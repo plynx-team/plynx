@@ -1,4 +1,4 @@
-from graph.blocks.block_base import BlockBase
+from graph.base_blocks.block_base import BlockBase
 
 class Echo(BlockBase):
     def __init__(self):
@@ -15,7 +15,8 @@ class Echo(BlockBase):
     def kill(self):
         pass
 
-    def get_base_name(self):
+    @staticmethod
+    def get_base_name():
         return 'echo'
 
 
