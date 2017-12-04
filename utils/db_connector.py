@@ -1,7 +1,7 @@
 from pymongo import MongoClient
-from utils.config import GetDBConfig
+from utils.config import get_db_config
 
-connectionConfig = GetDBConfig()
+connectionConfig = get_db_config()
 client = MongoClient(connectionConfig.host, connectionConfig.port)
 db = client['plynx']
 if connectionConfig.user:

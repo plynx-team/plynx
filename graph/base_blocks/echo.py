@@ -1,13 +1,13 @@
-from graph.base_blocks.block_base import BlockBase
+from graph.base_blocks.block_base import BlockBase, JobReturnStatus
 
 class Echo(BlockBase):
     def __init__(self):
-        self.outputs['out'] = ''
-        self.parameters['text'] = ''
-        pass
+        self.outputs = {}
+        self.parameters = {'text': ''}
 
     def run(self):
         print(self.parameters['text'])
+        return JobReturnStatus.SUCCESS
 
     def status(self):
         pass

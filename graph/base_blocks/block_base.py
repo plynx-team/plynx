@@ -1,4 +1,5 @@
 from abc import ABCMeta, abstractmethod
+from enum import Enum
 
 class abstractstatic(staticmethod):
     __slots__ = ()
@@ -13,9 +14,9 @@ class BlockBase:
 
     # Properties
 
-    inputs = {}
-    outputs = {}
-    parameters = {}
+    inputs = None
+    outputs = None
+    parameters = None
     graph = None
 
     # Methods
@@ -36,3 +37,7 @@ class BlockBase:
     def get_base_name():
         pass
 
+
+class JobReturnStatus(Enum):
+    SUCCESS = 0
+    FAILED = 1
