@@ -1,12 +1,17 @@
 from graph.base_blocks.block_base import BlockBase, JobReturnStatus
+from tempfile import SpooledTemporaryFile
+from utils.file_handler import upload_file_stream
 
 class Echo(BlockBase):
     def __init__(self):
-        self.outputs = {}
+        self.outputs = {'out': ''}
         self.parameters = {'text': ''}
+        self.logs = {'stderr': '', 'stdout': '', 'worker':''}
 
     def run(self):
-        print(self.parameters['text'])
+        with SpooledTemporaryFile() as f:
+            f.write(self.parameters['text'] + '\n')
+            self.outputs['out'] = upload_file_stream(f)
         return JobReturnStatus.SUCCESS
 
     def status(self):
@@ -25,3 +30,4 @@ if __name__ == "__main__":
     echo.parameters['text'] = 'Hello world'
 
     echo.run()
+    print echo.outputs

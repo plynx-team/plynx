@@ -17,6 +17,7 @@ class BlockBase:
     inputs = None
     outputs = None
     parameters = None
+    logs = None
     graph = None
 
     # Methods

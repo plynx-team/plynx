@@ -1,12 +1,16 @@
 import argparse
+import logging
 import socket
 import sys
 import uuid
 import threading
+import traceback
 from time import sleep
+from tempfile import SpooledTemporaryFile
 from backend.messages import WorkerMessage, WorkerMessageType, RunStatus, MasterMessageType
 from backend.tcp_utils import send_msg, recv_msg
 from graph.base_blocks.block_base import JobReturnStatus
+from utils.file_handler import upload_file_stream
 
 
 HOST, PORT = "localhost", 10000
@@ -25,10 +29,11 @@ class Worker:
         self.thread = threading.Thread(target=self.run, args=())
         self.thread.daemon = True   # Daemonize thread
         self.job = None
+        self.alive = True
 
     def forever(self):
         self.thread.start()
-        while True:
+        while self.alive:
             try:
                 self.heartbeat_iteration()
                 sleep(1)
@@ -74,8 +79,16 @@ class Worker:
                         self.job = master_message.job
                         try:
                             status = self.job.run()
-                        except:
-                            status = JobReturnStatus.FAILED
+                        except Exception as e:
+                            try:
+                                status = JobReturnStatus.FAILED
+                                with SpooledTemporaryFile() as f:
+                                    f.write(traceback.format_exc())
+                                    self.job.logs['worker'] = upload_file_stream(f)
+                            except Exception as e:
+                                self.alive = False
+                                logging.critical(traceback.format_exc())
+                                sys.exit(1)
 
                         if status == JobReturnStatus.SUCCESS:
                             self.run_status = RunStatus.SUCCESS
