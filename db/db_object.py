@@ -3,7 +3,7 @@ from abc import ABCMeta, abstractmethod
 
 class DBObject(object):
 
-    _dirty = False
+    _dirty = True
 
     @abstractmethod
     def save(self):

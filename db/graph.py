@@ -1,8 +1,8 @@
 import datetime
 from db.db_object import DBObject
 from utils.db_connector import *
-from utils.common import to_object_id
-from bson.objectid import ObjectId
+from utils.common import to_object_id, ObjectId
+
 
 class Graph(DBObject):
     """
@@ -17,8 +17,6 @@ class Graph(DBObject):
         if graph_id:
             self._id = to_object_id(graph_id)
             self.load()
-        else:
-            self.dirty = True
 
     def save(self):
         if not self.is_dirty():
@@ -34,8 +32,8 @@ class Graph(DBObject):
             {
                 "$setOnInsert": {"insertion_date": now},
                 "$set": {
+                    "update_date": now,
                     "title": self.title,
-                    'update_date': now
                 },
             },
             upsert=True,
