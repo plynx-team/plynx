@@ -1,5 +1,4 @@
 from graph.base_blocks.block_base import BlockBase, JobReturnStatus
-from utils.file_handler import upload_file_stream
 
 class GetResource(BlockBase):
     def __init__(self):
