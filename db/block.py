@@ -12,8 +12,9 @@ class Block(DBObject):
     _id = None
     title = None
     description = None
-    graph_id = None
     base_block_name = None
+    parent_block = None
+    derived_from = None
     inputs = {}
     outputs = {}
     parameters = {}
@@ -22,6 +23,25 @@ class Block(DBObject):
         if block_id:
             self._id = to_object_id(block_id)
             self.load()
+        else:
+            self._id = ObjectId()
+
+    def to_dict(self):
+        return {
+                "_id": self._id,
+                "base_block_name": self.base_block_name,
+                "inputs": self.inputs,
+                "outputs": self.outputs,
+                "parameters": self.parameters,
+                "title": self.title,
+                "description": self.description,
+                "parent_block": self.parent_block,
+                "derived_from": self.derived_from
+            }
+
+    def load_from_dict(self, d):
+        for key, value in d:
+            setattr(self, key, block[key])
 
     def save(self):
         if not self.is_dirty():
@@ -29,22 +49,14 @@ class Block(DBObject):
 
         now = datetime.datetime.utcnow()
 
-        if not self._id:
-            self._id = ObjectId()
+        block_dict = self.to_dict()
+        block_dict["update_date"] =  now
 
         db.blocks.find_one_and_update(
             {'_id': self._id},
             {
                 "$setOnInsert": {"insertion_date": now},
-                "$set": {
-                    "update_date": now,
-                    "title": self.title,
-                    "graph_id": self.graph_id,
-                    "base_block_name": self.base_block_name,
-                    "outputs": self.outputs,
-                    "description": self.description,
-                    "parameters": self.parameters
-                },
+                "$set": block_dict
             },
             upsert=True,
             )
@@ -52,22 +64,21 @@ class Block(DBObject):
         self._dirty = False
         return True
 
-    def load(self):
-        block = db.blocks.find_one({'_id': self._id})
+    def load(self, block=None):
+        if not block:
+            block = db.blocks.find_one({'_id': self._id})
 
-        for key, value in block.iteritems():
-            setattr(self, key, block[key])
+        self.load_from_dict(block)
 
         self._dirty = False
 
 
 if __name__ == "__main__":
     block = Block()
-    block.graph_id = ObjectId("5a28e0640310e9847ce041f0")
     block.title = 'Echo'
     block.base_block_name = "echo"
     block.outputs['out'] = ''
     block.description = 'echo'
-    block.parameters['text'] = 'hello world'
+    block.parameters['text'] = ''
 
     block.save()
