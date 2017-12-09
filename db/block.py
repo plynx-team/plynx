@@ -41,9 +41,9 @@ class Block(DBObject):
                 "derived_from": self.derived_from
             }
 
-    def load_from_dict(self, d):
-        for key, value in d:
-            setattr(self, key, block[key])
+    def load_from_dict(self, block_dict):
+        for key, value in block_dict.iteritems():
+            setattr(self, key, value)
 
     def save(self):
         if not self.is_dirty():

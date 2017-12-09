@@ -53,11 +53,10 @@ class Graph(DBObject):
                 setattr(self, key, graph[key])
 
         self.blocks = []
-        for block in db.blocks.find({'graph_id': self._id}):
+        for block in graph['blocks']:
             block_obj = Block()
             block_obj.load_from_dict(block)
             self.blocks.append(block_obj)
-        print self.blocks
 
         self._dirty = False
 
