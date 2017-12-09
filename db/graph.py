@@ -85,15 +85,15 @@ if __name__ == "__main__":
     grep = Block()
     grep.title = "Grep"
     grep.base_block_name = "grep"
-    grep.inputs = {'in': ''}
+    grep.inputs = {'in': {'block_id': get_resource._id, 'resource': 'out'}}
     grep.outputs = {'out': ''}
     grep.description = 'Grep block'
     grep.parameters['text'] = 'hello world'
     grep.derived_from = db.blocks.find_one({'base_block_name': grep.base_block_name})['_id']
 
-    graph.blocks = [get_resource, echo, graph]
+    graph.blocks = [get_resource, echo, grep]
 
-    #graph.save()
+    graph.save()
 
     #graph = Graph('5a28e0640310e9847ce041f0')
     #print graph.blocks[0].title
