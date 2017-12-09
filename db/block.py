@@ -74,6 +74,12 @@ class Block(DBObject):
 
         self._dirty = False
 
+    def __str__(self):
+        return 'Block(_id="{}")'.format(self._id)
+
+    def __repr__(self):
+        return 'Block({})'.format(str(self.to_dict()))
+
 
 if __name__ == "__main__":
     block = Block()

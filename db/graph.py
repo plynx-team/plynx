@@ -60,6 +60,11 @@ class Graph(DBObject):
 
         self._dirty = False
 
+    def __str__(self):
+        return 'Graph(_id="{}", blocks={})'.format(self._id, [str(b) for b in self.blocks])
+
+    def __repr__(self):
+        return 'Graph(_id="{}", title="{}", blocks={})'.format(self._id, self.title, str(self.blocks))
 
 if __name__ == "__main__":
     graph = Graph()
