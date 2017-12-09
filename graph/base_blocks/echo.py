@@ -4,6 +4,7 @@ from utils.file_handler import upload_file_stream
 
 class Echo(BlockBase):
     def __init__(self):
+        super(self.__class__, self).__init__()
         self.outputs = {'out': ''}
         self.parameters = {'text': ''}
         self.logs = {'stderr': '', 'stdout': '', 'worker':''}

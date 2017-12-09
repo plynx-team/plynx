@@ -17,6 +17,7 @@ class BlockCollection:
                 if name is not None:
                     self.name_to_class[name] = cls
 
+
 if __name__ == "__main__":
     collection = BlockCollection()
     print("Found classes:")

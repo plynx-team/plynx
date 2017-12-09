@@ -2,6 +2,7 @@ from graph.base_blocks.block_base import BlockBase, JobReturnStatus
 
 class GetResource(BlockBase):
     def __init__(self):
+        super(self.__class__, self).__init__()
         self.outputs = {'out': ''}
         self.parameters = {'resource_id': ''}
         self.logs = {'stderr': '', 'stdout': '', 'worker':''}

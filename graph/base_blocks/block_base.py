@@ -12,15 +12,15 @@ class abstractstatic(staticmethod):
 class BlockBase:
     __metaclass__ = ABCMeta
 
-    # Properties
-
-    inputs = None
-    outputs = None
-    parameters = None
-    logs = None
-    graph = None
-
     # Methods
+
+    def __init__(self):
+        self.inputs = None
+        self.outputs = None
+        self.parameters = None
+        self.logs = None
+        self.graph = None
+        print "BASE"
 
     @abstractmethod
     def run(self):

@@ -5,6 +5,7 @@ from utils.file_handler import get_file_stream, upload_file_stream
 
 class Grep(BlockBase):
     def __init__(self):
+        super(self.__class__, self).__init__()
         self.inputs = {'in': ''}
         self.outputs = {'out': ''}
         self.parameters = {'text': ''}
