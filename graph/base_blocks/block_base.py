@@ -20,7 +20,6 @@ class BlockBase:
         self.parameters = None
         self.logs = None
         self.graph = None
-        print "BASE"
 
     @abstractmethod
     def run(self):
