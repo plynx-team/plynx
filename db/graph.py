@@ -36,7 +36,7 @@ class Graph(DBObject):
                 "$set": {
                     "update_date": now,
                     "title": self.title,
-                    "blocks": [block.to_dict() for block in self.blocks] 
+                    "blocks": [block.to_dict() for block in self.blocks]
                 },
             },
             upsert=True,
@@ -99,5 +99,5 @@ if __name__ == "__main__":
 
     graph.save()
 
-    #graph = Graph('5a28e0640310e9847ce041f0')
-    #print graph.blocks[0].title
+    # graph = Graph('5a28e0640310e9847ce041f0')
+    # print graph.blocks[0].title

@@ -52,7 +52,7 @@ class Block(DBObject):
         now = datetime.datetime.utcnow()
 
         block_dict = self.to_dict()
-        block_dict["update_date"] =  now
+        block_dict["update_date"] = now
 
         db.blocks.find_one_and_update(
             {'_id': self._id},
