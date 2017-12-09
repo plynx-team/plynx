@@ -10,11 +10,12 @@ class Graph(DBObject):
     Basic graph with db interface
     """
 
-    blocks = []
-    _id = None
-    title = None
-
     def __init__(self, graph_id=None):
+        super(Graph, self).__init__()
+        self._id = None
+        self.title = None
+        self.blocks = []
+
         if graph_id:
             self._id = to_object_id(graph_id)
             self.load()
@@ -64,25 +65,35 @@ class Graph(DBObject):
 if __name__ == "__main__":
     graph = Graph()
     graph.title = "Test graph"
-    #from graph.base_blocks.collection import BlockCollection
-    #col = BlockCollection()
-    #block = col.name_to_class['echo']()
-    #block.parameters['text'] = ['Hello world']
-    #block = db.blocks.find_one({'base_name': 'echo'})
-    #del block['name']
-    #block.
-    #del block['_id']
-    block = Block()
-    block.title = "Echo"
-    block.base_block_name = "echo"
-    block.outputs = {'out': ''}
-    block.description = 'Echo block'
-    block.parameters['text'] = 'hello world'
-    block.derived_from = ObjectId("5a2aba980310e99ac1b5b634")
 
-    graph.blocks = [block]
-    graph.save()
+    get_resource = Block()
+    get_resource.title = "Get resource"
+    get_resource.base_block_name = "get_resource"
+    get_resource.outputs = {'out': ''}
+    get_resource.description = 'Get resource'
+    get_resource.parameters['resource_id'] = 'Piton.txt'
+    get_resource.derived_from = db.blocks.find_one({'base_block_name': get_resource.base_block_name})['_id']
+
+    echo = Block()
+    echo.title = "Echo"
+    echo.base_block_name = "echo"
+    echo.outputs = {'out': ''}
+    echo.description = 'Echo block'
+    echo.parameters['text'] = 'hello world'
+    echo.derived_from = db.blocks.find_one({'base_block_name': echo.base_block_name})['_id']
+
+    grep = Block()
+    grep.title = "Grep"
+    grep.base_block_name = "grep"
+    grep.inputs = {'in': ''}
+    grep.outputs = {'out': ''}
+    grep.description = 'Grep block'
+    grep.parameters['text'] = 'hello world'
+    grep.derived_from = db.blocks.find_one({'base_block_name': grep.base_block_name})['_id']
+
+    graph.blocks = [get_resource, echo, graph]
 
     #graph.save()
+
     #graph = Graph('5a28e0640310e9847ce041f0')
     #print graph.blocks[0].title

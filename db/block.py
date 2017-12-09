@@ -9,17 +9,19 @@ class Block(DBObject):
     Basic block with db interface
     """
 
-    _id = None
-    title = None
-    description = None
-    base_block_name = None
-    parent_block = None
-    derived_from = None
-    inputs = {}
-    outputs = {}
-    parameters = {}
-
     def __init__(self, block_id=None):
+        super(Block, self).__init__()
+
+        self._id = None
+        self.title = None
+        self.description = None
+        self.base_block_name = None
+        self.parent_block = None
+        self.derived_from = None
+        self.inputs = {}
+        self.outputs = {}
+        self.parameters = {}
+
         if block_id:
             self._id = to_object_id(block_id)
             self.load()
@@ -80,5 +82,24 @@ if __name__ == "__main__":
     block.outputs['out'] = ''
     block.description = 'echo'
     block.parameters['text'] = ''
+
+    block.save()
+
+    block = Block()
+    block.title = 'Get Resource'
+    block.base_block_name = "get_resource"
+    block.outputs['out'] = ''
+    block.description = 'get_resource'
+    block.parameters['resource_id'] = ''
+
+    block.save()
+
+    block = Block()
+    block.title = 'Grep'
+    block.base_block_name = "grep"
+    block.inputs['in'] = ''
+    block.outputs['out'] = ''
+    block.description = 'grep'
+    block.parameters['resource_id'] = ''
 
     block.save()
