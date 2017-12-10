@@ -2,6 +2,7 @@ import datetime
 from db.db_object import DBObject
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
+from common.block_enums import BlockRunningStatus
 
 
 class Block(DBObject):
@@ -21,6 +22,7 @@ class Block(DBObject):
         self.inputs = {}
         self.outputs = {}
         self.parameters = {}
+        self.running_status = BlockRunningStatus.CREATED
 
         if block_id:
             self._id = to_object_id(block_id)
@@ -38,7 +40,8 @@ class Block(DBObject):
                 "title": self.title,
                 "description": self.description,
                 "parent_block": self.parent_block,
-                "derived_from": self.derived_from
+                "derived_from": self.derived_from,
+                "running_status": self.running_status
             }
 
     def load_from_dict(self, block_dict):

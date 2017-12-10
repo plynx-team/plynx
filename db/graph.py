@@ -2,6 +2,7 @@ import datetime
 from db.db_object import DBObject
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
+from common.graph_enums import GraphRunningStatus
 from db.block import Block
 
 
@@ -14,6 +15,7 @@ class Graph(DBObject):
         super(Graph, self).__init__()
         self._id = None
         self.title = None
+        self.running_status = GraphRunningStatus.CREATED
         self.blocks = []
 
         if graph_id:
@@ -70,30 +72,21 @@ if __name__ == "__main__":
     graph = Graph()
     graph.title = "Test graph"
 
-    get_resource = Block()
-    get_resource.title = "Get resource"
-    get_resource.base_block_name = "get_resource"
-    get_resource.outputs = {'out': ''}
-    get_resource.description = 'Get resource'
+    block_id = db.blocks.find_one({'base_block_name': 'get_resource'})['_id']
+    get_resource = Block(block_id)
     get_resource.parameters['resource_id'] = 'Piton.txt'
-    get_resource.derived_from = db.blocks.find_one({'base_block_name': get_resource.base_block_name})['_id']
+    get_resource.derived_from = block_id
 
-    echo = Block()
-    echo.title = "Echo"
-    echo.base_block_name = "echo"
-    echo.outputs = {'out': ''}
-    echo.description = 'Echo block'
+    block_id = db.blocks.find_one({'base_block_name': 'echo'})['_id']
+    echo = Block(block_id)
     echo.parameters['text'] = 'hello world'
-    echo.derived_from = db.blocks.find_one({'base_block_name': echo.base_block_name})['_id']
+    echo.derived_from = block_id
 
-    grep = Block()
-    grep.title = "Grep"
-    grep.base_block_name = "grep"
+    block_id = db.blocks.find_one({'base_block_name': 'grep'})['_id']
+    grep = Block(block_id)
     grep.inputs = {'in': {'block_id': get_resource._id, 'resource': 'out'}}
-    grep.outputs = {'out': ''}
-    grep.description = 'Grep block'
-    grep.parameters['text'] = 'hello world'
-    grep.derived_from = db.blocks.find_one({'base_block_name': grep.base_block_name})['_id']
+    grep.parameters['text'] = 'def'
+    grep.derived_from = block_id
 
     graph.blocks = [get_resource, echo, grep]
 
