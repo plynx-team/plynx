@@ -1,4 +1,5 @@
-from graph.base_blocks.block_base import BlockBase, JobReturnStatus
+from graph.base_blocks.block_base import BlockBase, 
+from common.block_enums import JobReturnStatus
 from tempfile import SpooledTemporaryFile
 from utils.file_handler import upload_file_stream
 

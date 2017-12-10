@@ -9,7 +9,7 @@ from time import sleep
 from tempfile import SpooledTemporaryFile
 from backend.messages import WorkerMessage, WorkerMessageType, RunStatus, MasterMessageType
 from backend.tcp_utils import send_msg, recv_msg
-from graph.base_blocks.block_base import JobReturnStatus
+from common.block_enums import JobReturnStatus
 from utils.file_handler import upload_file_stream
 
 

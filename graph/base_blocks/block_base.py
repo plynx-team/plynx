@@ -1,5 +1,4 @@
 from abc import ABCMeta, abstractmethod
-from enum import Enum
 
 class abstractstatic(staticmethod):
     __slots__ = ()
@@ -36,8 +35,3 @@ class BlockBase:
     @abstractstatic
     def get_base_name():
         pass
-
-
-class JobReturnStatus(Enum):
-    SUCCESS = 0
-    FAILED = 1
