@@ -22,7 +22,7 @@ class Block(DBObject):
         self.inputs = {}
         self.outputs = {}
         self.parameters = {}
-        self.running_status = BlockRunningStatus.CREATED
+        self.block_running_status = BlockRunningStatus.CREATED
 
         if block_id:
             self._id = to_object_id(block_id)
@@ -41,7 +41,7 @@ class Block(DBObject):
                 "description": self.description,
                 "parent_block": self.parent_block,
                 "derived_from": self.derived_from,
-                "running_status": self.running_status
+                "block_running_status": self.block_running_status
             }
 
     def load_from_dict(self, block_dict):

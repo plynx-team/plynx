@@ -15,7 +15,7 @@ class Graph(DBObject):
         super(Graph, self).__init__()
         self._id = None
         self.title = None
-        self.running_status = GraphRunningStatus.CREATED
+        self.graph_running_status = GraphRunningStatus.CREATED
         self.blocks = []
 
         if graph_id:
@@ -38,6 +38,7 @@ class Graph(DBObject):
                 "$set": {
                     "update_date": now,
                     "title": self.title,
+                    "graph_running_status": self.graph_running_status,
                     "blocks": [block.to_dict() for block in self.blocks]
                 },
             },
