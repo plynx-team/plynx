@@ -17,6 +17,11 @@ class BlockCollection:
                 if name is not None:
                     self.name_to_class[name] = cls
 
+    def make_from_block_with_inputs(self, block_with_inputs):
+        job = self.name_to_class[block_with_inputs.base_block_name]()
+        job.restore_from_dict(block_with_inputs)
+        return job
+
 
 if __name__ == "__main__":
     collection = BlockCollection()

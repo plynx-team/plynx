@@ -15,13 +15,16 @@ class GraphScheduler(object):
     It determines blocks to be executed.
     
     Args:
-        graph_id (str)
+        graph (str or Graph)
 
     """
-    def __init__(self, graph_id):
-        self.graph_id = graph_id
-
-        self.graph = Graph(self.graph_id)
+    def __init__(self, graph):
+        if isinstance(graph, Graph):
+            self.graph_id = graph._id
+            self.graph = graph
+        else:
+            self.graph_id = graph_id
+            self.graph = Graph(self.graph_id)
 
         self.block_id_to_block = {
             block._id : block for block in self.graph.blocks
@@ -51,12 +54,12 @@ class GraphScheduler(object):
 
     def pop_blocks(self):
         """Get a set of blocks with satisfied dependencies"""
-        res = [self.get_block_with_inputs(block_id) for block_id in self.dependency_index_to_block_ids[0]]
+        res = [self._get_block_with_inputs(block_id) for block_id in self.dependency_index_to_block_ids[0]]
         del self.dependency_index_to_block_ids[0]
         return res
 
     def set_block_status(self, block, block_running_status):
-        block_id = block._id
+        block_id = block.block_id
         self.block_id_to_block[block_id].block_running_status = block_running_status
 
         if block_running_status == BlockRunningStatus.FAILED:
@@ -84,7 +87,7 @@ class GraphScheduler(object):
 
         self.graph.save()
 
-    def get_block_with_inputs(self, block_id):
+    def _get_block_with_inputs(self, block_id):
         res = copy.copy(self.block_id_to_block[block_id])
         for input_name in res.inputs.keys():
             parent_block_id = res.inputs[input_name]['block_id']

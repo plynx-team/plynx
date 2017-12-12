@@ -3,12 +3,16 @@ import sys
 import SocketServer
 import pickle
 import threading
-from utils.config import get_master_config
+from collections import deque
+from time import sleep
 from backend.messages import WorkerMessage, RunStatus, WorkerMessageType, MasterMessageType, MasterMessage
 from backend.tcp_utils import send_msg, recv_msg
-from collections import deque
-
+from common.graph_enums import GraphRunningStatus
+from db.graph_collection_manager import GraphCollectionManager
+from graph.graph_scheduler import GraphScheduler
+from utils.config import get_master_config
 from graph.base_blocks.collection import BlockCollection
+from common.block_enums import BlockRunningStatus
 
 
 class Master:
@@ -43,11 +47,24 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
                     job=self.server.worker_to_job[worker_id]
                     )
             elif worker_message.message_type == WorkerMessageType.JOB_FINISHED_SUCCESS:
+                job = self.server.worker_to_job[worker_id]
+                with self.server.new_schedulers_lock:
+                    scheduler = self.server.graph_id_to_scheduler[job.graph_id]
+                    job._id = job.block_id
+                scheduler.set_block_status(worker_message.body, BlockRunningStatus.SUCCESS)
+
                 print("Job marked as successful")
                 if worker_id in self.server.worker_to_job:
                     del self.server.worker_to_job[worker_id]
                 m = self.make_aknowledge_message(worker_id)
+
             elif worker_message.message_type == WorkerMessageType.JOB_FINISHED_FAILED:
+                job = self.server.worker_to_job[worker_id]
+                with self.server.new_schedulers_lock:
+                    scheduler = self.server.graph_id_to_scheduler[job.graph_id]
+                    job._id = job.block_id
+                scheduler.set_block_status(worker_message.body, BlockRunningStatus.FAILED)
+
                 print("Job marked as failed")
                 if worker_id in self.server.worker_to_job:
                     del self.server.worker_to_job[worker_id]
@@ -81,24 +98,33 @@ class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     # much faster rebinding
     allow_reuse_address = True
 
-    job_queue = deque()
-    job_queue_lock = threading.Lock()
-    worker_to_job = {}
-
     def __init__(self, server_address, RequestHandlerClass):
         SocketServer.TCPServer.__init__(self, server_address, RequestHandlerClass)
+        self.alive = True
+        self.graph_collection_manager = GraphCollectionManager()
+        self.job_queue = deque()
+        self.job_queue_lock = threading.Lock()
+        self.worker_to_job = {}
+        self.block_collection = BlockCollection()
 
-        col = BlockCollection()
-        self.job_queue.append(col.name_to_class['echo']())
-        self.job_queue[-1].parameters['text'] = "echo 1"
-        self.job_queue.append(col.name_to_class['echo']())
-        self.job_queue[-1].parameters['text'] = "echo 2"
-        print(self.job_queue)
-        print self.job_queue[-1].__dict__
-        from graph.base_blocks.echo import Echo
-        e = Echo()
-        print e.__dict__
-        # print e.__getstate__()
+        running_graphs = self.graph_collection_manager.get_graphs(GraphRunningStatus.RUNNING)
+        if len(running_graphs) > 0:
+            print("Found {} running graphs. Setting them to 'READY'".format(len(running_graphs)))
+            for graph in running_graphs:
+                graph.graph_running_status = GraphRunningStatus.READY
+                graph.save()
+
+        self.graph_id_to_scheduler = {}
+        self.new_graph_id_to_scheduler = []
+        self.new_schedulers_lock = threading.Lock()
+
+        self.thread_db_status_update = threading.Thread(target=self.run_db_status_update, args=())
+        self.thread_db_status_update.daemon = True   # Daemonize thread
+        self.thread_db_status_update.start()
+
+        self.thread_scheduler = threading.Thread(target=self.run_scheduler, args=())
+        self.thread_scheduler.daemon = True   # Daemonize thread
+        self.thread_scheduler.start()
 
     def allocate_job(self, worker_message):
         if len(self.job_queue) == 0:    # No jobs to allocate
@@ -109,6 +135,41 @@ class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self.worker_to_job[worker_message.worker_id] = job
 
         return True
+
+    def run_db_status_update(self):
+        while self.alive:
+            graphs = self.graph_collection_manager.get_graphs(GraphRunningStatus.READY)
+            for graph in graphs:
+                graph_scheduler = GraphScheduler(graph)
+                graph_scheduler.graph.graph_running_status = GraphRunningStatus.RUNNING
+                graph_scheduler.graph.save()
+
+                with self.new_schedulers_lock:
+                    self.new_graph_id_to_scheduler.append(graph_scheduler)
+
+            sleep(1)
+
+    def run_scheduler(self):
+        while self.alive:
+            with self.new_schedulers_lock:
+                self.graph_id_to_scheduler.update(
+                    {
+                    graph_scheduler.graph._id: graph_scheduler for graph_scheduler in self.new_graph_id_to_scheduler
+                    })
+                self.new_graph_id_to_scheduler = []
+
+            new_to_queue = []
+            for graph_id, scheduler in self.graph_id_to_scheduler.iteritems():
+                blocks_with_inputs = scheduler.pop_blocks()
+                for block in blocks_with_inputs:
+                    job = self.block_collection.make_from_block_with_inputs(block)
+                    job.graph_id = graph_id
+                    new_to_queue.append(job)
+
+            with self.job_queue_lock:
+                self.job_queue.extend(new_to_queue)
+
+            sleep(1)
 
 
 if __name__ == "__main__":
@@ -121,4 +182,5 @@ if __name__ == "__main__":
     try:
         server.serve_forever()
     except KeyboardInterrupt:
+        server.alive = False
         sys.exit(0)

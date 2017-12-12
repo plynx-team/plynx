@@ -22,14 +22,13 @@ class RunningPipelineException(Exception):
     pass
 
 class Worker:
-    worker_id = None
-    run_status = RunStatus.IDLE
-
     def __init__(self):
         self.thread = threading.Thread(target=self.run, args=())
         self.thread.daemon = True   # Daemonize thread
         self.job = None
         self.alive = True
+        self.worker_id = None
+        self.run_status = RunStatus.IDLE
 
     def forever(self):
         self.thread.start()

@@ -50,7 +50,9 @@ class Graph(DBObject):
 
     def load(self):
         graph = db.graphs.find_one({'_id': self._id})
+        self.load_from_mongo(graph)
 
+    def load_from_mongo(self, graph):
         for key, value in graph.iteritems():
             if key != 'blocks':
                 setattr(self, key, graph[key])
@@ -90,6 +92,7 @@ if __name__ == "__main__":
     grep.derived_from = block_id
 
     graph.blocks = [get_resource, echo, grep]
+    graph.graph_running_status = GraphRunningStatus.READY
 
     graph.save()
 
