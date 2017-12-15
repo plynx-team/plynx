@@ -23,6 +23,7 @@ class Block(DBObject):
         self.inputs = {}
         self.outputs = {}
         self.parameters = {}
+        self.logs = {}
         self.block_running_status = BlockRunningStatus.CREATED
 
         if block_id:
@@ -38,6 +39,7 @@ class Block(DBObject):
                 "inputs": self.inputs,
                 "outputs": self.outputs,
                 "parameters": self.parameters,
+                "logs": self.logs,
                 "title": self.title,
                 "description": self.description,
                 "parent_block": self.parent_block,
