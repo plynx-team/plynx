@@ -1,5 +1,4 @@
 import os, sys
-import db.base_blocks as db_blocks
 from graph.base_blocks.block_base import BlockBase
 
 class BlockCollection:

@@ -140,7 +140,7 @@ class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         while self.alive:
             graphs = self.graph_collection_manager.get_graphs(GraphRunningStatus.READY)
             for graph in graphs:
-                graph_scheduler = GraphScheduler(graph)
+                graph_scheduler = GraphScheduler(graph, self.block_collection)
                 graph_scheduler.graph.graph_running_status = GraphRunningStatus.RUNNING
                 graph_scheduler.graph.save()
 
@@ -160,11 +160,9 @@ class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
             new_to_queue = []
             for graph_id, scheduler in self.graph_id_to_scheduler.iteritems():
-                blocks_with_inputs = scheduler.pop_blocks()
-                for block in blocks_with_inputs:
-                    job = self.block_collection.make_from_block_with_inputs(block)
-                    job.graph_id = graph_id
-                    new_to_queue.append(job)
+                new_to_queue.extend(scheduler.pop_jobs())
+                for job in new_to_queue:
+                    print job.graph_id
 
             with self.job_queue_lock:
                 self.job_queue.extend(new_to_queue)

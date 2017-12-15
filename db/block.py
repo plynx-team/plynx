@@ -1,3 +1,4 @@
+import copy
 import datetime
 from db.db_object import DBObject
 from utils.db_connector import *
@@ -77,6 +78,9 @@ class Block(DBObject):
 
         self._dirty = False
 
+    def copy(self):
+        return copy.deepcopy(self)
+
     def __str__(self):
         return 'Block(_id="{}")'.format(self._id)
 
@@ -109,6 +113,6 @@ if __name__ == "__main__":
     block.inputs['in'] = ''
     block.outputs['out'] = ''
     block.description = 'grep'
-    block.parameters['resource_id'] = ''
+    block.parameters['text'] = ''
 
     block.save()

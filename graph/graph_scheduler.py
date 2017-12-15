@@ -1,10 +1,11 @@
-import copy
 from abc import ABCMeta, abstractmethod
 from enum import Enum
 from collections import defaultdict
+from db.block import Block
 from db.graph import Graph
 from common.block_enums import BlockRunningStatus
 from common.graph_enums import GraphRunningStatus
+from graph.base_blocks.collection import BlockCollection
 
 
 class GraphScheduler(object):
@@ -18,7 +19,7 @@ class GraphScheduler(object):
         graph (str or Graph)
 
     """
-    def __init__(self, graph):
+    def __init__(self, graph, block_collection=None):
         if isinstance(graph, Graph):
             self.graph_id = graph._id
             self.graph = graph
@@ -35,6 +36,10 @@ class GraphScheduler(object):
         self.block_id_to_dependents = defaultdict(lambda: set())
         self.block_id_to_dependency_index = defaultdict(lambda: 0)
         self.uncompleted_blocks_count = 0
+        if block_collection:
+            self.block_collection = block_collection
+        else:
+            self.block_collection = BlockCollection()
 
         for block in self.graph.blocks:
             block_id = block._id
@@ -52,9 +57,14 @@ class GraphScheduler(object):
     def finished(self):
         return self.graph.block_running_status in {GraphRunningStatus.SUCCESS, GraphRunningStatus.FAILED}
 
-    def pop_blocks(self):
+    def pop_jobs(self):
         """Get a set of blocks with satisfied dependencies"""
-        res = [self._get_block_with_inputs(block_id) for block_id in self.dependency_index_to_block_ids[0]]
+        res = []
+        for block_id in self.dependency_index_to_block_ids[0]:
+            block = self._get_block_with_inputs(block_id)
+            job = self.block_collection.make_from_block_with_inputs(block)
+            job.graph_id = self.graph_id
+            res.append(job)
         del self.dependency_index_to_block_ids[0]
         return res
 
@@ -88,7 +98,7 @@ class GraphScheduler(object):
         self.graph.save()
 
     def _get_block_with_inputs(self, block_id):
-        res = copy.copy(self.block_id_to_block[block_id])
+        res = self.block_id_to_block[block_id].copy()
         for input_name in res.inputs.keys():
             parent_block_id = res.inputs[input_name]['block_id']
             parent_resource = res.inputs[input_name]['resource']
