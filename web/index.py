@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from flask_server.common import *
+from web.common import *
 
 @app.route("/")
 @app.route("/index")

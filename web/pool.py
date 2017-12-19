@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-from flask_server.common import *
-from flask_server.send_file import *
+from web.common import *
+from web.send_file import *
 import utils.pool_collection as pcoll
 import utils.model_collection as mcoll
 import utils.img_collection as icoll
