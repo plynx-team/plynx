@@ -1,22 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     {% block head %}
-    <link rel="stylesheet" href="{{ url_for('static',filename='style.css') }}" />
-    <link rel="stylesheet" href="{{ url_for('static',filename='base_elements.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}" />
     <link rel="icon" type="image/x-icon" href="{{ url_for('static',filename='favicon.png') }}" />
     <title>{% block title %}{% endblock %} - Image Tag</title>
     {% endblock %}
-</head>
-<body>
-<div class="container">
-    <div id="header">
+  </head>
+  <body>
+    <div class="container">
+      <div id="header">
         {% block header %}
         <a href="/">IMAGE TAGS</a>
         {% endblock %}
+      </div>
+      <div id="nav">{% block nav %}{% endblock %}</div>
+      <div id="content">{% block content %}{% endblock %}</div>
     </div>
-    <div id="nav">{% block nav %}{% endblock %}</div>
-    <div id="content">{% block content %}{% endblock %}</div>
-</div>
+    <!-- scripts -->
+    <script src="{{ url_for('static', filename='bower_components/react/react.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='bower_components/react/react-dom.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='scripts/js/main.js') }}"></script>
 </body>
 </html>

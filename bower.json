@@ -1,0 +1,21 @@
+{
+  "name": "plynx",
+  "homepage": "https://github.com/khaxis/plynx",
+  "authors": [
+    "Ivan Khomyakov"
+  ],
+  "description": "",
+  "main": "",
+  "license": "proprietary",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap": "^3.3.6",
+    "react": "^15.1.0"
+  }
+}
