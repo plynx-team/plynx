@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 from web.common import *
+from web.graph_list import *
+from web.graph import *
 
 @app.route("/")
 @app.route("/index")

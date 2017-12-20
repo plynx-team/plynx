@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 from flask import send_file
 from os.path import join
-from utils.config import getDataPath
 from utils.file_handler import get_file_stream
-from web.pool import *
 
 
 @app.route("/get_image/<image_path>")

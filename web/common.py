@@ -7,6 +7,7 @@ app = Flask(__name__)
 
 
 def urls_for():
+    pass
     url_for('static', filename='style.css')
     url_for('static', filename='favicon.png')
 

@@ -13,3 +13,8 @@ class GraphCollectionManager(object):
             graphs.append(Graph())
             graphs[-1].load_from_mongo(db_graph)
         return graphs
+
+    @staticmethod
+    def get_db_graphs():
+        db_graphs = db.graphs.find({})
+        return list(db_graphs)

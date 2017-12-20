@@ -8,6 +8,7 @@
     {% endblock %}
   </head>
   <body>
+    <!-- Main block -->
     <div class="container">
       <div id="header">
         {% block header %}
@@ -18,8 +19,8 @@
       <div id="content">{% block content %}{% endblock %}</div>
     </div>
     <!-- scripts -->
-    <script src="{{ url_for('static', filename='bower_components/react/react.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='bower_components/react/react-dom.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='scripts/js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='bower_components/react/react.js') }}"></script>
+    <script src="{{ url_for('static', filename='bower_components/react/react-dom.js') }}"></script>
+    {% block scripts %}{% endblock %}
 </body>
 </html>

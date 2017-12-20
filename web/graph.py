@@ -1,20 +1,17 @@
 #!/usr/bin/env python
 from web.common import *
-from web.send_file import *
-import utils.pool_collection as pcoll
-import utils.model_collection as mcoll
-import utils.img_collection as icoll
-from utils.common import toObjectID
+from utils.common import to_object_id
 from collections import defaultdict, OrderedDict
 import random
 
 
 SAMPLE_SIZE=10
 
-@app.route("/pools/<pool_id>")
-def get_pool(pool_id):
-    pool_id = toObjectID(pool_id)
-    src_images = pcoll.getSampleOfImages(pool_id, 1000, previewOnly=True)
+@app.route("/graphs/<graph_id>")
+def get_pool(graph_id):
+    return render_template('base.html')
+    graph_id = to_object_id(graph_id)
+    src_images = pcoll.getSampleOfImages(graph_id, 1000, previewOnly=True)
     class_images = defaultdict(list)
     neg_images = []
     for img in src_images:
