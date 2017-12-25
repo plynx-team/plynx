@@ -1,4 +1,5 @@
 from db.graph import Graph
+from utils.common import to_object_id
 from utils.db_connector import *
 
 class GraphCollectionManager(object):
@@ -18,3 +19,7 @@ class GraphCollectionManager(object):
     def get_db_graphs():
         db_graphs = db.graphs.find({})
         return list(db_graphs)
+
+    @staticmethod
+    def get_db_graph(graph_id):
+        return db.graphs.find_one({'_id': to_object_id(graph_id)})

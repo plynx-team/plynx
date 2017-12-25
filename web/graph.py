@@ -1,11 +1,13 @@
 #!/usr/bin/env python
+from db.graph_collection_manager import GraphCollectionManager
 from web.common import *
-from utils.common import to_object_id
+from utils.common import to_object_id, JSONEncoder
 from collections import defaultdict, OrderedDict
 import random
 
-
 SAMPLE_SIZE=10
+graph_collection_manager = GraphCollectionManager()
+
 
 @app.route("/graphs/<graph_id>")
 def get_pool(graph_id):
@@ -37,3 +39,8 @@ def get_pool(graph_id):
 
     app.logger.info(models)
     return render_template('pool.html', pool=pool, class_images=class_images, models=models, properties=properties)
+
+
+@app.route('/plynx/api/v0/graphs/<graph_id>', methods=['GET'])
+def get_graph(graph_id):
+    return JSONEncoder().encode({'data': graph_collection_manager.get_db_graph(graph_id), 'status':'success'})
