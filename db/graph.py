@@ -15,6 +15,7 @@ class Graph(DBObject):
         super(Graph, self).__init__()
         self._id = None
         self.title = None
+        self.description = None
         self.graph_running_status = GraphRunningStatus.CREATED
         self.blocks = []
 
@@ -38,6 +39,7 @@ class Graph(DBObject):
                 "$set": {
                     "update_date": now,
                     "title": self.title,
+                    "description": self.description,
                     "graph_running_status": self.graph_running_status,
                     "blocks": [block.to_dict() for block in self.blocks]
                 },
@@ -74,6 +76,7 @@ class Graph(DBObject):
 if __name__ == "__main__":
     graph = Graph()
     graph.title = "Test graph"
+    graph.description = "Test description"
 
     block_id = db.blocks.find_one({'base_block_name': 'get_resource'})['_id']
     get_resource = Block(block_id)
