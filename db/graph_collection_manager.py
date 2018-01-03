@@ -17,7 +17,7 @@ class GraphCollectionManager(object):
 
     @staticmethod
     def get_db_graphs():
-        db_graphs = db.graphs.find({})
+        db_graphs = db.graphs.find({}).sort('insertion_date', -1)
         return list(db_graphs)
 
     @staticmethod

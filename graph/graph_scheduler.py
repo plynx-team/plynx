@@ -3,8 +3,7 @@ from enum import Enum
 from collections import defaultdict
 from db.block import Block
 from db.graph import Graph
-from common.block_enums import BlockRunningStatus
-from common.graph_enums import GraphRunningStatus
+from constants import BlockRunningStatus, GraphRunningStatus
 from graph.base_blocks.collection import BlockCollection
 
 

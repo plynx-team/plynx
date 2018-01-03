@@ -3,7 +3,7 @@ import datetime
 from db.db_object import DBObject
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
-from common.block_enums import BlockRunningStatus
+from constants import BlockRunningStatus
 
 
 class Block(DBObject):

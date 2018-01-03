@@ -2,7 +2,7 @@ import datetime
 from db.db_object import DBObject
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
-from common.graph_enums import GraphRunningStatus
+from constants import GraphRunningStatus
 from db.block import Block
 
 
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     grep.derived_from = block_id
 
     graph.blocks = [get_resource, echo, grep]
-    graph.graph_running_status = GraphRunningStatus.READY
+    # graph.graph_running_status = GraphRunningStatus.READY
 
     graph.save()
 

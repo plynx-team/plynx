@@ -1,7 +1,7 @@
 import re
 from tempfile import SpooledTemporaryFile
 from graph.base_blocks.block_base import BlockBase
-from common.block_enums import JobReturnStatus
+from constants import JobReturnStatus
 from utils.file_handler import get_file_stream, upload_file_stream
 
 class Grep(BlockBase):

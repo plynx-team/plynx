@@ -7,12 +7,11 @@ from collections import deque
 from time import sleep
 from backend.messages import WorkerMessage, RunStatus, WorkerMessageType, MasterMessageType, MasterMessage
 from backend.tcp_utils import send_msg, recv_msg
-from common.graph_enums import GraphRunningStatus
+from constants import BlockRunningStatus, GraphRunningStatus
 from db.graph_collection_manager import GraphCollectionManager
 from graph.graph_scheduler import GraphScheduler
 from utils.config import get_master_config
 from graph.base_blocks.collection import BlockCollection
-from common.block_enums import BlockRunningStatus
 
 
 class Master:
