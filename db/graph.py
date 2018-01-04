@@ -2,7 +2,7 @@ import datetime
 from db.db_object import DBObject
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
-from constants import GraphRunningStatus
+from constants import GraphRunningStatus, to_graph_running_status
 from db.block import Block
 
 
@@ -23,8 +23,10 @@ class Graph(DBObject):
             self._id = to_object_id(graph_id)
             self.load()
 
-    def save(self):
-        if not self.is_dirty():
+    def save(self, force=False):
+        assert isinstance(self._id, ObjectId)
+
+        if not self.is_dirty() and not force:
             return True
 
         now = datetime.datetime.utcnow()
@@ -59,7 +61,8 @@ class Graph(DBObject):
             if key != 'blocks':
                 setattr(self, key, graph[key])
 
-        self.graph_running_status = GraphRunningStatus(self.graph_running_status)
+        self._id = to_object_id(self._id)
+        self.graph_running_status = to_graph_running_status(self.graph_running_status)
 
         self.blocks = []
         for block in graph['blocks']:

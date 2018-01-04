@@ -1,7 +1,9 @@
 #!/usr/bin/env python
+import json
 from db.graph_collection_manager import GraphCollectionManager
+from db.graph import Graph
 from constants import BLOCK_RUNNING_STATUS_MAP, GRAPH_RUNNING_STATUS_MAP
-from web.common import *
+from web.common import app, request
 from utils.common import to_object_id, JSONEncoder
 from collections import defaultdict, OrderedDict
 import random
@@ -28,3 +30,17 @@ def get_graph(graph_id=None):
         return JSONEncoder().encode({
             'data': [_modify_graph_in_place(graph) for graph in graph_collection_manager.get_db_graphs()],
             'status':'success'})
+
+
+@app.route('/plynx/api/v0/graphs/<graph_id>', methods=['PUT'])
+# @app.route('/plynx/api/v0/graphs', methods=['POST'])
+def post_graph(graph_id):
+    print (request)
+    data = json.loads(request.data)['body']
+
+    graph = Graph()
+    graph.load_from_mongo(data)
+
+    graph.save(force=True)
+
+    return JSONEncoder().encode({'status':'success'})

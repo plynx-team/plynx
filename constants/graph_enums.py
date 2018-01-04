@@ -11,3 +11,15 @@ class GraphRunningStatus(Enum):
 GRAPH_RUNNING_STATUS_MAP = {
     status.value: status.name for status in GraphRunningStatus
 }
+
+GRAPH_RUNNING_STATUS_STR_MAP = {
+    status.name: status.value for status in GraphRunningStatus
+}
+
+def to_graph_running_status(graph_running_status):
+    if isinstance(graph_running_status, int):
+        return GraphRunningStatus(graph_running_status)
+    if isinstance(graph_running_status, basestring):
+        return GraphRunningStatus(GRAPH_RUNNING_STATUS_STR_MAP[graph_running_status.upper()])
+    else:
+        return graph_running_status

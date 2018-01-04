@@ -3,7 +3,7 @@ import datetime
 from db.db_object import DBObject
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
-from constants import BlockRunningStatus
+from constants import BlockRunningStatus, to_block_running_status
 
 
 class Block(DBObject):
@@ -55,7 +55,9 @@ class Block(DBObject):
         for key, value in block_dict.iteritems():
             setattr(self, key, value)
 
-        self.block_running_status = BlockRunningStatus(self.block_running_status)
+        print("sss<", self.block_running_status)
+        self.block_running_status = to_block_running_status(self.block_running_status)
+        print("sss>", self.block_running_status)
 
     def save(self):
         if not self.is_dirty():
