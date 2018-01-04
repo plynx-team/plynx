@@ -40,7 +40,7 @@ class Graph(DBObject):
                     "update_date": now,
                     "title": self.title,
                     "description": self.description,
-                    "graph_running_status": self.graph_running_status,
+                    "graph_running_status": self.graph_running_status.value,
                     "blocks": [block.to_dict() for block in self.blocks]
                 },
             },
@@ -59,6 +59,8 @@ class Graph(DBObject):
             if key != 'blocks':
                 setattr(self, key, graph[key])
 
+        self.graph_running_status = GraphRunningStatus(self.graph_running_status)
+
         self.blocks = []
         for block in graph['blocks']:
             block_obj = Block()
@@ -72,6 +74,7 @@ class Graph(DBObject):
 
     def __repr__(self):
         return 'Graph(_id="{}", title="{}", blocks={})'.format(self._id, self.title, str(self.blocks))
+
 
 if __name__ == "__main__":
     graph = Graph()

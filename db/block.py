@@ -44,12 +44,14 @@ class Block(DBObject):
                 "description": self.description,
                 "parent_block": self.parent_block,
                 "derived_from": self.derived_from,
-                "block_running_status": self.block_running_status
+                "block_running_status": self.block_running_status.value
             }
 
     def load_from_dict(self, block_dict):
         for key, value in block_dict.iteritems():
             setattr(self, key, value)
+
+        self.block_running_status = BlockRunningStatus(self.block_running_status)
 
     def save(self):
         if not self.is_dirty():
