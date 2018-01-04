@@ -55,9 +55,7 @@ class Block(DBObject):
         for key, value in block_dict.iteritems():
             setattr(self, key, value)
 
-        print("sss<", self.block_running_status)
         self.block_running_status = to_block_running_status(self.block_running_status)
-        print("sss>", self.block_running_status)
 
     def save(self):
         if not self.is_dirty():
