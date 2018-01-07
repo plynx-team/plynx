@@ -1,8 +1,5 @@
 #!/usr/bin/env python
-from flask import Flask
-from flask import render_template
-from flask import url_for
-from flask import request
+from flask import Flask, render_template, request, send_file, url_for
 from flask_cors import CORS
 
 app = Flask(__name__)
