@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from web.block import *
 from web.common import *
 from web.graph import *
 from web.resource import *

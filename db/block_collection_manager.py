@@ -7,6 +7,6 @@ class BlockCollectionManager(object):
     """
 
     @staticmethod
-    def get_db_blocks(block_running_status):
+    def get_db_blocks():
         db_blocks = db.blocks.find()
-        return [db_blocks]
+        return list(db_blocks)
