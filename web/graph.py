@@ -32,6 +32,13 @@ def get_graph(graph_id=None):
             'status':'success'})
 
 
+@app.route('/plynx/api/v0/create_graph', methods=['GET'])
+def create_graph():
+    return JSONEncoder().encode({
+        'data': _modify_graph_in_place(Graph().to_dict()),
+        'status':'success'})
+
+
 @app.route('/plynx/api/v0/graphs/<graph_id>', methods=['PUT'])
 # @app.route('/plynx/api/v0/graphs', methods=['POST'])
 def post_graph(graph_id):

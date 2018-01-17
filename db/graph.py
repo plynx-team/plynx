@@ -14,8 +14,8 @@ class Graph(DBObject):
     def __init__(self, graph_id=None):
         super(Graph, self).__init__()
         self._id = None
-        self.title = ''
-        self.description = ''
+        self.title = 'Title'
+        self.description = 'Description'
         self.graph_running_status = GraphRunningStatus.CREATED
         self.blocks = []
 
