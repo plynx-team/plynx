@@ -14,14 +14,26 @@ class Graph(DBObject):
     def __init__(self, graph_id=None):
         super(Graph, self).__init__()
         self._id = None
-        self.title = None
-        self.description = None
+        self.title = ''
+        self.description = ''
         self.graph_running_status = GraphRunningStatus.CREATED
         self.blocks = []
 
         if graph_id:
             self._id = to_object_id(graph_id)
             self.load()
+
+        if not self._id:
+            self._id = ObjectId()
+
+    def to_dict(self):
+        return {
+            "_id": self._id,
+            "title": self.title,
+            "description": self.description,
+            "graph_running_status": self.graph_running_status.value,
+            "blocks": [block.to_dict() for block in self.blocks]
+        }
 
     def save(self, force=False):
         assert isinstance(self._id, ObjectId)
@@ -31,20 +43,14 @@ class Graph(DBObject):
 
         now = datetime.datetime.utcnow()
 
-        if not self._id:
-            self._id = ObjectId()
+        graph_dict = self.to_dict()
+        graph_dict["update_date"] = now
 
         db.graphs.find_one_and_update(
             {'_id': self._id},
             {
                 "$setOnInsert": {"insertion_date": now},
-                "$set": {
-                    "update_date": now,
-                    "title": self.title,
-                    "description": self.description,
-                    "graph_running_status": self.graph_running_status.value,
-                    "blocks": [block.to_dict() for block in self.blocks]
-                },
+                "$set": graph_dict
             },
             upsert=True,
             )
