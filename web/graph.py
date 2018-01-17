@@ -22,7 +22,11 @@ def _modify_graph_in_place(graph):
 @app.route('/plynx/api/v0/graphs', methods=['GET'])
 @app.route('/plynx/api/v0/graphs/<graph_id>', methods=['GET'])
 def get_graph(graph_id=None):
-    if graph_id:
+    if graph_id == 'new':
+        return JSONEncoder().encode({
+            'data': _modify_graph_in_place(Graph().to_dict()),
+            'status':'success'})
+    elif graph_id:
         return JSONEncoder().encode({
             'data': _modify_graph_in_place(graph_collection_manager.get_db_graph(graph_id)),
             'status':'success'})
@@ -30,13 +34,6 @@ def get_graph(graph_id=None):
         return JSONEncoder().encode({
             'data': [_modify_graph_in_place(graph) for graph in graph_collection_manager.get_db_graphs()],
             'status':'success'})
-
-
-@app.route('/plynx/api/v0/create_graph', methods=['GET'])
-def create_graph():
-    return JSONEncoder().encode({
-        'data': _modify_graph_in_place(Graph().to_dict()),
-        'status':'success'})
 
 
 @app.route('/plynx/api/v0/graphs/<graph_id>', methods=['PUT'])
