@@ -42,4 +42,3 @@ class BlockBase:
         self.inputs = block_with_inputs.inputs
         self.outputs = block_with_inputs.outputs
         self.parameters = block_with_inputs.parameters
-        self.inputs = block_with_inputs.inputs

@@ -12,4 +12,4 @@ def main():
 
 if __name__ == "__main__":
     urls_for()
-    app.run()
+    app.run(threaded=True)
