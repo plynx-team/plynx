@@ -98,6 +98,17 @@ class Block(DBObject):
 
 if __name__ == "__main__":
     block = Block()
+    block.title = 'Command 1x1'
+    block.base_block_name = "command"
+    block.inputs['in'] = ''
+    block.outputs['out'] = ''
+    block.description = 'Any command with 1 arg'
+    block.parameters['text'] = ''
+    block.parameters['cmd'] = 'echo ${param[text]}'
+
+    block.save()
+
+    block = Block()
     block.title = 'Echo'
     block.base_block_name = "echo"
     block.outputs['out'] = ''

@@ -1,9 +1,11 @@
 from graph.base_blocks.block_base import BlockBase
 from constants import JobReturnStatus
-from utils.file_handler import upload_file_stream
+from utils.file_handler import get_file_stream, upload_file_stream
 import subprocess
 import os
 import json
+import uuid
+
 
 class Command(BlockBase):
     def __init__(self):
@@ -13,16 +15,22 @@ class Command(BlockBase):
 
     def run(self):
         env = os.environ.copy()
+        inputs = Command._prepare_inputs(self.inputs)
+        parameters = Command._prepare_parameters(self.parameters)
+        outputs = Command._prepare_outputs(self.outputs)
         cmd_array = [
-            self._get_arguments_string('input', self.inputs),
-            self._get_arguments_string('output', self.outputs),
-            self._get_arguments_string('param', self.parameters),
+            self._get_arguments_string('input', inputs),
+            self._get_arguments_string('output', outputs),
+            self._get_arguments_string('param', parameters),
             self.parameters['cmd']
         ]
         print "----"
         print ';'.join(cmd_array)
         print "----"
+
         subprocess.call(';'.join(cmd_array), shell=True, env=env, executable='bash')
+
+        self._postprocess_outputs(outputs)
 
         return JobReturnStatus.SUCCESS
 
@@ -48,14 +56,41 @@ class Command(BlockBase):
     def _escape_bash(s):
         return json.dumps(s).replace("'", "\\'")
 
+    @staticmethod
+    def _prepare_inputs(inputs):
+        res = {}
+        for key, value in inputs.iteritems():
+            filename = os.path.join('/tmp', key + str(uuid.uuid1()))
+            print filename
+            res[key] = filename
+            with open(filename, 'wb') as f:
+                f.write(get_file_stream(value).read())
+        return res
+
+    @staticmethod
+    def _prepare_outputs(outputs):
+        res = {}
+        for key, value in outputs.iteritems():
+            filename = os.path.join('/tmp', key + str(uuid.uuid1()))
+            res[key] = filename
+        return res
+
+    @staticmethod
+    def _prepare_parameters(parameters):
+        return parameters
+
+    def _postprocess_outputs(self, outputs):
+        for key, filename in outputs.iteritems():
+            with open(filename, 'rb') as f:
+                self.outputs[key] = upload_file_stream(f)
+
 
 if __name__ == "__main__":
     command = Command()
 
     command.block_id = 'abc',
-    command.inputs = { "in" : "" }
+    command.inputs = { "in" : 'Piton.txt'}
     command.outputs = { "out" : "" }
-
-    command.parameters = { "text" : "hello I'm Vanya", 'cmd': 'bash -c "echo abc ${param[text]}"'}
+    command.parameters = { "text" : "def", 'cmd': 'cat ${input[in]} | grep ${param[text]} > ${output[out]}'}
 
     command.run()
