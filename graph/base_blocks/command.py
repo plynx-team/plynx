@@ -10,8 +10,12 @@ import uuid
 class Command(BlockBase):
     def __init__(self):
         super(self.__class__, self).__init__()
-        self.parameters = {'cmd': ''}
-        self.logs = {'stderr': '', 'stdout': '', 'worker':''}
+        self.parameters = {'cmd': {'type': 'str', 'value': ''}}
+        self.logs = {
+            'stderr': {'type': 'file', 'value': None},
+            'stdout': {'type': 'file', 'value': None},
+            'worker': {'type': 'file', 'value': None}
+        }
 
     def run(self):
         env = os.environ.copy()
@@ -22,7 +26,7 @@ class Command(BlockBase):
             self._get_arguments_string('input', inputs),
             self._get_arguments_string('output', outputs),
             self._get_arguments_string('param', parameters),
-            self.parameters['cmd']
+            self.parameters['cmd']['value']
         ]
         print "----"
         print ';'.join(cmd_array)
@@ -59,12 +63,12 @@ class Command(BlockBase):
     @staticmethod
     def _prepare_inputs(inputs):
         res = {}
-        for key, value in inputs.iteritems():
-            filename = os.path.join('/tmp', key + str(uuid.uuid1()))
+        for key, input_container in inputs.iteritems():
+            filename = os.path.join('/tmp', str(uuid.uuid1()) + '_' + key)
             print filename
             res[key] = filename
             with open(filename, 'wb') as f:
-                f.write(get_file_stream(value).read())
+                f.write(get_file_stream(input_container['value']['resource_id']).read())
         return res
 
     @staticmethod
@@ -77,20 +81,46 @@ class Command(BlockBase):
 
     @staticmethod
     def _prepare_parameters(parameters):
-        return parameters
+        res = {}
+        for key, parameter in parameters.iteritems():
+            res[key] = parameter['value']
+        return res
 
     def _postprocess_outputs(self, outputs):
         for key, filename in outputs.iteritems():
             with open(filename, 'rb') as f:
-                self.outputs[key] = upload_file_stream(f)
+                self.outputs[key]['value'] = upload_file_stream(f)
 
 
 if __name__ == "__main__":
     command = Command()
 
     command.block_id = 'abc',
-    command.inputs = { "in" : 'Piton.txt'}
-    command.outputs = { "out" : "" }
-    command.parameters = { "text" : "def", 'cmd': 'cat ${input[in]} | grep ${param[text]} > ${output[out]}'}
-
+    command.inputs = {
+        "in" : {
+            'type': 'file',
+            'value': {
+                'block_id': '5a',
+                'output_id': 'a',
+                'resource_id': 'Piton.txt'
+            }
+        }
+    }
+    command.outputs = {
+        "out" : {
+            'type': 'file',
+            'value': None
+        }
+    }
+    command.parameters = {
+        "text" : {
+            'type': 'str',
+            'value': 'def'
+        },
+        "cmd" : {
+            'type': 'str',
+            'value': 'cat ${input[in]} | grep ${param[text]} > ${output[out]}'
+        }
+    }
     command.run()
+    print(command.outputs)

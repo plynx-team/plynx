@@ -44,7 +44,8 @@ class GraphScheduler(object):
             block_id = block._id
             dependency_index = 0
             for name, link in block.inputs.iteritems():
-                parent_block_id = link['block_id']
+                # link: {u'type': u'file', u'value': {u'output_id': u'out', u'block_id': u'5a62f2d15825680000bd4ebd'}}
+                parent_block_id = link['value']['block_id']
                 self.block_id_to_dependents[parent_block_id].add(block_id)
                 if self.block_id_to_block[parent_block_id].block_running_status not in {BlockRunningStatus.SUCCESS, BlockRunningStatus.FAILED}:
                     dependency_index += 1
@@ -82,7 +83,7 @@ class GraphScheduler(object):
 
                 removed_dependencies = 0
                 for name, link in dependent_block.inputs.iteritems():
-                    if link['block_id'] == block_id:
+                    if link['value']['block_id'] == block_id:
                         removed_dependencies += 1
                 dependency_index = prev_dependency_index - removed_dependencies
 
@@ -100,8 +101,8 @@ class GraphScheduler(object):
     def _get_block_with_inputs(self, block_id):
         res = self.block_id_to_block[block_id].copy()
         for input_name in res.inputs.keys():
-            parent_block_id = res.inputs[input_name]['block_id']
-            parent_resource = res.inputs[input_name]['resource']
+            parent_block_id = res.inputs[input_name]['value']['block_id']
+            parent_resource = res.inputs[input_name]['value']['output_id']
             res.inputs[input_name] = self.block_id_to_block[parent_block_id].outputs[parent_resource]
         return res
 

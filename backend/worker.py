@@ -83,7 +83,8 @@ class Worker:
                                 status = JobReturnStatus.FAILED
                                 with SpooledTemporaryFile() as f:
                                     f.write(traceback.format_exc())
-                                    self.job.logs['worker'] = upload_file_stream(f)
+                                    print(self.job.logs)
+                                    self.job.logs['worker']['value'] = upload_file_stream(f)
                             except Exception as e:
                                 self.alive = False
                                 logging.critical(traceback.format_exc())
