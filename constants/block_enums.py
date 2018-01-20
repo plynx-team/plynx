@@ -21,7 +21,6 @@ BLOCK_RUNNING_STATUS_STR_MAP = {
 
 
 def to_block_running_status(block_running_status):
-    print "a", block_running_status
     if isinstance(block_running_status, int):
         return BlockRunningStatus(block_running_status)
     if isinstance(block_running_status, basestring):
