@@ -100,38 +100,38 @@ if __name__ == "__main__":
     block = Block()
     block.title = 'Command 1x1'
     block.base_block_name = "command"
-    block.inputs['in'] = ''
-    block.outputs['out'] = ''
+    block.inputs['in'] = {'type': 'file', 'value': None}
+    block.outputs['out'] = {'type': 'file', 'value': None}
     block.description = 'Any command with 1 arg'
-    block.parameters['text'] = ''
-    block.parameters['cmd'] = 'echo ${param[text]}'
+    block.parameters['text'] = {'type': 'str', 'value': ''}
+    block.parameters['cmd'] = {'type': 'str', 'value': 'echo ${param[text]}'}
 
     block.save()
 
     block = Block()
     block.title = 'Echo'
     block.base_block_name = "echo"
-    block.outputs['out'] = ''
+    block.outputs['out'] = {'type': 'file', 'value': None}
     block.description = 'echo'
-    block.parameters['text'] = ''
+    block.parameters['text'] = {'type': 'str', 'value': ''}
 
     block.save()
 
     block = Block()
     block.title = 'Get Resource'
     block.base_block_name = "get_resource"
-    block.outputs['out'] = ''
+    block.outputs['out'] = {'type': 'file', 'value': None}
     block.description = 'get_resource'
-    block.parameters['resource_id'] = ''
+    block.parameters['resource_id'] = {'type': 'str', 'value': ''}
 
     block.save()
 
     block = Block()
     block.title = 'Grep'
     block.base_block_name = "grep"
-    block.inputs['in'] = ''
-    block.outputs['out'] = ''
+    block.inputs['in'] = {'type': 'file', 'value': None}
+    block.outputs['out'] = {'type': 'file', 'value': None}
     block.description = 'grep'
-    block.parameters['text'] = ''
+    block.parameters['text'] = {'type': 'str', 'value': ''}
 
     block.save()
