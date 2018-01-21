@@ -1,2 +1,2 @@
-class FileTypes():
+class FileTypes(object):
     FILE = 'file'
