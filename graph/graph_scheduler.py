@@ -3,7 +3,7 @@ from enum import Enum
 from collections import defaultdict
 from db import Block, Graph
 from constants import BlockRunningStatus, GraphRunningStatus
-from graph.base_blocks.collection import BlockCollection
+from .base_blocks import BlockCollection
 
 
 class GraphScheduler(object):

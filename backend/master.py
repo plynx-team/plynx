@@ -11,7 +11,7 @@ from constants import BlockRunningStatus, GraphRunningStatus
 from db import GraphCollectionManager
 from graph.graph_scheduler import GraphScheduler
 from utils.config import get_master_config
-from graph.base_blocks.collection import BlockCollection
+from graph.base_blocks import BlockCollection
 
 
 class Master:

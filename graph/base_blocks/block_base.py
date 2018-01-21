@@ -13,13 +13,8 @@ class BlockBase:
 
     # Methods
 
-    def __init__(self):
-        self.block_id = None
-        self.inputs = None
-        self.outputs = None
-        self.parameters = None
-        self.logs = None
-        self.graph_id = None
+    def __init__(self, block):
+        self.block = block
 
     @abstractmethod
     def run(self):
@@ -36,9 +31,3 @@ class BlockBase:
     @abstractstatic
     def get_base_name():
         pass
-
-    def restore_from_dict(self, block_with_inputs):
-        self.block_id = block_with_inputs._id
-        self.inputs = block_with_inputs.inputs
-        self.outputs = block_with_inputs.outputs
-        self.parameters = block_with_inputs.parameters

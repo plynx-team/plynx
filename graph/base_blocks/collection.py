@@ -1,5 +1,5 @@
 import os, sys
-from graph.base_blocks.block_base import BlockBase
+from . import BlockBase
 
 class BlockCollection:
     def __init__(self):

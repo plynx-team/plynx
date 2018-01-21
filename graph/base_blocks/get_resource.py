@@ -1,4 +1,4 @@
-from graph.base_blocks.block_base import BlockBase
+from . import BlockBase
 from constants import JobReturnStatus
 
 class GetResource(BlockBase):

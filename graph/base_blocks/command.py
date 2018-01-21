@@ -1,10 +1,11 @@
-from graph.base_blocks.block_base import BlockBase
-from constants import JobReturnStatus
-from utils.file_handler import get_file_stream, upload_file_stream
 import subprocess
 import os
 import json
 import uuid
+from . import BlockBase
+# from Input, InputValue, Output, Parameter
+from constants import JobReturnStatus
+from utils.file_handler import get_file_stream, upload_file_stream
 
 
 class Command(BlockBase):

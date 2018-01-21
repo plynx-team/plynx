@@ -101,6 +101,24 @@ class Block(DBObject):
     def __repr__(self):
         return 'Block({})'.format(str(self.to_dict()))
 
+    def _get_custom_element(self, arr, name):
+        for parameter in arr:
+            if parameter.name == name:
+                return parameter
+        raise Exception('Parameter "{}" not found in {}'.format(name, self.title))
+
+    def get_input_by_name(self, name):
+        return self._get_custom_element(self.inputs, name)
+
+    def get_parameter_by_name(self, name):
+        return self._get_custom_element(self.parameters, name)
+
+    def get_output_by_name(self, name):
+        return self._get_custom_element(self.outputs, name)
+
+    def get_log_by_name(self, name):
+        return self._get_custom_element(self.logs, name)
+
 
 if __name__ == "__main__":
     block = Block()
@@ -138,6 +156,23 @@ if __name__ == "__main__":
                 )
             )
         ]
+    block.logs = [
+        Output(
+            name='stderr',
+            file_type=FileTypes.FILE,
+            resource_id=None
+            ),
+        Output(
+            name='stdout',
+            file_type=FileTypes.FILE,
+            resource_id=None
+            ),
+        Output(
+            name='worker',
+            file_type=FileTypes.FILE,
+            resource_id=None
+            )
+        ]
     block.save()
 
     block = Block()
@@ -161,6 +196,13 @@ if __name__ == "__main__":
                 )
             )
         ]
+    block.logs = [
+        Output(
+            name='worker',
+            file_type=FileTypes.FILE,
+            resource_id=None
+            )
+        ]
     block.save()
 
     block = Block()
@@ -182,6 +224,13 @@ if __name__ == "__main__":
             widget=ParameterWidget(
                 alias = 'Resource ID'
                 )
+            )
+        ]
+    block.logs = [
+        Output(
+            name='worker',
+            file_type=FileTypes.FILE,
+            resource_id=None
             )
         ]
     block.save()
@@ -211,6 +260,13 @@ if __name__ == "__main__":
             widget=ParameterWidget(
                 alias = 'text'
                 )
+            )
+        ]
+    block.logs = [
+        Output(
+            name='worker',
+            file_type=FileTypes.FILE,
+            resource_id=None
             )
         ]
     block.save()
