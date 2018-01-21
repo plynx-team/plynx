@@ -1,0 +1,2 @@
+class FileTypes():
+    FILE = 'file'
