@@ -2,7 +2,7 @@ import datetime
 from db.db_object import DBObject
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
-from constants import GraphRunningStatus, to_graph_running_status
+from constants import GraphRunningStatus
 from db.block import Block
 
 
@@ -68,7 +68,6 @@ class Graph(DBObject):
                 setattr(self, key, graph[key])
 
         self._id = to_object_id(self._id)
-        self.graph_running_status = to_graph_running_status(self.graph_running_status)
 
         self.blocks = []
         for block in graph['blocks']:

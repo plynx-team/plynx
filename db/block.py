@@ -3,13 +3,15 @@ import datetime
 from db.db_object import DBObject
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
-from constants import BlockRunningStatus, to_block_running_status
+from constants import BlockRunningStatus
 
 
 class Block(DBObject):
     """
     Basic block with db interface
     """
+
+    PROPERTIES = {'inputs', 'outputs', 'parameters'}
 
     def __init__(self, block_id=None):
         super(Block, self).__init__()
@@ -53,9 +55,8 @@ class Block(DBObject):
 
     def load_from_dict(self, block_dict):
         for key, value in block_dict.iteritems():
-            setattr(self, key, value)
-
-        self.block_running_status = to_block_running_status(self.block_running_status)
+            if key not in Block.PROPERTIES:
+                setattr(self, key, value)
 
     def save(self):
         if not self.is_dirty():
