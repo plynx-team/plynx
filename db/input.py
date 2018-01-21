@@ -12,8 +12,8 @@ class InputValue(object):
 
     def to_dict(self):
         res = {
-            'block_id': block_id
-            'output_id': output_id
+            'block_id': block_id,
+            'output_id': output_id,
             'resource_id': resource_id            
         }
 
@@ -38,7 +38,7 @@ class Input(object):
     def load_from_dict(self, input_dict):
         self.__init__(input_dict['name'], input_dict['file_types'])
         self.values = []
-        for value_dict in input_dict['values']
+        for value_dict in input_dict['values']:
             input_value = InputValue(
                 value_dict.get('block_id', None),
                 value_dict.get('output_id', None),

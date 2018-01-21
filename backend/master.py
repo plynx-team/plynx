@@ -8,7 +8,7 @@ from time import sleep
 from backend.messages import WorkerMessage, RunStatus, WorkerMessageType, MasterMessageType, MasterMessage
 from backend.tcp_utils import send_msg, recv_msg
 from constants import BlockRunningStatus, GraphRunningStatus
-from db.graph_collection_manager import GraphCollectionManager
+from db import GraphCollectionManager
 from graph.graph_scheduler import GraphScheduler
 from utils.config import get_master_config
 from graph.base_blocks.collection import BlockCollection

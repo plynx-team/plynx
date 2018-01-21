@@ -1,4 +1,4 @@
-from db.graph import Graph
+from . import Graph
 from utils.common import to_object_id
 from utils.db_connector import *
 

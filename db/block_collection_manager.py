@@ -1,4 +1,4 @@
-from db.block import Block
+from . import Block
 from utils.common import to_object_id
 from utils.db_connector import *
 

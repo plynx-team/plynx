@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import json
-from db.graph_collection_manager import GraphCollectionManager
-from db.graph import Graph
+from db import GraphCollectionManager
+from db import Graph
 from web.common import app, request
 from utils.common import to_object_id, JSONEncoder
 from collections import defaultdict, OrderedDict

@@ -1,9 +1,8 @@
 import datetime
-from db.db_object import DBObject
+from . import Block, DBObject
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
 from constants import GraphRunningStatus
-from db.block import Block
 
 
 class Graph(DBObject):
@@ -108,7 +107,7 @@ if __name__ == "__main__":
     graph.blocks = [get_resource, echo, grep]
     # graph.graph_running_status = GraphRunningStatus.READY
 
-    graph.save()
+    #graph.save()
 
     # graph = Graph('5a28e0640310e9847ce041f0')
     # print graph.blocks[0].title

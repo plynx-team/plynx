@@ -1,8 +1,7 @@
 from abc import ABCMeta, abstractmethod
 from enum import Enum
 from collections import defaultdict
-from db.block import Block
-from db.graph import Graph
+from db import Block, Graph
 from constants import BlockRunningStatus, GraphRunningStatus
 from graph.base_blocks.collection import BlockCollection
 

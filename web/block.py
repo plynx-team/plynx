@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import json
-from db.block_collection_manager import BlockCollectionManager
+from db import BlockCollectionManager
 from web.common import app, request
 from utils.common import to_object_id, JSONEncoder
 

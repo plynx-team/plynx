@@ -1,6 +1,7 @@
 import copy
 import datetime
-from db.db_object import DBObject
+import db
+from . import DBObject
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
 from constants import BlockRunningStatus
@@ -22,10 +23,10 @@ class Block(DBObject):
         self.base_block_name = None
         self.parent_block = None
         self.derived_from = None
-        self.inputs = {}
-        self.outputs = {}
-        self.parameters = {}
-        self.logs = {}
+        self.inputs = []
+        self.outputs = []
+        self.parameters = []
+        self.logs = []
         self.block_running_status = BlockRunningStatus.CREATED
         self.x = 0
         self.y = 0
@@ -57,6 +58,9 @@ class Block(DBObject):
         for key, value in block_dict.iteritems():
             if key not in Block.PROPERTIES:
                 setattr(self, key, value)
+
+        self.inputs = [Input(input_dict) for input_dict in block_dict['inputs']]
+        # !! Err !!
 
     def save(self):
         if not self.is_dirty():
@@ -107,7 +111,9 @@ if __name__ == "__main__":
     block.parameters['text'] = {'type': 'str', 'value': ''}
     block.parameters['cmd'] = {'type': 'str', 'value': 'echo ${param[text]}'}
 
-    block.save()
+    print('hellow')
+    exit(1)
+    #block.save()
 
     block = Block()
     block.title = 'Echo'

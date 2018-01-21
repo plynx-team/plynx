@@ -1,7 +1,20 @@
 from constants import ParameterTypes
 
 
-class Output(object):
+class ParameterWidget(object):
+    def __init__(self, alias):
+        self.alias = alias
+
+    def to_dict(self):
+        return {
+            'alias': self.alias
+        }
+
+    def load_from_dict(self, widget_dict):
+        self.__init__(widget_dict['alias'])
+
+
+class Parameter(object):
     def __init__(self, name, parameter_type, value=None, is_public=True):
         assert isinstance(name, basestring)
         assert isinstance(parameter_type, basestring)
