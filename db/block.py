@@ -124,7 +124,7 @@ if __name__ == "__main__":
         Parameter(
             name='text',
             parameter_type=ParameterTypes.STR,
-            value='test text',
+            value='hello world',
             widget=ParameterWidget(
                 alias = 'text'
                 )
@@ -136,43 +136,81 @@ if __name__ == "__main__":
             widget=ParameterWidget(
                 alias = 'Command line'
                 )
-            ),
+            )
         ]
-
-    print('-' * 20)
-    print(block.to_dict())
-    block2 = Block()
-    block2.load_from_dict(block.to_dict())
-    print('-' * 15)
-    print(block2.to_dict())
-
-    exit(1)
-    #block.save()
+    block.save()
 
     block = Block()
     block.title = 'Echo'
+    block.description = 'echo bash command'
     block.base_block_name = "echo"
-    block.outputs['out'] = {'type': 'file', 'value': None}
-    block.description = 'echo'
-    block.parameters['text'] = {'type': 'str', 'value': ''}
-
+    block.outputs = [
+        Output(
+            name='out',
+            file_type=FileTypes.FILE,
+            resource_id=None
+            )
+        ]
+    block.parameters = [
+        Parameter(
+            name='text',
+            parameter_type=ParameterTypes.STR,
+            value='hello world',
+            widget=ParameterWidget(
+                alias = 'text'
+                )
+            )
+        ]
     block.save()
 
     block = Block()
     block.title = 'Get Resource'
+    block.description = 'get_resource from DB'
     block.base_block_name = "get_resource"
-    block.outputs['out'] = {'type': 'file', 'value': None}
-    block.description = 'get_resource'
-    block.parameters['resource_id'] = {'type': 'str', 'value': ''}
-
+    block.outputs = [
+        Output(
+            name='out',
+            file_type=FileTypes.FILE,
+            resource_id=None
+            )
+        ]
+    block.parameters = [
+        Parameter(
+            name='resource_id',
+            parameter_type=ParameterTypes.STR,
+            value='Piton.txt',
+            widget=ParameterWidget(
+                alias = 'Resource ID'
+                )
+            )
+        ]
     block.save()
 
     block = Block()
     block.title = 'Grep'
+    block.description = 'grep bash command'
     block.base_block_name = "grep"
-    block.inputs['in'] = {'type': 'file', 'value': None}
-    block.outputs['out'] = {'type': 'file', 'value': None}
-    block.description = 'grep'
-    block.parameters['text'] = {'type': 'str', 'value': ''}
-
+    block.inputs = [
+        Input(
+            name='in',
+            file_types=[FileTypes.FILE],
+            values=[])
+        ]
+    block.outputs = [
+        Output(
+            name='out',
+            file_type=FileTypes.FILE,
+            resource_id=None
+            )
+        ]
+    block.parameters = [
+        Parameter(
+            name='text',
+            parameter_type=ParameterTypes.STR,
+            value='hello world',
+            widget=ParameterWidget(
+                alias = 'text'
+                )
+            )
+        ]
     block.save()
