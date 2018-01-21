@@ -17,6 +17,12 @@ class InputValue(object):
             'resource_id': resource_id            
         }
 
+    def __str__(self):
+        return 'InputValue({}, {})'.format(self.block_id, self.output_id)
+
+    def __repr__(self):
+        return 'InputValue({})'.format(str(self.to_dict()))
+
 class Input(object):
     def __init__(self, name, file_types, values=None):
         assert isinstance(name, basestring)
@@ -45,3 +51,9 @@ class Input(object):
                 value_dict.get('resource_id', None)
                 )
             self.values.append(input_value)
+
+    def __str__(self):
+        return 'Input(name="{}")'.format(self.name)
+
+    def __repr__(self):
+        return 'Input({})'.format(str(self.to_dict()))
