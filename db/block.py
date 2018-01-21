@@ -1,10 +1,9 @@
 import copy
 import datetime
-import db
-from . import DBObject
+from . import DBObject, Input, Output, Parameter, ParameterWidget
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
-from constants import BlockRunningStatus
+from constants import BlockRunningStatus, FileTypes, ParameterTypes
 
 
 class Block(DBObject):
@@ -41,15 +40,15 @@ class Block(DBObject):
         return {
                 "_id": self._id,
                 "base_block_name": self.base_block_name,
-                "inputs": self.inputs,
-                "outputs": self.outputs,
-                "parameters": self.parameters,
-                "logs": self.logs,
+                "inputs": [input.to_dict() for input in self.inputs],
+                "outputs": [output.to_dict() for output in self.outputs],
+                "parameters": [parameter.to_dict() for parameter in self.parameters],
+                "logs": [log.to_dict() for log in self.logs],
                 "title": self.title,
                 "description": self.description,
                 "parent_block": self.parent_block,
                 "derived_from": self.derived_from,
-                "block_running_status": self.block_running_status.value,
+                "block_running_status": self.block_running_status,
                 "x": self.x,
                 "y": self.y
             }
@@ -59,8 +58,10 @@ class Block(DBObject):
             if key not in Block.PROPERTIES:
                 setattr(self, key, value)
 
-        self.inputs = [Input(input_dict) for input_dict in block_dict['inputs']]
-        # !! Err !!
+        self.inputs = [Input.create_from_dict(input_dict) for input_dict in block_dict['inputs']]
+        self.outputs = [Output.create_from_dict(output_dict) for output_dict in block_dict['outputs']]
+        self.parameters = [Parameter.create_from_dict(parameters_dict) for parameters_dict in block_dict['parameters']]
+        self.logs = [Output.create_from_dict(logs_dict) for logs_dict in block_dict['logs']]
 
     def save(self):
         if not self.is_dirty():
@@ -104,14 +105,47 @@ class Block(DBObject):
 if __name__ == "__main__":
     block = Block()
     block.title = 'Command 1x1'
-    block.base_block_name = "command"
-    block.inputs['in'] = {'type': 'file', 'value': None}
-    block.outputs['out'] = {'type': 'file', 'value': None}
     block.description = 'Any command with 1 arg'
-    block.parameters['text'] = {'type': 'str', 'value': ''}
-    block.parameters['cmd'] = {'type': 'str', 'value': 'echo ${param[text]}'}
+    block.base_block_name = "command"
+    block.inputs = [
+        Input(
+            name='in',
+            file_types=[FileTypes.FILE],
+            values=[])
+        ]
+    block.outputs = [
+        Output(
+            name='out',
+            file_type=FileTypes.FILE,
+            resource_id=None
+            )
+        ]
+    block.parameters = [
+        Parameter(
+            name='text',
+            parameter_type=ParameterTypes.STR,
+            value='test text',
+            widget=ParameterWidget(
+                alias = 'text'
+                )
+            ),
+        Parameter(
+            name='cmd',
+            parameter_type=ParameterTypes.STR,
+            value='cat ${input[in]} | grep ${param[text]} > ${output[out]}',
+            widget=ParameterWidget(
+                alias = 'Command line'
+                )
+            ),
+        ]
 
-    print('hellow')
+    print('-' * 20)
+    print(block.to_dict())
+    block2 = Block()
+    block2.load_from_dict(block.to_dict())
+    print('-' * 15)
+    print(block2.to_dict())
+
     exit(1)
     #block.save()
 

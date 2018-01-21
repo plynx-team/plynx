@@ -10,8 +10,9 @@ class ParameterWidget(object):
             'alias': self.alias
         }
 
-    def load_from_dict(self, widget_dict):
-        self.__init__(widget_dict['alias'])
+    @staticmethod
+    def create_from_dict(widget_dict):
+        return ParameterWidget(widget_dict['alias'])
 
     def __str__(self):
         return 'ParameterWidget(alias="{}")'.format(self.alias)
@@ -42,14 +43,14 @@ class Parameter(object):
             'widget': self.widget.to_dict() if self.widget else None
         }
 
-    def load_from_dict(self, parameter_dict):
+    @staticmethod
+    def create_from_dict(parameter_dict):
         if parameter_dict['widget']:
-            widget = ParameterWidget()
-            widget.load_from_dict(parameter_dict['widget'])
+            widget = ParameterWidget.create_from_dict(parameter_dict['widget'])
         else:
             widget = None
 
-        self.__init__(
+        return Parameter(
             name = parameter_dict['name'],
             parameter_type = parameter_dict['parameter_type'],
             value = parameter_dict['value'],

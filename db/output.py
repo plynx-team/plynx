@@ -17,8 +17,13 @@ class Output(object):
             'resource_id': self.resource_id
         }
 
-    def load_from_dict(self, output_dict):
-        self.__init__(output_dict['name'], output_dict['file_type'], output_dict['file_type'])
+    @staticmethod
+    def create_from_dict(output_dict):
+        return Output(
+            name=output_dict['name'],
+            file_type=output_dict['file_type'],
+            resource_id=output_dict['resource_id']
+            )
 
     def __str__(self):
         return 'Output(name="{}")'.format(self.name)

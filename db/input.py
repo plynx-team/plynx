@@ -41,16 +41,18 @@ class Input(object):
             'values': [value.to_dict() for value in self.values]
         }
 
-    def load_from_dict(self, input_dict):
-        self.__init__(input_dict['name'], input_dict['file_types'])
-        self.values = []
+    @staticmethod
+    def create_from_dict(input_dict):
+        res = Input(input_dict['name'], input_dict['file_types'])
+        res.values = []
         for value_dict in input_dict['values']:
             input_value = InputValue(
                 value_dict.get('block_id', None),
                 value_dict.get('output_id', None),
                 value_dict.get('resource_id', None)
                 )
-            self.values.append(input_value)
+            res.values.append(input_value)
+        return res
 
     def __str__(self):
         return 'Input(name="{}")'.format(self.name)
