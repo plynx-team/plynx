@@ -30,3 +30,6 @@ class Output(object):
 
     def __repr__(self):
         return 'Output({})'.format(str(self.to_dict()))
+
+    def __getattr__(self, name):
+        raise Exception("Can't get attribute '{}'".format(name))

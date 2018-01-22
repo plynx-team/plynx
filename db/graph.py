@@ -82,6 +82,9 @@ class Graph(DBObject):
     def __repr__(self):
         return 'Graph(_id="{}", title="{}", blocks={})'.format(self._id, self.title, str(self.blocks))
 
+    def __getattr__(self, name):
+        raise Exception("Can't get attribute '{}'".format(name))
+
 
 if __name__ == "__main__":
     graph = Graph()

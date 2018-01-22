@@ -101,6 +101,9 @@ class Block(DBObject):
     def __repr__(self):
         return 'Block({})'.format(str(self.to_dict()))
 
+    def __getattr__(self, name):
+        raise Exception("Can't get attribute '{}'".format(name))
+
     def _get_custom_element(self, arr, name):
         for parameter in arr:
             if parameter.name == name:
