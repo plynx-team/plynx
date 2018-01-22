@@ -27,15 +27,13 @@ class Echo(BlockBase):
 if __name__ == "__main__":
     from db import Block, BlockCollectionManager
     db_blocks = BlockCollectionManager.get_db_blocks()
-    echo_dict = filter(lambda doc: doc['base_block_name'] == 'echo', db_blocks)[-1]
+    obj_dict = filter(lambda doc: doc['base_block_name'] == Echo.get_base_name(), db_blocks)[-1]
 
     block = Block()
-    block.load_from_dict(echo_dict)
+    block.load_from_dict(obj_dict)
     block.get_parameter_by_name('text').value = "Hello world"
 
     echo = Echo(block)
 
-    #echo.parameters['text'] = {'type': 'str', 'value': 'Hello world'}
-
     echo.run()
-    print echo.block.outputs
+    print(echo.block.outputs)

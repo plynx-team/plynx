@@ -9,25 +9,19 @@ from utils.file_handler import get_file_stream, upload_file_stream
 
 
 class Command(BlockBase):
-    def __init__(self):
-        super(self.__class__, self).__init__()
-        self.parameters = {'cmd': {'type': 'str', 'value': ''}}
-        self.logs = {
-            'stderr': {'type': 'file', 'value': None},
-            'stdout': {'type': 'file', 'value': None},
-            'worker': {'type': 'file', 'value': None}
-        }
+    def __init__(self, block=None):
+        super(self.__class__, self).__init__(block)
 
     def run(self):
         env = os.environ.copy()
-        inputs = Command._prepare_inputs(self.inputs)
-        parameters = Command._prepare_parameters(self.parameters)
-        outputs = Command._prepare_outputs(self.outputs)
+        inputs = Command._prepare_inputs(self.block.inputs)
+        parameters = Command._prepare_parameters(self.block.parameters)
+        outputs = Command._prepare_outputs(self.block.outputs)
         cmd_array = [
             self._get_arguments_string('input', inputs),
             self._get_arguments_string('output', outputs),
             self._get_arguments_string('param', parameters),
-            self.parameters['cmd']['value']
+            self.block.get_parameter_by_name('cmd').value
         ]
         print "----"
         print ';'.join(cmd_array)
@@ -64,64 +58,56 @@ class Command(BlockBase):
     @staticmethod
     def _prepare_inputs(inputs):
         res = {}
-        for key, input_container in inputs.iteritems():
-            filename = os.path.join('/tmp', str(uuid.uuid1()) + '_' + key)
-            print filename
-            res[key] = filename
-            with open(filename, 'wb') as f:
-                f.write(get_file_stream(input_container['value']['resource_id']).read())
+        for input in inputs:
+            filenames = []
+            print input.values
+            for i, value in enumerate(input.values):
+                filename = os.path.join('/tmp', '{}_{}_{}'.format(str(uuid.uuid1()), i, input.name))
+                with open(filename, 'wb') as f:
+                    f.write(get_file_stream(value.resource_id).read())
+                filenames.append(filename)
+            res[input.name] = ' '.join(filenames)
         return res
 
     @staticmethod
     def _prepare_outputs(outputs):
         res = {}
-        for key, value in outputs.iteritems():
-            filename = os.path.join('/tmp', key + str(uuid.uuid1()))
-            res[key] = filename
+        for output in outputs:
+            filename = os.path.join('/tmp', '{}_{}'.format(str(uuid.uuid1()), output.name))
+            res[output.name] = filename
         return res
 
     @staticmethod
     def _prepare_parameters(parameters):
         res = {}
-        for key, parameter in parameters.iteritems():
-            res[key] = parameter['value']
+        for parameter in parameters:
+            res[parameter.name] = parameter.value
         return res
 
     def _postprocess_outputs(self, outputs):
         for key, filename in outputs.iteritems():
             with open(filename, 'rb') as f:
-                self.outputs[key]['value'] = upload_file_stream(f)
+                self.block.get_output_by_name(key).resource_id = upload_file_stream(f)
 
 
 if __name__ == "__main__":
-    command = Command()
+    from db import Block, BlockCollectionManager, InputValue
+    db_blocks = BlockCollectionManager.get_db_blocks()
+    obj_dict = filter(lambda doc: doc['base_block_name'] == Command.get_base_name(), db_blocks)[-1]
 
-    command.block_id = 'abc',
-    command.inputs = {
-        "in" : {
-            'type': 'file',
-            'value': {
-                'block_id': '5a',
-                'output_id': 'a',
-                'resource_id': 'Piton.txt'
-            }
-        }
-    }
-    command.outputs = {
-        "out" : {
-            'type': 'file',
-            'value': None
-        }
-    }
-    command.parameters = {
-        "text" : {
-            'type': 'str',
-            'value': 'def'
-        },
-        "cmd" : {
-            'type': 'str',
-            'value': 'cat ${input[in]} | grep ${param[text]} > ${output[out]}'
-        }
-    }
+    block = Block()
+    block.load_from_dict(obj_dict)
+    block.get_input_by_name('in').values.append(
+        InputValue(
+            block_id='fake',
+            output_id='fake',
+            resource_id='Piton.txt'
+            )
+        )
+    block.get_parameter_by_name('text').value = 'def'
+    block.get_parameter_by_name('cmd').value = 'cat ${input[in]} | grep ${param[text]} > ${output[out]}'
+
+    command = Command(block)
+
     command.run()
-    print(command.outputs)
+    print(command.block.outputs)

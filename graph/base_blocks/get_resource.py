@@ -2,18 +2,11 @@ from . import BlockBase
 from constants import JobReturnStatus
 
 class GetResource(BlockBase):
-    def __init__(self):
-        super(self.__class__, self).__init__()
-        self.outputs = {'out': {'type': 'file', 'value': None}}
-        self.parameters = {'resource_id': {'type': 'str', 'value': ''}}
-        self.logs = {
-            'stderr': {'type': 'file', 'value': None},
-            'stdout': {'type': 'file', 'value': None},
-            'worker': {'type': 'file', 'value': None}
-        }
+    def __init__(self, block=None):
+        super(self.__class__, self).__init__(block)
 
     def run(self):
-        self.outputs['out']['value'] = self.parameters['resource_id']['value']
+        self.block.get_output_by_name('out').resource_id = self.block.get_parameter_by_name('resource_id').value
         return JobReturnStatus.SUCCESS
 
     def status(self):
@@ -28,8 +21,15 @@ class GetResource(BlockBase):
 
 
 if __name__ == "__main__":
-    get_resource = GetResource()
-    get_resource.parameters['resource_id'] = {'type': 'str', 'value': 'Piton.txt'}
+    from db import Block, BlockCollectionManager
+    db_blocks = BlockCollectionManager.get_db_blocks()
+    obj_dict = filter(lambda doc: doc['base_block_name'] == GetResource.get_base_name(), db_blocks)[-1]
+
+    block = Block()
+    block.load_from_dict(obj_dict)
+    block.get_parameter_by_name('resource_id').value = "Piton.txt"
+
+    get_resource = GetResource(block)
 
     get_resource.run()
-    print get_resource.outputs
+    print(get_resource.block.outputs)

@@ -12,9 +12,9 @@ class InputValue(object):
 
     def to_dict(self):
         res = {
-            'block_id': block_id,
-            'output_id': output_id,
-            'resource_id': resource_id            
+            'block_id': self.block_id,
+            'output_id': self.output_id,
+            'resource_id': self.resource_id            
         }
 
     def __str__(self):
@@ -22,6 +22,9 @@ class InputValue(object):
 
     def __repr__(self):
         return 'InputValue({})'.format(str(self.to_dict()))
+
+    def __getattr__(self, name):
+        raise Exception("Can't get attribute '{}'".format(name))
 
 class Input(object):
     def __init__(self, name, file_types, values=None):
@@ -59,3 +62,6 @@ class Input(object):
 
     def __repr__(self):
         return 'Input({})'.format(str(self.to_dict()))
+
+    def __getattr__(self, name):
+        raise Exception("Can't get attribute '{}'".format(name))
