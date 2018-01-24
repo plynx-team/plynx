@@ -22,7 +22,7 @@ class GraphScheduler(object):
             self.graph_id = graph._id
             self.graph = graph
         else:
-            self.graph_id = graph_id
+            self.graph_id = graph
             self.graph = Graph(self.graph_id)
 
         self.block_id_to_block = {
@@ -42,33 +42,41 @@ class GraphScheduler(object):
         for block in self.graph.blocks:
             block_id = block._id
             dependency_index = 0
-            for name, link in block.inputs.iteritems():
-                # link: {u'type': u'file', u'value': {u'output_id': u'out', u'block_id': u'5a62f2d15825680000bd4ebd'}}
-                parent_block_id = link['value']['block_id']
-                self.block_id_to_dependents[parent_block_id].add(block_id)
-                if self.block_id_to_block[parent_block_id].block_running_status not in {BlockRunningStatus.SUCCESS, BlockRunningStatus.FAILED}:
-                    dependency_index += 1
+            for block_input in block.inputs:
+                for input_value in block_input.values:
+                    parent_block_id = input_value.block_id
+                    self.block_id_to_dependents[parent_block_id].add(block_id)
+                    if self.block_id_to_block[parent_block_id].block_running_status not in {BlockRunningStatus.SUCCESS, BlockRunningStatus.FAILED}:
+                        dependency_index += 1
+
             if block.block_running_status not in {BlockRunningStatus.SUCCESS, BlockRunningStatus.FAILED}:
                 self.uncompleted_blocks_count +=1
             self.dependency_index_to_block_ids[dependency_index].add(block_id)
             self.block_id_to_dependency_index[block_id] = dependency_index
 
     def finished(self):
-        return self.graph.block_running_status in {GraphRunningStatus.SUCCESS, GraphRunningStatus.FAILED}
+        return self.graph.graph_running_status in {GraphRunningStatus.SUCCESS, GraphRunningStatus.FAILED}
 
     def pop_jobs(self):
         """Get a set of blocks with satisfied dependencies"""
         res = []
         for block_id in self.dependency_index_to_block_ids[0]:
-            block = self._get_block_with_inputs(block_id)
-            job = self.block_collection.make_from_block_with_inputs(block)
-            job.graph_id = self.graph_id
+            block = self._get_block_with_inputs(block_id).copy()       
+            job = self.block_collection.make_job(block)
             res.append(job)
         del self.dependency_index_to_block_ids[0]
         return res
 
-    def set_block_status(self, block, block_running_status):
-        block_id = block.block_id
+    def update_block(self, block):
+        self._set_block_status(block._id, block.block_running_status)
+        self.block_id_to_block[block._id].load_from_dict(block.to_dict())   # copy
+        self.graph.save()
+
+    def _set_block_status(self, block_id, block_running_status):
+        # if block is already up to date
+        if block_running_status == self.block_id_to_block[block_id].block_running_status:
+            return
+
         self.block_id_to_block[block_id].block_running_status = block_running_status
 
         if block_running_status == BlockRunningStatus.FAILED:
@@ -81,41 +89,44 @@ class GraphScheduler(object):
                 prev_dependency_index = self.block_id_to_dependency_index[dependent_block_id]
 
                 removed_dependencies = 0
-                for name, link in dependent_block.inputs.iteritems():
-                    if link['value']['block_id'] == block_id:
-                        removed_dependencies += 1
+                for block_input in dependent_block.inputs:
+                    for input_value in block_input.values:
+                        if input_value.block_id == block_id:
+                            removed_dependencies += 1
                 dependency_index = prev_dependency_index - removed_dependencies
 
                 self.dependency_index_to_block_ids[prev_dependency_index].remove(dependent_block_id)
                 self.dependency_index_to_block_ids[dependency_index].add(dependent_block_id)
             self.uncompleted_blocks_count -= 1
-            self.block_id_to_block[block_id].outputs = block.outputs
-            self.block_id_to_block[block_id].logs = block.logs
 
         if self.uncompleted_blocks_count == 0:
             self.graph.graph_running_status = GraphRunningStatus.SUCCESS
 
-        self.graph.save()
+        # self.graph.save()
 
     def _get_block_with_inputs(self, block_id):
-        res = self.block_id_to_block[block_id].copy()
-        for input_name in res.inputs.keys():
-            parent_block_id = res.inputs[input_name]['value']['block_id']
-            parent_resource = res.inputs[input_name]['value']['output_id']
-            res.inputs[input_name] = self.block_id_to_block[parent_block_id].outputs[parent_resource]
+        """Get the block and init its inputs, i.e. filling its resource_ids"""
+        res = self.block_id_to_block[block_id]
+        for block_input in res.inputs:
+            for value in block_input.values:
+                value.resource_id = self.block_id_to_block[value.block_id].get_output_by_name(
+                    value.output_id
+                    ).resource_id
         return res
 
 
 def main():
-    graph_scheduler = GraphScheduler('5a2e038f0310e9d485621f4a')
+    graph_scheduler = GraphScheduler('5a681b430310e9cc8bbd2d82')
 
     while not graph_scheduler.finished():
-        blocks = graph_scheduler.pop_blocks()
-        for block in blocks:
+        jobs = graph_scheduler.pop_jobs()
+        for job in jobs:
+            block = job.block
             print repr(block)
-            for k in block.outputs:
-                block.outputs[k] = 'A'
-            graph_scheduler.set_block_status(block, BlockRunningStatus.SUCCESS)
+            for output in block.outputs:
+                output.resource_id = 'A'
+            block.block_running_status = BlockRunningStatus.SUCCESS
+            graph_scheduler.update_block(block)
 
 
 if __name__ == "__main__":

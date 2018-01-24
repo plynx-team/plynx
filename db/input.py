@@ -11,7 +11,7 @@ class InputValue(object):
         self.resource_id = resource_id
 
     def to_dict(self):
-        res = {
+        return {
             'block_id': self.block_id,
             'output_id': self.output_id,
             'resource_id': self.resource_id            
@@ -24,7 +24,10 @@ class InputValue(object):
         return 'InputValue({})'.format(str(self.to_dict()))
 
     def __getattr__(self, name):
+        if name.startswith('__') and name.endswith('__'):
+            return super(InputValue, self).__getattr__(name)
         raise Exception("Can't get attribute '{}'".format(name))
+
 
 class Input(object):
     def __init__(self, name, file_types, values=None):
@@ -64,4 +67,6 @@ class Input(object):
         return 'Input({})'.format(str(self.to_dict()))
 
     def __getattr__(self, name):
+        if name.startswith('__') and name.endswith('__'):
+            return super(Input, self).__getattr__(name)
         raise Exception("Can't get attribute '{}'".format(name))

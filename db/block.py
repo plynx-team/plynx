@@ -63,6 +63,11 @@ class Block(DBObject):
         self.parameters = [Parameter.create_from_dict(parameters_dict) for parameters_dict in block_dict['parameters']]
         self.logs = [Output.create_from_dict(logs_dict) for logs_dict in block_dict['logs']]
 
+    def copy(self):
+        block = Block()
+        block.load_from_dict(self.to_dict())
+        return block
+
     def save(self):
         if not self.is_dirty():
             return True
@@ -102,6 +107,8 @@ class Block(DBObject):
         return 'Block({})'.format(str(self.to_dict()))
 
     def __getattr__(self, name):
+        if name.startswith('__') and name.endswith('__'):
+            return super(Block, self).__getattr__(name)
         raise Exception("Can't get attribute '{}'".format(name))
 
     def _get_custom_element(self, arr, name):

@@ -26,6 +26,7 @@ class Worker:
         self.thread = threading.Thread(target=self.run, args=())
         self.thread.daemon = True   # Daemonize thread
         self.job = None
+        self.graph_id = None
         self.alive = True
         self.worker_id = None
         self.run_status = RunStatus.IDLE
@@ -49,7 +50,8 @@ class Worker:
                 worker_id=self.worker_id,
                 run_status=self.run_status,
                 message_type=WorkerMessageType.HEARTBEAT,
-                body=None
+                body=None,
+                graph_id=self.graph_id
                 )
             send_msg(sock, m)
             resp = recv_msg(sock)
@@ -67,15 +69,17 @@ class Worker:
                         worker_id=self.worker_id,
                         run_status=self.run_status,
                         message_type=WorkerMessageType.GET_JOB,
-                        body=None
+                        body=None,
+                        graph_id=None
                         )
                     send_msg(sock, m)
                     master_message = recv_msg(sock)
-                    print("Ask For job: ", master_message)
+                    print("I asked for a job; Received: ", master_message)
                     if master_message and master_message.message_type == MasterMessageType.SET_JOB:
                         print("Got the job")
                         self.run_status = RunStatus.RUNNING
                         self.job = master_message.job
+                        self.graph_id = master_message.graph_id
                         try:
                             status = self.job.run()
                         except Exception as e:
@@ -83,8 +87,7 @@ class Worker:
                                 status = JobReturnStatus.FAILED
                                 with SpooledTemporaryFile() as f:
                                     f.write(traceback.format_exc())
-                                    print(self.job.logs)
-                                    self.job.logs['worker']['value'] = upload_file_stream(f)
+                                    self.job.block.get_log_by_name('worker').resource_id = upload_file_stream(f)
                             except Exception as e:
                                 self.alive = False
                                 logging.critical(traceback.format_exc())
@@ -110,7 +113,8 @@ class Worker:
                         worker_id=self.worker_id,
                         run_status=self.run_status,
                         message_type=status,
-                        body=self.job
+                        body=self.job,
+                        graph_id=self.graph_id
                         )
 
                     send_msg(sock, m)

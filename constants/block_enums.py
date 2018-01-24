@@ -1,10 +1,10 @@
 class JobReturnStatus(object):
-    SUCCESS = 'success'
-    FAILED = 'failed'
+    SUCCESS = 'SUCCESS'
+    FAILED = 'FAILED'
 
 class BlockRunningStatus(object):
-    CREATED = 'created'
-    IN_QUEUE = 'in_queue'
-    RUNNING = 'running'
-    SUCCESS = 'success'
-    FAILED = 'failed'
+    CREATED = 'CREATED'
+    IN_QUEUE = 'IN_QUEUE'
+    RUNNING = 'RUNNING'
+    SUCCESS = 'SUCCESS'
+    FAILED = 'FAILED'

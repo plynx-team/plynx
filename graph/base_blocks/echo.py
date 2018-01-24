@@ -36,4 +36,5 @@ if __name__ == "__main__":
     echo = Echo(block)
 
     echo.run()
+
     print(echo.block.outputs)

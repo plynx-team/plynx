@@ -1,6 +1,6 @@
 class GraphRunningStatus(object):
-    CREATED = 'created'
-    READY = 'ready'
-    RUNNING = 'running'
-    SUCCESS = 'success'
-    FAILED = 'failed'
+    CREATED = 'CREATED'
+    READY = 'READY'
+    RUNNING = 'RUNNING'
+    SUCCESS = 'SUCCESS'
+    FAILED = 'FAILED'

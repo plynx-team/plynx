@@ -21,6 +21,9 @@ class BlockCollection:
         job.restore_from_dict(block_with_inputs)
         return job
 
+    def make_job(self, block):
+        return self.name_to_class[block.base_block_name](block)
+
 
 if __name__ == "__main__":
     collection = BlockCollection()

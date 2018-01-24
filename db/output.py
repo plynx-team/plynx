@@ -32,4 +32,6 @@ class Output(object):
         return 'Output({})'.format(str(self.to_dict()))
 
     def __getattr__(self, name):
+        if name.startswith('__') and name.endswith('__'):
+            return super(Output, self).__getattr__(name)
         raise Exception("Can't get attribute '{}'".format(name))

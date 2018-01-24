@@ -30,7 +30,7 @@ class Graph(DBObject):
             "_id": self._id,
             "title": self.title,
             "description": self.description,
-            "graph_running_status": self.graph_running_status.value,
+            "graph_running_status": self.graph_running_status,
             "blocks": [block.to_dict() for block in self.blocks]
         }
 

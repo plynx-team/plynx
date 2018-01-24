@@ -8,7 +8,7 @@ class GraphCollectionManager(object):
 
     @staticmethod
     def get_graphs(graph_running_status):
-        db_graphs = db.graphs.find({'graph_running_status': graph_running_status.value})
+        db_graphs = db.graphs.find({'graph_running_status': graph_running_status})
         graphs = []
         for db_graph in db_graphs:
             graphs.append(Graph())

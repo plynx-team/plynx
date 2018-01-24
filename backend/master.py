@@ -3,7 +3,7 @@ import sys
 import SocketServer
 import pickle
 import threading
-from collections import deque
+from collections import deque, namedtuple
 from time import sleep
 from backend.messages import WorkerMessage, RunStatus, WorkerMessageType, MasterMessageType, MasterMessage
 from backend.tcp_utils import send_msg, recv_msg
@@ -17,6 +17,9 @@ from graph.base_blocks import BlockCollection
 class Master:
     def __init__(self):
         pass
+
+
+MasterJobDescription = namedtuple('MasterJobDescription', ['graph_id', 'job'])
 
 
 class ClientTCPHandler(SocketServer.BaseRequestHandler):
@@ -33,47 +36,56 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
         worker_message = recv_msg(self.request)
         worker_id = worker_message.worker_id
         m = None
-        with self.server.job_queue_lock:
+        with self.server.job_description_queue_lock:
             if worker_message.message_type == WorkerMessageType.HEARTBEAT:
                 if self.idle_worker(worker_message):
                     self.server.allocate_job(worker_message)
                 m = self.make_aknowledge_message(worker_id)
-            elif worker_message.message_type == WorkerMessageType.GET_JOB and worker_id in self.server.worker_to_job:
+            elif worker_message.message_type == WorkerMessageType.GET_JOB and worker_id in self.server.worker_to_job_description:
                 print("SET_JOB")
                 m = MasterMessage(
                     worker_id=worker_id,
                     message_type=MasterMessageType.SET_JOB,
-                    job=self.server.worker_to_job[worker_id]
+                    job=self.server.worker_to_job_description[worker_id].job,
+                    graph_id=self.server.worker_to_job_description[worker_id].graph_id
                     )
             elif worker_message.message_type == WorkerMessageType.JOB_FINISHED_SUCCESS:
-                job = self.server.worker_to_job[worker_id]
+                job = self.server.worker_to_job_description[worker_id].job
+                graph_id = self.server.worker_to_job_description[worker_id].graph_id
+                assert job.block._id == worker_message.body.block._id
                 with self.server.new_schedulers_lock:
-                    scheduler = self.server.graph_id_to_scheduler[job.graph_id]
-                    job._id = job.block_id
-                scheduler.set_block_status(worker_message.body, BlockRunningStatus.SUCCESS)
+                    scheduler = self.server.graph_id_to_scheduler[graph_id]
+
+                worker_message.body.block.block_running_status = BlockRunningStatus.SUCCESS
+                scheduler.update_block(worker_message.body.block)
+                #scheduler._set_block_status(job._id, BlockRunningStatus.SUCCESS)
 
                 print("Job marked as successful")
-                if worker_id in self.server.worker_to_job:
-                    del self.server.worker_to_job[worker_id]
+                if worker_id in self.server.worker_to_job_description:
+                    del self.server.worker_to_job_description[worker_id]
                 m = self.make_aknowledge_message(worker_id)
 
             elif worker_message.message_type == WorkerMessageType.JOB_FINISHED_FAILED:
-                job = self.server.worker_to_job[worker_id]
+                job = self.server.worker_to_job_description[worker_id].job
+                graph_id = self.server.worker_to_job_description[worker_id].graph_id
+                assert job.block._id == worker_message.body.block._id
                 with self.server.new_schedulers_lock:
-                    scheduler = self.server.graph_id_to_scheduler[job.graph_id]
-                    job._id = job.block_id
-                scheduler.set_block_status(worker_message.body, BlockRunningStatus.FAILED)
+                    scheduler = self.server.graph_id_to_scheduler[graph_id]
+
+                worker_message.body.block.block_running_status = BlockRunningStatus.FAILED
+                scheduler.update_block(worker_message.body.block)
+                #scheduler.set_block_status(job._id, BlockRunningStatus.FAILED)
 
                 print("Job marked as failed")
-                if worker_id in self.server.worker_to_job:
-                    del self.server.worker_to_job[worker_id]
+                if worker_id in self.server.worker_to_job_description:
+                    del self.server.worker_to_job_description[worker_id]
                 m = self.make_aknowledge_message(worker_id)
 
         if m:
             send_msg(self.request, m)
 
-        with self.server.job_queue_lock:
-            print(self.server.job_queue)
+        with self.server.job_description_queue_lock:
+            print(self.server.job_description_queue)
         
         # Respond with AKN
         #self.request.sendall(worker_message)
@@ -87,7 +99,8 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
         return MasterMessage(
             worker_id=worker_id,
             message_type=MasterMessageType.AKNOWLEDGE,
-            job=None
+            job=None,
+            graph_id=None
             )
 
 
@@ -101,9 +114,9 @@ class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         SocketServer.TCPServer.__init__(self, server_address, RequestHandlerClass)
         self.alive = True
         self.graph_collection_manager = GraphCollectionManager()
-        self.job_queue = deque()
-        self.job_queue_lock = threading.Lock()
-        self.worker_to_job = {}
+        self.job_description_queue = deque()
+        self.job_description_queue_lock = threading.Lock()
+        self.worker_to_job_description = {}
         self.block_collection = BlockCollection()
 
         running_graphs = self.graph_collection_manager.get_graphs(GraphRunningStatus.RUNNING)
@@ -126,12 +139,12 @@ class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self.thread_scheduler.start()
 
     def allocate_job(self, worker_message):
-        if len(self.job_queue) == 0:    # No jobs to allocate
+        if len(self.job_description_queue) == 0:    # No jobs to allocate
             return False
-        if worker_message.worker_id in self.worker_to_job:   # worker already has a job
+        if worker_message.worker_id in self.worker_to_job_description:   # worker already has a job
             return False
-        job = self.job_queue.popleft()
-        self.worker_to_job[worker_message.worker_id] = job
+        job_description = self.job_description_queue.popleft()
+        self.worker_to_job_description[worker_message.worker_id] = job_description
 
         return True
 
@@ -159,12 +172,11 @@ class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
             new_to_queue = []
             for graph_id, scheduler in self.graph_id_to_scheduler.iteritems():
-                new_to_queue.extend(scheduler.pop_jobs())
-                for job in new_to_queue:
-                    print job.graph_id
+                new_to_queue.extend(
+                    [MasterJobDescription(graph_id=graph_id, job=job) for job in scheduler.pop_jobs()])
 
-            with self.job_queue_lock:
-                self.job_queue.extend(new_to_queue)
+            with self.job_description_queue_lock:
+                self.job_description_queue.extend(new_to_queue)
 
             sleep(1)
 
