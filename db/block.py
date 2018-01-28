@@ -3,7 +3,7 @@ import datetime
 from . import DBObject, Input, Output, Parameter, ParameterWidget
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
-from constants import BlockRunningStatus, FileTypes, ParameterTypes
+from constants import BlockStatus, BlockRunningStatus, FileTypes, ParameterTypes
 
 
 class Block(DBObject):
@@ -27,6 +27,7 @@ class Block(DBObject):
         self.parameters = []
         self.logs = []
         self.block_running_status = BlockRunningStatus.CREATED
+        self.block_status = BlockStatus.READY
         self.x = 0
         self.y = 0
 
@@ -49,6 +50,7 @@ class Block(DBObject):
                 "parent_block": self.parent_block,
                 "derived_from": self.derived_from,
                 "block_running_status": self.block_running_status,
+                "block_status": self.block_status,
                 "x": self.x,
                 "y": self.y
             }
@@ -135,6 +137,7 @@ if __name__ == "__main__":
     block.title = 'Command 1x1'
     block.description = 'Any command with 1 arg'
     block.base_block_name = "command"
+    block.block_status = BlockStatus.READY
     block.inputs = [
         Input(
             name='in',
@@ -189,6 +192,7 @@ if __name__ == "__main__":
     block.title = 'Echo'
     block.description = 'echo bash command'
     block.base_block_name = "echo"
+    block.block_status = BlockStatus.READY
     block.outputs = [
         Output(
             name='out',
@@ -219,6 +223,7 @@ if __name__ == "__main__":
     block.title = 'Get Resource'
     block.description = 'get_resource from DB'
     block.base_block_name = "get_resource"
+    block.block_status = BlockStatus.READY
     block.outputs = [
         Output(
             name='out',
@@ -249,6 +254,7 @@ if __name__ == "__main__":
     block.title = 'Grep'
     block.description = 'grep bash command'
     block.base_block_name = "grep"
+    block.block_status = BlockStatus.READY
     block.inputs = [
         Input(
             name='in',
