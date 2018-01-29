@@ -60,6 +60,8 @@ class Block(DBObject):
             if key not in Block.PROPERTIES:
                 setattr(self, key, value)
 
+        self._id = to_object_id(self._id)
+
         self.inputs = [Input.create_from_dict(input_dict) for input_dict in block_dict['inputs']]
         self.outputs = [Output.create_from_dict(output_dict) for output_dict in block_dict['outputs']]
         self.parameters = [Parameter.create_from_dict(parameters_dict) for parameters_dict in block_dict['parameters']]
@@ -70,8 +72,8 @@ class Block(DBObject):
         block.load_from_dict(self.to_dict())
         return block
 
-    def save(self):
-        if not self.is_dirty():
+    def save(self, force=False):
+        if not self.is_dirty() and not force:
             return True
 
         now = datetime.datetime.utcnow()

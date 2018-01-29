@@ -4,6 +4,7 @@ from collections import defaultdict
 from db import Block, Graph
 from constants import BlockRunningStatus, GraphRunningStatus
 from .base_blocks import BlockCollection
+from utils.common import to_object_id
 
 
 class GraphScheduler(object):
@@ -44,7 +45,7 @@ class GraphScheduler(object):
             dependency_index = 0
             for block_input in block.inputs:
                 for input_value in block_input.values:
-                    parent_block_id = input_value.block_id
+                    parent_block_id = to_object_id(input_value.block_id)
                     self.block_id_to_dependents[parent_block_id].add(block_id)
                     if self.block_id_to_block[parent_block_id].block_running_status not in {BlockRunningStatus.SUCCESS, BlockRunningStatus.FAILED}:
                         dependency_index += 1
@@ -70,7 +71,7 @@ class GraphScheduler(object):
     def update_block(self, block):
         self._set_block_status(block._id, block.block_running_status)
         self.block_id_to_block[block._id].load_from_dict(block.to_dict())   # copy
-        self.graph.save()
+        self.graph.save(force=True)
 
     def _set_block_status(self, block_id, block_running_status):
         # if block is already up to date
@@ -91,7 +92,7 @@ class GraphScheduler(object):
                 removed_dependencies = 0
                 for block_input in dependent_block.inputs:
                     for input_value in block_input.values:
-                        if input_value.block_id == block_id:
+                        if to_object_id(input_value.block_id) == to_object_id(block_id):
                             removed_dependencies += 1
                 dependency_index = prev_dependency_index - removed_dependencies
 
@@ -109,14 +110,14 @@ class GraphScheduler(object):
         res = self.block_id_to_block[block_id]
         for block_input in res.inputs:
             for value in block_input.values:
-                value.resource_id = self.block_id_to_block[value.block_id].get_output_by_name(
+                value.resource_id = self.block_id_to_block[to_object_id(value.block_id)].get_output_by_name(
                     value.output_id
                     ).resource_id
         return res
 
 
 def main():
-    graph_scheduler = GraphScheduler('5a681b430310e9cc8bbd2d82')
+    graph_scheduler = GraphScheduler('5a6d78570310e925ad2437a5')
 
     while not graph_scheduler.finished():
         jobs = graph_scheduler.pop_jobs()
