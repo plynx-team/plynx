@@ -20,8 +20,10 @@ def get_blocks(block_id=None):
             return 'Block was not found', 404
 
     else:
+        query = json.loads(request.args.get('query', "{}"))
+        status = query['status'] if query and 'status' in query else []
         return JSONEncoder().encode({
-            'data': block_collection_manager.get_db_blocks(statuses=request.args.getlist('status')),
+            'data': block_collection_manager.get_db_blocks(status=status),
             'status':'success'})
 
 @app.route('/plynx/api/v0/blocks/<block_id>', methods=['PUT'])

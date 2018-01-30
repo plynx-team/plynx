@@ -7,11 +7,13 @@ class BlockCollectionManager(object):
     """
 
     @staticmethod
-    def get_db_blocks(statuses=None):
-        if not statuses:
+    def get_db_blocks(status=None):
+        if status and isinstance(status, basestring):
+            status = [status]
+        if not status:
             db_blocks = db.blocks.find({}).sort('insertion_date', -1)
         else:
-            db_blocks = db.blocks.find({'block_status': {'$in': statuses}}).sort('insertion_date', -1)
+            db_blocks = db.blocks.find({'block_status': {'$in': status}}).sort('insertion_date', -1)
         return list(db_blocks)
 
     @staticmethod
