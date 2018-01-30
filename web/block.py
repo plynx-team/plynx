@@ -21,7 +21,7 @@ def get_blocks(block_id=None):
 
     else:
         return JSONEncoder().encode({
-            'data': block_collection_manager.get_db_blocks(),
+            'data': block_collection_manager.get_db_blocks(statuses=request.args.getlist('status')),
             'status':'success'})
 
 @app.route('/plynx/api/v0/blocks/<block_id>', methods=['PUT'])

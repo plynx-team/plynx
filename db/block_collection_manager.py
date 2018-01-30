@@ -7,8 +7,11 @@ class BlockCollectionManager(object):
     """
 
     @staticmethod
-    def get_db_blocks():
-        db_blocks = db.blocks.find({}).sort('insertion_date', -1)
+    def get_db_blocks(statuses=None):
+        if not statuses:
+            db_blocks = db.blocks.find({}).sort('insertion_date', -1)
+        else:
+            db_blocks = db.blocks.find({'block_status': {'$in': statuses}}).sort('insertion_date', -1)
         return list(db_blocks)
 
     @staticmethod
