@@ -3,6 +3,7 @@ from web.block import *
 from web.common import *
 from web.graph import *
 from web.resource import *
+from gevent.wsgi import WSGIServer
 
 @app.route("/")
 @app.route("/index")
@@ -12,4 +13,5 @@ def main():
 
 if __name__ == "__main__":
     urls_for()
-    app.run(threaded=True)
+    http_server = WSGIServer(('', 5000), app)
+    http_server.serve_forever()
