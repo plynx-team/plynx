@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import absolute_import
 import json
 from db import Block, BlockCollectionManager
 from web.common import app, request
@@ -10,7 +11,11 @@ block_collection_manager = BlockCollectionManager()
 @app.route('/plynx/api/v0/blocks', methods=['GET'])
 @app.route('/plynx/api/v0/blocks/<block_id>', methods=['GET'])
 def get_blocks(block_id=None):
-    if block_id:
+    if block_id == 'new':
+        return JSONEncoder().encode({
+            'data': Block.get_default().to_dict(),
+            'status':'success'})
+    elif block_id:
         block = block_collection_manager.get_db_block(block_id)
         if block:
             return JSONEncoder().encode({

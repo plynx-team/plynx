@@ -133,6 +133,40 @@ class Block(DBObject):
     def get_log_by_name(self, name):
         return self._get_custom_element(self.logs, name)
 
+    @staticmethod
+    def get_default():
+        block = Block()
+        block.title = ''
+        block.description = ''
+        block.base_block_name = "command"
+        block.block_status = BlockStatus.CREATED
+        block.parameters = [
+            Parameter(
+                name='cmd',
+                parameter_type=ParameterTypes.STR,
+                value='bash -c " "'
+                )
+            ]
+        block.logs = [
+            Output(
+                name='stderr',
+                file_type=FileTypes.FILE,
+                resource_id=None
+                ),
+            Output(
+                name='stdout',
+                file_type=FileTypes.FILE,
+                resource_id=None
+                ),
+            Output(
+                name='worker',
+                file_type=FileTypes.FILE,
+                resource_id=None
+                )
+            ]
+        return block
+
+
 
 if __name__ == "__main__":
     block = Block()
