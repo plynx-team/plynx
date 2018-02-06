@@ -5,12 +5,14 @@ import sys
 import uuid
 import threading
 import traceback
+import logging
 from time import sleep
 from tempfile import SpooledTemporaryFile
 from backend.messages import WorkerMessage, WorkerMessageType, RunStatus, MasterMessageType
 from backend.tcp_utils import send_msg, recv_msg
 from constants import JobReturnStatus
 from utils.file_handler import upload_file_stream
+from utils.logs import set_logging_level
 
 
 HOST, PORT = "localhost", 10000
@@ -74,9 +76,9 @@ class Worker:
                         )
                     send_msg(sock, m)
                     master_message = recv_msg(sock)
-                    print("I asked for a job; Received: ", master_message)
+                    logging.info("I asked for a job; Received: {}".format(master_message))
                     if master_message and master_message.message_type == MasterMessageType.SET_JOB:
-                        print("Got the job")
+                        logging.info("Got the job")
                         self.run_status = RunStatus.RUNNING
                         self.job = master_message.job
                         self.graph_id = master_message.graph_id
@@ -97,7 +99,7 @@ class Worker:
                             self.run_status = RunStatus.SUCCESS
                         elif status == JobReturnStatus.FAILED:
                             self.run_status = RunStatus.FAILED
-                        print("WorkerMessageType.FINISHED", self.run_status)
+                        logging.info("WorkerMessageType.FINISHED with status {}".format(self.run_status))
 
                 elif self.run_status == RunStatus.RUNNING:
                     raise RunningPipelineException("Not supposed to have this state")
@@ -123,7 +125,7 @@ class Worker:
 
                     if master_message and master_message.message_type == MasterMessageType.AKNOWLEDGE:
                         self.run_status = RunStatus.IDLE
-                        print("WorkerMessageType.IDLE")
+                        logging.info("WorkerMessageType.IDLE")
 
             finally:
                 sock.close()
@@ -131,7 +133,8 @@ class Worker:
             sleep(1)
 
 
-def run_worker(worker_id=None):
+def run_worker(worker_id=None, verbose=0):
+    set_logging_level(verbose)
     if worker_id is None:
         worker_id = str(uuid.uuid1())
     worker = Worker()
@@ -139,9 +142,11 @@ def run_worker(worker_id=None):
 
     worker.forever()
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Run worker.')
+    parser = argparse.ArgumentParser(description='Run worker')
     parser.add_argument('-i', '--worker-id', help='Any string identificator')
+    parser.add_argument('-v', '--verbose', action='count', default=0)
     args = parser.parse_args()
 
     run_worker(**vars(args))
