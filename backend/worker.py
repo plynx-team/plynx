@@ -50,7 +50,7 @@ class Worker:
                 worker_id=self.worker_id,
                 run_status=self.run_status,
                 message_type=WorkerMessageType.HEARTBEAT,
-                body=None,
+                body=self.job if self.run_status != RunStatus.IDLE else None,
                 graph_id=self.graph_id
                 )
             send_msg(sock, m)

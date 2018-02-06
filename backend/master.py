@@ -41,6 +41,15 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
                 if self.idle_worker(worker_message):
                     self.server.allocate_job(worker_message)
                 m = self.make_aknowledge_message(worker_id)
+
+                if worker_message.body:
+                    graph_id = self.server.worker_to_job_description[worker_id].graph_id
+                    with self.server.new_schedulers_lock:
+                        scheduler = self.server.graph_id_to_scheduler[graph_id]
+                        if worker_message.run_status == RunStatus.RUNNING:
+                            worker_message.body.block.block_running_status = BlockRunningStatus.RUNNING
+                            scheduler.update_block(worker_message.body.block)
+
             elif worker_message.message_type == WorkerMessageType.GET_JOB and worker_id in self.server.worker_to_job_description:
                 print("SET_JOB")
                 m = MasterMessage(
