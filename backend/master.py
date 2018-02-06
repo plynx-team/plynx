@@ -1,8 +1,10 @@
+import argparse
 import socket
 import sys
 import SocketServer
 import pickle
 import threading
+import logging
 from collections import deque, namedtuple
 from time import sleep
 from backend.messages import WorkerMessage, RunStatus, WorkerMessageType, MasterMessageType, MasterMessage
@@ -11,6 +13,7 @@ from constants import BlockRunningStatus, GraphRunningStatus
 from db import GraphCollectionManager
 from graph.graph_scheduler import GraphScheduler
 from utils.config import get_master_config
+from utils.logs import set_logging_level
 from graph.base_blocks import BlockCollection
 
 
@@ -51,13 +54,13 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
                             scheduler.update_block(worker_message.body.block)
 
             elif worker_message.message_type == WorkerMessageType.GET_JOB and worker_id in self.server.worker_to_job_description:
-                print("SET_JOB")
                 m = MasterMessage(
                     worker_id=worker_id,
                     message_type=MasterMessageType.SET_JOB,
                     job=self.server.worker_to_job_description[worker_id].job,
                     graph_id=self.server.worker_to_job_description[worker_id].graph_id
                     )
+                logging.info("SET_JOB worker_id: {}".format(worker_id))
             elif worker_message.message_type == WorkerMessageType.JOB_FINISHED_SUCCESS:
                 job = self.server.worker_to_job_description[worker_id].job
                 graph_id = self.server.worker_to_job_description[worker_id].graph_id
@@ -69,7 +72,7 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
                 scheduler.update_block(worker_message.body.block)
                 #scheduler._set_block_status(job._id, BlockRunningStatus.SUCCESS)
 
-                print("Job marked as successful")
+                logging.info("Job `{}` marked as SUCCESSFUL".format(job.block._id))
                 if worker_id in self.server.worker_to_job_description:
                     del self.server.worker_to_job_description[worker_id]
                 m = self.make_aknowledge_message(worker_id)
@@ -85,7 +88,7 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
                 scheduler.update_block(worker_message.body.block)
                 #scheduler.set_block_status(job._id, BlockRunningStatus.FAILED)
 
-                print("Job marked as failed")
+                logging.info("Job `{}` marked as FAILED".format(job.block._id))
                 if worker_id in self.server.worker_to_job_description:
                     del self.server.worker_to_job_description[worker_id]
                 m = self.make_aknowledge_message(worker_id)
@@ -94,7 +97,7 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
             send_msg(self.request, m)
 
         with self.server.job_description_queue_lock:
-            print(self.server.job_description_queue)
+            logging.info('Queue size: {}'.format(len(self.server.job_description_queue)))
         
         # Respond with AKN
         #self.request.sendall(worker_message)
@@ -130,7 +133,7 @@ class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
         running_graphs = self.graph_collection_manager.get_graphs(GraphRunningStatus.RUNNING)
         if len(running_graphs) > 0:
-            print("Found {} running graphs. Setting them to 'READY'".format(len(running_graphs)))
+            logging.info("Found {} running graphs. Setting them to 'READY'".format(len(running_graphs)))
             for graph in running_graphs:
                 graph.graph_running_status = GraphRunningStatus.READY
                 graph.save()
@@ -190,9 +193,17 @@ class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             sleep(1)
 
 
+def parse_arguments():
+    parser = argparse.ArgumentParser(description='Master launcher')
+    parser.add_argument('-v', '--verbose', action='count', default=0)
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
+    args = parse_arguments()
+    set_logging_level(args.verbose)
+
     master_config = get_master_config()
-    #run_server(master_config.host, master_config.port)
     server = MasterTCPServer((master_config.host, master_config.port), ClientTCPHandler)
 
     # Activate the server; this will keep running until you
