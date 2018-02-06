@@ -42,7 +42,7 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
                     self.server.allocate_job(worker_message)
                 m = self.make_aknowledge_message(worker_id)
 
-                if worker_message.body:
+                if worker_message.body and worker_id in self.server.worker_to_job_description:
                     graph_id = self.server.worker_to_job_description[worker_id].graph_id
                     with self.server.new_schedulers_lock:
                         scheduler = self.server.graph_id_to_scheduler[graph_id]

@@ -98,6 +98,7 @@ class GraphScheduler(object):
 
                 self.dependency_index_to_block_ids[prev_dependency_index].remove(dependent_block_id)
                 self.dependency_index_to_block_ids[dependency_index].add(dependent_block_id)
+                self.block_id_to_dependency_index[dependent_block_id] = dependency_index
             self.uncompleted_blocks_count -= 1
 
         if self.uncompleted_blocks_count == 0:
