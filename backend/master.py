@@ -183,9 +183,16 @@ class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                 self.new_graph_id_to_scheduler = []
 
             new_to_queue = []
+            finished_graph_ids = []
             for graph_id, scheduler in self.graph_id_to_scheduler.iteritems():
+                if scheduler.finished():
+                    finished_graph_ids.append(graph_id)
+                    continue
                 new_to_queue.extend(
                     [MasterJobDescription(graph_id=graph_id, job=job) for job in scheduler.pop_jobs()])
+
+            for graph_id in finished_graph_ids:
+                del self.graph_id_to_scheduler[graph_id]
 
             with self.job_description_queue_lock:
                 self.job_description_queue.extend(new_to_queue)
