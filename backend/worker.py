@@ -5,7 +5,6 @@ import sys
 import uuid
 import threading
 import traceback
-import logging
 from time import sleep
 from tempfile import SpooledTemporaryFile
 from backend.messages import WorkerMessage, WorkerMessageType, RunStatus, MasterMessageType

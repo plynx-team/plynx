@@ -2,6 +2,8 @@ import subprocess
 import os
 import json
 import uuid
+import logging
+from tempfile import SpooledTemporaryFile
 from . import BlockBase
 # from Input, InputValue, Output, Parameter
 from constants import JobReturnStatus
@@ -13,25 +15,26 @@ class Command(BlockBase):
         super(self.__class__, self).__init__(block)
 
     def run(self):
-        env = os.environ.copy()
-        inputs = Command._prepare_inputs(self.block.inputs)
-        parameters = Command._prepare_parameters(self.block.parameters)
-        outputs = Command._prepare_outputs(self.block.outputs)
-        cmd_array = [
-            self._get_arguments_string('input', inputs),
-            self._get_arguments_string('output', outputs),
-            self._get_arguments_string('param', parameters),
-            self.block.get_parameter_by_name('cmd').value
-        ]
-        print "----"
-        print ';'.join(cmd_array)
-        print "----"
+        with SpooledTemporaryFile() as worker_log_file:
+            env = os.environ.copy()
+            inputs = Command._prepare_inputs(self.block.inputs)
+            parameters = Command._prepare_parameters(self.block.parameters)
+            outputs = Command._prepare_outputs(self.block.outputs)
+            cmd_array = [
+                self._get_arguments_string('input', inputs),
+                self._get_arguments_string('output', outputs),
+                self._get_arguments_string('param', parameters),
+                self.block.get_parameter_by_name('cmd').value
+            ]
 
-        subprocess.call(';'.join(cmd_array), shell=True, env=env, executable='bash')
+            worker_log_file.write(';'.join(cmd_array))
+            self.block.get_log_by_name('worker').resource_id = upload_file_stream(worker_log_file)
 
-        self._postprocess_outputs(outputs)
+            subprocess.call(';'.join(cmd_array), shell=True, env=env, executable='bash')
 
-        return JobReturnStatus.SUCCESS
+            self._postprocess_outputs(outputs)
+
+            return JobReturnStatus.SUCCESS
 
     def status(self):
         pass
