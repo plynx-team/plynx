@@ -143,7 +143,7 @@ class Block(DBObject):
         block.parameters = [
             Parameter(
                 name='cmd',
-                parameter_type=ParameterTypes.STR,
+                parameter_type=ParameterTypes.TEXT,
                 value='bash -c " "'
                 )
             ]
@@ -190,7 +190,7 @@ if __name__ == "__main__":
     block.parameters = [
         Parameter(
             name='text',
-            parameter_type=ParameterTypes.STR,
+            parameter_type=ParameterTypes.TEXT,
             value='hello world',
             widget=ParameterWidget(
                 alias = 'text'
