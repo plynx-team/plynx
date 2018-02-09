@@ -27,7 +27,7 @@ class Command(BlockBase):
                 self.block.get_parameter_by_name('cmd').value
             ]
 
-            worker_log_file.write(';'.join(cmd_array))
+            worker_log_file.write(';\n'.join(cmd_array))
             self.block.get_log_by_name('worker').resource_id = upload_file_stream(worker_log_file)
 
             subprocess.call(';'.join(cmd_array), shell=True, env=env, executable='bash')
