@@ -19,9 +19,13 @@ def get_graph(graph_id=None):
             'data': Graph().to_dict(),
             'status':'success'})
     elif graph_id:
-        return JSONEncoder().encode({
-            'data': graph_collection_manager.get_db_graph(graph_id),
-            'status':'success'})
+        graph = graph_collection_manager.get_db_graph(graph_id)
+        if graph:
+            return JSONEncoder().encode({
+                'data': graph,
+                'status':'success'})
+        else:
+            return 'Graph was not found', 404
     else:
         return JSONEncoder().encode({
             'data': [graph for graph in graph_collection_manager.get_db_graphs()],
