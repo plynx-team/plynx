@@ -16,3 +16,8 @@ class BlockStatus(object):
     READY = 'READY'
     DEPRECATED = 'DEPRECATED'
     MANDATORY_DEPRECATED = 'MANDATORY_DEPRECATED'
+
+
+class BlockPostStatus(object):
+    SUCCESS = 'SUCCESS'
+    FAILED = 'FAILED'

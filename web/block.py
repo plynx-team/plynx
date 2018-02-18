@@ -4,6 +4,7 @@ import json
 from db import Block, BlockCollectionManager
 from web.common import app, request
 from utils.common import to_object_id, JSONEncoder
+from constants import BlockPostStatus
 
 block_collection_manager = BlockCollectionManager()
 
@@ -31,14 +32,27 @@ def get_blocks(block_id=None):
             'data': block_collection_manager.get_db_blocks(status=status),
             'status':'success'})
 
-@app.route('/plynx/api/v0/blocks/<block_id>', methods=['PUT'])
-def post_block(block_id):
-    print (request)
-    data = json.loads(request.data)['body']
 
-    block = Block()
-    block.load_from_dict(data)
+@app.route('/plynx/api/v0/blocks', methods=['POST'])
+def post_block():
+    app.logger.debug(request.data)
+    try:
+        body = json.loads(request.data)['body']
+        action = body['action']
 
-    block.save(force=True)
+        block = Block()
+        block.load_from_dict(body['block'])
+        block.save(force=True)
 
-    return JSONEncoder().encode({'status':'success'})
+        return JSONEncoder().encode(
+            {
+                'status': BlockPostStatus.SUCCESS,
+                'message': 'Block(_id=`{}`) successfully updated'.format(str(block._id))
+            })
+    except Exception as e:
+        app.logger.error(e)
+        return JSONEncoder().encode(
+            {
+                'status': BlockPostStatus.FAILED,
+                'message': 'Internal error: "{}"'.format(str(e))
+            })
