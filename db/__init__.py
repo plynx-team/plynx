@@ -3,6 +3,7 @@ from .db_object import DBObject
 from .input import Input, InputValue
 from .parameter import Parameter, ParameterWidget
 from .output import Output
+from .validation_error import ValidationError
 from .block import Block
 from .block_collection_manager import BlockCollectionManager
 from .graph import Graph
@@ -20,5 +21,6 @@ __all__ = [
     InputValue,
     Parameter,
     ParameterWidget,
-    Output
+    Output,
+    ValidationError
     ]

@@ -1,9 +1,9 @@
 import copy
 import datetime
-from . import DBObject, Input, Output, Parameter, ParameterWidget
+from . import DBObject, Input, Output, Parameter, ParameterWidget, ValidationError
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
-from constants import BlockStatus, BlockRunningStatus, FileTypes, ParameterTypes
+from constants import BlockStatus, BlockRunningStatus, FileTypes, ParameterTypes, ValidationTargetType, ValidationCode
 
 
 class Block(DBObject):
@@ -103,6 +103,45 @@ class Block(DBObject):
 
     def copy(self):
         return copy.deepcopy(self)
+
+    def get_validation_error(self):
+        """Return validation error if found; else None"""
+        violations = []
+        if self.title == '':
+            violations.append(
+                ValidationError(
+                    target=ValidationTargetType.PROPERTY,
+                    object_id='title',
+                    validation_code=ValidationCode.MISSING_PARAMETER
+                ))
+        if self.description == '':
+            violations.append(
+                ValidationError(
+                    target=ValidationTargetType.PROPERTY,
+                    object_id='description',
+                    validation_code=ValidationCode.MISSING_PARAMETER
+                ))
+
+        # Meaning the block is in the graph. Otherwise souldn't be in validation step
+        if self.block_status != BlockStatus.CREATED:
+            for input in self.inputs:
+                if len(input.values) == 0:
+                    violations.append(
+                        ValidationError(
+                            target=ValidationTargetType.INPUT,
+                            object_id=input.name,
+                            validation_code=ValidationCode.MISSING_INPUT
+                        ))
+
+        if len(violations) == 0:
+            return None
+
+        return ValidationError(
+                    target=ValidationTargetType.BLOCK,
+                    object_id=str(self._id),
+                    validation_code=ValidationCode.IN_DEPENDENTS,
+                    children=violations
+                    )
 
     def __str__(self):
         return 'Block(_id="{}")'.format(self._id)

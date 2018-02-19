@@ -18,6 +18,14 @@ class BlockStatus(object):
     MANDATORY_DEPRECATED = 'MANDATORY_DEPRECATED'
 
 
+class BlockPostAction:
+    SAVE = 'SAVE'
+    APPROVE = 'APPROVE'
+    VALIDATE = 'VALIDATE'
+    DEPRECATE = 'DEPRECATE'
+
+
 class BlockPostStatus(object):
     SUCCESS = 'SUCCESS'
     FAILED = 'FAILED'
+    VALIDATION_FAILED = 'VALIDATION_FAILED'
