@@ -1,8 +1,8 @@
 import datetime
-from . import Block, DBObject
+from . import Block, DBObject, ValidationError
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
-from constants import GraphRunningStatus
+from constants import GraphRunningStatus, ValidationTargetType, ValidationCode
 
 
 class Graph(DBObject):
@@ -59,9 +59,9 @@ class Graph(DBObject):
 
     def load(self):
         graph = db.graphs.find_one({'_id': self._id})
-        self.load_from_mongo(graph)
+        self.load_from_dict(graph)
 
-    def load_from_mongo(self, graph):
+    def load_from_dict(self, graph):
         for key, value in graph.iteritems():
             if key != 'blocks':
                 setattr(self, key, graph[key])
@@ -75,6 +75,40 @@ class Graph(DBObject):
             self.blocks.append(block_obj)
 
         self._dirty = False
+
+    def get_validation_error(self):
+        """Return validation error if found; else None"""
+        violations = []
+        if self.title == '':
+            violations.append(
+                ValidationError(
+                    target=ValidationTargetType.PROPERTY,
+                    object_id='title',
+                    validation_code=ValidationCode.MISSING_PARAMETER
+                ))
+        if self.description == '':
+            violations.append(
+                ValidationError(
+                    target=ValidationTargetType.PROPERTY,
+                    object_id='description',
+                    validation_code=ValidationCode.MISSING_PARAMETER
+                ))
+
+        # Meaning the block is in the graph. Otherwise souldn't be in validation step
+        for block in self.blocks:
+            block_violation = block.get_validation_error()
+            if block_violation:
+                violations.append(block_violation)
+
+        if len(violations) == 0:
+            return None
+
+        return ValidationError(
+                    target=ValidationTargetType.GRAPH,
+                    object_id=str(self._id),
+                    validation_code=ValidationCode.IN_DEPENDENTS,
+                    children=violations
+                    )
 
     def __str__(self):
         return 'Graph(_id="{}", blocks={})'.format(self._id, [str(b) for b in self.blocks])

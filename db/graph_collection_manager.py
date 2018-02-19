@@ -12,7 +12,7 @@ class GraphCollectionManager(object):
         graphs = []
         for db_graph in db_graphs:
             graphs.append(Graph())
-            graphs[-1].load_from_mongo(db_graph)
+            graphs[-1].load_from_dict(db_graph)
         return graphs
 
     @staticmethod
