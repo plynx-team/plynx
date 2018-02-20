@@ -2,7 +2,7 @@
 import json
 from db import GraphCollectionManager
 from db import Graph
-from web.common import app, request
+from web.common import app, request, auth
 from utils.common import to_object_id, JSONEncoder
 from collections import defaultdict, OrderedDict
 from constants import GraphRunningStatus, GraphPostAction, GraphPostStatus
@@ -20,6 +20,7 @@ def _make_fail_response(message):
 
 @app.route('/plynx/api/v0/graphs', methods=['GET'])
 @app.route('/plynx/api/v0/graphs/<graph_id>', methods=['GET'])
+@auth.login_required
 def get_graph(graph_id=None):
     if graph_id == 'new':
         return JSONEncoder().encode({

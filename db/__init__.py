@@ -7,6 +7,7 @@ from .validation_error import ValidationError
 from .block import Block
 from .block_collection_manager import BlockCollectionManager
 from .graph import Graph
+from .user import User
 from .graph_collection_manager import GraphCollectionManager
 
 
@@ -22,5 +23,6 @@ __all__ = [
     Parameter,
     ParameterWidget,
     Output,
+    User,
     ValidationError
     ]
