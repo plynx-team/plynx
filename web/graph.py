@@ -41,6 +41,7 @@ def get_graph(graph_id=None):
 
 
 @app.route('/plynx/api/v0/graphs', methods=['POST'])
+@auth.login_required
 def post_graph():
     app.logger.debug(request.data)
     try:

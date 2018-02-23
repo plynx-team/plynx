@@ -4,7 +4,7 @@ from flask_cors import CORS
 from flask_httpauth import HTTPBasicAuth
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 auth = HTTPBasicAuth()
 

@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 import json
 from db import Block, BlockCollectionManager
-from web.common import app, request
+from web.common import app, request, auth
 from utils.common import to_object_id, JSONEncoder
 from constants import BlockStatus, BlockPostAction, BlockPostStatus
 
@@ -17,6 +17,7 @@ def _make_fail_response(message):
 
 @app.route('/plynx/api/v0/blocks', methods=['GET'])
 @app.route('/plynx/api/v0/blocks/<block_id>', methods=['GET'])
+@auth.login_required
 def get_blocks(block_id=None):
     if block_id == 'new':
         return JSONEncoder().encode({
@@ -40,6 +41,7 @@ def get_blocks(block_id=None):
 
 
 @app.route('/plynx/api/v0/blocks', methods=['POST'])
+@auth.login_required
 def post_block():
     app.logger.debug(request.data)
     try:

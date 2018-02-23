@@ -30,14 +30,18 @@ def new_user():
 @app.route('/plynx/api/v0/token')
 @auth.login_required
 def get_auth_token():
-    token = g.user.generate_auth_token()
+    access_token = g.user.generate_access_token()
+    refresh_token = g.user.generate_refresh_token()
     return JSONEncoder().encode({
-            'token': token.decode('ascii') 
+            'access_token': access_token.decode('ascii'),
+            'refresh_token': refresh_token.decode('ascii')
             })
 
 
 @auth.verify_password
 def verify_password(username_or_token, password):
+    # TODO remove this one
+    print(username_or_token, password)
     user = User.verify_auth_token(username_or_token)
     if not user:
         # try to authenticate with username/password
