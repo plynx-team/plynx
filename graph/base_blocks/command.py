@@ -15,26 +15,43 @@ class Command(BlockBase):
         super(self.__class__, self).__init__(block)
 
     def run(self):
-        with SpooledTemporaryFile() as worker_log_file:
-            env = os.environ.copy()
-            inputs = Command._prepare_inputs(self.block.inputs)
-            parameters = Command._prepare_parameters(self.block.parameters)
-            outputs = Command._prepare_outputs(self.block.outputs)
-            cmd_array = [
-                self._get_arguments_string('input', inputs),
-                self._get_arguments_string('output', outputs),
-                self._get_arguments_string('param', parameters),
-                self.block.get_parameter_by_name('cmd').value
-            ]
+        res = JobReturnStatus.SUCCESS
 
+        env = os.environ.copy()
+        inputs = Command._prepare_inputs(self.block.inputs)
+        parameters = Command._prepare_parameters(self.block.parameters)
+        outputs = Command._prepare_outputs(self.block.outputs)
+        logs = Command._prepare_logs(self.block.logs)
+        cmd_command = ' '.join([
+            self.block.get_parameter_by_name('cmd').value,
+            '1>${log[stdout]}',
+            '2>${log[stderr]}'
+            ])
+        print(cmd_command)
+        cmd_array = [
+            self._get_arguments_string('input', inputs),
+            self._get_arguments_string('output', outputs),
+            self._get_arguments_string('param', parameters),
+            self._get_arguments_string('log', logs),
+            cmd_command
+        ]
+
+        with open(logs['worker'], 'a+') as worker_log_file:
             worker_log_file.write(';\n'.join(cmd_array))
-            self.block.get_log_by_name('worker').resource_id = upload_file_stream(worker_log_file)
+        try:
+            subprocess.check_call(';'.join(cmd_array), shell=True, env=env, executable='bash')
+        except Exception as e:
+            res = JobReturnStatus.FAILED
+            with open(logs['worker'], 'a+') as worker_log_file:
+                worker_log_file.write('#' * 60 + '\n')
+                worker_log_file.write('JOB FAILED')
+                worker_log_file.write('#' * 60 + '\n')
+                worker_log_file.write(str(e))
 
-            subprocess.call(';'.join(cmd_array), shell=True, env=env, executable='bash')
+        self._postprocess_outputs(outputs)
+        self._postprocess_logs(logs)
 
-            self._postprocess_outputs(outputs)
-
-            return JobReturnStatus.SUCCESS
+        return res
 
     def status(self):
         pass
@@ -81,6 +98,14 @@ class Command(BlockBase):
         return res
 
     @staticmethod
+    def _prepare_logs(logs):
+        res = {}
+        for log in logs:
+            filename = os.path.join('/tmp', '{}_{}'.format(str(uuid.uuid1()), log.name))
+            res[log.name] = filename
+        return res
+
+    @staticmethod
     def _prepare_parameters(parameters):
         res = {}
         for parameter in parameters:
@@ -91,6 +116,12 @@ class Command(BlockBase):
         for key, filename in outputs.iteritems():
             with open(filename, 'rb') as f:
                 self.block.get_output_by_name(key).resource_id = upload_file_stream(f)
+
+    def _postprocess_logs(self, logs):
+        for key, filename in logs.iteritems():
+            if os.path.exists(filename) and os.stat(filename).st_size != 0:
+                with open(filename, 'rb') as f:
+                    self.block.get_log_by_name(key).resource_id = upload_file_stream(f)
 
 
 if __name__ == "__main__":
@@ -113,4 +144,5 @@ if __name__ == "__main__":
     command = Command(block)
 
     command.run()
+    print(command.block.logs)
     print(command.block.outputs)
