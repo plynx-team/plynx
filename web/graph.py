@@ -38,10 +38,8 @@ def get_graph(graph_id=None):
         query = json.loads(request.args.get('query', "{}"))
         query = {k: v for k, v in query.iteritems() if k in {'per_page', 'offset'}}
         return JSONEncoder().encode({
-            'data': {
-                'graphs': [graph for graph in graph_collection_manager.get_db_graphs(**query)],
-                'total_count': graph_collection_manager.get_db_graphs_count()
-            },
+            'graphs': [graph for graph in graph_collection_manager.get_db_graphs(**query)],
+            'total_count': graph_collection_manager.get_db_graphs_count(),
             'status':'success'})
 
 
