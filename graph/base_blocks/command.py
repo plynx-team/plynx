@@ -43,8 +43,9 @@ class Command(BlockBase):
         except Exception as e:
             res = JobReturnStatus.FAILED
             with open(logs['worker'], 'a+') as worker_log_file:
+                worker_log_file.write('\n' * 3)
                 worker_log_file.write('#' * 60 + '\n')
-                worker_log_file.write('JOB FAILED')
+                worker_log_file.write('JOB FAILED\n')
                 worker_log_file.write('#' * 60 + '\n')
                 worker_log_file.write(str(e))
 

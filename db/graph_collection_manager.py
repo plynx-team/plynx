@@ -16,9 +16,13 @@ class GraphCollectionManager(object):
         return graphs
 
     @staticmethod
-    def get_db_graphs():
-        db_graphs = db.graphs.find({}).sort('insertion_date', -1)
+    def get_db_graphs(per_page=20, offset=0):
+        db_graphs = db.graphs.find({}).sort('insertion_date', -1).skip(offset).limit(per_page)
         return list(db_graphs)
+
+    @staticmethod
+    def get_db_graphs_count():
+        return db.graphs.count({})
 
     @staticmethod
     def get_db_graph(graph_id):
