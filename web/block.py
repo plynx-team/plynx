@@ -34,9 +34,11 @@ def get_blocks(block_id=None):
 
     else:
         query = json.loads(request.args.get('query', "{}"))
-        status = query['status'] if query and 'status' in query else []
+        blocks_query = {k: v for k, v in query.iteritems() if k in {'per_page', 'offset', 'status'}}
+        count_query = {k: v for k, v in query.iteritems() if k in {'status'}}
         return JSONEncoder().encode({
-            'data': block_collection_manager.get_db_blocks(status=status),
+            'blocks': block_collection_manager.get_db_blocks(**blocks_query),
+            'total_count': block_collection_manager.get_db_blocks_count(**count_query),
             'status':'success'})
 
 
