@@ -101,7 +101,7 @@ class GraphScheduler(object):
                 self.block_id_to_dependency_index[dependent_block_id] = dependency_index
             self.uncompleted_blocks_count -= 1
 
-        if self.uncompleted_blocks_count == 0:
+        if self.uncompleted_blocks_count == 0 and self.graph.graph_running_status != GraphRunningStatus.FAILED:
             self.graph.graph_running_status = GraphRunningStatus.SUCCESS
 
         # self.graph.save()
