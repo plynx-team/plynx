@@ -48,12 +48,14 @@ fastcache==1.0.2
 filelock==2.0.13
 Flask==0.12.2
 Flask-Cors==3.0.3
+Flask-HTTPAuth==3.2.3
 funcsigs==1.0.2
 functools32==3.2.3.post2
 futures==3.2.0
 gevent==1.2.2
 glob2==0.6
 gmpy2==2.0.8
+google-compute-engine==2.7.6
 greenlet==0.4.12
 grin==1.2.1
 h5py==2.7.1
@@ -109,6 +111,7 @@ pandas==0.22.0
 pandocfilters==1.4.2
 parso==0.1.1
 partd==0.3.8
+passlib==1.7.1
 path.py==10.5
 pathlib2==2.3.0
 patsy==0.5.0
@@ -132,6 +135,7 @@ pycurl==7.43.0.1
 pyflakes==1.6.0
 Pygments==2.2.0
 pylint==1.8.2
+pymongo==3.6.1
 pyodbc==4.0.22
 pyOpenSSL==17.5.0
 pyparsing==2.2.0
