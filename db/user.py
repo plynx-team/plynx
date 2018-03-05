@@ -82,7 +82,7 @@ class User(DBObject):
     def verify_password(self, password):
         return pwd_context.verify(password, self.password_hash)
 
-    def generate_access_token(self, expiration=6):
+    def generate_access_token(self, expiration=600):
         s = TimedSerializer(User.AUTH_CONFIG.secret_key, expires_in = expiration)
         return s.dumps({ 'username': self.username, 'type': 'access' })
 
