@@ -2,9 +2,8 @@
 import json
 from db import GraphCollectionManager
 from db import User
-from web.common import app, request, auth
+from web.common import app, request, auth, abort, g
 from utils.common import to_object_id, JSONEncoder
-from flask import abort, g
 
 
 @app.route('/plynx/api/v0/users', methods = ['POST'])
