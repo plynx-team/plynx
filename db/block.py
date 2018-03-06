@@ -30,6 +30,8 @@ class Block(DBObject):
         self.block_status = BlockStatus.READY
         self.x = 0
         self.y = 0
+        self.author = None
+        self.public = False
 
         if block_id:
             self._id = to_object_id(block_id)
@@ -52,7 +54,9 @@ class Block(DBObject):
                 "block_running_status": self.block_running_status,
                 "block_status": self.block_status,
                 "x": self.x,
-                "y": self.y
+                "y": self.y,
+                "author": self.author,
+                "public": self.public
             }
 
     def load_from_dict(self, block_dict):
@@ -61,6 +65,7 @@ class Block(DBObject):
                 setattr(self, key, value)
 
         self._id = to_object_id(self._id)
+        self.author = to_object_id(self.author)
 
         self.inputs = [Input.create_from_dict(input_dict) for input_dict in block_dict['inputs']]
         self.outputs = [Output.create_from_dict(output_dict) for output_dict in block_dict['outputs']]
@@ -179,6 +184,7 @@ class Block(DBObject):
         block.description = ''
         block.base_block_name = "command"
         block.block_status = BlockStatus.CREATED
+        block.public = False
         block.parameters = [
             Parameter(
                 name='cmd',

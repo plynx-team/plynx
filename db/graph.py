@@ -16,6 +16,8 @@ class Graph(DBObject):
         self.title = 'Title'
         self.description = 'Description'
         self.graph_running_status = GraphRunningStatus.CREATED
+        self.author = None
+        self.public = False
         self.blocks = []
 
         if graph_id:
@@ -31,6 +33,8 @@ class Graph(DBObject):
             "title": self.title,
             "description": self.description,
             "graph_running_status": self.graph_running_status,
+            "author": self.author,
+            "public": self.public,
             "blocks": [block.to_dict() for block in self.blocks]
         }
 
@@ -67,6 +71,7 @@ class Graph(DBObject):
                 setattr(self, key, graph[key])
 
         self._id = to_object_id(self._id)
+        self.author = to_object_id(self.author)
 
         self.blocks = []
         for block in graph['blocks']:

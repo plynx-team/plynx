@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 import json
 from db import Block, BlockCollectionManager
-from web.common import app, request, auth
+from web.common import app, request, auth, g
 from utils.common import to_object_id, JSONEncoder
 from constants import BlockStatus, BlockPostAction, BlockPostStatus
 
@@ -34,8 +34,9 @@ def get_blocks(block_id=None):
 
     else:
         query = json.loads(request.args.get('query', "{}"))
-        blocks_query = {k: v for k, v in query.iteritems() if k in {'per_page', 'offset', 'status'}}
-        count_query = {k: v for k, v in query.iteritems() if k in {'status'}}
+        query["author"] = to_object_id(g.user._id)
+        blocks_query = {k: v for k, v in query.iteritems() if k in {'per_page', 'offset', 'status', 'author'}}
+        count_query = {k: v for k, v in query.iteritems() if k in {'status', 'author'}}
         return JSONEncoder().encode({
             'blocks': block_collection_manager.get_db_blocks(**blocks_query),
             'total_count': block_collection_manager.get_db_blocks_count(**count_query),
@@ -51,6 +52,7 @@ def post_block():
 
         block = Block()
         block.load_from_dict(body['block'])
+        block.author = g.user._id
 
         action = body['action']
         if action == BlockPostAction.SAVE:

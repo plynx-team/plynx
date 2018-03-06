@@ -2,7 +2,7 @@
 import json
 from db import GraphCollectionManager
 from db import Graph
-from web.common import app, request, auth
+from web.common import app, request, auth, g
 from utils.common import to_object_id, JSONEncoder
 from collections import defaultdict, OrderedDict
 from constants import GraphRunningStatus, GraphPostAction, GraphPostStatus
@@ -36,10 +36,12 @@ def get_graph(graph_id=None):
             return 'Graph was not found', 404
     else:
         query = json.loads(request.args.get('query', "{}"))
-        query = {k: v for k, v in query.iteritems() if k in {'per_page', 'offset'}}
+        query["author"] = to_object_id(g.user._id)
+        graphs_query = {k: v for k, v in query.iteritems() if k in {'per_page', 'offset', 'author'}}
+        count_query = {k: v for k, v in query.iteritems() if k in {'author'}}
         return JSONEncoder().encode({
-            'graphs': [graph for graph in graph_collection_manager.get_db_graphs(**query)],
-            'total_count': graph_collection_manager.get_db_graphs_count(),
+            'graphs': [graph for graph in graph_collection_manager.get_db_graphs(**graphs_query)],
+            'total_count': graph_collection_manager.get_db_graphs_count(**count_query),
             'status':'success'})
 
 
@@ -52,6 +54,7 @@ def post_graph():
 
         graph = Graph()
         graph.load_from_dict(body['graph'])
+        graph.author = g.user._id
 
         action = body['action']
         if action == GraphPostAction.SAVE:

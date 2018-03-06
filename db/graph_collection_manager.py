@@ -16,13 +16,23 @@ class GraphCollectionManager(object):
         return graphs
 
     @staticmethod
-    def get_db_graphs(per_page=20, offset=0):
-        db_graphs = db.graphs.find({}).sort('insertion_date', -1).skip(offset).limit(per_page)
+    def get_db_graphs(author, per_page=20, offset=0):
+        db_graphs = db.graphs.find({
+                '$or': [
+                    {'author': author},
+                    {'public': True}
+                ]
+                }).sort('insertion_date', -1).skip(offset).limit(per_page)
         return list(db_graphs)
 
     @staticmethod
-    def get_db_graphs_count():
-        return db.graphs.count({})
+    def get_db_graphs_count(author):
+        return db.graphs.count({
+                '$or': [
+                    {'author': author},
+                    {'public': True}
+                ]
+                })
 
     @staticmethod
     def get_db_graph(graph_id):
