@@ -6,3 +6,4 @@ graph/.DS_Store
 node_modules/
 web/.DS_Store
 web/static/bower_components/
+*.pyc
