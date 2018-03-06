@@ -26,7 +26,7 @@ def new_user():
             })
 
 
-@app.route('/plynx/api/v0/token')
+@app.route('/plynx/api/v0/token', strict_slashes=False)
 @auth.login_required
 def get_auth_token():
     access_token = g.user.generate_access_token()
