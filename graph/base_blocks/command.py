@@ -24,7 +24,7 @@ class Command(BlockBase):
         logs = Command._prepare_logs(self.block.logs)
         cmd_command = ' '.join([
             self.block.get_parameter_by_name('cmd').value,
-            '1>${log[stdout]}',
+            # '1>${log[stdout]}',
             '2>${log[stderr]}'
             ])
         print(cmd_command)
