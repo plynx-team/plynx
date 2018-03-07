@@ -8,6 +8,7 @@ from .block import Block
 from .block_collection_manager import BlockCollectionManager
 from .graph import Graph
 from .user import User
+from .feedback import Feedback
 from .graph_collection_manager import GraphCollectionManager
 
 
@@ -24,5 +25,6 @@ __all__ = [
     ParameterWidget,
     Output,
     User,
+    Feedback,
     ValidationError
     ]

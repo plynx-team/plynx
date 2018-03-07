@@ -4,6 +4,7 @@ from web.common import *
 from web.graph import *
 from web.resource import *
 from web.user import *
+from web.feedback import *
 from gevent.wsgi import WSGIServer
 
 @app.route("/")

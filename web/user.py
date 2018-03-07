@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 import json
-from db import GraphCollectionManager
 from db import User
 from web.common import app, request, auth, abort, g
-from utils.common import to_object_id, JSONEncoder
+from utils.common import JSONEncoder
 
 
 @app.route('/plynx/api/v0/users', methods = ['POST'])
