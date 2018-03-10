@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 import json
-from db import User
+from db import User, DemoUserManager
 from web.common import app, request, auth, abort, g
 from utils.common import JSONEncoder
+
+
+demo_user_manager = DemoUserManager()
 
 
 @app.route('/plynx/api/v0/users', methods = ['POST'])
@@ -48,3 +51,16 @@ def verify_password(username_or_token, password):
             return False
     g.user = user
     return True
+
+
+@app.route('/plynx/api/v0/demo', methods = ['POST'])
+def post_demo_user():
+    user = demo_user_manager.create_demo_user()
+    demo_user_manager.create_demo_graphs(user)
+
+    access_token = user.generate_access_token(expiration=1800)
+    return JSONEncoder().encode({
+            'access_token': access_token.decode('ascii'),
+            'refresh_token': 'Not assigned',
+            'username': user.username
+            })
