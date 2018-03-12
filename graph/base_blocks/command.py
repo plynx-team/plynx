@@ -73,7 +73,7 @@ class Command(BlockBase):
 
     @staticmethod
     def _escape_bash(s):
-        return "\'{}\'".format(json.dumps(s).replace("'", "\\'")[1:-1])
+        return json.dumps(s).replace("'", "\\'")
 
     @staticmethod
     def _prepare_inputs(inputs):
