@@ -1,5 +1,7 @@
-import subprocess
+from subprocess import Popen, PIPE
 import os
+import shutil
+import signal
 import json
 import uuid
 import logging
@@ -22,11 +24,7 @@ class Command(BlockBase):
         parameters = Command._prepare_parameters(self.block.parameters)
         outputs = Command._prepare_outputs(self.block.outputs)
         logs = Command._prepare_logs(self.block.logs)
-        cmd_command = ' '.join([
-            self.block.get_parameter_by_name('cmd').value,
-            '2>${log[stderr]}'
-            ])
-        print(cmd_command)
+        cmd_command = self.block.get_parameter_by_name('cmd').value
         cmd_array = [
             self._get_arguments_string('input', inputs),
             self._get_arguments_string('output', outputs),
@@ -35,12 +33,40 @@ class Command(BlockBase):
             cmd_command
         ]
 
-        with open(logs['worker'], 'a+') as worker_log_file:
-            worker_log_file.write(';\n'.join(cmd_array))
+        script_location = self._get_script_fname()
+        with open(script_location, 'w') as script_file:
+            script_file.write(';\n'.join(cmd_array))
+
         try:
-            subprocess.check_call(';'.join(cmd_array), shell=True, env=env, executable='bash')
+            def pre_exec():
+                # Restore default signal disposition and invoke setsid
+                for sig in ('SIGPIPE', 'SIGXFZ', 'SIGXFSZ'):
+                    if hasattr(signal, sig):
+                        signal.signal(getattr(signal, sig), signal.SIG_DFL)
+                os.setsid()
+
+            shutil.copyfile(script_location, logs['worker'])
+            sp = Popen(
+                ['bash', script_location],
+                stdout=PIPE, stderr=PIPE,
+                cwd='/tmp', env=env,
+                preexec_fn=pre_exec)
+
+            line = ''
+            with open(logs['stdout'], 'w') as f:
+                for line in iter(sp.stdout.readline, b''):
+                    f.write(line)
+            with open(logs['stderr'], 'w') as f:
+                for line in iter(sp.stderr.readline, b''):
+                    f.write(line)
+            sp.wait()
+
+            if sp.returncode:
+                raise Exception("Process returned non-zero value")
+
         except Exception as e:
             res = JobReturnStatus.FAILED
+            print e
             with open(logs['worker'], 'a+') as worker_log_file:
                 worker_log_file.write('\n' * 3)
                 worker_log_file.write('#' * 60 + '\n')
@@ -106,6 +132,10 @@ class Command(BlockBase):
         return res
 
     @staticmethod
+    def _get_script_fname():
+        return os.path.join('/tmp', '{}_{}'.format(str(uuid.uuid1()), "exec.sh"))
+
+    @staticmethod
     def _prepare_parameters(parameters):
         res = {}
         for parameter in parameters:
@@ -126,7 +156,7 @@ class Command(BlockBase):
 
 if __name__ == "__main__":
     from db import Block, BlockCollectionManager, InputValue
-    db_blocks = BlockCollectionManager.get_db_blocks()
+    db_blocks = BlockCollectionManager.get_db_blocks('5a9e2af30310e9cdd4516d58')
     obj_dict = filter(lambda doc: doc['base_block_name'] == Command.get_base_name(), db_blocks)[-1]
 
     block = Block()
