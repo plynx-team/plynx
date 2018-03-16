@@ -1,0 +1,6 @@
+boto==2.48.0
+enum34==1.1.6
+pymongo==3.5.1
+pyyaml
+passlib==1.7.1
+itsdangerous==0.24
