@@ -144,8 +144,9 @@ class Command(BlockBase):
 
     def _postprocess_outputs(self, outputs):
         for key, filename in outputs.iteritems():
-            with open(filename, 'rb') as f:
-                self.block.get_output_by_name(key).resource_id = upload_file_stream(f)
+            if os.path.exists(filename):
+                with open(filename, 'rb') as f:
+                    self.block.get_output_by_name(key).resource_id = upload_file_stream(f)
 
     def _postprocess_logs(self, logs):
         for key, filename in logs.iteritems():
