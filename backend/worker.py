@@ -14,7 +14,7 @@ from utils.file_handler import upload_file_stream
 from utils.logs import set_logging_level
 
 
-HOST, PORT = "localhost", 10000
+HOST, PORT = "127.0.0.1", 10000
 
 # Create a socket (SOCK_STREAM means a TCP socket)
 
@@ -23,13 +23,15 @@ class RunningPipelineException(Exception):
     pass
 
 class Worker:
-    def __init__(self):
+    def __init__(self, worker_id, host, port):
         self.thread = threading.Thread(target=self.run, args=())
         self.thread.daemon = True   # Daemonize thread
         self.job = None
         self.graph_id = None
         self.alive = True
-        self.worker_id = None
+        self.worker_id = worker_id
+        self.host = host
+        self.port = port
         self.run_status = RunStatus.IDLE
 
     def forever(self):
@@ -46,7 +48,7 @@ class Worker:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             # Connect to server and send data
-            sock.connect((HOST, PORT))
+            sock.connect((self.host, self.port))
             m = WorkerMessage(
                 worker_id=self.worker_id,
                 run_status=self.run_status,
@@ -65,7 +67,7 @@ class Worker:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             try:
                 if self.run_status == RunStatus.IDLE:
-                    sock.connect((HOST, PORT))
+                    sock.connect((self.host, self.port))
                     m = WorkerMessage(
                         worker_id=self.worker_id,
                         run_status=self.run_status,
@@ -103,7 +105,7 @@ class Worker:
                 elif self.run_status == RunStatus.RUNNING:
                     raise RunningPipelineException("Not supposed to have this state")
                 elif self.run_status in [RunStatus.SUCCESS, RunStatus.FAILED]:
-                    sock.connect((HOST, PORT))
+                    sock.connect((self.host, self.port))
 
                     if self.run_status == RunStatus.SUCCESS:
                         status = WorkerMessageType.JOB_FINISHED_SUCCESS
@@ -132,12 +134,13 @@ class Worker:
             sleep(1)
 
 
-def run_worker(worker_id=None, verbose=0):
+def run_worker(worker_id=None, verbose=0, host=None, port=None):
     set_logging_level(verbose)
+    host = host or HOST
+    port = port or PORT
     if worker_id is None:
         worker_id = str(uuid.uuid1())
-    worker = Worker()
-    worker.worker_id = worker_id
+    worker = Worker(worker_id, host, port)
 
     worker.forever()
 
@@ -146,6 +149,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run worker')
     parser.add_argument('-i', '--worker-id', help='Any string identificator')
     parser.add_argument('-v', '--verbose', action='count', default=0)
+    parser.add_argument('-h', '--host', default=HOST)
+    parser.add_argument('-p', '--port', default=PORT)
     args = parser.parse_args()
 
     run_worker(**vars(args))
