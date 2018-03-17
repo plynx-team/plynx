@@ -8,6 +8,10 @@ WORKDIR /app
 ADD . /app
 
 # Install any needed packages specified in requirements.txt
+RUN apt-get update
+RUN apt-get install -y build-essential
+
+RUN pip install --upgrade pip
 RUN pip install --trusted-host pypi.python.org -r ./docker/worker/requirements.txt
 RUN useradd -c "Worker" worker  -s /bin/bash
 RUN chmod 700 /app

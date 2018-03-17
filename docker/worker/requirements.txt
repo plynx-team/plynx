@@ -4,3 +4,7 @@ pymongo==3.5.1
 pyyaml
 passlib==1.7.1
 itsdangerous==0.24
+numpy==1.13.3
+scikit-learn==0.19.1
+scipy==0.19.1
+matplotlib==2.1.0
