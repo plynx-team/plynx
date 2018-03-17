@@ -149,8 +149,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run worker')
     parser.add_argument('-i', '--worker-id', help='Any string identificator')
     parser.add_argument('-v', '--verbose', action='count', default=0)
-    parser.add_argument('-h', '--host', default=HOST)
-    parser.add_argument('-p', '--port', default=PORT)
+    parser.add_argument('-H', '--host', default=HOST)
+    parser.add_argument('-P', '--port', default=PORT)
     args = parser.parse_args()
 
     run_worker(**vars(args))
