@@ -1,0 +1,17 @@
+class FileStatus(object):
+    READY = 'READY'
+    DEPRECATED = 'DEPRECATED'
+    MANDATORY_DEPRECATED = 'MANDATORY_DEPRECATED'
+
+
+class FilePostAction:
+    SAVE = 'SAVE'
+    APPROVE = 'APPROVE'
+    VALIDATE = 'VALIDATE'
+    DEPRECATE = 'DEPRECATE'
+
+
+class FilePostStatus(object):
+    SUCCESS = 'SUCCESS'
+    FAILED = 'FAILED'
+    VALIDATION_FAILED = 'VALIDATION_FAILED'

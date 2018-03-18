@@ -1,4 +1,5 @@
 from .block_enums import BlockRunningStatus, BlockStatus, BlockPostAction, BlockPostStatus, JobReturnStatus
+from .file_enums import FileStatus, FilePostAction, FilePostStatus
 from .file_types import FileTypes
 from .graph_enums import GraphRunningStatus, GraphPostAction, GraphPostStatus
 from .parameter_types import ParameterTypes
@@ -11,6 +12,9 @@ __all__ = [
     BlockPostAction,
     BlockPostStatus,
     JobReturnStatus,
+    FileStatus,
+    FilePostAction,
+    FilePostStatus,
     FileTypes,
     GraphRunningStatus,
     GraphPostAction,
