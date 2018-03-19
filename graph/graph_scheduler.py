@@ -41,16 +41,18 @@ class GraphScheduler(object):
             self.block_collection = BlockCollection()
 
         for block in self.graph.blocks:
+            if block._type == 'file':
+                continue
             block_id = block._id
             dependency_index = 0
             for block_input in block.inputs:
                 for input_value in block_input.values:
                     parent_block_id = to_object_id(input_value.block_id)
                     self.block_id_to_dependents[parent_block_id].add(block_id)
-                    if self.block_id_to_block[parent_block_id].block_running_status not in {BlockRunningStatus.SUCCESS, BlockRunningStatus.FAILED}:
+                    if self.block_id_to_block[parent_block_id].block_running_status not in {BlockRunningStatus.SUCCESS, BlockRunningStatus.FAILED, BlockRunningStatus.STATIC}:
                         dependency_index += 1
 
-            if block.block_running_status not in {BlockRunningStatus.SUCCESS, BlockRunningStatus.FAILED}:
+            if block.block_running_status not in {BlockRunningStatus.SUCCESS, BlockRunningStatus.FAILED, BlockRunningStatus.STATIC}:
                 self.uncompleted_blocks_count +=1
             self.dependency_index_to_block_ids[dependency_index].add(block_id)
             self.block_id_to_dependency_index[block_id] = dependency_index

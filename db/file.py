@@ -3,7 +3,7 @@ import datetime
 from . import DBObject, Output, ValidationError
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
-from constants import FileStatus, FileTypes, ValidationTargetType, ValidationCode
+from constants import BlockRunningStatus, FileStatus, FileTypes, ValidationTargetType, ValidationCode
 
 
 class File(DBObject):
@@ -23,6 +23,7 @@ class File(DBObject):
         self.parent_file = None
         self.outputs = []
         self.file_status = FileStatus.READY
+        self.block_running_status = BlockRunningStatus.STATIC
         self.x = 0
         self.y = 0
         self.author = None
@@ -42,6 +43,7 @@ class File(DBObject):
                 "title": self.title,
                 "description": self.description,
                 "file_status": self.file_status,
+                "block_running_status": self.block_running_status,
                 "x": self.x,
                 "y": self.y,
                 "author": self.author,
@@ -111,6 +113,22 @@ class File(DBObject):
                     validation_code=ValidationCode.MISSING_PARAMETER
                 ))
 
+        if self.file_status != FileStatus.READY:
+            violations.append(
+                ValidationError(
+                    target=ValidationTargetType.PROPERTY,
+                    object_id='file_status',
+                    validation_code=ValidationCode.INVALID_VALUE
+                ))
+
+        if self.block_running_status != BlockRunningStatus.STATIC:
+            violations.append(
+                ValidationError(
+                    target=ValidationTargetType.PROPERTY,
+                    object_id='block_running_status',
+                    validation_code=ValidationCode.INVALID_VALUE
+                ))
+
         if len(violations) == 0:
             return None
 
@@ -147,6 +165,7 @@ class File(DBObject):
         file.title = 'File'
         file.description = 'Custom file'
         file.file_status = FileStatus.READY
+        file.block_running_status = BlockRunningStatus.STATIC
         file.public = False
 
         return file

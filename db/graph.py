@@ -1,5 +1,5 @@
 import datetime
-from . import Block, DBObject, ValidationError
+from . import Block, File, DBObject, ValidationError
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
 from constants import GraphRunningStatus, ValidationTargetType, ValidationCode
@@ -75,9 +75,13 @@ class Graph(DBObject):
 
         self.blocks = []
         for block in graph['blocks']:
-            block_obj = Block()
-            block_obj.load_from_dict(block)
-            self.blocks.append(block_obj)
+            if block['_type'] == 'block':
+                item_obj = Block()
+            elif block['_type'] == 'file':
+                item_obj = File()
+
+            item_obj.load_from_dict(block)
+            self.blocks.append(item_obj)
 
         self._dirty = False
 

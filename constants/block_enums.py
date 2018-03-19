@@ -4,6 +4,7 @@ class JobReturnStatus(object):
 
 
 class BlockRunningStatus(object):
+    STATIC = 'STATIC'
     CREATED = 'CREATED'
     IN_QUEUE = 'IN_QUEUE'
     RUNNING = 'RUNNING'

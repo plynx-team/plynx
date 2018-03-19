@@ -6,7 +6,6 @@ class FileStatus(object):
 
 class FilePostAction:
     SAVE = 'SAVE'
-    APPROVE = 'APPROVE'
     VALIDATE = 'VALIDATE'
     DEPRECATE = 'DEPRECATE'
 

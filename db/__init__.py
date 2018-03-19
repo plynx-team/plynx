@@ -6,6 +6,8 @@ from .output import Output
 from .validation_error import ValidationError
 from .block import Block
 from .block_collection_manager import BlockCollectionManager
+from .file import File
+from .file_collection_manager import FileCollectionManager
 from .graph import Graph
 from .user import User
 from .feedback import Feedback
@@ -17,6 +19,8 @@ __all__ = [
     get_base_blocks,
     Block,
     BlockCollectionManager,
+    File,
+    FileCollectionManager,
     DBObject,
     Graph,
     GraphCollectionManager,
