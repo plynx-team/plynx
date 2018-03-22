@@ -28,7 +28,12 @@ class FileCollectionManager(object):
                     {'file_status': {'$in': status}}
                     ]
                 }).sort('insertion_date', -1).skip(offset).limit(per_page)
-        return list(db_files)
+
+        res = []
+        for file in db_files:
+            file['_readonly'] = (author != to_object_id(file['author']))
+            res.append(file)
+        return res
 
     @staticmethod
     def get_db_files_count(author, status=None):
@@ -54,5 +59,7 @@ class FileCollectionManager(object):
                 })
 
     @staticmethod
-    def get_db_file(file_id):
-        return db.files.find_one({'_id': to_object_id(file_id)})
+    def get_db_file(file_id, author):
+        res = db.files.find_one({'_id': to_object_id(file_id)})
+        res['_readonly'] = (author != to_object_id(res['author']))
+        return res

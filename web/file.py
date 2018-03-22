@@ -19,12 +19,9 @@ def _make_fail_response(message):
 @app.route('/plynx/api/v0/files/<file_id>', methods=['GET'])
 @auth.login_required
 def get_files(file_id=None):
-    if file_id == 'new':
-        return JSONEncoder().encode({
-            'data': File.get_default().to_dict(),
-            'status':'success'})
-    elif file_id:
-        file = file_collection_manager.get_db_file(file_id)
+    author = to_object_id(g.user._id)
+    if file_id:
+        file = file_collection_manager.get_db_file(file_id, author)
         if file:
             return JSONEncoder().encode({
                 'data': file,
@@ -34,7 +31,7 @@ def get_files(file_id=None):
 
     else:
         query = json.loads(request.args.get('query', "{}"))
-        query["author"] = to_object_id(g.user._id)
+        query["author"] = author
         files_query = {k: v for k, v in query.iteritems() if k in {'per_page', 'offset', 'status', 'author'}}
         count_query = {k: v for k, v in query.iteritems() if k in {'status', 'author'}}
         return JSONEncoder().encode({

@@ -89,7 +89,8 @@ class File(DBObject):
     def load(self, file=None):
         if not file:
             file = db.files.find_one({'_id': self._id})
-        self.load_from_dict(file)
+        if file:
+            self.load_from_dict(file)
         self._dirty = False
 
     def copy(self):
