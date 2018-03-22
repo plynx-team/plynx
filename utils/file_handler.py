@@ -14,14 +14,14 @@ def get_file_stream(file_path, prefix=None):
     content_stream.seek(0)
     return content_stream
 
-def upload_file_stream(fp, prefix=None, file_path=None):
+def upload_file_stream(fp, prefix=None, file_path=None, seek=True):
     fp.seek(0)
     if file_path is None:
         file_path = str(uuid.uuid1())
     if prefix is None:
         prefix = STORAGE_CONFIG.resources
     content = storage_uri(STORAGE_CONFIG.resources + file_path, STORAGE_CONFIG.scheme)
-    content.new_key().set_contents_from_file(fp)
+    content.new_key().set_contents_from_stream(fp)
     return file_path
 
 

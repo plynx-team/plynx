@@ -121,13 +121,6 @@ class Block(DBObject):
                     object_id='title',
                     validation_code=ValidationCode.MISSING_PARAMETER
                 ))
-        if self.description == '':
-            violations.append(
-                ValidationError(
-                    target=ValidationTargetType.PROPERTY,
-                    object_id='description',
-                    validation_code=ValidationCode.MISSING_PARAMETER
-                ))
 
         # Meaning the block is in the graph. Otherwise souldn't be in validation step
         if self.block_status != BlockStatus.CREATED:

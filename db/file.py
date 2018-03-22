@@ -105,13 +105,6 @@ class File(DBObject):
                     object_id='title',
                     validation_code=ValidationCode.MISSING_PARAMETER
                 ))
-        if self.description == '':
-            violations.append(
-                ValidationError(
-                    target=ValidationTargetType.PROPERTY,
-                    object_id='description',
-                    validation_code=ValidationCode.MISSING_PARAMETER
-                ))
 
         if self.file_status != FileStatus.READY:
             violations.append(
