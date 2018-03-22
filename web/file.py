@@ -91,6 +91,7 @@ def post_file():
         return JSONEncoder().encode(
             {
                 'status': FilePostStatus.SUCCESS,
+                'resource_id': file.outputs[0].resource_id,
                 'message': 'File(_id=`{}`) successfully updated'.format(str(file._id))
             })
     except Exception as e:
