@@ -21,6 +21,7 @@ class File(DBObject):
         self.title = None
         self.description = None
         self.parent_file = None
+        self.inputs = []
         self.outputs = []
         self.file_status = FileStatus.READY
         self.block_running_status = BlockRunningStatus.STATIC

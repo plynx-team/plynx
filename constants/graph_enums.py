@@ -10,6 +10,7 @@ class GraphPostAction:
     SAVE = 'SAVE'
     APPROVE = 'APPROVE'
     VALIDATE = 'VALIDATE'
+    AUTO_LAYOUT = 'AUTO_LAYOUT'
 
 
 class GraphPostStatus(object):

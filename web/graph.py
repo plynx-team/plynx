@@ -55,47 +55,50 @@ def post_graph():
         graph = Graph()
         graph.load_from_dict(body['graph'])
         graph.author = g.user._id
+        actions = body['actions']
 
-        action = body['action']
-        if action == GraphPostAction.SAVE:
-            if graph.graph_running_status != GraphRunningStatus.CREATED:
-                return _make_fail_response('Cannot save graph with status `{}`'.format(graph.graph_running_status))
+        for action in actions:
+            if action == GraphPostAction.SAVE:
+                if graph.graph_running_status != GraphRunningStatus.CREATED:
+                    return _make_fail_response('Cannot save graph with status `{}`'.format(graph.graph_running_status))
+                graph.save(force=True)
 
-            graph.save(force=True)
+            elif action == GraphPostAction.AUTO_LAYOUT:
+                graph.arrange_auto_layout()
 
-        elif action == GraphPostAction.APPROVE:
-            if graph.graph_running_status != GraphRunningStatus.CREATED:
-                return _make_fail_response('Graph status `{}` expected. Found `{}`'.format(GraphRunningStatus.CREATED, graph.graph_running_status))
+            elif action == GraphPostAction.APPROVE:
+                if graph.graph_running_status != GraphRunningStatus.CREATED:
+                    return _make_fail_response('Graph status `{}` expected. Found `{}`'.format(GraphRunningStatus.CREATED, graph.graph_running_status))
 
-            validation_error = graph.get_validation_error()
-            if validation_error:
-                return JSONEncoder().encode({
-                            'status': GraphPostStatus.VALIDATION_FAILED,
-                            'message': 'Graph validation failed',
-                            'validation_error': validation_error.to_dict()
-                            })
+                validation_error = graph.get_validation_error()
+                if validation_error:
+                    return JSONEncoder().encode({
+                                'status': GraphPostStatus.VALIDATION_FAILED,
+                                'message': 'Graph validation failed',
+                                'validation_error': validation_error.to_dict()
+                                })
 
-            graph.graph_running_status = GraphRunningStatus.READY
-            graph.save(force=True)
+                graph.graph_running_status = GraphRunningStatus.READY
+                graph.save(force=True)
 
-        elif action == GraphPostAction.VALIDATE:
-            validation_error = graph.get_validation_error()
+            elif action == GraphPostAction.VALIDATE:
+                validation_error = graph.get_validation_error()
 
-            if validation_error:
-                return JSONEncoder().encode({
-                            'status': GraphPostStatus.VALIDATION_FAILED,
-                            'message': 'Graph validation failed',
-                            'validation_error': validation_error.to_dict()
-                            })
-
-        else:
-            return _make_fail_response('Unknown action `{}`'.format(action))
+                if validation_error:
+                    return JSONEncoder().encode({
+                                'status': GraphPostStatus.VALIDATION_FAILED,
+                                'message': 'Graph validation failed',
+                                'validation_error': validation_error.to_dict()
+                                })
+            else:
+                return _make_fail_response('Unknown action `{}`'.format(action))
 
         return JSONEncoder().encode(
             {
                 'status': GraphPostStatus.SUCCESS,
-                'message': 'Graph(_id=`{}`) successfully updated'.format(str(graph._id))
+                'message': 'Graph(_id=`{}`) successfully updated'.format(str(graph._id)),
+                'graph': graph.to_dict()
             })
     except Exception as e:
         app.logger.error(e)
-        return _make_fail_response('Internal error: "{}"'.format(str(e)))
+        return _make_fail_response('Internal error: "{}"'.format(repr(e)))
