@@ -137,6 +137,7 @@ class Graph(DBObject):
         node_id_to_level = defaultdict(lambda: -1)
         node_id_to_node = {}
         queued_node_ids = set()
+        children_ids = defaultdict(set)
 
         node_ids = set([node._id for node in self.blocks])
         non_zero_block_ids = set()
@@ -144,7 +145,9 @@ class Graph(DBObject):
             node_id_to_node[node._id] = node
             for input in node.inputs:
                 for value in input.values:
-                    non_zero_block_ids.add(to_object_id(value.block_id))
+                    parent_node_id = to_object_id(value.block_id)
+                    non_zero_block_ids.add(parent_node_id)
+                    children_ids[parent_node_id].add(node._id)
 
         leaves = node_ids - non_zero_block_ids
         to_visit = deque()
@@ -155,7 +158,8 @@ class Graph(DBObject):
         while to_visit:
             node_id = to_visit.popleft()
             node = node_id_to_node[node_id]
-            node_level = node_id_to_level[node_id]
+            node_level = max([node_id_to_level[node_id]] + [node_id_to_level[child_id] + 1 for child_id in children_ids[node_id]])
+            node_id_to_level[node_id] = node_level
             for input in node.inputs:
                 for value in input.values:
                     parent_node_id = to_object_id(value.block_id)
@@ -180,11 +184,11 @@ class Graph(DBObject):
             for index, node_id in enumerate(level_to_node_ids[level]):
                 if node_id in parent_node_ids:
                     return index
-            return len(level_to_node_ids[level])
+            return -1
 
-        def get_index(node, level):
+        def get_index(node, max_level, level):
             return tuple(
-                [get_index_helper(node, lvl) for lvl in range(level - 1, -1 , -1)]
+                    [get_index_helper(node, lvl) for lvl in range(max_level, level, -1)]
                 )
 
         for node_id, level in node_id_to_level.items():
@@ -195,7 +199,7 @@ class Graph(DBObject):
             index_to_node_id = []
             for node_id in level_node_ids:
                 node = node_id_to_node[node_id]
-                index = get_index(node, level)
+                index = get_index(node, max_level, level)
                 index_to_node_id.append((index, node_id))
 
             index_to_node_id.sort()
