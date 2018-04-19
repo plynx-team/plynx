@@ -8,6 +8,7 @@ MasterConfig = namedtuple('MasterConfig', 'host port')
 MongoConfig = namedtuple('MongoConfig', 'user password host port')
 StorageConfig = namedtuple('StorageConfig', 'scheme resources stderr stdout worker')
 AuthConfig = namedtuple('AuthConfig', 'secret_key')
+WebConfig = namedtuple('WebConfig', 'endpoint')
 
 def __init__():
     global _config
@@ -42,6 +43,11 @@ def get_storage_config():
 def get_auth_config():
     return AuthConfig(
         secret_key=_config['auth']['secret_key']
+        )
+
+def get_web_config():
+    return WebConfig(
+        endpoint=_config['web']['endpoint']
         )
 
 __init__()

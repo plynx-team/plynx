@@ -6,9 +6,11 @@ from web.common import app, request, auth, g
 from utils.common import to_object_id, JSONEncoder
 from collections import defaultdict, OrderedDict
 from constants import GraphRunningStatus, GraphPostAction, GraphPostStatus
+from utils.config import get_web_config
 
 
 graph_collection_manager = GraphCollectionManager()
+WEB_CONFIG = get_web_config()
 
 
 def _make_fail_response(message):
@@ -97,7 +99,8 @@ def post_graph():
             {
                 'status': GraphPostStatus.SUCCESS,
                 'message': 'Graph(_id=`{}`) successfully updated'.format(str(graph._id)),
-                'graph': graph.to_dict()
+                'graph': graph.to_dict(),
+                'url': '{}/graphs/{}'.format(WEB_CONFIG.endpoint.rstrip('/'), str(graph._id))
             })
     except Exception as e:
         app.logger.error(e)
