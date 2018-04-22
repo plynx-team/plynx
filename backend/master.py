@@ -155,10 +155,13 @@ class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             return False
         if worker_message.worker_id in self.worker_to_job_description:   # worker already has a job
             return False
-        job_description = self.job_description_queue.popleft()
-        self.worker_to_job_description[worker_message.worker_id] = job_description
-
-        return True
+        while self.job_description_queue:
+            job_description = self.job_description_queue.popleft()
+            scheduler = self.graph_id_to_scheduler.get(job_description.graph_id, None)
+            if scheduler and scheduler.graph.graph_running_status == GraphRunningStatus.RUNNING:
+                self.worker_to_job_description[worker_message.worker_id] = job_description
+                return True
+        return False
 
     def run_db_status_update(self):
         while self.alive:
