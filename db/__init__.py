@@ -5,6 +5,8 @@ from .parameter import Parameter, ParameterWidget
 from .output import Output
 from .validation_error import ValidationError
 from .block import Block
+from .block_cache import BlockCache
+from .block_cache_manager import BlockCacheManager
 from .block_collection_manager import BlockCollectionManager
 from .file import File
 from .file_collection_manager import FileCollectionManager
@@ -18,6 +20,8 @@ from .demo_user_manager import DemoUserManager
 __all__ = [
     get_base_blocks,
     Block,
+    BlockCache,
+    BlockCacheManager,
     BlockCollectionManager,
     File,
     FileCollectionManager,

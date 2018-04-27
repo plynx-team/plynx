@@ -28,11 +28,7 @@ class BlockCache(DBObject):
             self.block_id = block._id
             self.outputs = block.outputs
             self.logs = block.logs
-            self.key = BlockCache._generate_key(
-                inputs=block.inputs,
-                parameters=block.parameters,
-                derived_from=block.derived_from
-                )
+            self.key = BlockCache.generate_key(block)
 
     def to_dict(self):
         return {
@@ -80,7 +76,10 @@ class BlockCache(DBObject):
         return True
 
     @staticmethod
-    def _generate_key(inputs, parameters, derived_from):
+    def generate_key(block):
+        inputs=block.inputs
+        parameters=block.parameters
+        derived_from=block.derived_from
 
         sorted_inputs = sorted(inputs, key=lambda x: x.name)
         inputs_hash = ','.join([
