@@ -12,6 +12,13 @@ class BlockCacheManager(object):
         - parameters
     """
 
+    def __init__(self):
+        BlockCacheManager._init_index()
+
+    @staticmethod
+    def _init_index():
+        db.block_cache.create_index('key', name='key_index', background=True)
+
     @staticmethod
     def get(block):
         key = BlockCache.generate_key(block)
