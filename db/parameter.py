@@ -71,9 +71,9 @@ class Parameter(object):
             name = parameter_dict['name'],
             parameter_type = parameter_dict['parameter_type'],
             value = parameter_dict['value'],
-            mutable_type = parameter_dict['mutable_type'],
-            publicable = parameter_dict['publicable'],
-            removable = parameter_dict['removable'],
+            mutable_type = parameter_dict.get('mutable_type', True),
+            publicable = parameter_dict.get('publicable', True),
+            removable = parameter_dict.get('removable', True),
             widget = widget
             )
 
