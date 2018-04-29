@@ -22,12 +22,26 @@ class ParameterWidget(object):
 
 
 class Parameter(object):
-    def __init__(self, name, parameter_type, value=None, widget=None):
+    def __init__(self,
+                 name,
+                 parameter_type,
+                 value=None,
+                 widget=None,
+                 mutable_type=True,
+                 removable=True,
+                 publicable=True
+                 ):
         assert isinstance(name, basestring)
         assert isinstance(parameter_type, basestring)
         assert widget is None or isinstance(widget, ParameterWidget)
+        assert type(mutable_type) is bool
+        assert type(publicable) is bool
+        assert type(removable) is bool
         self.name = name
         self.parameter_type = parameter_type
+        self.mutable_type = mutable_type
+        self.publicable = publicable
+        self.removable = removable
         if value is None:
             self.value = ParameterTypes.get_default_by_type(self.parameter_type)
         else:
@@ -40,6 +54,9 @@ class Parameter(object):
             'name': self.name,
             'parameter_type': self.parameter_type,
             'value': self.value,
+            'mutable_type': self.mutable_type,
+            'removable': self.removable,
+            'publicable': self.publicable,
             'widget': self.widget.to_dict() if self.widget else None
         }
 
@@ -54,6 +71,9 @@ class Parameter(object):
             name = parameter_dict['name'],
             parameter_type = parameter_dict['parameter_type'],
             value = parameter_dict['value'],
+            mutable_type = parameter_dict['mutable_type'],
+            publicable = parameter_dict['publicable'],
+            removable = parameter_dict['removable'],
             widget = widget
             )
 

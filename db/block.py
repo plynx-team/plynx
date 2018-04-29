@@ -184,7 +184,18 @@ class Block(DBObject):
             Parameter(
                 name='cmd',
                 parameter_type=ParameterTypes.TEXT,
-                value='bash -c " "'
+                value='bash -c " "',
+                mutable_type=False,
+                publicable=False,
+                removable=False
+                ),
+            Parameter(
+                name='cacheable',
+                parameter_type=ParameterTypes.BOOL,
+                value=True,
+                mutable_type=False,
+                publicable=False,
+                removable=False
                 )
             ]
         block.logs = [
