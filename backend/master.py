@@ -17,10 +17,6 @@ from utils.logs import set_logging_level
 from graph.base_blocks import BlockCollection
 
 
-class Master:
-    def __init__(self):
-        pass
-
 
 MasterJobDescription = namedtuple('MasterJobDescription', ['graph_id', 'job'])
 
