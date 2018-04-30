@@ -1,3 +1,4 @@
+import logging
 from abc import ABCMeta, abstractmethod
 from enum import Enum
 from collections import defaultdict
@@ -79,23 +80,28 @@ class GraphScheduler(object):
         for block_id in self.dependency_index_to_block_ids[0]:
             block = self._get_block_with_inputs(block_id).copy()
             if GraphScheduler._cacheable(block):
-                cache = GraphScheduler.block_cache_manager.get(block, self.graph.author)
-                if cache:
-                    block.block_running_status = BlockRunningStatus.RESTORED
-                    block.outputs = cache.outputs
-                    block.logs = cache.logs
-                    block.cache_url = '{}/graphs/{}?nid={}'.format(
-                        GraphScheduler.WEB_CONFIG.endpoint.rstrip('/'),
-                        str(cache.graph_id),
-                        str(cache.block_id),
-                        )
-                    cached_blocks.append(block)
-                    continue
+                try:
+                    cache = GraphScheduler.block_cache_manager.get(block, self.graph.author)
+                    if cache:
+                        block.block_running_status = BlockRunningStatus.RESTORED
+                        block.outputs = cache.outputs
+                        block.logs = cache.logs
+                        block.cache_url = '{}/graphs/{}?nid={}'.format(
+                            GraphScheduler.WEB_CONFIG.endpoint.rstrip('/'),
+                            str(cache.graph_id),
+                            str(cache.block_id),
+                            )
+                        cached_blocks.append(block)
+                        continue
+                except Exception as err:
+                    logging.exception("Unable to update cache")
             job = self.block_collection.make_job(block)
             res.append(job)
         del self.dependency_index_to_block_ids[0]
+
         for block in cached_blocks:
             self.update_block(block)
+
         return res
 
     def update_block(self, block):
