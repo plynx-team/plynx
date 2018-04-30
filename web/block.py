@@ -19,12 +19,13 @@ def _make_fail_response(message):
 @app.route('/plynx/api/v0/blocks/<block_id>', methods=['GET'])
 @auth.login_required
 def get_blocks(block_id=None):
+    author = to_object_id(g.user._id)
     if block_id == 'new':
         return JSONEncoder().encode({
             'data': Block.get_default().to_dict(),
             'status':'success'})
     elif block_id:
-        block = block_collection_manager.get_db_block(block_id)
+        block = block_collection_manager.get_db_block(block_id, author)
         if block:
             return JSONEncoder().encode({
                 'data': block,

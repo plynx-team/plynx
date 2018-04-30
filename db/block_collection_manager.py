@@ -28,7 +28,12 @@ class BlockCollectionManager(object):
                     {'block_status': {'$in': status}}
                     ]
                 }).sort('insertion_date', -1).skip(offset).limit(per_page)
-        return list(db_blocks)
+
+        res = []
+        for block in db_blocks:
+            block['_readonly'] = (author != to_object_id(block['author']))
+            res.append(block)
+        return res
 
     @staticmethod
     def get_db_blocks_count(author, status=None):
@@ -54,5 +59,7 @@ class BlockCollectionManager(object):
                 })
 
     @staticmethod
-    def get_db_block(block_id):
-        return db.blocks.find_one({'_id': to_object_id(block_id)})
+    def get_db_block(block_id, author):
+        res = db.blocks.find_one({'_id': to_object_id(block_id)})
+        res['_readonly'] = (author != to_object_id(res['author']))
+        return res
