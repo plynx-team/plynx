@@ -14,7 +14,7 @@ class BlockCache(DBObject):
     PROPERTIES = {'outputs', 'logs'}
     IGNORED_PARAMETERS = {'cmd'}
 
-    def __init__(self, block=None, graph_id=None):
+    def __init__(self, block=None, graph_id=None, user_id=None):
         super(BlockCache, self).__init__()
 
         self._id = ObjectId()
@@ -28,7 +28,7 @@ class BlockCache(DBObject):
             self.block_id = block._id
             self.outputs = block.outputs
             self.logs = block.logs
-            self.key = BlockCache.generate_key(block)
+            self.key = BlockCache.generate_key(block, user_id)
 
     def to_dict(self):
         return {
@@ -75,8 +75,9 @@ class BlockCache(DBObject):
         self._dirty = False
         return True
 
+    # Demo: remove user_id
     @staticmethod
-    def generate_key(block):
+    def generate_key(block, user_id):
         inputs=block.inputs
         parameters=block.parameters
         derived_from=block.derived_from
@@ -99,7 +100,7 @@ class BlockCache(DBObject):
                 for parameter in sorted_parameters if parameter.name not in BlockCache.IGNORED_PARAMETERS
             ])
 
-        key = '{};{};{}'.format(derived_from, inputs_hash, parameters_hash)
+        key = '{};{};{};{}'.format(derived_from, inputs_hash, parameters_hash, str(user_id))
         return key
 
     def __str__(self):

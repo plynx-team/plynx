@@ -20,8 +20,8 @@ class BlockCacheManager(object):
         db.block_cache.create_index('key', name='key_index', background=True)
 
     @staticmethod
-    def get(block):
-        key = BlockCache.generate_key(block)
+    def get(block, user_id):
+        key = BlockCache.generate_key(block, user_id)
         db_block_cache = db.block_cache.find({
             'key': key
             }).sort('insertion_date', -1).limit(1)
@@ -33,9 +33,10 @@ class BlockCacheManager(object):
         else:
             return None
 
+    # Demo: remove user_id
     @staticmethod
-    def post(block, graph_id):
+    def post(block, graph_id, user_id):
         assert block.block_running_status == BlockRunningStatus.SUCCESS, \
             'Only blocks with status SUCCESS can be cached'
-        block_cache = BlockCache(block=block, graph_id=graph_id)
+        block_cache = BlockCache(block=block, graph_id=graph_id, user_id=user_id)
         block_cache.save()

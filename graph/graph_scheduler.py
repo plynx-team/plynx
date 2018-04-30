@@ -78,7 +78,7 @@ class GraphScheduler(object):
         for block_id in self.dependency_index_to_block_ids[0]:
             block = self._get_block_with_inputs(block_id).copy()
             if GraphScheduler._cacheable(block):
-                cache = GraphScheduler.block_cache_manager.get(block)
+                cache = GraphScheduler.block_cache_manager.get(block, self.graph.author)
                 if cache:
                     block.block_running_status = BlockRunningStatus.RESTORED
                     block.outputs = cache.outputs
@@ -108,7 +108,7 @@ class GraphScheduler(object):
 
         block.block_running_status = block_running_status
         if block_running_status == BlockRunningStatus.SUCCESS and GraphScheduler._cacheable(block):
-            GraphScheduler.block_cache_manager.post(block, self.graph_id)
+            GraphScheduler.block_cache_manager.post(block, self.graph_id, self.graph.author)
 
         if block_running_status == BlockRunningStatus.FAILED:
             self.graph.graph_running_status = GraphRunningStatus.FAILED
