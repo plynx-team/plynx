@@ -75,6 +75,7 @@ class GraphScheduler(object):
     def pop_jobs(self):
         """Get a set of blocks with satisfied dependencies"""
         res = []
+        cached_blocks = []
         for block_id in self.dependency_index_to_block_ids[0]:
             block = self._get_block_with_inputs(block_id).copy()
             if GraphScheduler._cacheable(block):
@@ -88,11 +89,13 @@ class GraphScheduler(object):
                         str(cache.graph_id),
                         str(cache.block_id),
                         )
-                    self.update_block(block)
+                    cached_blocks.append(block)
                     continue
             job = self.block_collection.make_job(block)
             res.append(job)
         del self.dependency_index_to_block_ids[0]
+        for block in cached_blocks:
+            self.update_block(block)
         return res
 
     def update_block(self, block):
