@@ -29,6 +29,7 @@ class Block(DBObject):
         self.logs = []
         self.block_running_status = BlockRunningStatus.CREATED
         self.block_status = BlockStatus.READY
+        self.cache_url = None
         self.x = 0
         self.y = 0
         self.author = None
@@ -55,6 +56,7 @@ class Block(DBObject):
                 "derived_from": self.derived_from,
                 "block_running_status": self.block_running_status,
                 "block_status": self.block_status,
+                "cache_url": self.cache_url,
                 "x": self.x,
                 "y": self.y,
                 "author": self.author,

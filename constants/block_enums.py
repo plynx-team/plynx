@@ -9,6 +9,7 @@ class BlockRunningStatus(object):
     IN_QUEUE = 'IN_QUEUE'
     RUNNING = 'RUNNING'
     SUCCESS = 'SUCCESS'
+    RESTORED = 'RESTORED'
     FAILED = 'FAILED'
 
 

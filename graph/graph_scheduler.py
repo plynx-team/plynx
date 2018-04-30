@@ -1,10 +1,11 @@
 from abc import ABCMeta, abstractmethod
 from enum import Enum
 from collections import defaultdict
-from db import Block, Graph
+from db import Block, Graph, BlockCacheManager
 from constants import BlockRunningStatus, GraphRunningStatus
 from .base_blocks import BlockCollection
 from utils.common import to_object_id
+from utils.config import get_web_config
 
 
 class GraphScheduler(object):
@@ -18,6 +19,9 @@ class GraphScheduler(object):
         graph (str or Graph)
 
     """
+    block_cache_manager = BlockCacheManager()
+    WEB_CONFIG = get_web_config()
+
     def __init__(self, graph, block_collection=None):
         if isinstance(graph, Graph):
             self.graph_id = graph._id
@@ -49,10 +53,18 @@ class GraphScheduler(object):
                 for input_value in block_input.values:
                     parent_block_id = to_object_id(input_value.block_id)
                     self.block_id_to_dependents[parent_block_id].add(block_id)
-                    if self.block_id_to_block[parent_block_id].block_running_status not in {BlockRunningStatus.SUCCESS, BlockRunningStatus.FAILED, BlockRunningStatus.STATIC}:
+                    if self.block_id_to_block[parent_block_id].block_running_status not in {
+                            BlockRunningStatus.SUCCESS,
+                            BlockRunningStatus.FAILED,
+                            BlockRunningStatus.STATIC,
+                            BlockRunningStatus.RESTORED}:
                         dependency_index += 1
 
-            if block.block_running_status not in {BlockRunningStatus.SUCCESS, BlockRunningStatus.FAILED, BlockRunningStatus.STATIC}:
+            if block.block_running_status not in {
+                    BlockRunningStatus.SUCCESS,
+                    BlockRunningStatus.FAILED,
+                    BlockRunningStatus.STATIC,
+                    BlockRunningStatus.RESTORED}:
                 self.uncompleted_blocks_count +=1
             self.dependency_index_to_block_ids[dependency_index].add(block_id)
             self.block_id_to_dependency_index[block_id] = dependency_index
@@ -64,7 +76,20 @@ class GraphScheduler(object):
         """Get a set of blocks with satisfied dependencies"""
         res = []
         for block_id in self.dependency_index_to_block_ids[0]:
-            block = self._get_block_with_inputs(block_id).copy()       
+            block = self._get_block_with_inputs(block_id).copy()
+            if GraphScheduler._cacheable(block):
+                cache = GraphScheduler.block_cache_manager.get(block)
+                if cache:
+                    block.block_running_status = BlockRunningStatus.RESTORED
+                    block.outputs = cache.outputs
+                    block.logs = cache.logs
+                    block.cache_url = '{}/graphs/{}?nid={}'.format(
+                        GraphScheduler.WEB_CONFIG.endpoint.rstrip('/'),
+                        str(cache.graph_id),
+                        str(cache.block_id),
+                        )
+                    self.update_block(block)
+                    continue
             job = self.block_collection.make_job(block)
             res.append(job)
         del self.dependency_index_to_block_ids[0]
@@ -76,16 +101,19 @@ class GraphScheduler(object):
         self.graph.save(force=True)
 
     def _set_block_status(self, block_id, block_running_status):
+        block = self.block_id_to_block[block_id]
         # if block is already up to date
-        if block_running_status == self.block_id_to_block[block_id].block_running_status:
+        if block_running_status == block.block_running_status:
             return
 
-        self.block_id_to_block[block_id].block_running_status = block_running_status
+        block.block_running_status = block_running_status
+        if block_running_status == BlockRunningStatus.SUCCESS and GraphScheduler._cacheable(block):
+            GraphScheduler.block_cache_manager.post(block, self.graph_id)
 
         if block_running_status == BlockRunningStatus.FAILED:
             self.graph.graph_running_status = GraphRunningStatus.FAILED
 
-        if block_running_status in {BlockRunningStatus.SUCCESS, BlockRunningStatus.FAILED}:
+        if block_running_status in {BlockRunningStatus.SUCCESS, BlockRunningStatus.FAILED, BlockRunningStatus.RESTORED}:
             for dependent_block_id in self.block_id_to_dependents[block_id]:
 
                 dependent_block = self.block_id_to_block[dependent_block_id]
@@ -117,6 +145,13 @@ class GraphScheduler(object):
                     value.output_id
                     ).resource_id
         return res
+
+    @staticmethod
+    def _cacheable(block):
+        for parameter in block.parameters:
+            if parameter.name == 'cacheable':
+                return parameter.value
+        return False
 
 
 def main():

@@ -25,8 +25,13 @@ class BlockCacheManager(object):
         db_block_cache = db.block_cache.find({
             'key': key
             }).sort('insertion_date', -1).limit(1)
-        res = list(db_block_cache)
-        return res[0] if len(res) else None
+        caches = list(db_block_cache)
+        if len(caches):
+            res = BlockCache()
+            res.load_from_dict(caches[0])
+            return res
+        else:
+            return None
 
     @staticmethod
     def post(block, graph_id):
