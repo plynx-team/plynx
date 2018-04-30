@@ -105,6 +105,11 @@ class GraphScheduler(object):
         return res
 
     def update_block(self, block):
+        if block.block_running_status == BlockRunningStatus.SUCCESS \
+                and self.block_id_to_block[block._id].block_running_status != block.block_running_status \
+                and GraphScheduler._cacheable(block):
+            GraphScheduler.block_cache_manager.post(block, self.graph_id, self.graph.author)
+
         self._set_block_status(block._id, block.block_running_status)
         self.block_id_to_block[block._id].load_from_dict(block.to_dict())   # copy
         self.graph.save(force=True)
@@ -114,10 +119,7 @@ class GraphScheduler(object):
         # if block is already up to date
         if block_running_status == block.block_running_status:
             return
-
         block.block_running_status = block_running_status
-        if block_running_status == BlockRunningStatus.SUCCESS and GraphScheduler._cacheable(block):
-            GraphScheduler.block_cache_manager.post(block, self.graph_id, self.graph.author)
 
         if block_running_status == BlockRunningStatus.FAILED:
             self.graph.graph_running_status = GraphRunningStatus.FAILED
