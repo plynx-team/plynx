@@ -66,7 +66,7 @@ class Command(BlockBase):
 
         except Exception as e:
             res = JobReturnStatus.FAILED
-            print e
+            logging.exception("Job failed")
             with open(logs['worker'], 'a+') as worker_log_file:
                 worker_log_file.write('\n' * 3)
                 worker_log_file.write('#' * 60 + '\n')
@@ -106,7 +106,6 @@ class Command(BlockBase):
         res = {}
         for input in inputs:
             filenames = []
-            print input.values
             for i, value in enumerate(input.values):
                 filename = os.path.join('/tmp', '{}_{}_{}'.format(str(uuid.uuid1()), i, input.name))
                 with open(filename, 'wb') as f:

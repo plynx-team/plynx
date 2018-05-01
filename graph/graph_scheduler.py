@@ -46,7 +46,12 @@ class GraphScheduler(object):
             self.block_collection = BlockCollection()
 
         for block in self.graph.blocks:
-            if block._type == 'file':
+            # ignore blocks in finished statuses
+            if block.block_running_status in {
+                            BlockRunningStatus.SUCCESS,
+                            BlockRunningStatus.FAILED,
+                            BlockRunningStatus.STATIC,
+                            BlockRunningStatus.RESTORED}:
                 continue
             block_id = block._id
             dependency_index = 0
@@ -126,7 +131,6 @@ class GraphScheduler(object):
 
         if block_running_status in {BlockRunningStatus.SUCCESS, BlockRunningStatus.FAILED, BlockRunningStatus.RESTORED}:
             for dependent_block_id in self.block_id_to_dependents[block_id]:
-
                 dependent_block = self.block_id_to_block[dependent_block_id]
                 prev_dependency_index = self.block_id_to_dependency_index[dependent_block_id]
 
@@ -172,7 +176,7 @@ def main():
         jobs = graph_scheduler.pop_jobs()
         for job in jobs:
             block = job.block
-            print repr(block)
+            print(repr(block))
             for output in block.outputs:
                 output.resource_id = 'A'
             block.block_running_status = BlockRunningStatus.SUCCESS

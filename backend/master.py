@@ -132,6 +132,9 @@ class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             logging.info("Found {} running graphs. Setting them to 'READY'".format(len(running_graphs)))
             for graph in running_graphs:
                 graph.graph_running_status = GraphRunningStatus.READY
+                for block in graph.blocks:
+                    if block.block_running_status == BlockRunningStatus.RUNNING:
+                        block.block_running_status = BlockRunningStatus.CREATED
                 graph.save()
 
         self.graph_id_to_scheduler = {}
