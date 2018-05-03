@@ -124,6 +124,29 @@ class Block(DBObject):
                     validation_code=ValidationCode.MISSING_PARAMETER
                 ))
 
+        for input in self.inputs:
+            if input.min_count < 0:
+                violations.append(
+                    ValidationError(
+                        target=ValidationTargetType.INPUT,
+                        object_id=input.name,
+                        validation_code=ValidationCode.MINIMUM_COUNT_MUST_NOT_BE_NEGATIVE
+                    ))
+            if input.min_count > input.max_count and input.max_count > 0:
+                violations.append(
+                    ValidationError(
+                        target=ValidationTargetType.INPUT,
+                        object_id=input.name,
+                        validation_code=ValidationCode.MINIMUM_COUNT_MUST_BE_GREATER_THAN_MAXIMUM
+                    ))
+            if input.max_count == 0:
+                violations.append(
+                    ValidationError(
+                        target=ValidationTargetType.INPUT,
+                        object_id=input.name,
+                        validation_code=ValidationCode.MAXIMUM_COUNT_MUST_NOT_BE_ZERO
+                    ))
+
         # Meaning the block is in the graph. Otherwise souldn't be in validation step
         if self.block_status != BlockStatus.CREATED:
             for input in self.inputs:
