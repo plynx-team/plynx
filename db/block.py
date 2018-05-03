@@ -127,7 +127,7 @@ class Block(DBObject):
         # Meaning the block is in the graph. Otherwise souldn't be in validation step
         if self.block_status != BlockStatus.CREATED:
             for input in self.inputs:
-                if len(input.values) == 0:
+                if len(input.values) < input.min_count:
                     violations.append(
                         ValidationError(
                             target=ValidationTargetType.INPUT,

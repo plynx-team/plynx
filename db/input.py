@@ -39,12 +39,16 @@ class Input(object):
             values = []
         assert isinstance(values, list)
         self.values = values
+        self.min_count = 1
+        self.max_count = 1
 
     def to_dict(self):
         return {
             'name': self.name,
             'file_types': self.file_types,
-            'values': [value.to_dict() for value in self.values]
+            'values': [value.to_dict() for value in self.values],
+            'min_count': self.min_count,
+            'max_count': self.max_count
         }
 
     @staticmethod
@@ -58,6 +62,10 @@ class Input(object):
                 value_dict.get('resource_id', None)
                 )
             res.values.append(input_value)
+        res.min_count = input_dict.get('min_count', 1)
+        res.max_count = input_dict.get('max_count', 1)
+        assert isinstance(res.min_count, int)
+        assert isinstance(res.max_count, int)
         return res
 
     def __str__(self):
