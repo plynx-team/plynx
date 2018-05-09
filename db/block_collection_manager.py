@@ -2,6 +2,7 @@ from . import Block
 from utils.common import to_object_id
 from utils.db_connector import *
 
+
 class BlockCollectionManager(object):
     """
     """
@@ -34,6 +35,16 @@ class BlockCollectionManager(object):
             block['_readonly'] = (author != to_object_id(block['author']))
             res.append(block)
         return res
+
+    @staticmethod
+    def get_db_blocks_by_ids(ids):
+        db_blocks = db.blocks.find({
+            '_id': {
+                '$in': list(ids)
+                }
+            })
+
+        return list(db_blocks)
 
     @staticmethod
     def get_db_blocks_count(author, status=None):

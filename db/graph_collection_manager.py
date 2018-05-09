@@ -1,10 +1,30 @@
-from . import Graph
+from . import Graph, BlockCollectionManager
 from utils.common import to_object_id
 from utils.db_connector import *
+
 
 class GraphCollectionManager(object):
     """
     """
+
+    bcm = BlockCollectionManager()
+
+    @staticmethod
+    def _update_block_statuses(db_graph):
+        block_ids = set(
+            [to_object_id(block['derived_from']) for block in db_graph['blocks']]
+            )
+        db_blocks = GraphCollectionManager.bcm.get_db_blocks_by_ids(block_ids)
+        block_id_to_db_block = {
+            db_block['_id']: db_block for db_block in db_blocks
+        }
+
+        for g_block in db_graph['blocks']:
+            id = to_object_id(g_block['derived_from'])
+            db_block = block_id_to_db_block[id]
+            g_block['block_status'] = db_block['block_status']
+
+        return db_graph
 
     @staticmethod
     def get_graphs(graph_running_status):
@@ -36,4 +56,6 @@ class GraphCollectionManager(object):
 
     @staticmethod
     def get_db_graph(graph_id):
-        return db.graphs.find_one({'_id': to_object_id(graph_id)})
+        return GraphCollectionManager._update_block_statuses(
+            db.graphs.find_one({'_id': to_object_id(graph_id)})
+            )
