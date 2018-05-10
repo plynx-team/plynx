@@ -12,7 +12,6 @@ class GraphCollectionManager(object):
 
     @staticmethod
     def _update_block_statuses(db_graph):
-        """
         block_ids = set(
             [to_object_id(block['derived_from']) for block in db_graph['blocks'] if block['_type'] == 'block']
             )
@@ -32,7 +31,7 @@ class GraphCollectionManager(object):
             if id in node_id_to_db_node:
                 db_node = node_id_to_db_node[id]
                 g_block['block_status'] = db_node['block_status']
-"""
+
         return db_graph
 
     @staticmethod
