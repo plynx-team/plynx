@@ -36,6 +36,16 @@ class FileCollectionManager(object):
         return res
 
     @staticmethod
+    def get_db_files_by_ids(ids):
+        db_files = db.files.find({
+            '_id': {
+                '$in': list(ids)
+                }
+            })
+
+        return list(db_files)
+
+    @staticmethod
     def get_db_files_count(author, status=None):
         if status and isinstance(status, basestring):
             status = [status]

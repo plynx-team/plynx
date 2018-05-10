@@ -62,8 +62,7 @@ class Input(object):
                 value_dict.get('resource_id', None)
                 )
             res.values.append(input_value)
-        res.min_count = input_dict.get('min_count', 1)
-        res.max_count = input_dict.get('max_count', 1)
+
         assert isinstance(res.min_count, int)
         assert isinstance(res.max_count, int)
         return res

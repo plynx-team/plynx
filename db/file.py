@@ -21,9 +21,10 @@ class File(DBObject):
         self.title = None
         self.description = None
         self.parent_file = None
+        self.derived_from = None
         self.inputs = []
         self.outputs = []
-        self.file_status = FileStatus.READY
+        self.block_status = FileStatus.READY
         self.block_running_status = BlockRunningStatus.STATIC
         self.x = 0
         self.y = 0
@@ -43,7 +44,8 @@ class File(DBObject):
                 "outputs": [output.to_dict() for output in self.outputs],
                 "title": self.title,
                 "description": self.description,
-                "file_status": self.file_status,
+                "block_status": self.block_status,
+                "derived_from": self.derived_from,
                 "block_running_status": self.block_running_status,
                 "x": self.x,
                 "y": self.y,
@@ -108,11 +110,11 @@ class File(DBObject):
                     validation_code=ValidationCode.MISSING_PARAMETER
                 ))
 
-        if self.file_status != FileStatus.READY:
+        if self.block_status != FileStatus.READY:
             violations.append(
                 ValidationError(
                     target=ValidationTargetType.PROPERTY,
-                    object_id='file_status',
+                    object_id='block_status',
                     validation_code=ValidationCode.INVALID_VALUE
                 ))
 
@@ -159,7 +161,7 @@ class File(DBObject):
         file = File()
         file.title = 'File'
         file.description = 'Custom file'
-        file.file_status = FileStatus.READY
+        file.block_status = FileStatus.READY
         file.block_running_status = BlockRunningStatus.STATIC
         file.public = False
 
@@ -173,7 +175,7 @@ if __name__ == "__main__":
     file = File()
     file.title = "File"
     file.description = "mnist.csv"
-    file.file_status = FileStatus.READY
+    file.block_status = FileStatus.READY
     file.author = user._id
     file.public = False
     file.outputs = [
@@ -188,7 +190,7 @@ if __name__ == "__main__":
     file = File()
     file.title = "File"
     file.description = "sample.py"
-    file.file_status = FileStatus.READY
+    file.block_status = FileStatus.READY
     file.author = user._id
     file.public = False
     file.outputs = [
@@ -203,7 +205,7 @@ if __name__ == "__main__":
     file = File()
     file.title = "File"
     file.description = "train.py"
-    file.file_status = FileStatus.READY
+    file.block_status = FileStatus.READY
     file.author = user._id
     file.public = False
     file.outputs = [
@@ -218,7 +220,7 @@ if __name__ == "__main__":
     file = File()
     file.title = "File"
     file.description = "predict.py"
-    file.file_status = FileStatus.READY
+    file.block_status = FileStatus.READY
     file.author = user._id
     file.public = False
     file.outputs = [
@@ -233,7 +235,7 @@ if __name__ == "__main__":
     file = File()
     file.title = "File"
     file.description = "build_plot.py"
-    file.file_status = FileStatus.READY
+    file.block_status = FileStatus.READY
     file.author = user._id
     file.public = False
     file.outputs = [
