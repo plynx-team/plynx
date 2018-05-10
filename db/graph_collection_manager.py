@@ -13,12 +13,12 @@ class GraphCollectionManager(object):
     @staticmethod
     def _update_block_statuses(db_graph):
         block_ids = set(
-            [to_object_id(block['derived_from']) for block in db_graph['blocks'] if block['_type'] == 'block']
+            [to_object_id(block['derived_from']) for block in db_graph['blocks'] if block['type'] == 'block']
             )
         db_blocks = GraphCollectionManager.bcm.get_db_blocks_by_ids(block_ids)
 
         file_ids = set(
-            [to_object_id(file['derived_from']) for file in db_graph['blocks'] if file['_type'] == 'file']
+            [to_object_id(file['derived_from']) for file in db_graph['blocks'] if file['type'] == 'file']
             )
         db_files = GraphCollectionManager.fcm.get_db_files_by_ids(file_ids)
 

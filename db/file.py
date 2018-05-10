@@ -17,7 +17,7 @@ class File(DBObject):
         super(File, self).__init__()
 
         self._id = None
-        self._type = 'file'
+        self.type = 'file'
         self.title = None
         self.description = None
         self.parent_file = None
@@ -40,7 +40,7 @@ class File(DBObject):
     def to_dict(self):
         return {
                 "_id": self._id,
-                "_type": self._type,
+                "type": self.type,
                 "outputs": [output.to_dict() for output in self.outputs],
                 "title": self.title,
                 "description": self.description,

@@ -17,7 +17,7 @@ class Block(DBObject):
         super(Block, self).__init__()
 
         self._id = None
-        self._type = 'block'
+        self.type = 'block'
         self.title = None
         self.description = None
         self.base_block_name = None
@@ -44,7 +44,7 @@ class Block(DBObject):
     def to_dict(self):
         return {
                 "_id": self._id,
-                "_type": self._type,
+                "type": self.type,
                 "base_block_name": self.base_block_name,
                 "inputs": [input.to_dict() for input in self.inputs],
                 "outputs": [output.to_dict() for output in self.outputs],

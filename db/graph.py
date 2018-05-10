@@ -76,9 +76,9 @@ class Graph(DBObject):
 
         self.blocks = []
         for block in graph['blocks']:
-            if block['_type'] == 'block':
+            if block['type'] == 'block':
                 item_obj = Block()
-            elif block['_type'] == 'file':
+            elif block['type'] == 'file':
                 item_obj = File()
 
             item_obj.load_from_dict(block)
