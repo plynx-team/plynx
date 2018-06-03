@@ -2,6 +2,7 @@ class ValidationTargetType(object):
     BLOCK = 'BLOCK'
     GRAPH = 'GRAPH'
     INPUT = 'INPUT'
+    NODE = 'NODE'
     PARAMETER = 'PARAMETER'
     PROPERTY = 'PROPERTY'
 

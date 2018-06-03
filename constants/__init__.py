@@ -1,4 +1,5 @@
-from .block_enums import BlockRunningStatus, BlockStatus, BlockPostAction, BlockPostStatus, JobReturnStatus
+from .block_enums import BlockRunningStatus, BlockStatus, BlockPostAction, BlockPostStatus
+from .node_enums import NodeRunningStatus, NodeStatus, NodePostAction, NodePostStatus, JobReturnStatus
 from .file_enums import FileStatus, FilePostAction, FilePostStatus
 from .file_types import FileTypes
 from .graph_enums import GraphRunningStatus, GraphPostAction, GraphPostStatus
@@ -19,6 +20,10 @@ __all__ = [
     GraphRunningStatus,
     GraphPostAction,
     GraphPostStatus,
+    NodeRunningStatus,
+    NodeStatus,
+    NodePostAction,
+    NodePostStatus,
     ParameterTypes,
     ResourcePostStatus,
     ValidationTargetType,
