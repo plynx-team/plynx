@@ -3,56 +3,56 @@ import datetime
 from . import DBObject, Input, Output, Parameter, ParameterWidget, ValidationError
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
-from constants import BlockStatus, BlockRunningStatus, FileTypes, ParameterTypes, ValidationTargetType, ValidationCode
+from constants import NodeStatus, NodeRunningStatus, FileTypes, ParameterTypes, ValidationTargetType, ValidationCode
 
 
-class BlockCache(DBObject):
+class NodeCache(DBObject):
     """
-    Basic block cache with db interface
+    Basic Node Cache with db interface
     """
 
     PROPERTIES = {'outputs', 'logs'}
     IGNORED_PARAMETERS = {'cmd'}
 
-    def __init__(self, block=None, graph_id=None, user_id=None):
-        super(BlockCache, self).__init__()
+    def __init__(self, node=None, graph_id=None, user_id=None):
+        super(NodeCache, self).__init__()
 
         self._id = ObjectId()
         self.key = ''
         self.graph_id = graph_id
-        self.block_id = None    # refer to graph's block
+        self.node_id = None    # refer to Node in Graph
         self.outputs = []
         self.logs = []
 
-        if block:
-            self.block_id = block._id
-            self.outputs = block.outputs
-            self.logs = block.logs
-            self.key = BlockCache.generate_key(block, user_id)
+        if node:
+            self.node_id = node._id
+            self.outputs = node.outputs
+            self.logs = node.logs
+            self.key = NodeCache.generate_key(node, user_id)
 
     def to_dict(self):
         return {
                 "_id": self._id,
                 "key": self.key,
                 "graph_id": self.graph_id,
-                "block_id": self.block_id,
+                "node_id": self.node_id,
                 "outputs": [output.to_dict() for output in self.outputs],
                 "logs": [log.to_dict() for log in self.logs]
             }
 
-    def load_from_dict(self, block_dict):
-        for key, value in block_dict.iteritems():
-            if key not in BlockCache.PROPERTIES:
+    def load_from_dict(self, node_dict):
+        for key, value in node_dict.iteritems():
+            if key not in NodeCache.PROPERTIES:
                 setattr(self, key, value)
 
         self._id = to_object_id(self._id)
-        self.outputs = [Output.create_from_dict(output_dict) for output_dict in block_dict['outputs']]
-        self.logs = [Output.create_from_dict(logs_dict) for logs_dict in block_dict['logs']]
+        self.outputs = [Output.create_from_dict(output_dict) for output_dict in node_dict['outputs']]
+        self.logs = [Output.create_from_dict(logs_dict) for logs_dict in node_dict['logs']]
 
     def copy(self):
-        block_cache = BlockCache()
-        block_cache.load_from_dict(self.to_dict())
-        return block_cache
+        node_cache = NodeCache()
+        node_cache.load_from_dict(self.to_dict())
+        return node_cache
 
     def save(self, force=False):
         if not self.is_dirty() and not force:
@@ -60,14 +60,14 @@ class BlockCache(DBObject):
 
         now = datetime.datetime.utcnow()
 
-        block_cache_dict = self.to_dict()
-        block_cache_dict["update_date"] = now
+        node_cache_dict = self.to_dict()
+        node_cache_dict["update_date"] = now
 
-        db.block_cache.find_one_and_update(
+        db.node_cache.find_one_and_update(
             {'_id': self._id},
             {
                 "$setOnInsert": {"insertion_date": now},
-                "$set": block_cache_dict
+                "$set": node_cache_dict
             },
             upsert=True,
             )
@@ -77,10 +77,10 @@ class BlockCache(DBObject):
 
     # Demo: remove user_id
     @staticmethod
-    def generate_key(block, user_id):
-        inputs=block.inputs
-        parameters=block.parameters
-        derived_from=block.derived_from
+    def generate_key(node, user_id):
+        inputs=node.inputs
+        parameters=node.parameters
+        derived_from=node.derived_from
 
         sorted_inputs = sorted(inputs, key=lambda x: x.name)
         inputs_hash = ','.join([
@@ -97,19 +97,19 @@ class BlockCache(DBObject):
                     parameter.name,
                     parameter.value
                 )
-                for parameter in sorted_parameters if parameter.name not in BlockCache.IGNORED_PARAMETERS
+                for parameter in sorted_parameters if parameter.name not in NodeCache.IGNORED_PARAMETERS
             ])
 
         key = '{};{};{};{}'.format(derived_from, inputs_hash, parameters_hash, str(user_id))
         return key
 
     def __str__(self):
-        return 'BlockCache(_id="{}")'.format(self._id)
+        return 'NodeCache(_id="{}")'.format(self._id)
 
     def __repr__(self):
-        return 'BlockCache({})'.format(str(self.to_dict()))
+        return 'NodeCache({})'.format(str(self.to_dict()))
 
     def __getattr__(self, name):
         if name.startswith('__') and name.endswith('__'):
-            return super(BlockCache, self).__getattr__(name)
+            return super(NodeCache, self).__getattr__(name)
         raise Exception("Can't get attribute '{}'".format(name))
