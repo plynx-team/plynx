@@ -31,3 +31,7 @@ class BaseNode:
     @abstractstatic
     def get_base_name():
         pass
+
+    @classmethod
+    def get_default(cls):
+        pass

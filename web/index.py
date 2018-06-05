@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-from web.block import *
+from web.node import *
 from web.common import *
-from web.file import *
 from web.graph import *
 from web.resource import *
 from web.user import *

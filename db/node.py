@@ -42,7 +42,6 @@ class Node(DBObject):
     def to_dict(self):
         return {
                 "_id": self._id,
-                "_type": self._type,
                 "base_node_name": self.base_node_name,
                 "inputs": [input.to_dict() for input in self.inputs],
                 "outputs": [output.to_dict() for output in self.outputs],
@@ -193,48 +192,3 @@ class Node(DBObject):
 
     def get_log_by_name(self, name):
         return self._get_custom_element(self.logs, name)
-
-    @staticmethod
-    def get_default(base_node_name):
-        block = Block()
-        block.title = ''
-        block.description = ''
-        block.base_block_name = "command"
-        block.block_status = BlockStatus.CREATED
-        block.public = False
-        block.parameters = [
-            Parameter(
-                name='cmd',
-                parameter_type=ParameterTypes.TEXT,
-                value='bash -c " "',
-                mutable_type=False,
-                publicable=False,
-                removable=False
-                ),
-            Parameter(
-                name='cacheable',
-                parameter_type=ParameterTypes.BOOL,
-                value=True,
-                mutable_type=False,
-                publicable=False,
-                removable=False
-                )
-            ]
-        block.logs = [
-            Output(
-                name='stderr',
-                file_type=FileTypes.FILE,
-                resource_id=None
-                ),
-            Output(
-                name='stdout',
-                file_type=FileTypes.FILE,
-                resource_id=None
-                ),
-            Output(
-                name='worker',
-                file_type=FileTypes.FILE,
-                resource_id=None
-                )
-            ]
-        return node

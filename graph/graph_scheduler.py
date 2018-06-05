@@ -2,7 +2,7 @@ import logging
 from abc import ABCMeta, abstractmethod
 from enum import Enum
 from collections import defaultdict
-from db import Block, Graph, NodeCacheManager
+from db import Graph, NodeCacheManager
 from constants import NodeRunningStatus, GraphRunningStatus
 from .base_nodes import NodeCollection
 from utils.common import to_object_id

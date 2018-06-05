@@ -8,7 +8,8 @@ import logging
 from tempfile import SpooledTemporaryFile
 from . import BaseNode
 # from Input, InputValue, Output, Parameter
-from constants import JobReturnStatus
+from constants import JobReturnStatus, NodeStatus, FileTypes, ParameterTypes
+from db import Node, Output, Parameter
 from utils.file_handler import get_file_stream, upload_file_stream
 
 
@@ -89,6 +90,51 @@ class Command(BaseNode):
     def get_base_name():
         return 'command'
 
+    @classmethod
+    def get_default(cls):
+        node = Node()
+        node.title = ''
+        node.description = ''
+        node.base_node_name = cls.get_base_name()
+        node.node_status = NodeStatus.CREATED
+        node.public = False
+        node.parameters = [
+            Parameter(
+                name='cmd',
+                parameter_type=ParameterTypes.TEXT,
+                value='bash -c " "',
+                mutable_type=False,
+                publicable=False,
+                removable=False
+                ),
+            Parameter(
+                name='cacheable',
+                parameter_type=ParameterTypes.BOOL,
+                value=True,
+                mutable_type=False,
+                publicable=False,
+                removable=False
+                )
+            ]
+        node.logs = [
+            Output(
+                name='stderr',
+                file_type=FileTypes.FILE,
+                resource_id=None
+                ),
+            Output(
+                name='stdout',
+                file_type=FileTypes.FILE,
+                resource_id=None
+                ),
+            Output(
+                name='worker',
+                file_type=FileTypes.FILE,
+                resource_id=None
+                )
+            ]
+        return node
+
     @staticmethod
     def _get_arguments_string(var_name, arguments):
         res = []
@@ -152,27 +198,3 @@ class Command(BaseNode):
             if os.path.exists(filename) and os.stat(filename).st_size != 0:
                 with open(filename, 'rb') as f:
                     self.node.get_log_by_name(key).resource_id = upload_file_stream(f)
-
-
-if __name__ == "__main__":
-    from db import Block, BlockCollectionManager, InputValue
-    db_blocks = BlockCollectionManager.get_db_blocks('5a9e2af30310e9cdd4516d58')
-    obj_dict = filter(lambda doc: doc['base_block_name'] == Command.get_base_name(), db_blocks)[-1]
-
-    block = Block()
-    block.load_from_dict(obj_dict)
-    block.get_input_by_name('in').values.append(
-        InputValue(
-            block_id='fake',
-            output_id='fake',
-            resource_id='Piton.txt'
-            )
-        )
-    block.get_parameter_by_name('text').value = 'def'
-    block.get_parameter_by_name('cmd').value = 'cat ${input[in]} | grep ${param[text]} > ${output[out]}'
-
-    command = Command(block)
-
-    command.run()
-    print(command.block.logs)
-    print(command.block.outputs)
