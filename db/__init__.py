@@ -1,4 +1,3 @@
-from .base_blocks import get_base_blocks
 from .db_object import DBObject
 from .input import Input, InputValue
 from .parameter import Parameter, ParameterWidget
@@ -16,7 +15,6 @@ from .demo_user_manager import DemoUserManager
 
 
 __all__ = [
-    get_base_blocks,
     DBObject,
     DemoUserManager,
     Graph,
