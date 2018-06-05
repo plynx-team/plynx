@@ -1,4 +1,4 @@
-from . import Graph, BlockCollectionManager, FileCollectionManager
+from . import Graph, NodeCollectionManager
 from utils.common import to_object_id
 from utils.db_connector import *
 
@@ -7,23 +7,17 @@ class GraphCollectionManager(object):
     """
     """
 
-    bcm = BlockCollectionManager()
-    fcm = FileCollectionManager()
+    node_collection_manager = NodeCollectionManager()
 
     @staticmethod
-    def _update_block_statuses(db_graph):
-        block_ids = set(
-            [to_object_id(block['derived_from']) for block in db_graph['blocks'] if block['_type'] == 'block']
+    def _update_node_statuses(db_graph):
+        node_ids = set(
+            [to_object_id(node['derived_from']) for node in db_graph['nodes']]
             )
-        db_blocks = GraphCollectionManager.bcm.get_db_blocks_by_ids(block_ids)
-
-        file_ids = set(
-            [to_object_id(file['derived_from']) for file in db_graph['blocks'] if file['_type'] == 'file']
-            )
-        db_files = GraphCollectionManager.fcm.get_db_files_by_ids(file_ids)
+        db_nodes = node_collection_manager.get_db_nodes_by_ids(node_ids)
 
         node_id_to_db_node = {
-            db_node['_id']: db_node for db_node in db_blocks + db_files
+            db_node['_id']: db_node for db_node in db_nodes
         }
 
         for g_block in db_graph['blocks']:

@@ -1,6 +1,6 @@
 import datetime
 from collections import deque, defaultdict
-from . import Block, File, DBObject, Node, ValidationError
+from . import DBObject, Node, ValidationError
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
 from constants import GraphRunningStatus, ValidationTargetType, ValidationCode
@@ -225,33 +225,3 @@ class Graph(DBObject):
 
     def __getattr__(self, name):
         raise Exception("Can't get attribute '{}'".format(name))
-
-
-if __name__ == "__main__":
-    graph = Graph()
-    graph.title = "Test graph"
-    graph.description = "Test description"
-
-    node_id = db.nodes.find_one({'base_node_name': 'get_resource'})['_id']
-    get_resource = Block(node_id)
-    get_resource.parameters['resource_id'] = 'Piton.txt'
-    get_resource.derived_from = node_id
-
-    node_id = db.nodes.find_one({'base_node_name': 'echo'})['_id']
-    echo = Block(node_id)
-    echo.parameters['text'] = 'hello world'
-    echo.derived_from = node_id
-
-    node_id = db.nodes.find_one({'base_node_name': 'grep'})['_id']
-    grep = Block(node_id)
-    grep.inputs = {'in': {'node_id': get_resource._id, 'resource': 'out'}}
-    grep.parameters['text'] = 'def'
-    grep.derived_from = node_id
-
-    graph.nodes = [get_resource, echo, grep]
-    # graph.graph_running_status = GraphRunningStatus.READY
-
-    #graph.save()
-
-    # graph = Graph('5a28e0640310e9847ce041f0')
-    # print graph.nodes[0].title
