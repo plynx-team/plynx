@@ -21,4 +21,4 @@ RUN chmod 1777 /tmp
 EXPOSE 10000
 
 # Run app.py when the container launches
-CMD ["python", "-m", "backend.worker", "-vvv", "--host", "docker"]
+CMD ["python", "-m", "core.worker", "-vvv", "--host", "docker"]

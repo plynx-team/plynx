@@ -7,8 +7,7 @@ import threading
 import traceback
 from time import sleep
 from tempfile import SpooledTemporaryFile
-from backend.messages import WorkerMessage, WorkerMessageType, RunStatus, MasterMessageType
-from backend.tcp_utils import send_msg, recv_msg
+from . import WorkerMessage, WorkerMessageType, RunStatus, MasterMessageType, send_msg, recv_msg
 from constants import JobReturnStatus
 from utils.file_handler import upload_file_stream
 from utils.logs import set_logging_level
@@ -90,7 +89,7 @@ class Worker:
                                 status = JobReturnStatus.FAILED
                                 with SpooledTemporaryFile() as f:
                                     f.write(traceback.format_exc())
-                                    self.job.block.get_log_by_name('worker').resource_id = upload_file_stream(f)
+                                    self.job.node.get_log_by_name('worker').resource_id = upload_file_stream(f)
                             except Exception as e:
                                 self.alive = False
                                 logging.critical(traceback.format_exc())

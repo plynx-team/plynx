@@ -7,14 +7,13 @@ import threading
 import logging
 from collections import deque, namedtuple
 from time import sleep
-from backend.messages import WorkerMessage, RunStatus, WorkerMessageType, MasterMessageType, MasterMessage
-from backend.tcp_utils import send_msg, recv_msg
-from constants import BlockRunningStatus, GraphRunningStatus
+from . import WorkerMessage, RunStatus, WorkerMessageType, MasterMessageType, MasterMessage, send_msg, recv_msg
+from constants import NodeRunningStatus, GraphRunningStatus
 from db import GraphCollectionManager
 from graph.graph_scheduler import GraphScheduler
 from utils.config import get_master_config
 from utils.logs import set_logging_level
-from graph.base_blocks import BlockCollection
+from graph.base_nodes import NodeCollection
 
 
 
@@ -46,8 +45,8 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
                     with self.server.new_schedulers_lock:
                         scheduler = self.server.graph_id_to_scheduler[graph_id]
                         if worker_message.run_status == RunStatus.RUNNING:
-                            worker_message.body.block.block_running_status = BlockRunningStatus.RUNNING
-                            scheduler.update_block(worker_message.body.block)
+                            worker_message.body.node.node_running_status = NodeRunningStatus.RUNNING
+                            scheduler.update_node(worker_message.body.node)
 
             elif worker_message.message_type == WorkerMessageType.GET_JOB and worker_id in self.server.worker_to_job_description:
                 m = MasterMessage(
@@ -60,15 +59,15 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
             elif worker_message.message_type == WorkerMessageType.JOB_FINISHED_SUCCESS:
                 job = self.server.worker_to_job_description[worker_id].job
                 graph_id = self.server.worker_to_job_description[worker_id].graph_id
-                assert job.block._id == worker_message.body.block._id
+                assert job.node._id == worker_message.body.node._id
                 with self.server.new_schedulers_lock:
                     scheduler = self.server.graph_id_to_scheduler[graph_id]
 
-                worker_message.body.block.block_running_status = BlockRunningStatus.SUCCESS
-                scheduler.update_block(worker_message.body.block)
-                #scheduler._set_block_status(job._id, BlockRunningStatus.SUCCESS)
+                worker_message.body.node.node_running_status = NodeRunningStatus.SUCCESS
+                scheduler.update_node(worker_message.body.node)
+                #scheduler._set_node_status(job._id, NodeRunningStatus.SUCCESS)
 
-                logging.info("Job `{}` marked as SUCCESSFUL".format(job.block._id))
+                logging.info("Job `{}` marked as SUCCESSFUL".format(job.node._id))
                 if worker_id in self.server.worker_to_job_description:
                     del self.server.worker_to_job_description[worker_id]
                 m = self.make_aknowledge_message(worker_id)
@@ -76,15 +75,15 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
             elif worker_message.message_type == WorkerMessageType.JOB_FINISHED_FAILED:
                 job = self.server.worker_to_job_description[worker_id].job
                 graph_id = self.server.worker_to_job_description[worker_id].graph_id
-                assert job.block._id == worker_message.body.block._id
+                assert job.node._id == worker_message.body.node._id
                 with self.server.new_schedulers_lock:
                     scheduler = self.server.graph_id_to_scheduler[graph_id]
 
-                worker_message.body.block.block_running_status = BlockRunningStatus.FAILED
-                scheduler.update_block(worker_message.body.block)
-                #scheduler.set_block_status(job._id, BlockRunningStatus.FAILED)
+                worker_message.body.node.node_running_status = NodeRunningStatus.FAILED
+                scheduler.update_node(worker_message.body.node)
+                #scheduler.set_node_status(job._id, NodeRunningStatus.FAILED)
 
-                logging.info("Job `{}` marked as FAILED".format(job.block._id))
+                logging.info("Job `{}` marked as FAILED".format(job.node._id))
                 if worker_id in self.server.worker_to_job_description:
                     del self.server.worker_to_job_description[worker_id]
                 m = self.make_aknowledge_message(worker_id)
@@ -125,16 +124,16 @@ class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self.job_description_queue = deque()
         self.job_description_queue_lock = threading.Lock()
         self.worker_to_job_description = {}
-        self.block_collection = BlockCollection()
+        self.node_collection = NodeCollection()
 
         running_graphs = self.graph_collection_manager.get_graphs(GraphRunningStatus.RUNNING)
         if len(running_graphs) > 0:
             logging.info("Found {} running graphs. Setting them to 'READY'".format(len(running_graphs)))
             for graph in running_graphs:
                 graph.graph_running_status = GraphRunningStatus.READY
-                for block in graph.blocks:
-                    if block.block_running_status == BlockRunningStatus.RUNNING:
-                        block.block_running_status = BlockRunningStatus.CREATED
+                for node in graph.nodes:
+                    if node.node_running_status == NodeRunningStatus.RUNNING:
+                        node.node_running_status = NodeRunningStatus.CREATED
                 graph.save()
 
         self.graph_id_to_scheduler = {}
@@ -166,7 +165,7 @@ class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         while self.alive:
             graphs = self.graph_collection_manager.get_graphs(GraphRunningStatus.READY)
             for graph in graphs:
-                graph_scheduler = GraphScheduler(graph, self.block_collection)
+                graph_scheduler = GraphScheduler(graph, self.node_collection)
                 graph_scheduler.graph.graph_running_status = GraphRunningStatus.RUNNING
                 graph_scheduler.graph.save()
 
