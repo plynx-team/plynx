@@ -12,19 +12,19 @@ class GraphCollectionManager(object):
     @staticmethod
     def _update_node_statuses(db_graph):
         node_ids = set(
-            [to_object_id(node['derived_from']) for node in db_graph['nodes']]
+            [to_object_id(node['parent_node']) for node in db_graph['nodes']]
             )
-        db_nodes = node_collection_manager.get_db_nodes_by_ids(node_ids)
+        db_nodes = GraphCollectionManager.node_collection_manager.get_db_nodes_by_ids(node_ids)
 
         node_id_to_db_node = {
             db_node['_id']: db_node for db_node in db_nodes
         }
 
-        for g_block in db_graph['blocks']:
-            id = to_object_id(g_block['derived_from'])
+        for g_node in db_graph['nodes']:
+            id = to_object_id(g_node['parent_node'])
             if id in node_id_to_db_node:
                 db_node = node_id_to_db_node[id]
-                g_block['block_status'] = db_node['block_status']
+                g_node['node_status'] = db_node['node_status']
 
         return db_graph
 
@@ -58,6 +58,6 @@ class GraphCollectionManager(object):
 
     @staticmethod
     def get_db_graph(graph_id):
-        return GraphCollectionManager._update_block_statuses(
+        return GraphCollectionManager._update_node_statuses(
             db.graphs.find_one({'_id': to_object_id(graph_id)})
             )

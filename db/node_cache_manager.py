@@ -7,7 +7,7 @@ class NodeCacheManager(object):
     """
     The Node cache interface.
     The cache is defined by Node's
-        - derived_from
+        - parent_node
         - inputs
         - parameters
     """

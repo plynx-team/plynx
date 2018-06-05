@@ -43,8 +43,8 @@ def get_nodes(node_link=None):
     else:
         query = json.loads(request.args.get('query', "{}"))
         query["author"] = to_object_id(g.user._id)
-        nodes_query = {k: v for k, v in query.iteritems() if k in {'per_page', 'offset', 'status', 'author'}}
-        count_query = {k: v for k, v in query.iteritems() if k in {'status', 'author'}}
+        nodes_query = {k: v for k, v in query.iteritems() if k in {'per_page', 'offset', 'status', 'author', 'base_node_names'}}
+        count_query = {k: v for k, v in query.iteritems() if k in {'status', 'author', 'base_node_names'}}
         return JSONEncoder().encode({
             'nodes': node_collection_manager.get_db_nodes(**nodes_query),
             'total_count': node_collection_manager.get_db_nodes_count(**count_query),

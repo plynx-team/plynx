@@ -80,7 +80,7 @@ class NodeCache(DBObject):
     def generate_key(node, user_id):
         inputs=node.inputs
         parameters=node.parameters
-        derived_from=node.derived_from
+        parent_node=node.parent_node
 
         sorted_inputs = sorted(inputs, key=lambda x: x.name)
         inputs_hash = ','.join([
@@ -100,7 +100,7 @@ class NodeCache(DBObject):
                 for parameter in sorted_parameters if parameter.name not in NodeCache.IGNORED_PARAMETERS
             ])
 
-        key = '{};{};{};{}'.format(derived_from, inputs_hash, parameters_hash, str(user_id))
+        key = '{};{};{};{}'.format(parent_node, inputs_hash, parameters_hash, str(user_id))
         return key
 
     def __str__(self):

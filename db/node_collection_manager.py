@@ -8,7 +8,7 @@ class NodeCollectionManager(object):
     """
 
     @staticmethod
-    def get_db_nodes(author, status=None, per_page=20, offset=0):
+    def get_db_nodes(author, status=None, per_page=20, offset=0, base_node_names=None):
         if status and isinstance(status, basestring):
             status = [status]
         if not status:
@@ -47,7 +47,7 @@ class NodeCollectionManager(object):
         return list(db_nodes)
 
     @staticmethod
-    def get_db_nodes_count(author, status=None):
+    def get_db_nodes_count(author, status=None, base_node_names=None):
         if status and isinstance(status, basestring):
             status = [status]
         if not status:
