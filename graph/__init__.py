@@ -1,4 +1,4 @@
 from .graph_scheduler import GraphScheduler
-import base_blocks
+import base_nodes
 
-__all__ = [GraphScheduler, base_blocks]
+__all__ = [GraphScheduler, base_nodes]

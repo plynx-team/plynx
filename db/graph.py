@@ -1,6 +1,6 @@
 import datetime
 from collections import deque, defaultdict
-from . import Block, File, DBObject, ValidationError
+from . import Block, File, DBObject, Node, ValidationError
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
 from constants import GraphRunningStatus, ValidationTargetType, ValidationCode
@@ -19,7 +19,7 @@ class Graph(DBObject):
         self.graph_running_status = GraphRunningStatus.CREATED
         self.author = None
         self.public = False
-        self.blocks = []
+        self.nodes = []
 
         if graph_id:
             self._id = to_object_id(graph_id)
@@ -36,7 +36,7 @@ class Graph(DBObject):
             "graph_running_status": self.graph_running_status,
             "author": self.author,
             "public": self.public,
-            "blocks": [block.to_dict() for block in self.blocks]
+            "nodes": [node.to_dict() for node in self.nodes]
         }
 
     def save(self, force=False):
@@ -68,21 +68,17 @@ class Graph(DBObject):
 
     def load_from_dict(self, graph):
         for key, value in graph.iteritems():
-            if key != 'blocks':
+            if key != 'nodes':
                 setattr(self, key, graph[key])
 
         self._id = to_object_id(self._id)
         self.author = to_object_id(self.author)
 
-        self.blocks = []
-        for block in graph['blocks']:
-            if block['_type'] == 'block':
-                item_obj = Block()
-            elif block['_type'] == 'file':
-                item_obj = File()
-
-            item_obj.load_from_dict(block)
-            self.blocks.append(item_obj)
+        self.nodes = []
+        for node_dict in graph['nodes']:
+            node = Node()
+            node.load_from_dict(node_dict)
+            self.nodes.append(node)
 
         self._dirty = False
 
@@ -104,11 +100,11 @@ class Graph(DBObject):
                     validation_code=ValidationCode.MISSING_PARAMETER
                 ))
 
-        # Meaning the block is in the graph. Otherwise souldn't be in validation step
-        for block in self.blocks:
-            block_violation = block.get_validation_error()
-            if block_violation:
-                violations.append(block_violation)
+        # Meaning the node is in the graph. Otherwise souldn't be in validation step
+        for node in self.nodes:
+            node_violation = node.get_validation_error()
+            if node_violation:
+                violations.append(node_violation)
 
         if len(violations) == 0:
             return None
@@ -139,17 +135,17 @@ class Graph(DBObject):
         queued_node_ids = set()
         children_ids = defaultdict(set)
 
-        node_ids = set([node._id for node in self.blocks])
-        non_zero_block_ids = set()
-        for node in self.blocks:
+        node_ids = set([node._id for node in self.nodes])
+        non_zero_node_ids = set()
+        for node in self.nodes:
             node_id_to_node[node._id] = node
             for input in node.inputs:
                 for value in input.values:
-                    parent_node_id = to_object_id(value.block_id)
-                    non_zero_block_ids.add(parent_node_id)
+                    parent_node_id = to_object_id(value.node_id)
+                    non_zero_node_ids.add(parent_node_id)
                     children_ids[parent_node_id].add(node._id)
 
-        leaves = node_ids - non_zero_block_ids
+        leaves = node_ids - non_zero_node_ids
         to_visit = deque()
         for leaf_id in leaves:
             node_id_to_level[leaf_id] = 0
@@ -162,7 +158,7 @@ class Graph(DBObject):
             node_id_to_level[node_id] = node_level
             for input in node.inputs:
                 for value in input.values:
-                    parent_node_id = to_object_id(value.block_id)
+                    parent_node_id = to_object_id(value.node_id)
                     parent_level = node_id_to_level[parent_node_id]
                     node_id_to_level[parent_node_id] = max(node_level + 1, parent_level)
                     if parent_node_id not in queued_node_ids:
@@ -179,7 +175,7 @@ class Graph(DBObject):
             parent_node_ids = set()
             for input in node.inputs:
                 for value in input.values:
-                    parent_node_ids.add(to_object_id(value.block_id))
+                    parent_node_ids.add(to_object_id(value.node_id))
 
             for index, node_id in enumerate(level_to_node_ids[level]):
                 if node_id in parent_node_ids:
@@ -222,10 +218,10 @@ class Graph(DBObject):
                 node.y = TOP_PADDING + cum_heights[index]
 
     def __str__(self):
-        return 'Graph(_id="{}", blocks={})'.format(self._id, [str(b) for b in self.blocks])
+        return 'Graph(_id="{}", nodes={})'.format(self._id, [str(b) for b in self.nodes])
 
     def __repr__(self):
-        return 'Graph(_id="{}", title="{}", blocks={})'.format(self._id, self.title, str(self.blocks))
+        return 'Graph(_id="{}", title="{}", nodes={})'.format(self._id, self.title, str(self.nodes))
 
     def __getattr__(self, name):
         raise Exception("Can't get attribute '{}'".format(name))
@@ -236,26 +232,26 @@ if __name__ == "__main__":
     graph.title = "Test graph"
     graph.description = "Test description"
 
-    block_id = db.blocks.find_one({'base_block_name': 'get_resource'})['_id']
-    get_resource = Block(block_id)
+    node_id = db.nodes.find_one({'base_node_name': 'get_resource'})['_id']
+    get_resource = Block(node_id)
     get_resource.parameters['resource_id'] = 'Piton.txt'
-    get_resource.derived_from = block_id
+    get_resource.derived_from = node_id
 
-    block_id = db.blocks.find_one({'base_block_name': 'echo'})['_id']
-    echo = Block(block_id)
+    node_id = db.nodes.find_one({'base_node_name': 'echo'})['_id']
+    echo = Block(node_id)
     echo.parameters['text'] = 'hello world'
-    echo.derived_from = block_id
+    echo.derived_from = node_id
 
-    block_id = db.blocks.find_one({'base_block_name': 'grep'})['_id']
-    grep = Block(block_id)
-    grep.inputs = {'in': {'block_id': get_resource._id, 'resource': 'out'}}
+    node_id = db.nodes.find_one({'base_node_name': 'grep'})['_id']
+    grep = Block(node_id)
+    grep.inputs = {'in': {'node_id': get_resource._id, 'resource': 'out'}}
     grep.parameters['text'] = 'def'
-    grep.derived_from = block_id
+    grep.derived_from = node_id
 
-    graph.blocks = [get_resource, echo, grep]
+    graph.nodes = [get_resource, echo, grep]
     # graph.graph_running_status = GraphRunningStatus.READY
 
     #graph.save()
 
     # graph = Graph('5a28e0640310e9847ce041f0')
-    # print graph.blocks[0].title
+    # print graph.nodes[0].title

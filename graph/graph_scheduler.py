@@ -2,9 +2,9 @@ import logging
 from abc import ABCMeta, abstractmethod
 from enum import Enum
 from collections import defaultdict
-from db import Block, Graph, BlockCacheManager
-from constants import BlockRunningStatus, GraphRunningStatus
-from .base_blocks import BlockCollection
+from db import Block, Graph, NodeCacheManager
+from constants import NodeRunningStatus, GraphRunningStatus
+from .base_nodes import NodeCollection
 from utils.common import to_object_id
 from utils.config import get_web_config
 
@@ -14,16 +14,16 @@ class GraphScheduler(object):
 
     It works with a single db.graph.Graph object.
     GraphScheduler loads the Graph from DB.
-    It determines blocks to be executed.
+    It determines Nodes to be executed.
     
     Args:
         graph (str or Graph)
 
     """
-    block_cache_manager = BlockCacheManager()
+    node_cache_manager = NodeCacheManager()
     WEB_CONFIG = get_web_config()
 
-    def __init__(self, graph, block_collection=None):
+    def __init__(self, graph, node_collection=None):
         if isinstance(graph, Graph):
             self.graph_id = graph._id
             self.graph = graph
@@ -31,139 +31,139 @@ class GraphScheduler(object):
             self.graph_id = graph
             self.graph = Graph(self.graph_id)
 
-        self.block_id_to_block = {
-            block._id : block for block in self.graph.blocks
+        self.node_id_to_node = {
+            node._id : node for node in self.graph.nodes
         }
 
         # number of dependencies to ids 
-        self.dependency_index_to_block_ids = defaultdict(lambda: set())
-        self.block_id_to_dependents = defaultdict(lambda: set())
-        self.block_id_to_dependency_index = defaultdict(lambda: 0)
-        self.uncompleted_blocks_count = 0
-        if block_collection:
-            self.block_collection = block_collection
+        self.dependency_index_to_node_ids = defaultdict(lambda: set())
+        self.node_id_to_dependents = defaultdict(lambda: set())
+        self.node_id_to_dependency_index = defaultdict(lambda: 0)
+        self.uncompleted_nodes_count = 0
+        if node_collection:
+            self.node_collection = node_collection
         else:
-            self.block_collection = BlockCollection()
+            self.node_collection = NodeCollection()
 
-        for block in self.graph.blocks:
-            # ignore blocks in finished statuses
-            if block.block_running_status in {
-                            BlockRunningStatus.SUCCESS,
-                            BlockRunningStatus.FAILED,
-                            BlockRunningStatus.STATIC,
-                            BlockRunningStatus.RESTORED}:
+        for node in self.graph.nodes:
+            # ignore nodes in finished statuses
+            if node.node_running_status in {
+                            NodeRunningStatus.SUCCESS,
+                            NodeRunningStatus.FAILED,
+                            NodeRunningStatus.STATIC,
+                            NodeRunningStatus.RESTORED}:
                 continue
-            block_id = block._id
+            node_id = node._id
             dependency_index = 0
-            for block_input in block.inputs:
-                for input_value in block_input.values:
-                    parent_block_id = to_object_id(input_value.block_id)
-                    self.block_id_to_dependents[parent_block_id].add(block_id)
-                    if self.block_id_to_block[parent_block_id].block_running_status not in {
-                            BlockRunningStatus.SUCCESS,
-                            BlockRunningStatus.FAILED,
-                            BlockRunningStatus.STATIC,
-                            BlockRunningStatus.RESTORED}:
+            for node_input in node.inputs:
+                for input_value in node_input.values:
+                    parent_node_id = to_object_id(input_value.node_id)
+                    self.node_id_to_dependents[parent_node_id].add(node_id)
+                    if self.node_id_to_node[parent_node_id].node_running_status not in {
+                            NodeRunningStatus.SUCCESS,
+                            NodeRunningStatus.FAILED,
+                            NodeRunningStatus.STATIC,
+                            NodeRunningStatus.RESTORED}:
                         dependency_index += 1
 
-            if block.block_running_status not in {
-                    BlockRunningStatus.SUCCESS,
-                    BlockRunningStatus.FAILED,
-                    BlockRunningStatus.STATIC,
-                    BlockRunningStatus.RESTORED}:
-                self.uncompleted_blocks_count +=1
-            self.dependency_index_to_block_ids[dependency_index].add(block_id)
-            self.block_id_to_dependency_index[block_id] = dependency_index
+            if node.node_running_status not in {
+                    NodeRunningStatus.SUCCESS,
+                    NodeRunningStatus.FAILED,
+                    NodeRunningStatus.STATIC,
+                    NodeRunningStatus.RESTORED}:
+                self.uncompleted_nodes_count +=1
+            self.dependency_index_to_node_ids[dependency_index].add(node_id)
+            self.node_id_to_dependency_index[node_id] = dependency_index
 
     def finished(self):
         return self.graph.graph_running_status in {GraphRunningStatus.SUCCESS, GraphRunningStatus.FAILED}
 
     def pop_jobs(self):
-        """Get a set of blocks with satisfied dependencies"""
+        """Get a set of nodes with satisfied dependencies"""
         res = []
-        cached_blocks = []
-        for block_id in self.dependency_index_to_block_ids[0]:
-            block = self._get_block_with_inputs(block_id).copy()
-            if GraphScheduler._cacheable(block):
+        cached_nodes = []
+        for node_id in self.dependency_index_to_node_ids[0]:
+            node = self._get_node_with_inputs(node_id).copy()
+            if GraphScheduler._cacheable(node):
                 try:
-                    cache = GraphScheduler.block_cache_manager.get(block, self.graph.author)
+                    cache = GraphScheduler.node_cache_manager.get(node, self.graph.author)
                     if cache:
-                        block.block_running_status = BlockRunningStatus.RESTORED
-                        block.outputs = cache.outputs
-                        block.logs = cache.logs
-                        block.cache_url = '{}/graphs/{}?nid={}'.format(
+                        node.node_running_status = NodeRunningStatus.RESTORED
+                        node.outputs = cache.outputs
+                        node.logs = cache.logs
+                        node.cache_url = '{}/graphs/{}?nid={}'.format(
                             GraphScheduler.WEB_CONFIG.endpoint.rstrip('/'),
                             str(cache.graph_id),
-                            str(cache.block_id),
+                            str(cache.node_id),
                             )
-                        cached_blocks.append(block)
+                        cached_nodes.append(node)
                         continue
                 except Exception as err:
                     logging.exception("Unable to update cache")
-            job = self.block_collection.make_job(block)
+            job = self.node_collection.make_job(node)
             res.append(job)
-        del self.dependency_index_to_block_ids[0]
+        del self.dependency_index_to_node_ids[0]
 
-        for block in cached_blocks:
-            self.update_block(block)
+        for node in cached_nodes:
+            self.update_node(node)
 
         return res
 
-    def update_block(self, block):
-        if block.block_running_status == BlockRunningStatus.SUCCESS \
-                and self.block_id_to_block[block._id].block_running_status != block.block_running_status \
-                and GraphScheduler._cacheable(block):
-            GraphScheduler.block_cache_manager.post(block, self.graph_id, self.graph.author)
+    def update_node(self, node):
+        if node.node_running_status == NodeRunningStatus.SUCCESS \
+                and self.node_id_to_node[node._id].node_running_status != node.node_running_status \
+                and GraphScheduler._cacheable(node):
+            GraphScheduler.node_cache_manager.post(node, self.graph_id, self.graph.author)
 
-        self._set_block_status(block._id, block.block_running_status)
-        self.block_id_to_block[block._id].load_from_dict(block.to_dict())   # copy
+        self._set_node_status(node._id, node.node_running_status)
+        self.node_id_to_node[node._id].load_from_dict(node.to_dict())   # copy
         self.graph.save(force=True)
 
-    def _set_block_status(self, block_id, block_running_status):
-        block = self.block_id_to_block[block_id]
-        # if block is already up to date
-        if block_running_status == block.block_running_status:
+    def _set_node_status(self, node_id, node_running_status):
+        node = self.node_id_to_node[node_id]
+        # if node is already up to date
+        if node_running_status == node.node_running_status:
             return
-        block.block_running_status = block_running_status
+        node.node_running_status = node_running_status
 
-        if block_running_status == BlockRunningStatus.FAILED:
+        if node_running_status == NodeRunningStatus.FAILED:
             self.graph.graph_running_status = GraphRunningStatus.FAILED
 
-        if block_running_status in {BlockRunningStatus.SUCCESS, BlockRunningStatus.FAILED, BlockRunningStatus.RESTORED}:
-            for dependent_block_id in self.block_id_to_dependents[block_id]:
-                dependent_block = self.block_id_to_block[dependent_block_id]
-                prev_dependency_index = self.block_id_to_dependency_index[dependent_block_id]
+        if node_running_status in {NodeRunningStatus.SUCCESS, NodeRunningStatus.FAILED, NodeRunningStatus.RESTORED}:
+            for dependent_node_id in self.node_id_to_dependents[node_id]:
+                dependent_node = self.node_id_to_node[dependent_node_id]
+                prev_dependency_index = self.node_id_to_dependency_index[dependent_node_id]
 
                 removed_dependencies = 0
-                for block_input in dependent_block.inputs:
-                    for input_value in block_input.values:
-                        if to_object_id(input_value.block_id) == to_object_id(block_id):
+                for node_input in dependent_node.inputs:
+                    for input_value in node_input.values:
+                        if to_object_id(input_value.node_id) == to_object_id(node_id):
                             removed_dependencies += 1
                 dependency_index = prev_dependency_index - removed_dependencies
 
-                self.dependency_index_to_block_ids[prev_dependency_index].remove(dependent_block_id)
-                self.dependency_index_to_block_ids[dependency_index].add(dependent_block_id)
-                self.block_id_to_dependency_index[dependent_block_id] = dependency_index
-            self.uncompleted_blocks_count -= 1
+                self.dependency_index_to_node_ids[prev_dependency_index].remove(dependent_node_id)
+                self.dependency_index_to_node_ids[dependency_index].add(dependent_node_id)
+                self.node_id_to_dependency_index[dependent_node_id] = dependency_index
+            self.uncompleted_nodes_count -= 1
 
-        if self.uncompleted_blocks_count == 0 and self.graph.graph_running_status != GraphRunningStatus.FAILED:
+        if self.uncompleted_nodes_count == 0 and self.graph.graph_running_status != GraphRunningStatus.FAILED:
             self.graph.graph_running_status = GraphRunningStatus.SUCCESS
 
         # self.graph.save()
 
-    def _get_block_with_inputs(self, block_id):
-        """Get the block and init its inputs, i.e. filling its resource_ids"""
-        res = self.block_id_to_block[block_id]
-        for block_input in res.inputs:
-            for value in block_input.values:
-                value.resource_id = self.block_id_to_block[to_object_id(value.block_id)].get_output_by_name(
+    def _get_node_with_inputs(self, node_id):
+        """Get the node and init its inputs, i.e. filling its resource_ids"""
+        res = self.node_id_to_node[node_id]
+        for node_input in res.inputs:
+            for value in node_input.values:
+                value.resource_id = self.node_id_to_node[to_object_id(value.node_id)].get_output_by_name(
                     value.output_id
                     ).resource_id
         return res
 
     @staticmethod
-    def _cacheable(block):
-        for parameter in block.parameters:
+    def _cacheable(node):
+        for parameter in node.parameters:
             if parameter.name == 'cacheable':
                 return parameter.value
         return False
@@ -175,12 +175,12 @@ def main():
     while not graph_scheduler.finished():
         jobs = graph_scheduler.pop_jobs()
         for job in jobs:
-            block = job.block
-            print(repr(block))
-            for output in block.outputs:
+            node = job.node
+            print(repr(node))
+            for output in node.outputs:
                 output.resource_id = 'A'
-            block.block_running_status = BlockRunningStatus.SUCCESS
-            graph_scheduler.update_block(block)
+            node.node_running_status = NodeRunningStatus.SUCCESS
+            graph_scheduler.update_node(node)
 
 
 if __name__ == "__main__":
