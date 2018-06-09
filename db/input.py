@@ -2,23 +2,23 @@ from constants import FileTypes
 
 
 class InputValue(object):
-    def __init__(self, block_id, output_id, resource_id):
-        assert isinstance(block_id, basestring)
+    def __init__(self, node_id, output_id, resource_id):
+        assert isinstance(node_id, basestring)
         assert isinstance(output_id, basestring)
         assert isinstance(resource_id, basestring) or resource_id is None
-        self.block_id = block_id
+        self.node_id = node_id
         self.output_id = output_id
         self.resource_id = resource_id
 
     def to_dict(self):
         return {
-            'block_id': self.block_id,
+            'node_id': self.node_id,
             'output_id': self.output_id,
             'resource_id': self.resource_id            
         }
 
     def __str__(self):
-        return 'InputValue({}, {})'.format(self.block_id, self.output_id)
+        return 'InputValue({}, {})'.format(self.node_id, self.output_id)
 
     def __repr__(self):
         return 'InputValue({})'.format(str(self.to_dict()))
@@ -57,7 +57,7 @@ class Input(object):
         res.values = []
         for value_dict in input_dict['values']:
             input_value = InputValue(
-                value_dict.get('block_id', None),
+                value_dict.get('node_id', None),
                 value_dict.get('output_id', None),
                 value_dict.get('resource_id', None)
                 )
