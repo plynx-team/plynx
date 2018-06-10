@@ -30,14 +30,13 @@ class InputValue(object):
 
 
 class Input(object):
-    def __init__(self, name, file_types, values=None):
-        assert isinstance(name, basestring)
-        assert isinstance(file_types, list)
-        self.name = name
-        self.file_types = file_types
+    PROPERTIES = ['values']
+
+    def __init__(self, values=None):
+        self.name = ''
+        self.file_types = []
         if values is None:
             values = []
-        assert isinstance(values, list)
         self.values = values
         self.min_count = 1
         self.max_count = 1
@@ -53,7 +52,11 @@ class Input(object):
 
     @staticmethod
     def create_from_dict(input_dict):
-        res = Input(input_dict['name'], input_dict['file_types'])
+        res = Input()
+        for key, value in input_dict.iteritems():
+            if key not in Input.PROPERTIES:
+                setattr(res, key, value)
+
         res.values = []
         for value_dict in input_dict['values']:
             input_value = InputValue(
@@ -63,8 +66,11 @@ class Input(object):
                 )
             res.values.append(input_value)
 
+        assert isinstance(res.name, basestring)
+        assert isinstance(res.file_types, list)
         assert isinstance(res.min_count, int)
         assert isinstance(res.max_count, int)
+        assert isinstance(res.values, list)
         return res
 
     def __str__(self):

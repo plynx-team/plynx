@@ -11,24 +11,23 @@ class NodeCollectionManager(object):
     def get_db_nodes(author, status=None, per_page=20, offset=0, base_node_names=None):
         if status and isinstance(status, basestring):
             status = [status]
-        if not status:
-            db_nodes = db.nodes.find({
-                '$or': [
-                    {'author': author},
-                    {'public': True}
-                ]
-                }).sort('insertion_date', -1).skip(offset).limit(per_page)
-        else:
-            db_nodes = db.nodes.find({
-                '$and': [{
-                    '$or': [
-                            {'author': author},
-                            {'public': True}
-                        ]
-                    },
-                    {'node_status': {'$in': status}}
-                    ]
-                }).sort('insertion_date', -1).skip(offset).limit(per_page)
+        if base_node_names and isinstance(base_node_names, basestring):
+            base_node_names = [base_node_names]
+
+        and_query = []
+        and_query.append({
+            '$or': [
+                {'author': author},
+                {'public': True}
+            ]})
+        if base_node_names:
+            and_query.append({'base_node_name': {'$in': base_node_names}})
+        if status:
+            and_query.append({'node_status': {'$in': status}})
+
+        db_nodes = db.nodes.find({
+            '$and': and_query
+        }).sort('insertion_date', -1).skip(offset).limit(per_page)
 
         res = []
         for node in db_nodes:
@@ -50,23 +49,27 @@ class NodeCollectionManager(object):
     def get_db_nodes_count(author, status=None, base_node_names=None):
         if status and isinstance(status, basestring):
             status = [status]
+        if base_node_names and isinstance(base_node_names, basestring):
+            base_node_names = [base_node_names]
+
+        and_query = []
+        and_query.append({
+            '$or': [
+                {'author': author},
+                {'public': True}
+            ]})
+        if base_node_names:
+            and_query.append({'base_node_name': {'$in': base_node_names}})
+        if status:
+            and_query.append({'node_status': {'$in': status}})
+
         if not status:
             return db.nodes.count({
-                '$or': [
-                    {'author': author},
-                    {'public': True}
-                ]
+                '$and': and_query
                 })
         else:
             return db.nodes.count({
-                '$and': [{
-                    '$or': [
-                            {'author': author},
-                            {'public': True}
-                        ]
-                    },
-                    {'node_status': {'$in': status}}
-                    ]
+                '$and': and_query
                 })
 
     @staticmethod

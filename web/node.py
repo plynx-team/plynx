@@ -64,7 +64,7 @@ def post_node():
 
         action = body['action']
         if action == NodePostAction.SAVE:
-            if node.node_status != NodeStatus.CREATED:
+            if node.node_status != NodeStatus.CREATED and node.base_node_name != 'file':
                 return _make_fail_response('Cannot save node with status `{}`'.format(node.node_status))
 
             node.save(force=True)

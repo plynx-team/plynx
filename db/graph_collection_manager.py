@@ -11,6 +11,8 @@ class GraphCollectionManager(object):
 
     @staticmethod
     def _update_node_statuses(db_graph):
+        if not db_graph:
+            return None
         node_ids = set(
             [to_object_id(node['parent_node']) for node in db_graph['nodes']]
             )
