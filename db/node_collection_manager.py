@@ -73,7 +73,8 @@ class NodeCollectionManager(object):
                 })
 
     @staticmethod
-    def get_db_node(node_id, author):
+    def get_db_node(node_id, author = None):
         res = db.nodes.find_one({'_id': to_object_id(node_id)})
-        res['_readonly'] = (author != to_object_id(res['author']))
+        if res:
+            res['_readonly'] = (author != to_object_id(res['author']))
         return res

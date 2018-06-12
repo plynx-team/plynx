@@ -21,6 +21,7 @@ class Node(DBObject):
         self.description = None
         self.base_node_name = None
         self.parent_node = None
+        self.successor_node = None
         self.inputs = []
         self.outputs = []
         self.parameters = []
@@ -50,6 +51,7 @@ class Node(DBObject):
                 "title": self.title,
                 "description": self.description,
                 "parent_node": self.parent_node,
+                "successor_node": self.successor_node,
                 "node_running_status": self.node_running_status,
                 "node_status": self.node_status,
                 "cache_url": self.cache_url,
@@ -71,6 +73,7 @@ class Node(DBObject):
         self.outputs = [Output.create_from_dict(output_dict) for output_dict in node_dict['outputs']]
         self.parameters = [Parameter.create_from_dict(parameters_dict) for parameters_dict in node_dict['parameters']]
         self.logs = [Output.create_from_dict(logs_dict) for logs_dict in node_dict['logs']]
+        return self
 
     def copy(self):
         node = Node()
@@ -163,6 +166,24 @@ class Node(DBObject):
                     validation_code=ValidationCode.IN_DEPENDENTS,
                     children=violations
                     )
+
+    def apply_properties(self, other_node):
+        for other_input in other_node.inputs:
+            for input in self.inputs:
+                if other_input.name == input.name:
+                    if (input.max_count < 0 or input.max_count >= other_input.max_count) and set(input.file_types) >= set(other_input.file_types):
+                        input.values = other_input.values
+                    break
+
+        for other_parameter in other_node.parameters:
+            for parameter in self.parameters:
+                if other_parameter.name == parameter.name:
+                    if parameter.parameter_type == other_parameter.parameter_type:
+                        parameter.value = other_parameter.value
+                    break
+
+        self.x = other_node.x
+        self.y = other_node.y
 
     def __str__(self):
         return 'Node(_id="{}")'.format(self._id)

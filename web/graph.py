@@ -58,6 +58,7 @@ def post_graph():
         graph.load_from_dict(body['graph'])
         graph.author = g.user._id
         actions = body['actions']
+        extra_response = {}
 
         for action in actions:
             if action == GraphPostAction.SAVE:
@@ -67,6 +68,10 @@ def post_graph():
 
             elif action == GraphPostAction.AUTO_LAYOUT:
                 graph.arrange_auto_layout()
+
+            elif action == GraphPostAction.UPDATE_NODES:
+                upd = graph_collection_manager.update_blocks(graph)
+                extra_response['updated_nodes_count'] = upd
 
             elif action == GraphPostAction.APPROVE:
                 if graph.graph_running_status != GraphRunningStatus.CREATED:
@@ -95,13 +100,13 @@ def post_graph():
             else:
                 return _make_fail_response('Unknown action `{}`'.format(action))
 
-        return JSONEncoder().encode(
+        return JSONEncoder().encode(dict(
             {
                 'status': GraphPostStatus.SUCCESS,
                 'message': 'Graph(_id=`{}`) successfully updated'.format(str(graph._id)),
                 'graph': graph.to_dict(),
                 'url': '{}/graphs/{}'.format(WEB_CONFIG.endpoint.rstrip('/'), str(graph._id))
-            })
+            }, **extra_response))
     except Exception as e:
         app.logger.error(e)
         return _make_fail_response('Internal error: "{}"'.format(repr(e)))

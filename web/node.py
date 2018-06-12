@@ -29,6 +29,8 @@ def get_nodes(node_link=None):
             'status':'success'})
     # if node_link is defined (Node id)
     elif node_link:
+        import time
+        time.sleep(1)
         try:
             node_id = to_object_id(node_link)
         except:
@@ -93,10 +95,16 @@ def post_node():
                             'validation_error': validation_error.to_dict()
                             })
         elif action == NodePostAction.DEPRECATE:
-            if node.node_status != NodeStatus.READY:
-                return _make_fail_response('Node status `{}` expected. Found `{}`'.format(NodeStatus.READY, node.node_status))
+            if node.node_status == NodeStatus.CREATED:
+                return _make_fail_response('Node status `{}` not expected.'.format(node.node_status))
 
             node.node_status = NodeStatus.DEPRECATED
+            node.save(force=True)
+        elif action == NodePostAction.MANDATORY_DEPRECATE:
+            if node.node_status == NodeStatus.CREATED:
+                return _make_fail_response('Node status `{}` not expected.'.format(node.node_status))
+
+            node.node_status = NodeStatus.MANDATORY_DEPRECATED
             node.save(force=True)
 
         else:

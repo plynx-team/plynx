@@ -25,6 +25,7 @@ class NodePostAction:
     APPROVE = 'APPROVE'
     VALIDATE = 'VALIDATE'
     DEPRECATE = 'DEPRECATE'
+    MANDATORY_DEPRECATE = 'MANDATORY_DEPRECATE'
 
 
 class NodePostStatus(object):

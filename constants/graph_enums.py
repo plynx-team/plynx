@@ -11,6 +11,7 @@ class GraphPostAction:
     APPROVE = 'APPROVE'
     VALIDATE = 'VALIDATE'
     AUTO_LAYOUT = 'AUTO_LAYOUT'
+    UPDATE_NODES = 'UPDATE_NODES'
 
 
 class GraphPostStatus(object):
