@@ -157,6 +157,14 @@ class Node(DBObject):
                             validation_code=ValidationCode.MISSING_INPUT
                         ))
 
+            if self.node_status == NodeStatus.MANDATORY_DEPRECATED:
+                violations.append(
+                    ValidationError(
+                        target=ValidationTargetType.NODE,
+                        object_id=str(self._id),
+                        validation_code=ValidationCode.DEPRECATED_NODE
+                    ))
+
         if len(violations) == 0:
             return None
 
