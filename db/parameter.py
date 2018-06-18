@@ -1,4 +1,4 @@
-from constants import ParameterTypes
+from constants import ParameterEnum, ParameterTypes
 
 
 class ParameterWidget(object):
@@ -44,16 +44,22 @@ class Parameter(object):
         self.removable = removable
         if value is None:
             self.value = ParameterTypes.get_default_by_type(self.parameter_type)
+        elif self.parameter_type == ParameterTypes.ENUM:
+            self.value = ParameterEnum.create_from_dict(value)
         else:
             self.value = value
-        assert ParameterTypes.value_is_valid(self.value, self.parameter_type)
+        assert ParameterTypes.value_is_valid(self.value, self.parameter_type), \
+            "Invalid parameter value type"
         self.widget = widget
 
     def to_dict(self):
+        value = self.value
+        if self.parameter_type == ParameterTypes.ENUM:
+            value = self.value.to_dict()
         return {
             'name': self.name,
             'parameter_type': self.parameter_type,
-            'value': self.value,
+            'value': value,
             'mutable_type': self.mutable_type,
             'removable': self.removable,
             'publicable': self.publicable,
