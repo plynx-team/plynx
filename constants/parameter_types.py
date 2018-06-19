@@ -27,6 +27,8 @@ class ParameterTypes:
     BOOL = 'bool'
     TEXT = 'text'
     ENUM = 'enum'
+    LIST_STR = 'list_str'
+    LIST_INT = 'list_int'
 
     @staticmethod
     def get_default_by_type(parameter_type):
@@ -40,6 +42,10 @@ class ParameterTypes:
             return ''
         if parameter_type == ParameterTypes.ENUM:
             return ParameterEnum()
+        if parameter_type == ParameterTypes.LIST_STR:
+            return []
+        if parameter_type == ParameterTypes.LIST_INT:
+            return []
         else:
             return None
 
@@ -59,5 +65,9 @@ class ParameterTypes:
             return isinstance(value, basestring)
         if parameter_type == ParameterTypes.ENUM:
             return isinstance(value, ParameterEnum)
+        if parameter_type == ParameterTypes.LIST_STR:
+            return isinstance(value, list) and all(ParameterTypes.value_is_valid(x, ParameterTypes.STR) for x in value)
+        if parameter_type == ParameterTypes.LIST_INT:
+            return isinstance(value, list) and all(ParameterTypes.value_is_valid(x, ParameterTypes.INT) for x in value)
         else:
             return False

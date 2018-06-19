@@ -184,7 +184,13 @@ class Command(BaseNode):
     def _prepare_parameters(parameters):
         res = {}
         for parameter in parameters:
-            res[parameter.name] = parameter.value
+            if parameter.parameter_type == ParameterTypes.ENUM:
+                index = max(0, min(len(parameter.value.values) - 1, parameter.value.index))
+                res[parameter.name] = parameter.value.values[index]
+            elif parameter.parameter_type in [ParameterTypes.LIST_STR, ParameterTypes.LIST_INT]:
+                res[parameter.name] = ' '.join(map(str, parameter.value))
+            else:
+                res[parameter.name] = parameter.value
         return res
 
     def _postprocess_outputs(self, outputs):
