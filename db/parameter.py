@@ -49,7 +49,7 @@ class Parameter(object):
         else:
             self.value = value
         assert ParameterTypes.value_is_valid(self.value, self.parameter_type), \
-            "Invalid parameter value type"
+            "Invalid parameter value type: {}: {}".format(self.name, self.value)
         self.widget = widget
 
     def to_dict(self):
