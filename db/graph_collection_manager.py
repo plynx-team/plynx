@@ -53,7 +53,7 @@ class GraphCollectionManager(object):
             new_db_node = db_node
             if original_parent_node_id not in new_node_db_mapping:
                 while new_db_node['node_status'] != NodeStatus.READY and 'successor_node' in new_db_node and new_db_node['successor_node']:
-                    n = GraphCollectionManager.node_collection_manager.get_db_node(db_node['successor_node'])
+                    n = GraphCollectionManager.node_collection_manager.get_db_node(new_db_node['successor_node'])
                     if n:
                         new_db_node = n
                     else:
