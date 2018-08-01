@@ -14,10 +14,6 @@ class BashJinja2(BaseBash, BaseNode):
         cmd = self.node.get_parameter_by_name('cmd').value
         cmd_template = jinja2.Template(cmd)
 
-        print "-"*30
-        print "cmd", cmd
-        print "-"*30
-
         script_location = self._get_script_fname()
         with open(script_location, 'w') as script_file:
             script_file.write(
