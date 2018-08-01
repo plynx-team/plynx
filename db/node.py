@@ -186,7 +186,7 @@ class Node(DBObject):
         for other_parameter in other_node.parameters:
             for parameter in self.parameters:
                 if other_parameter.name == parameter.name:
-                    if parameter.parameter_type == other_parameter.parameter_type:
+                    if parameter.parameter_type == other_parameter.parameter_type and parameter.widget:
                         parameter.value = other_parameter.value
                     break
 
