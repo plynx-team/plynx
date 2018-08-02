@@ -99,15 +99,20 @@ class BaseBash(object):
         return node
 
     @staticmethod
-    def _prepare_inputs(inputs):
+    def _prepare_inputs(inputs, preview):
         res = {}
         for input in inputs:
             filenames = []
-            for i, value in enumerate(input.values):
-                filename = os.path.join('/tmp', '{}_{}_{}'.format(str(uuid.uuid1()), i, input.name))
-                with open(filename, 'wb') as f:
-                    f.write(get_file_stream(value.resource_id).read())
-                filenames.append(filename)
+            if preview:
+                for i, value in enumerate(range(input.min_count)):
+                    filename = os.path.join('/tmp', '{}_{}_{}'.format(str(uuid.uuid1()), i, input.name))
+                    filenames.append(filename)
+            else:
+                for i, value in enumerate(input.values):
+                    filename = os.path.join('/tmp', '{}_{}_{}'.format(str(uuid.uuid1()), i, input.name))
+                    with open(filename, 'wb') as f:
+                        f.write(get_file_stream(value.resource_id).read())
+                    filenames.append(filename)
             res[input.name] = ' '.join(filenames)                                                       #!!!!!!
         return res
 

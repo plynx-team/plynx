@@ -6,8 +6,8 @@ class Command(BaseBash, BaseNode):
     def __init__(self, node=None):
         super(self.__class__, self).__init__(node)
 
-    def run(self):
-        inputs = BaseBash._prepare_inputs(self.node.inputs)
+    def run(self, preview=False):
+        inputs = BaseBash._prepare_inputs(self.node.inputs, preview)
         parameters = BaseBash._prepare_parameters(self.node.parameters)
         outputs = BaseBash._prepare_outputs(self.node.outputs)
         logs = BaseBash._prepare_logs(self.node.logs)
@@ -19,10 +19,13 @@ class Command(BaseBash, BaseNode):
             self._get_arguments_string('log', logs),
             cmd_command
         ]
+        cmd_string = ';\n'.join(cmd_array)
+        if preview:
+            return cmd_string
 
         script_location = self._get_script_fname()
         with open(script_location, 'w') as script_file:
-            script_file.write(';\n'.join(cmd_array))
+            script_file.write(cmd_string)
 
         res = self.exec_script(script_location, logs)
 

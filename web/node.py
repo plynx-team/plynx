@@ -106,6 +106,15 @@ def post_node():
 
             node.node_status = NodeStatus.MANDATORY_DEPRECATED
             node.save(force=True)
+        elif action == NodePostAction.PREVIEW_CMD:
+            job = node_collection.make_job(node)
+
+            return JSONEncoder().encode(
+            {
+                'status': NodePostStatus.SUCCESS,
+                'message': 'Successfully created preview',
+                'preview_text': job.run(preview=True)
+            })
 
         else:
             return _make_fail_response('Unknown action `{}`'.format(action))
