@@ -99,13 +99,13 @@ class BaseBash(object):
         return node
 
     @staticmethod
-    def _prepare_inputs(inputs, preview):
+    def _prepare_inputs(inputs, preview=False):
         res = {}
         for input in inputs:
             filenames = []
             if preview:
                 for i, value in enumerate(range(input.min_count)):
-                    filename = os.path.join('/tmp', '{}_{}_{}'.format(str(uuid.uuid1()), i, input.name))
+                    filename = os.path.join('/tmp', '{}_{}_{}'.format(str(uuid.uuid1())[:8], i, input.name))
                     filenames.append(filename)
             else:
                 for i, value in enumerate(input.values):
@@ -117,10 +117,13 @@ class BaseBash(object):
         return res
 
     @staticmethod
-    def _prepare_outputs(outputs):
+    def _prepare_outputs(outputs, preview=False):
         res = {}
         for output in outputs:
-            filename = os.path.join('/tmp', '{}_{}'.format(str(uuid.uuid1()), output.name))
+            if preview:
+                filename = os.path.join('/tmp', '{}_{}'.format(str(uuid.uuid1())[:8], output.name))
+            else:
+                filename = os.path.join('/tmp', '{}_{}'.format(str(uuid.uuid1()), output.name))
             res[output.name] = filename
         return res
 

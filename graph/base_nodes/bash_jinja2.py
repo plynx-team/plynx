@@ -9,7 +9,7 @@ class BashJinja2(BaseBash, BaseNode):
     def run(self, preview=False):
         inputs = BaseBash._prepare_inputs(self.node.inputs, preview)
         parameters = BaseBash._prepare_parameters(self.node.parameters)
-        outputs = BaseBash._prepare_outputs(self.node.outputs)
+        outputs = BaseBash._prepare_outputs(self.node.outputs, preview)
         logs = BaseBash._prepare_logs(self.node.logs)
         cmd = self.node.get_parameter_by_name('cmd').value
         cmd_template = jinja2.Template(cmd)
