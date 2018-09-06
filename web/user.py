@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-import json
 from db import User, DemoUserManager
-from web.common import app, request, auth, abort, g
+from web.common import app, request, abort, g, requires_auth
 from utils.common import JSONEncoder
 
 
@@ -29,7 +28,7 @@ def new_user():
 
 
 @app.route('/plynx/api/v0/token', strict_slashes=False)
-@auth.login_required
+@requires_auth
 def get_auth_token():
     access_token = g.user.generate_access_token()
     refresh_token = g.user.generate_refresh_token()
@@ -37,21 +36,6 @@ def get_auth_token():
             'access_token': access_token.decode('ascii'),
             'refresh_token': refresh_token.decode('ascii')
             })
-
-
-@auth.verify_password
-def verify_password(username_or_token, password):
-    # TODO remove this one
-    print(username_or_token, password)
-    user = User.verify_auth_token(username_or_token)
-    if not user:
-        # try to authenticate with username/password
-        user = User.find_user_by_name(username_or_token)
-        if not user or not user.verify_password(password):
-            return False
-    g.user = user
-    return True
-
 
 @app.route('/plynx/api/v0/demo', methods = ['POST'])
 def post_demo_user():

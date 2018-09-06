@@ -3,7 +3,7 @@ from __future__ import absolute_import
 import json
 from db import Node, NodeCollectionManager
 from graph.base_nodes import NodeCollection
-from web.common import app, request, auth, g
+from web.common import app, request, g, requires_auth
 from utils.common import to_object_id, JSONEncoder
 from constants import NodeStatus, NodePostAction, NodePostStatus
 
@@ -19,7 +19,7 @@ def _make_fail_response(message):
 
 @app.route('/plynx/api/v0/nodes', methods=['GET'])
 @app.route('/plynx/api/v0/nodes/<node_link>', methods=['GET'])
-@auth.login_required
+@requires_auth
 def get_nodes(node_link=None):
     author = to_object_id(g.user._id)
     # if node_link is a base node
@@ -54,7 +54,7 @@ def get_nodes(node_link=None):
 
 
 @app.route('/plynx/api/v0/nodes', methods=['POST'])
-@auth.login_required
+@requires_auth
 def post_node():
     app.logger.debug(request.data)
     try:

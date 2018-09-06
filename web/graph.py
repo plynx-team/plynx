@@ -2,9 +2,8 @@
 import json
 from db import GraphCollectionManager
 from db import Graph
-from web.common import app, request, auth, g
+from web.common import app, request, g, requires_auth
 from utils.common import to_object_id, JSONEncoder
-from collections import defaultdict, OrderedDict
 from constants import GraphRunningStatus, GraphPostAction, GraphPostStatus
 from utils.config import get_web_config
 
@@ -22,7 +21,7 @@ def _make_fail_response(message):
 
 @app.route('/plynx/api/v0/graphs', methods=['GET'])
 @app.route('/plynx/api/v0/graphs/<graph_id>', methods=['GET'])
-@auth.login_required
+@requires_auth
 def get_graph(graph_id=None):
     if graph_id == 'new':
         return JSONEncoder().encode({
@@ -48,7 +47,7 @@ def get_graph(graph_id=None):
 
 
 @app.route('/plynx/api/v0/graphs', methods=['POST'])
-@auth.login_required
+@requires_auth
 def post_graph():
     app.logger.debug(request.data)
     try:

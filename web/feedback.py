@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import json
 from db import Feedback
-from web.common import app, request, auth, abort, g
+from web.common import app, request
 from utils.common import JSONEncoder
 
 

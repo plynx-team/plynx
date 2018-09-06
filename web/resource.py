@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-from web.common import app, request, send_file, auth, g
-from utils.common import to_object_id, JSONEncoder
+from web.common import app, request, send_file, requires_auth
+from utils.common import JSONEncoder
 from utils.file_handler import get_file_stream, upload_file_stream
 from constants import ResourcePostStatus
 
@@ -18,7 +18,7 @@ def get_resource(resource_id):
 
 
 @app.route('/plynx/api/v0/resource', methods=['POST'])
-@auth.login_required
+@requires_auth
 def post_resource():
     try:
         resource_id = upload_file_stream(request.files['data'])
