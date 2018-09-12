@@ -5,7 +5,11 @@ FROM khaxis/plynx:base
 WORKDIR /app
 
 # Copy the current directory contents into the container at /app
-ADD . /app
+ADD ./constants /app/constants
+ADD ./core /app/core
+ADD ./graph /app/graph
+ADD ./utils /app/utils
+ADD ./config.yaml /app/config.yaml
 
 # Create worker user
 RUN useradd -c "Worker" worker  -s /bin/bash
