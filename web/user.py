@@ -1,6 +1,7 @@
 #!/usr/bin/env python
+from flask import request, abort, g
 from db import User, DemoUserManager
-from web.common import app, request, abort, g, requires_auth
+from web import app, requires_auth
 from utils.common import JSONEncoder
 
 

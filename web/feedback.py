@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import json
 from db import Feedback
-from web.common import app, request
+from flask import request
+from web import app
 from utils.common import JSONEncoder
 
 

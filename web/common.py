@@ -6,6 +6,7 @@ from functools import wraps
 from db import User
 
 app = Flask(__name__)
+app.debug = True
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 

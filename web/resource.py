@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-from web.common import app, request, send_file, requires_auth
+from flask import request, send_file
+from web import app, requires_auth
 from utils.common import JSONEncoder
 from utils.file_handler import get_file_stream, upload_file_stream
 from constants import ResourcePostStatus

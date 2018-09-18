@@ -2,8 +2,9 @@
 from __future__ import absolute_import
 import json
 from db import Node, NodeCollectionManager
+from flask import request, g
 from graph.base_nodes import NodeCollection
-from web.common import app, request, g, requires_auth
+from web import app, requires_auth
 from utils.common import to_object_id, JSONEncoder
 from constants import NodeStatus, NodePostAction, NodePostStatus
 

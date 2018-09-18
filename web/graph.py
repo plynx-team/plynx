@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import json
-from db import GraphCollectionManager
-from db import Graph
-from web.common import app, request, g, requires_auth
+from db import GraphCollectionManager, Graph
+from flask import request, g
+from web import app, requires_auth
 from utils.common import to_object_id, JSONEncoder
 from constants import GraphRunningStatus, GraphPostAction, GraphPostStatus
 from utils.config import get_web_config
