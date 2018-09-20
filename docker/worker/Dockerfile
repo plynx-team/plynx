@@ -9,14 +9,13 @@ ADD ./constants /app/constants
 ADD ./core /app/core
 ADD ./graph /app/graph
 ADD ./utils /app/utils
-ADD ./config.yaml /app/config.yaml
 
 # Create worker user
 RUN useradd -c "Worker" worker  -s /bin/bash
 RUN chmod 700 /app
 RUN chmod 1777 /tmp
 
-# Make port 10000 available to the world outside this container
+# Make port ports available to the world outside this container
 EXPOSE 10000
 
 # Run app.py when the container launches
