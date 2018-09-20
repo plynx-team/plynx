@@ -210,6 +210,7 @@ def parse_arguments():
 if __name__ == "__main__":
     args = parse_arguments()
     set_logging_level(args.verbose)
+    logging.info("Init master")
 
     master_config = get_master_config()
     server = MasterTCPServer((master_config.host, master_config.port), ClientTCPHandler)
@@ -217,6 +218,7 @@ if __name__ == "__main__":
     # Activate the server; this will keep running until you
     # interrupt the program with Ctrl-C
     try:
+        logging.info("Start serving")
         server.serve_forever()
     except KeyboardInterrupt:
         server.alive = False
