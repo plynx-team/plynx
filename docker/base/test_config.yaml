@@ -1,0 +1,33 @@
+mongodb:
+  user:
+  password:
+  host: 'mongodb'
+  port: 27017
+
+master:
+  #host: 'host.docker.internal'
+  host: ''
+  port: 10000
+
+storage-gs:
+  scheme: gs
+  resources: gs://plynx-demo/resources/
+  stdout: gs://plynx-demo/stdout/
+  stderr: gs://plynx-demo/stderr/
+  worker: gs://plynx-demo/worker/
+
+storage:
+  scheme: file
+  resources: /Users/khaxis/data/plynx/resources/
+  stdout: /Users/khaxis/data/plynx/stdout/
+  stderr: /Users/khaxis/data/plynx/stderr/
+  worker: /Users/khaxis/data/plynx/worker/
+
+auth:
+  secret_key: SECRET_KEY
+
+web:
+  endpoint: http://localhost:3000
+
+demo:
+  graph_ids: []

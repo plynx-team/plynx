@@ -1,6 +1,7 @@
 from . import Graph
 from . import User
 from utils.common import to_object_id, ObjectId
+from utils.config import get_demo_config
 from utils.db_connector import *
 import string
 import random
@@ -9,7 +10,7 @@ import random
 class DemoUserManager(object):
     """
     """
-    GRAPHS_TO_CLONE = {'5aa42bda8ff257000090594b'}
+    demo_config = get_demo_config()
 
     @staticmethod
     def _id_generator(size=6, chars=string.ascii_uppercase + string.digits):
@@ -27,7 +28,7 @@ class DemoUserManager(object):
     @staticmethod
     def create_demo_graphs(user):
         res = []
-        for graph_id in DemoUserManager.GRAPHS_TO_CLONE:
+        for graph_id in DemoUserManager.demo_config.graph_ids:
             graph = Graph(graph_id)
             graph._id = ObjectId()
             graph.author = user._id
