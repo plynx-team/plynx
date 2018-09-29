@@ -42,24 +42,24 @@ class Node(DBObject):
 
     def to_dict(self):
         return {
-                "_id": self._id,
-                "base_node_name": self.base_node_name,
-                "inputs": [input.to_dict() for input in self.inputs],
-                "outputs": [output.to_dict() for output in self.outputs],
-                "parameters": [parameter.to_dict() for parameter in self.parameters],
-                "logs": [log.to_dict() for log in self.logs],
-                "title": self.title,
-                "description": self.description,
-                "parent_node": self.parent_node,
-                "successor_node": self.successor_node,
-                "node_running_status": self.node_running_status,
-                "node_status": self.node_status,
-                "cache_url": self.cache_url,
-                "x": self.x,
-                "y": self.y,
-                "author": self.author,
-                "public": self.public
-            }
+            "_id": self._id,
+            "base_node_name": self.base_node_name,
+            "inputs": [input.to_dict() for input in self.inputs],
+            "outputs": [output.to_dict() for output in self.outputs],
+            "parameters": [parameter.to_dict() for parameter in self.parameters],
+            "logs": [log.to_dict() for log in self.logs],
+            "title": self.title,
+            "description": self.description,
+            "parent_node": self.parent_node,
+            "successor_node": self.successor_node,
+            "node_running_status": self.node_running_status,
+            "node_status": self.node_status,
+            "cache_url": self.cache_url,
+            "x": self.x,
+            "y": self.y,
+            "author": self.author,
+            "public": self.public
+        }
 
     def load_from_dict(self, node_dict):
         for key, value in node_dict.iteritems():
@@ -96,7 +96,7 @@ class Node(DBObject):
                 "$set": node_dict
             },
             upsert=True,
-            )
+        )
 
         self._dirty = False
         return True
@@ -169,11 +169,11 @@ class Node(DBObject):
             return None
 
         return ValidationError(
-                    target=ValidationTargetType.NODE,
-                    object_id=str(self._id),
-                    validation_code=ValidationCode.IN_DEPENDENTS,
-                    children=violations
-                    )
+            target=ValidationTargetType.NODE,
+            object_id=str(self._id),
+            validation_code=ValidationCode.IN_DEPENDENTS,
+            children=violations
+        )
 
     def apply_properties(self, other_node):
         for other_input in other_node.inputs:

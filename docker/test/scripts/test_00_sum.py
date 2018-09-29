@@ -54,14 +54,14 @@ def upload_file(endpoint, access_token, data_path, filename):
     r = requests.post(
         '{}/nodes'.format(endpoint),
         json={
-            'body': { 
+            'body': {
                 'node': base_file,
                 'action': 'SAVE'
             }
         },
         auth=(access_token, ''),
-      )
-    
+    )
+
     if r.ok:
         response = r.json()
         assert response['status'] == SUCCESS_RESPONSE
@@ -78,14 +78,14 @@ def create_operations(endpoint, access_token, nodes_filename):
         r = requests.post(
             '{}/nodes'.format(endpoint),
             json={
-                'body': { 
+                'body': {
                     'node': node,
                     'action': 'APPROVE'
                 }
             },
             auth=(access_token, ''),
-          )
-        
+        )
+
         if r.ok:
             response = r.json()
             assert response['status'] == SUCCESS_RESPONSE, "Not expected `status`: `{}`".format(response['status'])
@@ -117,8 +117,8 @@ def run_graph(access_token, file_id, operations):
             input=Grep(
                 input=f.outputs.out,
                 template="^{}".format(number)
-                ).outputs.output
-            ).outputs.output for number in range(1,10)]
+            ).outputs.output
+        ).outputs.output for number in range(1, 10)]
     )
 
     graph = Graph(

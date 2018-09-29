@@ -12,4 +12,3 @@ from .user import User
 from .feedback import Feedback
 from .graph_collection_manager import GraphCollectionManager
 from .demo_user_manager import DemoUserManager
-

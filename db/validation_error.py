@@ -16,7 +16,7 @@ class ValidationError(object):
             'object_id': self.object_id,
             'validation_code': self.validation_code,
             'children': [child.to_dict() for child in self.children]
-            }
+        }
 
     def __str__(self):
         return 'ValidationError({}, {}, {}, {})'.format(
@@ -24,7 +24,7 @@ class ValidationError(object):
             self.object_id,
             self.validation_code,
             self.children
-            )
+        )
 
     def __repr__(self):
         return 'ValidationError({})'.format(str(self.to_dict()))

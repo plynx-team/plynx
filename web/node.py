@@ -16,7 +16,8 @@ def _make_fail_response(message):
     return JSONEncoder().encode({
         'status': NodePostStatus.FAILED,
         'message': message
-        })
+    })
+
 
 @app.route('/plynx/api/v0/nodes', methods=['GET'])
 @app.route('/plynx/api/v0/nodes/<node_link>', methods=['GET'])
@@ -27,7 +28,7 @@ def get_nodes(node_link=None):
     if node_link in node_collection.name_to_class:
         return JSONEncoder().encode({
             'data': node_collection.name_to_class[node_link].get_default().to_dict(),
-            'status':'success'})
+            'status': 'success'})
     # if node_link is defined (Node id)
     elif node_link:
         import time
@@ -40,7 +41,7 @@ def get_nodes(node_link=None):
         if node:
             return JSONEncoder().encode({
                 'data': node,
-                'status':'success'})
+                'status': 'success'})
         else:
             return 'Node was not found', 404
     else:
@@ -51,7 +52,7 @@ def get_nodes(node_link=None):
         return JSONEncoder().encode({
             'nodes': node_collection_manager.get_db_nodes(**nodes_query),
             'total_count': node_collection_manager.get_db_nodes_count(**count_query),
-            'status':'success'})
+            'status': 'success'})
 
 
 @app.route('/plynx/api/v0/nodes', methods=['POST'])
@@ -78,10 +79,10 @@ def post_node():
             validation_error = node.get_validation_error()
             if validation_error:
                 return JSONEncoder().encode({
-                            'status': NodePostStatus.VALIDATION_FAILED,
-                            'message': 'Node validation failed',
-                            'validation_error': validation_error.to_dict()
-                            })
+                    'status': NodePostStatus.VALIDATION_FAILED,
+                    'message': 'Node validation failed',
+                    'validation_error': validation_error.to_dict()
+                })
 
             node.node_status = NodeStatus.READY
             node.save(force=True)
@@ -91,10 +92,10 @@ def post_node():
 
             if validation_error:
                 return JSONEncoder().encode({
-                            'status': NodePostStatus.VALIDATION_FAILED,
-                            'message': 'Node validation failed',
-                            'validation_error': validation_error.to_dict()
-                            })
+                    'status': NodePostStatus.VALIDATION_FAILED,
+                    'message': 'Node validation failed',
+                    'validation_error': validation_error.to_dict()
+                })
         elif action == NodePostAction.DEPRECATE:
             if node.node_status == NodeStatus.CREATED:
                 return _make_fail_response('Node status `{}` not expected.'.format(node.node_status))
@@ -111,11 +112,11 @@ def post_node():
             job = node_collection.make_job(node)
 
             return JSONEncoder().encode(
-            {
-                'status': NodePostStatus.SUCCESS,
-                'message': 'Successfully created preview',
-                'preview_text': job.run(preview=True)
-            })
+                {
+                    'status': NodePostStatus.SUCCESS,
+                    'message': 'Successfully created preview',
+                    'preview_text': job.run(preview=True)
+                })
 
         else:
             return _make_fail_response('Unknown action `{}`'.format(action))

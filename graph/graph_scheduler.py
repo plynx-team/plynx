@@ -15,7 +15,7 @@ class GraphScheduler(object):
     It works with a single db.graph.Graph object.
     GraphScheduler loads the Graph from DB.
     It determines Nodes to be executed.
-    
+
     Args:
         graph (str or Graph)
 
@@ -32,10 +32,10 @@ class GraphScheduler(object):
             self.graph = Graph(self.graph_id)
 
         self.node_id_to_node = {
-            node._id : node for node in self.graph.nodes
+            node._id: node for node in self.graph.nodes
         }
 
-        # number of dependencies to ids 
+        # number of dependencies to ids
         self.dependency_index_to_node_ids = defaultdict(lambda: set())
         self.node_id_to_dependents = defaultdict(lambda: set())
         self.node_id_to_dependency_index = defaultdict(lambda: 0)
@@ -48,10 +48,10 @@ class GraphScheduler(object):
         for node in self.graph.nodes:
             # ignore nodes in finished statuses
             if node.node_running_status in {
-                            NodeRunningStatus.SUCCESS,
-                            NodeRunningStatus.FAILED,
-                            NodeRunningStatus.STATIC,
-                            NodeRunningStatus.RESTORED}:
+                    NodeRunningStatus.SUCCESS,
+                    NodeRunningStatus.FAILED,
+                    NodeRunningStatus.STATIC,
+                    NodeRunningStatus.RESTORED}:
                 continue
             node_id = node._id
             dependency_index = 0
@@ -71,7 +71,7 @@ class GraphScheduler(object):
                     NodeRunningStatus.FAILED,
                     NodeRunningStatus.STATIC,
                     NodeRunningStatus.RESTORED}:
-                self.uncompleted_nodes_count +=1
+                self.uncompleted_nodes_count += 1
             self.dependency_index_to_node_ids[dependency_index].add(node_id)
             self.node_id_to_dependency_index[node_id] = dependency_index
 
@@ -95,7 +95,7 @@ class GraphScheduler(object):
                             GraphScheduler.WEB_CONFIG.endpoint.rstrip('/'),
                             str(cache.graph_id),
                             str(cache.node_id),
-                            )
+                        )
                         cached_nodes.append(node)
                         continue
                 except Exception as err:
@@ -158,7 +158,7 @@ class GraphScheduler(object):
             for value in node_input.values:
                 value.resource_id = self.node_id_to_node[to_object_id(value.node_id)].get_output_by_name(
                     value.output_id
-                    ).resource_id
+                ).resource_id
         return res
 
     @staticmethod

@@ -29,7 +29,7 @@ def authenticate():
         'Could not verify your access level for that URL; You have to login with proper credentials',
         401,
         {'WWW-Authenticate': 'PlynxBasic realm="Login Required"'}
-        )
+    )
 
 
 def requires_auth(f):
@@ -38,5 +38,5 @@ def requires_auth(f):
         auth = request.authorization
         if not auth or not verify_password(auth.username, auth.password):
             return authenticate()
-        return f(*args,**kwargs)
+        return f(*args, **kwargs)
     return decorated

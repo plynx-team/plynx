@@ -5,6 +5,7 @@ from utils.config import get_storage_config
 
 STORAGE_CONFIG = get_storage_config()
 
+
 def get_file_stream(file_path, prefix=None):
     if prefix is None:
         prefix = STORAGE_CONFIG.resources
@@ -13,6 +14,7 @@ def get_file_stream(file_path, prefix=None):
     content.get_contents_to_file(content_stream)
     content_stream.seek(0)
     return content_stream
+
 
 def upload_file_stream(fp, prefix=None, file_path=None, seek=True):
     fp.seek(0)

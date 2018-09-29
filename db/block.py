@@ -43,25 +43,25 @@ class Block(DBObject):
 
     def to_dict(self):
         return {
-                "_id": self._id,
-                "_type": self._type,
-                "base_block_name": self.base_block_name,
-                "inputs": [input.to_dict() for input in self.inputs],
-                "outputs": [output.to_dict() for output in self.outputs],
-                "parameters": [parameter.to_dict() for parameter in self.parameters],
-                "logs": [log.to_dict() for log in self.logs],
-                "title": self.title,
-                "description": self.description,
-                "parent_block": self.parent_block,
-                "derived_from": self.derived_from,
-                "block_running_status": self.block_running_status,
-                "block_status": self.block_status,
-                "cache_url": self.cache_url,
-                "x": self.x,
-                "y": self.y,
-                "author": self.author,
-                "public": self.public
-            }
+            "_id": self._id,
+            "_type": self._type,
+            "base_block_name": self.base_block_name,
+            "inputs": [input.to_dict() for input in self.inputs],
+            "outputs": [output.to_dict() for output in self.outputs],
+            "parameters": [parameter.to_dict() for parameter in self.parameters],
+            "logs": [log.to_dict() for log in self.logs],
+            "title": self.title,
+            "description": self.description,
+            "parent_block": self.parent_block,
+            "derived_from": self.derived_from,
+            "block_running_status": self.block_running_status,
+            "block_status": self.block_status,
+            "cache_url": self.cache_url,
+            "x": self.x,
+            "y": self.y,
+            "author": self.author,
+            "public": self.public
+        }
 
     def load_from_dict(self, block_dict):
         for key, value in block_dict.iteritems():
@@ -97,7 +97,7 @@ class Block(DBObject):
                 "$set": block_dict
             },
             upsert=True,
-            )
+        )
 
         self._dirty = False
         return True
@@ -162,11 +162,11 @@ class Block(DBObject):
             return None
 
         return ValidationError(
-                    target=ValidationTargetType.BLOCK,
-                    object_id=str(self._id),
-                    validation_code=ValidationCode.IN_DEPENDENTS,
-                    children=violations
-                    )
+            target=ValidationTargetType.BLOCK,
+            object_id=str(self._id),
+            validation_code=ValidationCode.IN_DEPENDENTS,
+            children=violations
+        )
 
     def __str__(self):
         return 'Block(_id="{}")'.format(self._id)
@@ -213,7 +213,7 @@ class Block(DBObject):
                 mutable_type=False,
                 publicable=False,
                 removable=False
-                ),
+            ),
             Parameter(
                 name='cacheable',
                 parameter_type=ParameterTypes.BOOL,
@@ -221,27 +221,26 @@ class Block(DBObject):
                 mutable_type=False,
                 publicable=False,
                 removable=False
-                )
-            ]
+            )
+        ]
         block.logs = [
             Output(
                 name='stderr',
                 file_type=FileTypes.FILE,
                 resource_id=None
-                ),
+            ),
             Output(
                 name='stdout',
                 file_type=FileTypes.FILE,
                 resource_id=None
-                ),
+            ),
             Output(
                 name='worker',
                 file_type=FileTypes.FILE,
                 resource_id=None
-                )
-            ]
+            )
+        ]
         return block
-
 
 
 if __name__ == "__main__":
@@ -255,49 +254,49 @@ if __name__ == "__main__":
             name='in',
             file_types=[FileTypes.FILE],
             values=[])
-        ]
+    ]
     block.outputs = [
         Output(
             name='out',
             file_type=FileTypes.FILE,
             resource_id=None
-            )
-        ]
+        )
+    ]
     block.parameters = [
         Parameter(
             name='text',
             parameter_type=ParameterTypes.TEXT,
             value='hello world',
             widget=ParameterWidget(
-                alias = 'text'
-                )
-            ),
+                alias='text'
+            )
+        ),
         Parameter(
             name='cmd',
             parameter_type=ParameterTypes.STR,
             value='cat ${input[in]} | grep ${param[text]} > ${output[out]}',
             widget=ParameterWidget(
-                alias = 'Command line'
-                )
+                alias='Command line'
             )
-        ]
+        )
+    ]
     block.logs = [
         Output(
             name='stderr',
             file_type=FileTypes.FILE,
             resource_id=None
-            ),
+        ),
         Output(
             name='stdout',
             file_type=FileTypes.FILE,
             resource_id=None
-            ),
+        ),
         Output(
             name='worker',
             file_type=FileTypes.FILE,
             resource_id=None
-            )
-        ]
+        )
+    ]
     block.save()
 
     block = Block()
@@ -310,25 +309,25 @@ if __name__ == "__main__":
             name='out',
             file_type=FileTypes.FILE,
             resource_id=None
-            )
-        ]
+        )
+    ]
     block.parameters = [
         Parameter(
             name='text',
             parameter_type=ParameterTypes.STR,
             value='hello world',
             widget=ParameterWidget(
-                alias = 'text'
-                )
+                alias='text'
             )
-        ]
+        )
+    ]
     block.logs = [
         Output(
             name='worker',
             file_type=FileTypes.FILE,
             resource_id=None
-            )
-        ]
+        )
+    ]
     block.save()
 
     block = Block()
@@ -341,25 +340,25 @@ if __name__ == "__main__":
             name='out',
             file_type=FileTypes.FILE,
             resource_id=None
-            )
-        ]
+        )
+    ]
     block.parameters = [
         Parameter(
             name='resource_id',
             parameter_type=ParameterTypes.STR,
             value='Piton.txt',
             widget=ParameterWidget(
-                alias = 'Resource ID'
-                )
+                alias='Resource ID'
             )
-        ]
+        )
+    ]
     block.logs = [
         Output(
             name='worker',
             file_type=FileTypes.FILE,
             resource_id=None
-            )
-        ]
+        )
+    ]
     block.save()
 
     block = Block()
@@ -372,29 +371,29 @@ if __name__ == "__main__":
             name='in',
             file_types=[FileTypes.FILE],
             values=[])
-        ]
+    ]
     block.outputs = [
         Output(
             name='out',
             file_type=FileTypes.FILE,
             resource_id=None
-            )
-        ]
+        )
+    ]
     block.parameters = [
         Parameter(
             name='text',
             parameter_type=ParameterTypes.STR,
             value='hello world',
             widget=ParameterWidget(
-                alias = 'text'
-                )
+                alias='text'
             )
-        ]
+        )
+    ]
     block.logs = [
         Output(
             name='worker',
             file_type=FileTypes.FILE,
             resource_id=None
-            )
-        ]
+        )
+    ]
     block.save()

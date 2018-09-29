@@ -16,7 +16,6 @@ from utils.logs import set_logging_level
 from graph.base_nodes import NodeCollection
 
 
-
 MasterJobDescription = namedtuple('MasterJobDescription', ['graph_id', 'job'])
 
 
@@ -54,7 +53,7 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
                     message_type=MasterMessageType.SET_JOB,
                     job=self.server.worker_to_job_description[worker_id].job,
                     graph_id=self.server.worker_to_job_description[worker_id].graph_id
-                    )
+                )
                 logging.info("SET_JOB worker_id: {}".format(worker_id))
             elif worker_message.message_type == WorkerMessageType.JOB_FINISHED_SUCCESS:
                 job = self.server.worker_to_job_description[worker_id].job
@@ -93,9 +92,9 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
 
         with self.server.job_description_queue_lock:
             logging.info('Queue size: {}'.format(len(self.server.job_description_queue)))
-        
+
         # Respond with AKN
-        #self.request.sendall(worker_message)
+        # self.request.sendall(worker_message)
 
     @staticmethod
     def idle_worker(worker_message):
@@ -108,7 +107,7 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
             message_type=MasterMessageType.AKNOWLEDGE,
             job=None,
             graph_id=None
-            )
+        )
 
 
 class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
@@ -179,7 +178,7 @@ class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             with self.new_schedulers_lock:
                 self.graph_id_to_scheduler.update(
                     {
-                    graph_scheduler.graph._id: graph_scheduler for graph_scheduler in self.new_graph_id_to_scheduler
+                        graph_scheduler.graph._id: graph_scheduler for graph_scheduler in self.new_graph_id_to_scheduler
                     })
                 self.new_graph_id_to_scheduler = []
 

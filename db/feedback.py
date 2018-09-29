@@ -8,6 +8,7 @@ class Feedback(DBObject):
     """
     Basic Feedback class with db interface
     """
+
     def __init__(self, feedback_id=None):
         super(Feedback, self).__init__()
         self._id = None
@@ -48,7 +49,7 @@ class Feedback(DBObject):
                 "$set": feedback_dict
             },
             upsert=True,
-            )
+        )
 
         self._dirty = False
         return True

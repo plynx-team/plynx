@@ -27,11 +27,13 @@ def get_db_config():
         port=int(_config['mongodb']['port'])
     )
 
+
 def get_master_config():
     return MasterConfig(
         host=_config['master']['host'],
         port=int(_config['master']['port'])
     )
+
 
 def get_storage_config():
     return StorageConfig(
@@ -42,19 +44,23 @@ def get_storage_config():
         worker=_config['storage']['worker']
     )
 
+
 def get_auth_config():
     return AuthConfig(
         secret_key=_config['auth']['secret_key']
-        )
+    )
+
 
 def get_web_config():
     return WebConfig(
         endpoint=_config['web']['endpoint']
-        )
+    )
+
 
 def get_demo_config():
     return DemoConfig(
         graph_ids=_config['demo']['graph_ids'] or []
-        )
+    )
+
 
 __init__()

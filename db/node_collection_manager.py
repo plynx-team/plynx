@@ -40,8 +40,8 @@ class NodeCollectionManager(object):
         db_nodes = db.nodes.find({
             '_id': {
                 '$in': list(ids)
-                }
-            })
+            }
+        })
 
         return list(db_nodes)
 
@@ -66,14 +66,14 @@ class NodeCollectionManager(object):
         if not status:
             return db.nodes.count({
                 '$and': and_query
-                })
+            })
         else:
             return db.nodes.count({
                 '$and': and_query
-                })
+            })
 
     @staticmethod
-    def get_db_node(node_id, author = None):
+    def get_db_node(node_id, author=None):
         res = db.nodes.find_one({'_id': to_object_id(node_id)})
         if res:
             res['_readonly'] = (author != to_object_id(res['author']))

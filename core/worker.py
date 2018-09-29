@@ -21,6 +21,7 @@ HOST, PORT = "127.0.0.1", 10000
 class RunningPipelineException(Exception):
     pass
 
+
 class Worker:
     def __init__(self, worker_id, host, port):
         self.thread = threading.Thread(target=self.run, args=())
@@ -41,7 +42,6 @@ class Worker:
                 sleep(1)
             except KeyboardInterrupt:
                 sys.exit(0)
-            
 
     def heartbeat_iteration(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -54,7 +54,7 @@ class Worker:
                 message_type=WorkerMessageType.HEARTBEAT,
                 body=self.job if self.run_status != RunStatus.IDLE else None,
                 graph_id=self.graph_id
-                )
+            )
             send_msg(sock, m)
             resp = recv_msg(sock)
             # TODO Check response
@@ -73,7 +73,7 @@ class Worker:
                         message_type=WorkerMessageType.GET_JOB,
                         body=None,
                         graph_id=None
-                        )
+                    )
                     send_msg(sock, m)
                     master_message = recv_msg(sock)
                     logging.info("I asked for a job; Received: {}".format(master_message))
@@ -117,7 +117,7 @@ class Worker:
                         message_type=status,
                         body=self.job,
                         graph_id=self.graph_id
-                        )
+                    )
 
                     send_msg(sock, m)
 

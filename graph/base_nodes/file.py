@@ -2,6 +2,7 @@ from . import BaseNode
 from constants import JobReturnStatus, NodeStatus, NodeRunningStatus, FileTypes
 from db import Node, Output
 
+
 class File(BaseNode):
     def __init__(self, node=None):
         super(self.__class__, self).__init__(node)
@@ -34,6 +35,6 @@ class File(BaseNode):
                 name='out',
                 file_type=FileTypes.FILE,
                 resource_id=None
-                )
+            )
         ]
         return node

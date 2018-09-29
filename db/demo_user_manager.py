@@ -24,7 +24,6 @@ class DemoUserManager(object):
         user.save()
         return user
 
-
     @staticmethod
     def create_demo_graphs(user):
         res = []

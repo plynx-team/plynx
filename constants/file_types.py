@@ -1,6 +1,6 @@
 class FileTypes(object):
     FILE = 'file'
-    PDF  = 'pdf'
+    PDF = 'pdf'
     IMAGE = 'image'
     EXECUTABLE = 'executable'
     CSV = 'csv'

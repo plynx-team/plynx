@@ -23,7 +23,7 @@ class Output(object):
             name=output_dict['name'],
             file_type=output_dict['file_type'],
             resource_id=output_dict['resource_id'] if 'resource_id' in output_dict else None
-            )
+        )
 
     def __str__(self):
         return 'Output(name="{}")'.format(self.name)

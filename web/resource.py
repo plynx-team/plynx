@@ -10,7 +10,7 @@ def _make_fail_response(message):
     return JSONEncoder().encode({
         'status': ResourcePostStatus.FAILED,
         'message': message
-        })
+    })
 
 
 @app.route('/plynx/api/v0/resource/<resource_id>', methods=['GET'])
@@ -26,7 +26,7 @@ def post_resource():
         return JSONEncoder().encode({
             'status': ResourcePostStatus.SUCCESS,
             'resource_id': resource_id
-            })
+        })
     except Exception as e:
         app.logger.error(e)
         return _make_fail_response('Internal error: "{}"'.format(str(e)))

@@ -16,7 +16,7 @@ def _make_fail_response(message):
     return JSONEncoder().encode({
         'status': GraphPostStatus.FAILED,
         'message': message
-        })
+    })
 
 
 @app.route('/plynx/api/v0/graphs', methods=['GET'])
@@ -26,13 +26,13 @@ def get_graph(graph_id=None):
     if graph_id == 'new':
         return JSONEncoder().encode({
             'data': Graph().to_dict(),
-            'status':'success'})
+            'status': 'success'})
     elif graph_id:
         graph = graph_collection_manager.get_db_graph(graph_id)
         if graph:
             return JSONEncoder().encode({
                 'data': graph,
-                'status':'success'})
+                'status': 'success'})
         else:
             return 'Graph was not found', 404
     else:
@@ -43,7 +43,7 @@ def get_graph(graph_id=None):
         return JSONEncoder().encode({
             'graphs': [graph for graph in graph_collection_manager.get_db_graphs(**graphs_query)],
             'total_count': graph_collection_manager.get_db_graphs_count(**count_query),
-            'status':'success'})
+            'status': 'success'})
 
 
 @app.route('/plynx/api/v0/graphs', methods=['POST'])
@@ -79,10 +79,10 @@ def post_graph():
                 validation_error = graph.get_validation_error()
                 if validation_error:
                     return JSONEncoder().encode({
-                                'status': GraphPostStatus.VALIDATION_FAILED,
-                                'message': 'Graph validation failed',
-                                'validation_error': validation_error.to_dict()
-                                })
+                        'status': GraphPostStatus.VALIDATION_FAILED,
+                        'message': 'Graph validation failed',
+                        'validation_error': validation_error.to_dict()
+                    })
 
                 graph.graph_running_status = GraphRunningStatus.READY
                 graph.save(force=True)
@@ -92,10 +92,10 @@ def post_graph():
 
                 if validation_error:
                     return JSONEncoder().encode({
-                                'status': GraphPostStatus.VALIDATION_FAILED,
-                                'message': 'Graph validation failed',
-                                'validation_error': validation_error.to_dict()
-                                })
+                        'status': GraphPostStatus.VALIDATION_FAILED,
+                        'message': 'Graph validation failed',
+                        'validation_error': validation_error.to_dict()
+                    })
             else:
                 return _make_fail_response('Unknown action `{}`'.format(action))
 

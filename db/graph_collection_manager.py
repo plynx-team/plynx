@@ -16,7 +16,7 @@ class GraphCollectionManager(object):
             return None
         node_ids = set(
             [to_object_id(node['parent_node']) for node in db_graph['nodes']]
-            )
+        )
         db_nodes = GraphCollectionManager.node_collection_manager.get_db_nodes_by_ids(node_ids)
 
         node_id_to_db_node = {
@@ -44,7 +44,7 @@ class GraphCollectionManager(object):
     def update_blocks(graph):
         node_ids = set(
             [to_object_id(node.parent_node) for node in graph.nodes]
-            )
+        )
         db_nodes = GraphCollectionManager.node_collection_manager.get_db_nodes_by_ids(node_ids)
         new_node_db_mapping = {}
 
@@ -66,10 +66,9 @@ class GraphCollectionManager(object):
                 Node().load_from_dict(new_node_db_mapping[to_object_id(node.parent_node)])
             ) for node in graph.nodes]
 
-
         updated_nodes_count = sum(1
-            for node, new_node in zip(graph.nodes, new_nodes) if node.parent_node != new_node.parent_node
-        )
+                                  for node, new_node in zip(graph.nodes, new_nodes) if node.parent_node != new_node.parent_node
+                                  )
 
         graph.nodes = new_nodes
         return updated_nodes_count
@@ -86,24 +85,24 @@ class GraphCollectionManager(object):
     @staticmethod
     def get_db_graphs(author, per_page=20, offset=0):
         db_graphs = db.graphs.find({
-                '$or': [
-                    {'author': author},
-                    {'public': True}
-                ]
-                }).sort('insertion_date', -1).skip(offset).limit(per_page)
+            '$or': [
+                {'author': author},
+                {'public': True}
+            ]
+        }).sort('insertion_date', -1).skip(offset).limit(per_page)
         return list(db_graphs)
 
     @staticmethod
     def get_db_graphs_count(author):
         return db.graphs.count({
-                '$or': [
-                    {'author': author},
-                    {'public': True}
-                ]
-                })
+            '$or': [
+                {'author': author},
+                {'public': True}
+            ]
+        })
 
     @staticmethod
     def get_db_graph(graph_id):
         return GraphCollectionManager._update_node_statuses(
             db.graphs.find_one({'_id': to_object_id(graph_id)})
-            )
+        )

@@ -57,7 +57,7 @@ class Graph(DBObject):
                 "$set": graph_dict
             },
             upsert=True,
-            )
+        )
 
         self._dirty = False
         return True
@@ -110,11 +110,11 @@ class Graph(DBObject):
             return None
 
         return ValidationError(
-                    target=ValidationTargetType.GRAPH,
-                    object_id=str(self._id),
-                    validation_code=ValidationCode.IN_DEPENDENTS,
-                    children=violations
-                    )
+            target=ValidationTargetType.GRAPH,
+            object_id=str(self._id),
+            validation_code=ValidationCode.IN_DEPENDENTS,
+            children=violations
+        )
 
     def arrange_auto_layout(self):
         """Use heuristic to rearange nodes.
@@ -184,8 +184,8 @@ class Graph(DBObject):
 
         def get_index(node, max_level, level):
             return tuple(
-                    [get_index_helper(node, lvl) for lvl in range(max_level, level, -1)]
-                )
+                [get_index_helper(node, lvl) for lvl in range(max_level, level, -1)]
+            )
 
         for node_id, level in node_id_to_level.items():
             level_to_node_ids[level].append(node_id)

@@ -1,5 +1,7 @@
-import os, sys
+import os
+import sys
 from . import BaseNode
+
 
 class NodeCollection:
     def __init__(self):

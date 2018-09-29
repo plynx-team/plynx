@@ -14,7 +14,7 @@ class InputValue(object):
         return {
             'node_id': self.node_id,
             'output_id': self.output_id,
-            'resource_id': self.resource_id            
+            'resource_id': self.resource_id
         }
 
     def __str__(self):
@@ -63,7 +63,7 @@ class Input(object):
                 value_dict.get('node_id', None),
                 value_dict.get('output_id', None),
                 value_dict.get('resource_id', None)
-                )
+            )
             res.values.append(input_value)
 
         assert isinstance(res.name, basestring)

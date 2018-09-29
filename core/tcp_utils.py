@@ -8,6 +8,7 @@ def send_msg(sock, msg):
     msg = struct.pack('>I', len(msg)) + msg
     sock.sendall(msg)
 
+
 def recv_msg(sock):
     # Read message length and unpack it into an integer
     raw_msglen = recvall(sock, 4)
@@ -17,6 +18,7 @@ def recv_msg(sock):
     # Read the message data
     msg = recvall(sock, msglen)
     return pickle.loads(msg)
+
 
 def recvall(sock, n):
     # Helper function to recv n bytes or return None if EOF is hit

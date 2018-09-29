@@ -2,6 +2,7 @@ from . import BaseNode
 from constants import JobReturnStatus, NodeStatus, FileTypes, ParameterTypes
 from db import Node, Output, Parameter
 
+
 class GetResource(BaseNode):
     def __init__(self, node=None):
         super(self.__class__, self).__init__(node)
@@ -36,13 +37,13 @@ class GetResource(BaseNode):
                 mutable_type=False,
                 publicable=True,
                 removable=False
-                )
-            ]
+            )
+        ]
         node.outputs = [
             Output(
                 name='out',
                 file_type=FileTypes.FILE,
                 resource_id=None
-                )
+            )
         ]
         return node

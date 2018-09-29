@@ -3,6 +3,7 @@ from utils.common import to_object_id
 from utils.db_connector import *
 from constants import NodeRunningStatus
 
+
 class NodeCacheManager(object):
     """
     The Node cache interface.
@@ -24,7 +25,7 @@ class NodeCacheManager(object):
         key = NodeCache.generate_key(node, user_id)
         db_node_cache = db.node_cache.find({
             'key': key
-            }).sort('insertion_date', -1).limit(1)
+        }).sort('insertion_date', -1).limit(1)
         caches = list(db_node_cache)
         if len(caches):
             res = NodeCache()

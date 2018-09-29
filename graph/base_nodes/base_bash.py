@@ -69,7 +69,7 @@ class BaseBash(object):
                 mutable_type=False,
                 publicable=False,
                 removable=False
-                ),
+            ),
             Parameter(
                 name='cacheable',
                 parameter_type=ParameterTypes.BOOL,
@@ -77,25 +77,25 @@ class BaseBash(object):
                 mutable_type=False,
                 publicable=False,
                 removable=False
-                )
-            ]
+            )
+        ]
         node.logs = [
             Output(
                 name='stderr',
                 file_type=FileTypes.FILE,
                 resource_id=None
-                ),
+            ),
             Output(
                 name='stdout',
                 file_type=FileTypes.FILE,
                 resource_id=None
-                ),
+            ),
             Output(
                 name='worker',
                 file_type=FileTypes.FILE,
                 resource_id=None
-                )
-            ]
+            )
+        ]
         return node
 
     @staticmethod
@@ -113,7 +113,7 @@ class BaseBash(object):
                     with open(filename, 'wb') as f:
                         f.write(get_file_stream(value.resource_id).read())
                     filenames.append(filename)
-            res[input.name] = ' '.join(filenames)                                                       #!!!!!!
+            res[input.name] = ' '.join(filenames)  # !!!!!!
         return res
 
     @staticmethod
@@ -147,7 +147,7 @@ class BaseBash(object):
                 index = max(0, min(len(parameter.value.values) - 1, parameter.value.index))
                 res[parameter.name] = parameter.value.values[index]
             elif parameter.parameter_type in [ParameterTypes.LIST_STR, ParameterTypes.LIST_INT]:
-                res[parameter.name] = ' '.join(map(str, parameter.value))                               #!!!!!!!!!
+                res[parameter.name] = ' '.join(map(str, parameter.value))  # !!!!!!!!!
             else:
                 res[parameter.name] = parameter.value
         return res

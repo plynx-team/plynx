@@ -74,14 +74,14 @@ class Parameter(object):
             widget = None
 
         return Parameter(
-            name = parameter_dict['name'],
-            parameter_type = parameter_dict['parameter_type'],
-            value = parameter_dict['value'],
-            mutable_type = parameter_dict.get('mutable_type', True),
-            publicable = parameter_dict.get('publicable', True),
-            removable = parameter_dict.get('removable', True),
-            widget = widget
-            )
+            name=parameter_dict['name'],
+            parameter_type=parameter_dict['parameter_type'],
+            value=parameter_dict['value'],
+            mutable_type=parameter_dict.get('mutable_type', True),
+            publicable=parameter_dict.get('publicable', True),
+            removable=parameter_dict.get('removable', True),
+            widget=widget
+        )
 
     def __str__(self):
         return 'Parameter(name="{}")'.format(self.name)

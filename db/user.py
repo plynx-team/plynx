@@ -5,8 +5,8 @@ from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
 from utils.config import get_auth_config
 from itsdangerous import (SignatureExpired, BadSignature,
-    TimedJSONWebSignatureSerializer as TimedSerializer,
-    JSONWebSignatureSerializer as Serializer)
+                          TimedJSONWebSignatureSerializer as TimedSerializer,
+                          JSONWebSignatureSerializer as Serializer)
 
 
 class User(DBObject):
@@ -57,7 +57,7 @@ class User(DBObject):
                 "$set": user_dict
             },
             upsert=True,
-            )
+        )
 
         self._dirty = False
         return True
@@ -75,7 +75,6 @@ class User(DBObject):
         self._id = to_object_id(self._id)
         self._dirty = False
 
-
     def hash_password(self, password):
         self.password_hash = pwd_context.encrypt(password)
 
@@ -83,12 +82,12 @@ class User(DBObject):
         return pwd_context.verify(password, self.password_hash)
 
     def generate_access_token(self, expiration=600):
-        s = TimedSerializer(User.AUTH_CONFIG.secret_key, expires_in = expiration)
-        return s.dumps({ 'username': self.username, 'type': 'access' })
+        s = TimedSerializer(User.AUTH_CONFIG.secret_key, expires_in=expiration)
+        return s.dumps({'username': self.username, 'type': 'access'})
 
     def generate_refresh_token(self):
         s = Serializer(User.AUTH_CONFIG.secret_key)
-        return s.dumps({ 'username': self.username, 'type': 'refresh' })
+        return s.dumps({'username': self.username, 'type': 'refresh'})
 
     def __str__(self):
         return 'User(_id="{}", username={})'.format(self._id, self.username)

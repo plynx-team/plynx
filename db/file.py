@@ -39,19 +39,19 @@ class File(DBObject):
 
     def to_dict(self):
         return {
-                "_id": self._id,
-                "_type": self._type,
-                "outputs": [output.to_dict() for output in self.outputs],
-                "title": self.title,
-                "description": self.description,
-                "block_status": self.block_status,
-                "derived_from": self.derived_from,
-                "block_running_status": self.block_running_status,
-                "x": self.x,
-                "y": self.y,
-                "author": self.author,
-                "public": self.public
-            }
+            "_id": self._id,
+            "_type": self._type,
+            "outputs": [output.to_dict() for output in self.outputs],
+            "title": self.title,
+            "description": self.description,
+            "block_status": self.block_status,
+            "derived_from": self.derived_from,
+            "block_running_status": self.block_running_status,
+            "x": self.x,
+            "y": self.y,
+            "author": self.author,
+            "public": self.public
+        }
 
     def load_from_dict(self, file_dict):
         for key, value in file_dict.iteritems():
@@ -84,7 +84,7 @@ class File(DBObject):
                 "$set": file_dict
             },
             upsert=True,
-            )
+        )
 
         self._dirty = False
         return True
@@ -130,11 +130,11 @@ class File(DBObject):
             return None
 
         return ValidationError(
-                    target=ValidationTargetType.FILE,
-                    object_id=str(self._id),
-                    validation_code=ValidationCode.IN_DEPENDENTS,
-                    children=violations
-                    )
+            target=ValidationTargetType.FILE,
+            object_id=str(self._id),
+            validation_code=ValidationCode.IN_DEPENDENTS,
+            children=violations
+        )
 
     def __str__(self):
         return 'File(_id="{}")'.format(self._id)
@@ -168,7 +168,6 @@ class File(DBObject):
         return file
 
 
-
 if __name__ == "__main__":
     from db import User
     user = User.find_user_by_name("khaxis")
@@ -183,8 +182,8 @@ if __name__ == "__main__":
             name='out',
             file_type=FileTypes.CSV,
             resource_id="mnist.csv"
-            )
-        ]
+        )
+    ]
     file.save()
 
     file = File()
@@ -198,8 +197,8 @@ if __name__ == "__main__":
             name='out',
             file_type=FileTypes.EXECUTABLE,
             resource_id="sample.py"
-            )
-        ]
+        )
+    ]
     file.save()
 
     file = File()
@@ -213,8 +212,8 @@ if __name__ == "__main__":
             name='out',
             file_type=FileTypes.EXECUTABLE,
             resource_id="train.py"
-            )
-        ]
+        )
+    ]
     file.save()
 
     file = File()
@@ -228,8 +227,8 @@ if __name__ == "__main__":
             name='out',
             file_type=FileTypes.EXECUTABLE,
             resource_id="predict.py"
-            )
-        ]
+        )
+    ]
     file.save()
 
     file = File()
@@ -243,6 +242,6 @@ if __name__ == "__main__":
             name='out',
             file_type=FileTypes.EXECUTABLE,
             resource_id='build_plot.py'
-            )
-        ]
+        )
+    ]
     file.save()
