@@ -1,0 +1,150 @@
+[
+  {
+    "inputs": [
+      {
+        "min_count": 1,
+        "file_types": [
+          "csv"
+        ],
+        "values": [],
+        "name": "input",
+        "max_count": -1
+      }
+    ],
+    "update_date": "2018-09-11T05:20:05.645Z",
+    "logs": [
+      {
+        "file_type": "file",
+        "name": "stderr",
+        "resource_id": null
+      },
+      {
+        "file_type": "file",
+        "name": "stdout",
+        "resource_id": null
+      },
+      {
+        "file_type": "file",
+        "name": "worker",
+        "resource_id": null
+      }
+    ],
+    "parameters": [
+      {
+        "publicable": false,
+        "widget": null,
+        "name": "cmd",
+        "value": "cat {{ input[\"input\"] }} | grep \"{{ param['template'] }}\" > {{ output[\"output\"] }}",
+        "mutable_type": false,
+        "parameter_type": "text",
+        "removable": false
+      },
+      {
+        "publicable": false,
+        "widget": null,
+        "name": "cacheable",
+        "value": true,
+        "mutable_type": false,
+        "parameter_type": "bool",
+        "removable": false
+      },
+      {
+        "publicable": true,
+        "widget": {"alias": "Template"},
+        "name": "template",
+        "value": "template",
+        "parameter_type": "str",
+        "removable": true
+      }
+    ],
+    "title": "Grep",
+    "outputs": [
+      {
+        "file_type": "csv",
+        "name": "output",
+        "resource_id": null
+      }
+    ],
+    "base_node_name": "bash_jinja2",
+    "cache_url": null,
+    "node_running_status": "CREATED",
+    "node_status": "CREATED",
+    "successor_node": null,
+    "y": 0,
+    "x": 0,
+    "parent_node": null,
+    "public": true,
+    "description": "Grep node",
+    "insertion_date": "2018-09-11T05:17:54.426Z"
+  },
+  {
+    "inputs": [
+      {
+        "min_count": 1,
+        "file_types": [
+          "file"
+        ],
+        "values": [],
+        "name": "input",
+        "max_count": -1
+      }
+    ],
+    "update_date": "2018-09-11T05:20:05.645Z",
+    "logs": [
+      {
+        "file_type": "file",
+        "name": "stderr",
+        "resource_id": null
+      },
+      {
+        "file_type": "file",
+        "name": "stdout",
+        "resource_id": null
+      },
+      {
+        "file_type": "file",
+        "name": "worker",
+        "resource_id": null
+      }
+    ],
+    "parameters": [
+      {
+        "publicable": false,
+        "widget": null,
+        "name": "cmd",
+        "value": "cat {{ input[\"input\"] }} | paste -sd+ - | bc > {{ output[\"output\"] }}",
+        "mutable_type": false,
+        "parameter_type": "text",
+        "removable": false
+      },
+      {
+        "publicable": false,
+        "widget": null,
+        "name": "cacheable",
+        "value": true,
+        "mutable_type": false,
+        "parameter_type": "bool",
+        "removable": false
+      }
+    ],
+    "title": "Sum",
+    "outputs": [
+      {
+        "file_type": "file",
+        "name": "output",
+        "resource_id": null
+      }
+    ],
+    "base_node_name": "bash_jinja2",
+    "cache_url": null,
+    "node_running_status": "CREATED",
+    "node_status": "CREATED",
+    "successor_node": null,
+    "y": 0,
+    "x": 0,
+    "parent_node": null,
+    "public": true,
+    "description": "Sum values",
+    "insertion_date": "2018-09-11T05:17:54.426Z"
+  }
+]
