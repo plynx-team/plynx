@@ -1,0 +1,63 @@
+version: "3.3"
+services:
+    mongodb:
+        image: mongo:3.6-jessie
+        container_name: "mongodb"
+        environment:
+            - MONGO_DATA_DIR=/data/db
+            - MONGO_LOG_DIR=/dev/null
+        volumes:
+            - ./test/integration/data/db:/data/db
+        ports:
+            - 27017:27017
+        command: mongod --smallfiles --logpath=/dev/null # --quiet
+    master:
+        image: khaxis/plynx:master
+        container_name: "master"
+        ports:
+            - "10000:10000"
+        depends_on:
+            - mongodb
+        links:
+            - mongodb
+    workers:
+        image: khaxis/plynx:worker
+        # deploy:
+        #     replicas: 3
+        #     resources:
+        #         limits:
+        #             cpus: "0.5"
+        #     restart_policy:
+        #         condition: on-failure
+        volumes:
+            - disk-storage:/data
+            #- type: bind
+            #    source: ~/.boto
+            #    target: /root/.boto
+        depends_on:
+            - master
+        links:
+            - master
+            - mongodb
+    backend:
+        image: khaxis/plynx:backend
+        container_name: "backend"
+        ports:
+            - "5000:5000"
+        depends_on:
+            - mongodb
+        links:
+            - mongodb
+        volumes:
+            - disk-storage:/data
+    test:
+        image: khaxis/plynx:test
+        container_name: "test"
+        depends_on:
+            - backend
+        links:
+            - backend
+            - mongodb
+
+volumes:
+    disk-storage:
