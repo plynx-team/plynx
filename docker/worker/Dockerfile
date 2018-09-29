@@ -7,6 +7,8 @@ WORKDIR /app
 # Copy the current directory contents into the container at /app
 ADD ./constants /app/constants
 ADD ./core /app/core
+# TODO: don't use db
+ADD ./db /app/db
 ADD ./graph /app/graph
 ADD ./utils /app/utils
 
@@ -19,4 +21,7 @@ RUN chmod 1777 /tmp
 EXPOSE 10000
 
 # Run app.py when the container launches
-ENTRYPOINT python -m core.worker -vvv --host host.docker.internal
+ENTRYPOINT for i in $(seq 3); do \
+    python -m core.worker -vvv --host master; \
+    sleep 1; \
+    done

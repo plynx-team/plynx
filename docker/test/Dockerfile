@@ -10,7 +10,10 @@ RUN apt-get install -y \
 
 # Copy the current directory contents into the container at /app
 ADD ./docker/test/scripts /app/scripts
-
+ADD ./docker/test/data_00 /app/data_00
+ADD ./plynx-python-client /app/plynx-python-client
+ENV PYTHONPATH "${PYTHONPATH}:/app/plynx-python-client"
+ENV PLYNX_ENDPOINT "http://backend:5000/plynx/api/v0"
 
 # Run app.py when the container launches
 ENTRYPOINT ./scripts/run_tests.sh

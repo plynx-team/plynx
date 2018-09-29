@@ -12,3 +12,4 @@ Flask==0.12.2
 Flask-Cors==3.0.3
 Flask-HTTPAuth==3.2.3
 gevent==1.2.2
+requests==2.18.4
