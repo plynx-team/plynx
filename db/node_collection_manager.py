@@ -8,7 +8,7 @@ class NodeCollectionManager(object):
     """
 
     @staticmethod
-    def _get_basic_nodes_query(author, status, base_node_names, search=None):
+    def _get_basic_query(author, status, base_node_names, search):
         if status and isinstance(status, basestring):
             status = [status]
         if base_node_names and isinstance(base_node_names, basestring):
@@ -31,7 +31,7 @@ class NodeCollectionManager(object):
 
     @staticmethod
     def get_db_nodes(author, status=None, base_node_names=None, search=None, per_page=20, offset=0):
-        and_query = NodeCollectionManager._get_basic_nodes_query(
+        and_query = NodeCollectionManager._get_basic_query(
             author=author,
             status=status,
             base_node_names=base_node_names,
@@ -60,7 +60,7 @@ class NodeCollectionManager(object):
 
     @staticmethod
     def get_db_nodes_count(author, status=None, base_node_names=None, search=None):
-        and_query = NodeCollectionManager._get_basic_nodes_query(
+        and_query = NodeCollectionManager._get_basic_query(
             author=author,
             status=status,
             base_node_names=base_node_names,

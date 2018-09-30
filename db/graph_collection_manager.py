@@ -83,22 +83,37 @@ class GraphCollectionManager(object):
         return graphs
 
     @staticmethod
-    def get_db_graphs(author, per_page=20, offset=0):
-        db_graphs = db.graphs.find({
+    def _get_basic_query(author, search):
+        and_query = []
+        and_query.append({
             '$or': [
                 {'author': author},
                 {'public': True}
-            ]
+            ]})
+        if search:
+            and_query.append({'$text': {'$search': search}})
+
+        return and_query
+
+    @staticmethod
+    def get_db_graphs(author, search=None, per_page=20, offset=0):
+        and_query = GraphCollectionManager._get_basic_query(
+            author=author,
+            search=search,
+        )
+        db_graphs = db.graphs.find({
+            '$and': and_query
         }).sort('insertion_date', -1).skip(offset).limit(per_page)
         return list(db_graphs)
 
     @staticmethod
-    def get_db_graphs_count(author):
+    def get_db_graphs_count(author, search=None):
+        and_query = GraphCollectionManager._get_basic_query(
+            author=author,
+            search=search,
+        )
         return db.graphs.count({
-            '$or': [
-                {'author': author},
-                {'public': True}
-            ]
+            '$and': and_query
         })
 
     @staticmethod

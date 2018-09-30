@@ -10,6 +10,8 @@ from utils.config import get_web_config
 
 graph_collection_manager = GraphCollectionManager()
 WEB_CONFIG = get_web_config()
+COUNT_QUERY_KEYS = {'author', 'search'}
+PAGINATION_QUERY_KEYS = COUNT_QUERY_KEYS.union({'per_page', 'offset'})
 
 
 def _make_fail_response(message):
@@ -38,8 +40,8 @@ def get_graph(graph_id=None):
     else:
         query = json.loads(request.args.get('query', "{}"))
         query["author"] = to_object_id(g.user._id)
-        graphs_query = {k: v for k, v in query.iteritems() if k in {'per_page', 'offset', 'author'}}
-        count_query = {k: v for k, v in query.iteritems() if k in {'author'}}
+        count_query = {k: v for k, v in query.iteritems() if k in COUNT_QUERY_KEYS}
+        graphs_query = {k: v for k, v in query.iteritems() if k in PAGINATION_QUERY_KEYS}
         return JSONEncoder().encode({
             'graphs': [graph for graph in graph_collection_manager.get_db_graphs(**graphs_query)],
             'total_count': graph_collection_manager.get_db_graphs_count(**count_query),
