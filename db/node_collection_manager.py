@@ -8,7 +8,7 @@ class NodeCollectionManager(object):
     """
 
     @staticmethod
-    def get_db_nodes(author, status=None, per_page=20, offset=0, base_node_names=None):
+    def _get_basic_nodes_query(author, status, base_node_names):
         if status and isinstance(status, basestring):
             status = [status]
         if base_node_names and isinstance(base_node_names, basestring):
@@ -24,6 +24,16 @@ class NodeCollectionManager(object):
             and_query.append({'base_node_name': {'$in': base_node_names}})
         if status:
             and_query.append({'node_status': {'$in': status}})
+
+        return and_query
+
+    @staticmethod
+    def get_db_nodes(author, status=None, base_node_names=None, per_page=20, offset=0):
+        and_query = NodeCollectionManager._get_basic_nodes_query(
+            author=author,
+            status=status,
+            base_node_names=base_node_names
+        )
 
         db_nodes = db.nodes.find({
             '$and': and_query
@@ -47,30 +57,15 @@ class NodeCollectionManager(object):
 
     @staticmethod
     def get_db_nodes_count(author, status=None, base_node_names=None):
-        if status and isinstance(status, basestring):
-            status = [status]
-        if base_node_names and isinstance(base_node_names, basestring):
-            base_node_names = [base_node_names]
+        and_query = NodeCollectionManager._get_basic_nodes_query(
+            author=author,
+            status=status,
+            base_node_names=base_node_names
+        )
 
-        and_query = []
-        and_query.append({
-            '$or': [
-                {'author': author},
-                {'public': True}
-            ]})
-        if base_node_names:
-            and_query.append({'base_node_name': {'$in': base_node_names}})
-        if status:
-            and_query.append({'node_status': {'$in': status}})
-
-        if not status:
-            return db.nodes.count({
-                '$and': and_query
-            })
-        else:
-            return db.nodes.count({
-                '$and': and_query
-            })
+        return db.nodes.count({
+            '$and': and_query
+        })
 
     @staticmethod
     def get_db_node(node_id, author=None):
