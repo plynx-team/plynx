@@ -8,6 +8,9 @@ from web import app, requires_auth
 from utils.common import to_object_id, JSONEncoder
 from constants import NodeStatus, NodePostAction, NodePostStatus
 
+COUNT_QUERY_KEYS = {'status', 'author', 'base_node_names', 'search'}
+PAGINATION_QUERY_KEYS = COUNT_QUERY_KEYS.union({'per_page', 'offset'})
+
 node_collection_manager = NodeCollectionManager()
 node_collection = NodeCollection()
 
@@ -47,8 +50,8 @@ def get_nodes(node_link=None):
     else:
         query = json.loads(request.args.get('query', "{}"))
         query["author"] = to_object_id(g.user._id)
-        nodes_query = {k: v for k, v in query.iteritems() if k in {'per_page', 'offset', 'status', 'author', 'base_node_names'}}
-        count_query = {k: v for k, v in query.iteritems() if k in {'status', 'author', 'base_node_names'}}
+        nodes_query = {k: v for k, v in query.iteritems() if k in PAGINATION_QUERY_KEYS}
+        count_query = {k: v for k, v in query.iteritems() if k in COUNT_QUERY_KEYS}
         return JSONEncoder().encode({
             'nodes': node_collection_manager.get_db_nodes(**nodes_query),
             'total_count': node_collection_manager.get_db_nodes_count(**count_query),

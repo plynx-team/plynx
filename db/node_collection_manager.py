@@ -8,7 +8,7 @@ class NodeCollectionManager(object):
     """
 
     @staticmethod
-    def _get_basic_nodes_query(author, status, base_node_names):
+    def _get_basic_nodes_query(author, status, base_node_names, search=None):
         if status and isinstance(status, basestring):
             status = [status]
         if base_node_names and isinstance(base_node_names, basestring):
@@ -24,15 +24,18 @@ class NodeCollectionManager(object):
             and_query.append({'base_node_name': {'$in': base_node_names}})
         if status:
             and_query.append({'node_status': {'$in': status}})
+        if search:
+            and_query.append({'$text': {'$search': search}})
 
         return and_query
 
     @staticmethod
-    def get_db_nodes(author, status=None, base_node_names=None, per_page=20, offset=0):
+    def get_db_nodes(author, status=None, base_node_names=None, search=None, per_page=20, offset=0):
         and_query = NodeCollectionManager._get_basic_nodes_query(
             author=author,
             status=status,
-            base_node_names=base_node_names
+            base_node_names=base_node_names,
+            search=search
         )
 
         db_nodes = db.nodes.find({
@@ -56,11 +59,12 @@ class NodeCollectionManager(object):
         return list(db_nodes)
 
     @staticmethod
-    def get_db_nodes_count(author, status=None, base_node_names=None):
+    def get_db_nodes_count(author, status=None, base_node_names=None, search=None):
         and_query = NodeCollectionManager._get_basic_nodes_query(
             author=author,
             status=status,
-            base_node_names=base_node_names
+            base_node_names=base_node_names,
+            search=search,
         )
 
         return db.nodes.count({
