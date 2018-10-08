@@ -10,7 +10,7 @@ from utils.file_handler import get_file_stream, upload_file_stream
 
 
 class BaseBash(object):
-    def exec_script(self, script_location, logs):
+    def exec_script(self, script_location, logs, command='bash'):
         res = JobReturnStatus.SUCCESS
 
         try:
@@ -24,7 +24,7 @@ class BaseBash(object):
             env = os.environ.copy()
             shutil.copyfile(script_location, logs['worker'])
             sp = Popen(
-                ['bash', script_location],
+                [command, script_location],
                 stdout=PIPE, stderr=PIPE,
                 cwd='/tmp', env=env,
                 preexec_fn=pre_exec)
@@ -99,7 +99,7 @@ class BaseBash(object):
         return node
 
     @staticmethod
-    def _prepare_inputs(inputs, preview=False):
+    def _prepare_inputs(inputs, preview=False, pythonize=False):
         res = {}
         for input in inputs:
             filenames = []
@@ -113,7 +113,13 @@ class BaseBash(object):
                     with open(filename, 'wb') as f:
                         f.write(get_file_stream(value.resource_id).read())
                     filenames.append(filename)
-            res[input.name] = ' '.join(filenames)  # !!!!!!
+            if pythonize:
+                if input.min_count == 1 and input.max_count == 1:
+                    res[input.name] = filenames[0]
+                else:
+                    res[input.name] = filenames
+            else:
+                res[input.name] = ' '.join(filenames)  # !!!!!!
         return res
 
     @staticmethod
@@ -136,18 +142,21 @@ class BaseBash(object):
         return res
 
     @staticmethod
-    def _get_script_fname():
-        return os.path.join('/tmp', '{}_{}'.format(str(uuid.uuid1()), "exec.sh"))
+    def _get_script_fname(extension='.sh'):
+        return os.path.join('/tmp', '{}_{}'.format(str(uuid.uuid1()), "exec{}".format(extension)))
 
     @staticmethod
-    def _prepare_parameters(parameters):
+    def _prepare_parameters(parameters, pythonize=False):
         res = {}
         for parameter in parameters:
             if parameter.parameter_type == ParameterTypes.ENUM:
                 index = max(0, min(len(parameter.value.values) - 1, parameter.value.index))
                 res[parameter.name] = parameter.value.values[index]
             elif parameter.parameter_type in [ParameterTypes.LIST_STR, ParameterTypes.LIST_INT]:
-                res[parameter.name] = ' '.join(map(str, parameter.value))  # !!!!!!!!!
+                if pythonize:
+                    res[parameter.name] = parameter.value
+                else:
+                    res[parameter.name] = ' '.join(map(str, parameter.value))  # !!!!!!!!!
             else:
                 res[parameter.name] = parameter.value
         return res

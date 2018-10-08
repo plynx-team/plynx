@@ -18,6 +18,7 @@ class NodeCollection:
                 if name is not None:
                     self.name_to_class[name] = cls
 
+    # TODO ever used?
     def make_from_node_with_inputs(self, node_with_inputs):
         job = self.name_to_class[node_with_inputs.base_node_name]()
         job.restore_from_dict(node_with_inputs)
