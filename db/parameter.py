@@ -1,4 +1,4 @@
-from constants import ParameterEnum, ParameterTypes
+from constants import ParameterEnum, ParameterCode, ParameterTypes
 
 
 class ParameterWidget(object):
@@ -46,6 +46,8 @@ class Parameter(object):
             self.value = ParameterTypes.get_default_by_type(self.parameter_type)
         elif self.parameter_type == ParameterTypes.ENUM:
             self.value = ParameterEnum.create_from_dict(value)
+        elif self.parameter_type == ParameterTypes.CODE:
+            self.value = ParameterCode.create_from_dict(value)
         else:
             self.value = value
         assert ParameterTypes.value_is_valid(self.value, self.parameter_type), \
@@ -54,7 +56,7 @@ class Parameter(object):
 
     def to_dict(self):
         value = self.value
-        if self.parameter_type == ParameterTypes.ENUM:
+        if self.parameter_type in [ParameterTypes.ENUM, ParameterTypes.CODE]:
             value = self.value.to_dict()
         return {
             'name': self.name,

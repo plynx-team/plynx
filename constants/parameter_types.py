@@ -10,15 +10,38 @@ class ParameterEnum(object):
             'index': self.index
         }
 
-    @staticmethod
-    def create_from_dict(obj_dict):
-        parameter_enum = ParameterEnum()
+    @classmethod
+    def create_from_dict(cls, obj_dict):
+        parameter_enum = cls()
         for key, value in obj_dict.iteritems():
             setattr(parameter_enum, key, value)
         return parameter_enum
 
     def __repr__(self):
         return 'ParameterEnum({})'.format(str(self.to_dict()))
+
+
+class ParameterCode(object):
+    MODES = {'python'}
+    def __init__(self, value='', mode='python'):
+        self.value = value
+        self.mode = mode
+
+    def to_dict(self):
+        return {
+            'value': self.value,
+            'mode': self.mode
+        }
+
+    @classmethod
+    def create_from_dict(cls, obj_dict):
+        parameter_code = cls()
+        for key, value in obj_dict.iteritems():
+            setattr(parameter_code, key, value)
+        return parameter_code
+
+    def __repr__(self):
+        return 'ParameterCode({})'.format(str(self.to_dict()))
 
 
 class ParameterTypes:
@@ -29,6 +52,7 @@ class ParameterTypes:
     ENUM = 'enum'
     LIST_STR = 'list_str'
     LIST_INT = 'list_int'
+    CODE = 'code'
 
     @staticmethod
     def get_default_by_type(parameter_type):
@@ -46,6 +70,8 @@ class ParameterTypes:
             return []
         if parameter_type == ParameterTypes.LIST_INT:
             return []
+        if parameter_type == ParameterTypes.CODE:
+            return ParameterCode()
         else:
             return None
 
@@ -69,5 +95,7 @@ class ParameterTypes:
             return isinstance(value, list) and all(ParameterTypes.value_is_valid(x, ParameterTypes.STR) for x in value)
         if parameter_type == ParameterTypes.LIST_INT:
             return isinstance(value, list) and all(ParameterTypes.value_is_valid(x, ParameterTypes.INT) for x in value)
+        if parameter_type == ParameterTypes.CODE:
+            return isinstance(value, ParameterCode)
         else:
             return False

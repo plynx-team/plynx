@@ -149,16 +149,20 @@ class BaseBash(object):
     def _prepare_parameters(parameters, pythonize=False):
         res = {}
         for parameter in parameters:
+            value = None
             if parameter.parameter_type == ParameterTypes.ENUM:
                 index = max(0, min(len(parameter.value.values) - 1, parameter.value.index))
-                res[parameter.name] = parameter.value.values[index]
+                value = parameter.value.values[index]
             elif parameter.parameter_type in [ParameterTypes.LIST_STR, ParameterTypes.LIST_INT]:
                 if pythonize:
-                    res[parameter.name] = parameter.value
+                    value = parameter.value
                 else:
-                    res[parameter.name] = ' '.join(map(str, parameter.value))  # !!!!!!!!!
+                    value = ' '.join(map(str, parameter.value))  # !!!!!!!!!
+            elif parameter.parameter_type == ParameterTypes.CODE:
+                value = parameter.value.value
             else:
-                res[parameter.name] = parameter.value
+                value = parameter.value
+            res[parameter.name] = value
         return res
 
     def _postprocess_outputs(self, outputs):
