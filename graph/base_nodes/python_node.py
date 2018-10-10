@@ -16,7 +16,9 @@ class PythonNode(BaseBash, BaseNode):
             self._get_arguments_string('output', outputs),
             self._get_arguments_string('param', parameters),
             self._get_arguments_string('log', logs),
-            cmd
+            "\n",
+            "# User code starts there:",
+            cmd,
         ]
         cmd_string = '\n'.join(cmd_array)
 
