@@ -43,7 +43,7 @@ def get_test_block():
 
 
 def compare_dictionaries(dict1, dict2):
-    if dict1 == None or dict2 == None:
+    if dict1 is None or dict2 is None:
         return True
 
     if not isinstance(dict1, dict) or not isinstance(dict2, dict):

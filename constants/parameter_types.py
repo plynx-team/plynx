@@ -23,6 +23,7 @@ class ParameterEnum(object):
 
 class ParameterCode(object):
     MODES = {'python'}
+
     def __init__(self, value='', mode='python'):
         self.value = value
         self.mode = mode

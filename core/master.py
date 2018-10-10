@@ -64,7 +64,7 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
 
                 worker_message.body.node.node_running_status = NodeRunningStatus.SUCCESS
                 scheduler.update_node(worker_message.body.node)
-                #scheduler._set_node_status(job._id, NodeRunningStatus.SUCCESS)
+                # scheduler._set_node_status(job._id, NodeRunningStatus.SUCCESS)
 
                 logging.info("Job `{}` marked as SUCCESSFUL".format(job.node._id))
                 if worker_id in self.server.worker_to_job_description:
@@ -80,7 +80,7 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
 
                 worker_message.body.node.node_running_status = NodeRunningStatus.FAILED
                 scheduler.update_node(worker_message.body.node)
-                #scheduler.set_node_status(job._id, NodeRunningStatus.FAILED)
+                # scheduler.set_node_status(job._id, NodeRunningStatus.FAILED)
 
                 logging.info("Job `{}` marked as FAILED".format(job.node._id))
                 if worker_id in self.server.worker_to_job_description:
