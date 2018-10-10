@@ -48,14 +48,14 @@ class PythonNode(BaseBash, BaseNode):
     def get_base_name():
         return 'python'
 
-    @staticmethod
-    def _get_arguments_string(var_name, arguments):
+    @classmethod
+    def _get_arguments_string(cls, var_name, arguments):
         res = ['{} = {{}}'.format(var_name)]
         for key, value in arguments.iteritems():
             res.append('{var_name}["{key}"] = {value}'.format(
                 var_name=var_name,
                 key=key,
-                value=PythonNode._pythonize(value)
+                value=repr(cls._pythonize(value))
                 )
             )
         return '\n'.join(res)
@@ -63,5 +63,5 @@ class PythonNode(BaseBash, BaseNode):
     @staticmethod
     def _pythonize(value):
         if isinstance(value, basestring):
-            return '"""{}"""'.format(value)
+            repr(value)
         return value
