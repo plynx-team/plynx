@@ -3,7 +3,7 @@ from collections import deque, defaultdict
 from . import DBObject, Node, ValidationError
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
-from constants import GraphRunningStatus, ValidationTargetType, ValidationCode
+from constants import GraphRunningStatus, ValidationTargetType, ValidationCode, ParameterTypes
 
 
 class Graph(DBObject):
@@ -128,6 +128,8 @@ class Graph(DBObject):
         LEFT_PADDING = 30
         TOP_PADDING = 80
         LEVEL_WIDTH = 252
+        SPECIAL_PARAMETER_HEIGHT = 20
+        SPECIAL_PARAMETER_TYPES = [ParameterTypes.CODE]
         min_node_height = HEADER_HEIGHT + DESCRIPTION_HEIGHT + FOOTER_HEIGHT + BORDERS_HEIGHT
 
         node_id_to_level = defaultdict(lambda: -1)
@@ -203,7 +205,17 @@ class Graph(DBObject):
 
             for index, node_id in enumerate(level_to_node_ids[level]):
                 node = node_id_to_node[node_id]
-                node_height = min_node_height + ITEM_HEIGHT * max(len(node.inputs), len(node.outputs))
+                special_parameters_count = len(
+                    filter(
+                        lambda parameter: parameter.parameter_type in SPECIAL_PARAMETER_TYPES,
+                        node.parameters
+                    )
+                )
+                node_height = sum([
+                    min_node_height,
+                    ITEM_HEIGHT * max(len(node.inputs), len(node.outputs)),
+                    special_parameters_count * SPECIAL_PARAMETER_HEIGHT
+                ])
                 row_heights[index] = max(row_heights[index], node_height)
 
         cum_heights = [0]
