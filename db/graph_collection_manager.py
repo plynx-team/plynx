@@ -41,7 +41,7 @@ class GraphCollectionManager(object):
         return new_node
 
     @staticmethod
-    def update_blocks(graph):
+    def update_nodes(graph):
         node_ids = set(
             [to_object_id(node.parent_node) for node in graph.nodes]
         )

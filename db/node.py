@@ -190,6 +190,8 @@ class Node(DBObject):
                         parameter.value = other_parameter.value
                     break
 
+        self.description = other_node.description
+
         self.x = other_node.x
         self.y = other_node.y
 

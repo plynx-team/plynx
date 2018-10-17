@@ -71,7 +71,7 @@ def post_graph():
                 graph.arrange_auto_layout()
 
             elif action == GraphPostAction.UPDATE_NODES:
-                upd = graph_collection_manager.update_blocks(graph)
+                upd = graph_collection_manager.update_nodes(graph)
                 extra_response['updated_nodes_count'] = upd
 
             elif action == GraphPostAction.APPROVE:
