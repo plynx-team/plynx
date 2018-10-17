@@ -207,7 +207,8 @@ class Graph(DBObject):
                 node = node_id_to_node[node_id]
                 special_parameters_count = len(
                     filter(
-                        lambda parameter: parameter.parameter_type in SPECIAL_PARAMETER_TYPES,
+                        lambda parameter:
+                            parameter.parameter_type in SPECIAL_PARAMETER_TYPES and parameter.widget,
                         node.parameters
                     )
                 )
