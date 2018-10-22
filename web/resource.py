@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import json
 from flask import request, send_file
 from web import app, requires_auth
 from utils.common import JSONEncoder
@@ -15,7 +16,8 @@ def _make_fail_response(message):
 
 @app.route('/plynx/api/v0/resource/<resource_id>', methods=['GET'])
 def get_resource(resource_id):
-    return send_file(get_file_stream(resource_id), attachment_filename=resource_id)
+    preview = json.loads(request.args.get('preview', 'false'))
+    return send_file(get_file_stream(resource_id, preview=preview), attachment_filename=resource_id)
 
 
 @app.route('/plynx/api/v0/resource', methods=['POST'])
