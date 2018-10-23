@@ -60,6 +60,7 @@ class Worker:
             # check status
             if master_message.message_type == MasterMessageType.KILL:
                 logging.info("Received KILL message: {}".format(master_message))
+                self.job.kill()
         finally:
             sock.close()
 
