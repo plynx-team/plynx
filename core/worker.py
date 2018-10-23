@@ -33,6 +33,7 @@ class Worker:
         self.host = host
         self.port = port
         self.run_status = RunStatus.IDLE
+        self.killed = False
 
     def forever(self):
         self.thread.start()
@@ -60,7 +61,11 @@ class Worker:
             # check status
             if master_message.message_type == MasterMessageType.KILL:
                 logging.info("Received KILL message: {}".format(master_message))
-                self.job.kill()
+                if not self.killed:
+                    self.killed = True
+                    self.job.kill()
+                else:
+                    logging.info("Already attempted to KILL")
         finally:
             sock.close()
 
@@ -82,6 +87,7 @@ class Worker:
                     logging.info("I asked for a job; Received: {}".format(master_message))
                     if master_message and master_message.message_type == MasterMessageType.SET_JOB:
                         logging.info("Got the job")
+                        self.killed = False
                         self.run_status = RunStatus.RUNNING
                         self.job = master_message.job
                         self.graph_id = master_message.graph_id

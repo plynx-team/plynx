@@ -76,7 +76,9 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
                     # scheduler._set_node_status(job._id, NodeRunningStatus.SUCCESS)
                     logging.info("Job `{}` marked as SUCCESSFUL".format(job.node._id))
                 else:
-                    logging.info("Scheduler not found for Job `{}`. Graph `{}` might be canceled".format(job.node._id, graph_id))
+                    logging.info(
+                        "Scheduler not found for Job `{}`. Graph `{}` might have been be canceled".format(job.node._id, graph_id)
+                    )
 
                 if worker_id in self.server.worker_to_job_description:
                     del self.server.worker_to_job_description[worker_id]
@@ -95,7 +97,9 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
                     # scheduler.set_node_status(job._id, NodeRunningStatus.FAILED)
                     logging.info("Job `{}` marked as FAILED".format(job.node._id))
                 else:
-                    logging.info("Scheduler not found for Job `{}`. Graph `{}` might be canceled".format(job.node._id, graph_id))
+                    logging.info(
+                        "Scheduler not found for Job `{}`. Graph `{}` might have been be canceled".format(job.node._id, graph_id)
+                    )
 
                 if worker_id in self.server.worker_to_job_description:
                     del self.server.worker_to_job_description[worker_id]
@@ -198,6 +202,15 @@ class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                     })
                 self.new_graph_id_to_scheduler = []
 
+            # TODO Posibly Race Condition with the DB
+            # Some nodes might be updated to "PROCESSING" when shoud stay CANCELED
+            graph_cancelations = list(self.graph_cancelation_manager.get_new_graph_cancelations())
+            for graph_cancelation in graph_cancelations:
+                if graph_cancelation.graph_id in self.graph_id_to_scheduler:
+                    # TODO: check race condition
+                    self.graph_id_to_scheduler[graph_cancelation.graph_id].graph.cancel()
+            self.graph_cancelation_manager.remove([graph_cancelation._id for graph_cancelation in graph_cancelations])
+
             new_to_queue = []
             finished_graph_ids = []
             for graph_id, scheduler in self.graph_id_to_scheduler.iteritems():
@@ -209,13 +222,6 @@ class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
             for graph_id in finished_graph_ids:
                 del self.graph_id_to_scheduler[graph_id]
-
-            graph_cancelations = list(self.graph_cancelation_manager.get_new_graph_cancelations())
-            for graph_cancelation in graph_cancelations:
-                if graph_cancelation.graph_id in self.graph_id_to_scheduler:
-                    # TODO: check race condition
-                    self.graph_id_to_scheduler[graph_cancelation.graph_id].graph.cancel()
-            self.graph_cancelation_manager.remove([graph_cancelation._id for graph_cancelation in graph_cancelations])
 
             with self.job_description_queue_lock:
                 self.job_description_queue.extend(new_to_queue)
