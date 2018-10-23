@@ -56,8 +56,10 @@ class Worker:
                 graph_id=self.graph_id
             )
             send_msg(sock, m)
-            resp = recv_msg(sock)
-            # TODO Check response
+            master_message = recv_msg(sock)
+            # check status
+            if master_message.message_type == MasterMessageType.KILL:
+                logging.info("Received KILL message: {}".format(master_message))
         finally:
             sock.close()
 

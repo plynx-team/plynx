@@ -51,7 +51,8 @@ class GraphScheduler(object):
                     NodeRunningStatus.SUCCESS,
                     NodeRunningStatus.FAILED,
                     NodeRunningStatus.STATIC,
-                    NodeRunningStatus.RESTORED}:
+                    NodeRunningStatus.RESTORED,
+                    NodeRunningStatus.CANCELED}:
                 continue
             node_id = node._id
             dependency_index = 0
@@ -63,20 +64,22 @@ class GraphScheduler(object):
                             NodeRunningStatus.SUCCESS,
                             NodeRunningStatus.FAILED,
                             NodeRunningStatus.STATIC,
-                            NodeRunningStatus.RESTORED}:
+                            NodeRunningStatus.RESTORED,
+                            NodeRunningStatus.CANCELED}:
                         dependency_index += 1
 
             if node.node_running_status not in {
                     NodeRunningStatus.SUCCESS,
                     NodeRunningStatus.FAILED,
                     NodeRunningStatus.STATIC,
-                    NodeRunningStatus.RESTORED}:
+                    NodeRunningStatus.RESTORED,
+                    NodeRunningStatus.CANCELED}:
                 self.uncompleted_nodes_count += 1
             self.dependency_index_to_node_ids[dependency_index].add(node_id)
             self.node_id_to_dependency_index[node_id] = dependency_index
 
     def finished(self):
-        return self.graph.graph_running_status in {GraphRunningStatus.SUCCESS, GraphRunningStatus.FAILED}
+        return self.graph.graph_running_status in {GraphRunningStatus.SUCCESS, GraphRunningStatus.FAILED, GraphRunningStatus.CANCELED}
 
     def pop_jobs(self):
         """Get a set of nodes with satisfied dependencies"""

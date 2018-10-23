@@ -4,6 +4,7 @@ class GraphRunningStatus(object):
     RUNNING = 'RUNNING'
     SUCCESS = 'SUCCESS'
     FAILED = 'FAILED'
+    CANCELED = 'CANCELED'
 
 
 class GraphPostAction:
@@ -12,6 +13,7 @@ class GraphPostAction:
     VALIDATE = 'VALIDATE'
     AUTO_LAYOUT = 'AUTO_LAYOUT'
     UPDATE_NODES = 'UPDATE_NODES'
+    CANCEL = 'CANCEL'
 
 
 class GraphPostStatus(object):

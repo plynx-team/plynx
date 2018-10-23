@@ -10,6 +10,7 @@ from time import sleep
 from . import WorkerMessage, RunStatus, WorkerMessageType, MasterMessageType, MasterMessage, send_msg, recv_msg
 from constants import NodeRunningStatus, GraphRunningStatus
 from db import GraphCollectionManager
+from db import GraphCancelationManager
 from graph.graph_scheduler import GraphScheduler
 from utils.config import get_master_config
 from utils.logs import set_logging_level
@@ -42,10 +43,17 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
                 if worker_message.body and worker_id in self.server.worker_to_job_description:
                     graph_id = self.server.worker_to_job_description[worker_id].graph_id
                     with self.server.new_schedulers_lock:
-                        scheduler = self.server.graph_id_to_scheduler[graph_id]
-                        if worker_message.run_status == RunStatus.RUNNING:
+                        scheduler = self.server.graph_id_to_scheduler.get(graph_id, None)
+                        if scheduler and worker_message.run_status == RunStatus.RUNNING:
                             worker_message.body.node.node_running_status = NodeRunningStatus.RUNNING
                             scheduler.update_node(worker_message.body.node)
+                        elif not scheduler:
+                            m = MasterMessage(
+                                worker_id=worker_id,
+                                message_type=MasterMessageType.KILL,
+                                job=self.server.worker_to_job_description[worker_id].job.node._id,
+                                graph_id=graph_id
+                            )
 
             elif worker_message.message_type == WorkerMessageType.GET_JOB and worker_id in self.server.worker_to_job_description:
                 m = MasterMessage(
@@ -60,13 +68,16 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
                 graph_id = self.server.worker_to_job_description[worker_id].graph_id
                 assert job.node._id == worker_message.body.node._id
                 with self.server.new_schedulers_lock:
-                    scheduler = self.server.graph_id_to_scheduler[graph_id]
+                    scheduler = self.server.graph_id_to_scheduler.get(graph_id, None)
 
                 worker_message.body.node.node_running_status = NodeRunningStatus.SUCCESS
-                scheduler.update_node(worker_message.body.node)
-                # scheduler._set_node_status(job._id, NodeRunningStatus.SUCCESS)
+                if scheduler:
+                    scheduler.update_node(worker_message.body.node)
+                    # scheduler._set_node_status(job._id, NodeRunningStatus.SUCCESS)
+                    logging.info("Job `{}` marked as SUCCESSFUL".format(job.node._id))
+                else:
+                    logging.info("Scheduler not found for Job `{}`. Graph `{}` might be canceled".format(job.node._id, graph_id))
 
-                logging.info("Job `{}` marked as SUCCESSFUL".format(job.node._id))
                 if worker_id in self.server.worker_to_job_description:
                     del self.server.worker_to_job_description[worker_id]
                 m = self.make_aknowledge_message(worker_id)
@@ -76,13 +87,16 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
                 graph_id = self.server.worker_to_job_description[worker_id].graph_id
                 assert job.node._id == worker_message.body.node._id
                 with self.server.new_schedulers_lock:
-                    scheduler = self.server.graph_id_to_scheduler[graph_id]
+                    scheduler = self.server.graph_id_to_scheduler.get(graph_id, None)
 
                 worker_message.body.node.node_running_status = NodeRunningStatus.FAILED
-                scheduler.update_node(worker_message.body.node)
-                # scheduler.set_node_status(job._id, NodeRunningStatus.FAILED)
+                if scheduler:
+                    scheduler.update_node(worker_message.body.node)
+                    # scheduler.set_node_status(job._id, NodeRunningStatus.FAILED)
+                    logging.info("Job `{}` marked as FAILED".format(job.node._id))
+                else:
+                    logging.info("Scheduler not found for Job `{}`. Graph `{}` might be canceled".format(job.node._id, graph_id))
 
-                logging.info("Job `{}` marked as FAILED".format(job.node._id))
                 if worker_id in self.server.worker_to_job_description:
                     del self.server.worker_to_job_description[worker_id]
                 m = self.make_aknowledge_message(worker_id)
@@ -120,6 +134,7 @@ class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         SocketServer.TCPServer.__init__(self, server_address, RequestHandlerClass)
         self.alive = True
         self.graph_collection_manager = GraphCollectionManager()
+        self.graph_cancelation_manager = GraphCancelationManager()
         self.job_description_queue = deque()
         self.job_description_queue_lock = threading.Lock()
         self.worker_to_job_description = {}
@@ -155,6 +170,7 @@ class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         while self.job_description_queue:
             job_description = self.job_description_queue.popleft()
             scheduler = self.graph_id_to_scheduler.get(job_description.graph_id, None)
+            # CANCELED and FAILED Graphs should not have a job assigned
             if scheduler and scheduler.graph.graph_running_status == GraphRunningStatus.RUNNING:
                 self.worker_to_job_description[worker_message.worker_id] = job_description
                 return True
@@ -193,6 +209,13 @@ class MasterTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
             for graph_id in finished_graph_ids:
                 del self.graph_id_to_scheduler[graph_id]
+
+            graph_cancelations = list(self.graph_cancelation_manager.get_new_graph_cancelations())
+            for graph_cancelation in graph_cancelations:
+                if graph_cancelation.graph_id in self.graph_id_to_scheduler:
+                    # TODO: check race condition
+                    self.graph_id_to_scheduler[graph_cancelation.graph_id].graph.cancel()
+            self.graph_cancelation_manager.remove([graph_cancelation._id for graph_cancelation in graph_cancelations])
 
             with self.job_description_queue_lock:
                 self.job_description_queue.extend(new_to_queue)

@@ -11,6 +11,7 @@ class NodeRunningStatus(object):
     SUCCESS = 'SUCCESS'
     RESTORED = 'RESTORED'
     FAILED = 'FAILED'
+    CANCELED = 'CANCELED'
 
 
 class NodeStatus(object):

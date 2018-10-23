@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import json
 from db import GraphCollectionManager, Graph
+from db import GraphCancelationManager
 from flask import request, g
 from web import app, requires_auth
 from utils.common import to_object_id, JSONEncoder
@@ -9,6 +10,7 @@ from utils.config import get_web_config
 
 
 graph_collection_manager = GraphCollectionManager()
+graph_cancelation_manager = GraphCancelationManager()
 WEB_CONFIG = get_web_config()
 COUNT_QUERY_KEYS = {'author', 'search'}
 PAGINATION_QUERY_KEYS = COUNT_QUERY_KEYS.union({'per_page', 'offset'})
@@ -98,6 +100,10 @@ def post_graph():
                         'message': 'Graph validation failed',
                         'validation_error': validation_error.to_dict()
                     })
+            elif action == GraphPostAction.CANCEL:
+                if graph.graph_running_status != GraphRunningStatus.RUNNING:
+                    return _make_fail_response('Graph status `{}` expected. Found `{}`'.format(GraphRunningStatus.RUNNING, graph.graph_running_status))
+                graph_cancelation_manager.cancel_graph(graph._id)
             else:
                 return _make_fail_response('Unknown action `{}`'.format(action))
 

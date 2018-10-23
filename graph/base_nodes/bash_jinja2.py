@@ -1,10 +1,10 @@
 import jinja2
-from . import BaseBash, BaseNode
+from . import BaseBash
 
 
-class BashJinja2(BaseBash, BaseNode):
+class BashJinja2(BaseBash):
     def __init__(self, node=None):
-        super(self.__class__, self).__init__(node)
+        super(BashJinja2, self).__init__(node)
 
     def run(self, preview=False):
         inputs = BaseBash._prepare_inputs(self.node.inputs, preview)
@@ -39,7 +39,7 @@ class BashJinja2(BaseBash, BaseNode):
         pass
 
     def kill(self):
-        pass
+        return self.kill_process()
 
     @staticmethod
     def get_base_name():

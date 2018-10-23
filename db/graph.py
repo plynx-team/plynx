@@ -3,7 +3,7 @@ from collections import deque, defaultdict
 from . import DBObject, Node, ValidationError
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
-from constants import GraphRunningStatus, ValidationTargetType, ValidationCode, ParameterTypes
+from constants import GraphRunningStatus, ValidationTargetType, ValidationCode, ParameterTypes, NodeRunningStatus
 
 
 class Graph(DBObject):
@@ -61,6 +61,15 @@ class Graph(DBObject):
 
         self._dirty = False
         return True
+
+    def cancel(self):
+        self.graph_running_status = GraphRunningStatus.CANCELED
+        for node in self.nodes:
+            print "!!!", node.node_running_status
+            if node.node_running_status == NodeRunningStatus.RUNNING:
+                print "!!!", node.node_running_status
+                node.node_running_status = NodeRunningStatus.CANCELED
+        self.save(force=True)
 
     def load(self):
         graph = db.graphs.find_one({'_id': self._id})

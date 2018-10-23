@@ -7,9 +7,14 @@ import logging
 from constants import JobReturnStatus, NodeStatus, FileTypes, ParameterTypes
 from db import Node, Output, Parameter
 from utils.file_handler import get_file_stream, upload_file_stream
+from . import BaseNode
 
 
-class BaseBash(object):
+class BaseBash(BaseNode):
+    def __init__(self, node=None):
+        super(BaseBash, self).__init__(node)
+        self.sp = None
+
     def exec_script(self, script_location, logs, command='bash'):
         res = JobReturnStatus.SUCCESS
 
@@ -23,7 +28,7 @@ class BaseBash(object):
 
             env = os.environ.copy()
             shutil.copyfile(script_location, logs['worker'])
-            sp = Popen(
+            self.sp = Popen(
                 [command, script_location],
                 stdout=PIPE, stderr=PIPE,
                 cwd='/tmp', env=env,
@@ -31,14 +36,14 @@ class BaseBash(object):
 
             line = ''
             with open(logs['stdout'], 'w') as f:
-                for line in iter(sp.stdout.readline, b''):
+                for line in iter(self.sp.stdout.readline, b''):
                     f.write(line)
             with open(logs['stderr'], 'w') as f:
-                for line in iter(sp.stderr.readline, b''):
+                for line in iter(self.sp.stderr.readline, b''):
                     f.write(line)
-            sp.wait()
+            self.sp.wait()
 
-            if sp.returncode:
+            if self.sp.returncode:
                 raise Exception("Process returned non-zero value")
 
         except Exception as e:
@@ -52,6 +57,16 @@ class BaseBash(object):
                 worker_log_file.write(str(e))
 
         return res
+
+    def kill_process():
+        if self.sp:
+            self.sp.kill()
+
+    # Hack: do not pickle file
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        del d['sp']
+        return d
 
     @classmethod
     def get_default(cls):

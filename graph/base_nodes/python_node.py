@@ -1,9 +1,9 @@
-from . import BaseBash, BaseNode
+from . import BaseBash
 
 
-class PythonNode(BaseBash, BaseNode):
+class PythonNode(BaseBash):
     def __init__(self, node=None):
-        super(self.__class__, self).__init__(node)
+        super(PythonNode, self).__init__(node)
 
     def run(self, preview=False):
         inputs = BaseBash._prepare_inputs(self.node.inputs, preview, pythonize=True)
@@ -42,7 +42,7 @@ class PythonNode(BaseBash, BaseNode):
         pass
 
     def kill(self):
-        pass
+        return self.kill_process()
 
     @staticmethod
     def get_base_name():
