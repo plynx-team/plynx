@@ -71,7 +71,7 @@ class BaseBash(BaseNode):
         return res
 
     def kill_process(self):
-        if self.sp:
+        if hasattr(self, 'sp') and self.sp:
             logging.info('Sending SIGTERM signal to bash process group')
             os.killpg(os.getpgid(self.sp.pid), signal.SIGTERM)
 
