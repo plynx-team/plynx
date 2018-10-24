@@ -73,7 +73,10 @@ class BaseBash(BaseNode):
     def kill_process(self):
         if hasattr(self, 'sp') and self.sp:
             logging.info('Sending SIGTERM signal to bash process group')
-            os.killpg(os.getpgid(self.sp.pid), signal.SIGTERM)
+            try:
+                os.killpg(os.getpgid(self.sp.pid), signal.SIGTERM)
+            except OSError as e:
+                logging.error('Error: {}'.format(e))
 
     # Hack: do not pickle file
     def __getstate__(self):
