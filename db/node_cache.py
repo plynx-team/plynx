@@ -1,5 +1,6 @@
 import copy
 import datetime
+import hashlib
 from . import DBObject, Input, Output, Parameter, ParameterWidget, ValidationError
 from utils.db_connector import *
 from utils.common import to_object_id, ObjectId
@@ -75,7 +76,7 @@ class NodeCache(DBObject):
         self._dirty = False
         return True
 
-    # Demo: remove user_id
+    # TODO from Demo: remove user_id
     @staticmethod
     def generate_key(node, user_id):
         inputs = node.inputs
@@ -100,8 +101,13 @@ class NodeCache(DBObject):
             for parameter in sorted_parameters if parameter.name not in NodeCache.IGNORED_PARAMETERS
         ])
 
-        key = '{};{};{};{}'.format(parent_node, inputs_hash, parameters_hash, str(user_id))
-        return key
+        return hashlib.sha256(
+            '{};{};{};{}'.format(
+                parent_node,
+                inputs_hash,
+                parameters_hash,
+                str(user_id))
+        ).hexdigest()
 
     def __str__(self):
         return 'NodeCache(_id="{}")'.format(self._id)
