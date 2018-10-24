@@ -23,3 +23,7 @@ ADD ./docker/base/test_config.yaml /app/config.yaml
 
 # Clean up
 RUN rm /app/requirements.txt
+
+# Copy the current directory contents into the container at /app
+ADD ./plynx /app/plynx
+ADD ./wsgi.py /app/wsgi.py

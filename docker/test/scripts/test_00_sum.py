@@ -4,7 +4,7 @@ import json
 import requests
 import argparse
 from bson.objectid import ObjectId
-from plynx import Node, File, Graph, Client
+from plynx.api import Node, File, Graph, Client
 
 BASE_FILE = 'base_file.json'
 SEQ_FILE = 'seq_100.csv'

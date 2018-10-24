@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import os
-from web import app
+from plynx.web import app
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
