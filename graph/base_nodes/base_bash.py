@@ -66,7 +66,8 @@ class BaseBash(BaseNode):
     # Hack: do not pickle file
     def __getstate__(self):
         d = dict(self.__dict__)
-        del d['sp']
+        if 'sp' in d:
+            del d['sp']
         return d
 
     @classmethod
