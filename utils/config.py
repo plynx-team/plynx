@@ -5,6 +5,7 @@ CONFIG_NAME = 'config.yaml'
 _config = None
 
 MasterConfig = namedtuple('MasterConfig', 'host port')
+WorkerConfig = namedtuple('WorkerConfig', 'user')
 MongoConfig = namedtuple('MongoConfig', 'user password host port')
 StorageConfig = namedtuple('StorageConfig', 'scheme resources stderr stdout worker')
 AuthConfig = namedtuple('AuthConfig', 'secret_key')
@@ -32,6 +33,12 @@ def get_master_config():
     return MasterConfig(
         host=_config['master']['host'],
         port=int(_config['master']['port'])
+    )
+
+
+def get_worker_config():
+    return WorkerConfig(
+        user=_config['worker']['user'],
     )
 
 

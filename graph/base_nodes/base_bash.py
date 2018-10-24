@@ -4,10 +4,14 @@ import shutil
 import signal
 import uuid
 import logging
+import pwd
 from constants import JobReturnStatus, NodeStatus, FileTypes, ParameterTypes
 from db import Node, Output, Parameter
 from utils.file_handler import get_file_stream, upload_file_stream
+from utils.config import get_worker_config
 from . import BaseNode
+
+WORKER_CONFIG = get_worker_config()
 
 
 class BaseBash(BaseNode):
@@ -19,7 +23,15 @@ class BaseBash(BaseNode):
         res = JobReturnStatus.SUCCESS
 
         try:
+            if WORKER_CONFIG.user:
+                pw_record = pwd.getpwnam('worker')
             def pre_exec():
+                if WORKER_CONFIG.user:
+                    user_uid = pw_record.pw_uid
+                    user_gid = pw_record.pw_gid
+                    os.setgid(user_gid)
+                    os.setuid(user_uid)
+                pw_record = pwd.getpwnam('worker')
                 # Restore default signal disposition and invoke setsid
                 for sig in ('SIGPIPE', 'SIGXFZ', 'SIGXFSZ'):
                     if hasattr(signal, sig):
