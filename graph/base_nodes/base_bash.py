@@ -26,6 +26,7 @@ class BaseBash(BaseNode):
             pw_record = None
             if WORKER_CONFIG.user:
                 pw_record = pwd.getpwnam(WORKER_CONFIG.user)
+
             def pre_exec():
                 if WORKER_CONFIG.user:
                     user_uid = pw_record.pw_uid

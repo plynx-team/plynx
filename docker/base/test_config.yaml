@@ -8,6 +8,9 @@ master:
   host: 'master'
   port: 10000
 
+worker:
+  user:
+
 storage:
   scheme: file
   resources: /data/resources/
