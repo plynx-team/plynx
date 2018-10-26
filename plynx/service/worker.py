@@ -23,6 +23,8 @@ class RunningPipelineException(Exception):
 
 
 class Worker:
+    NUMBER_OF_ATTEMPTS = 10
+
     def __init__(self, worker_id, host, port):
         self.thread = threading.Thread(target=self.run, args=())
         self.thread.daemon = True   # Daemonize thread
@@ -34,6 +36,21 @@ class Worker:
         self.port = port
         self.run_status = RunStatus.IDLE
         self.killed = False
+
+    def attempt_to_connect(self, number_of_attempts=NUMBER_OF_ATTEMPTS):
+        for attempt in range(number_of_attempts):
+            try:
+                self.heartbeat_iteration()
+                sleep(1)
+            except KeyboardInterrupt:
+                sys.exit(0)
+            except:
+                logging.info("Failed to connect: #{} / #{}".format(attempt + 1, number_of_attempts))
+                sleep(1)
+            else:
+                logging.info("Connected")
+                return True
+        return False
 
     def forever(self):
         self.thread.start()
@@ -104,6 +121,7 @@ class Worker:
                                 logging.critical(traceback.format_exc())
                                 sys.exit(1)
 
+                        self.killed = True
                         if status == JobReturnStatus.SUCCESS:
                             self.run_status = RunStatus.SUCCESS
                         elif status == JobReturnStatus.FAILED:
@@ -149,6 +167,9 @@ def run_worker(worker_id=None, verbose=0, host=None, port=None):
     if worker_id is None:
         worker_id = str(uuid.uuid1())
     worker = Worker(worker_id, host, port)
+
+    if not worker.attempt_to_connect():
+        sys.exit(2)
 
     worker.forever()
 
