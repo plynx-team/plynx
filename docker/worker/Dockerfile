@@ -13,7 +13,4 @@ RUN chmod 1777 /tmp
 EXPOSE 10000
 
 # Run app.py when the container launches
-ENTRYPOINT for i in $(seq 3); do \
-    python -m plynx.service.worker -vvv --host master; \
-    sleep 1; \
-    done
+ENTRYPOINT python -m plynx.service.worker -vvv --host master

@@ -10,7 +10,8 @@ RUN apt-get install -y \
     build-essential \
     iputils-ping \
     curl \
-    bc
+    bc \
+    mongodb-clients
 
 # Copy the current directory contents into the container at /app
 ADD ./docker/base/requirements.txt /app
