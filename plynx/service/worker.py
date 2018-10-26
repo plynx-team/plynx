@@ -101,9 +101,14 @@ class Worker:
                     )
                     send_msg(sock, m)
                     master_message = recv_msg(sock)
-                    logging.info("I asked for a job; Received: {}".format(master_message))
+                    logging.debug("Asked for a job; Received mesage: {}".format(master_message))
                     if master_message and master_message.message_type == MasterMessageType.SET_JOB:
-                        logging.info("Got the job")
+                        logging.info(
+                            "Got the job: graph_id=`{graph_id}` job_id=`{job_id}`".format(
+                                graph_id=master_message.graph_id,
+                                job_id=master_message.job.node._id,
+                            )
+                        )
                         self.killed = False
                         self.run_status = RunStatus.RUNNING
                         self.job = master_message.job

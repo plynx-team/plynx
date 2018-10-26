@@ -46,7 +46,7 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
                     if scheduler and worker_message.run_status == RunStatus.RUNNING:
                         worker_message.body.node.node_running_status = NodeRunningStatus.RUNNING
                         scheduler.update_node(worker_message.body.node)
-                    else:
+                    elif not scheduler:
                         m = MasterMessage(
                             worker_id=worker_id,
                             message_type=MasterMessageType.KILL,
