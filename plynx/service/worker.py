@@ -53,7 +53,10 @@ class Worker:
         return False
 
     def forever(self):
+        #Run run() method
         self.thread.start()
+
+        # run heartbeat_iteration() method
         while self.alive:
             try:
                 self.heartbeat_iteration()
@@ -66,14 +69,14 @@ class Worker:
         try:
             # Connect to server and send data
             sock.connect((self.host, self.port))
-            m = WorkerMessage(
+            message = WorkerMessage(
                 worker_id=self.worker_id,
                 run_status=self.run_status,
                 message_type=WorkerMessageType.HEARTBEAT,
                 body=self.job if self.run_status != RunStatus.IDLE else None,
                 graph_id=self.graph_id
             )
-            send_msg(sock, m)
+            send_msg(sock, message)
             master_message = recv_msg(sock)
             # check status
             if master_message.message_type == MasterMessageType.KILL:
@@ -88,18 +91,19 @@ class Worker:
 
     def run(self):
         while True:
+            logging.info(self.run_status)
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             try:
                 if self.run_status == RunStatus.IDLE:
                     sock.connect((self.host, self.port))
-                    m = WorkerMessage(
+                    message = WorkerMessage(
                         worker_id=self.worker_id,
                         run_status=self.run_status,
                         message_type=WorkerMessageType.GET_JOB,
                         body=None,
                         graph_id=None
                     )
-                    send_msg(sock, m)
+                    send_msg(sock, message)
                     master_message = recv_msg(sock)
                     logging.debug("Asked for a job; Received mesage: {}".format(master_message))
                     if master_message and master_message.message_type == MasterMessageType.SET_JOB:
@@ -143,7 +147,7 @@ class Worker:
                     elif self.run_status == RunStatus.FAILED:
                         status = WorkerMessageType.JOB_FINISHED_FAILED
 
-                    m = WorkerMessage(
+                    message = WorkerMessage(
                         worker_id=self.worker_id,
                         run_status=self.run_status,
                         message_type=status,
@@ -151,14 +155,13 @@ class Worker:
                         graph_id=self.graph_id
                     )
 
-                    send_msg(sock, m)
+                    send_msg(sock, message)
 
                     master_message = recv_msg(sock)
 
                     if master_message and master_message.message_type == MasterMessageType.AKNOWLEDGE:
                         self.run_status = RunStatus.IDLE
                         logging.info("WorkerMessageType.IDLE")
-
             finally:
                 sock.close()
 

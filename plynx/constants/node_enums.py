@@ -13,6 +13,18 @@ class NodeRunningStatus(object):
     FAILED = 'FAILED'
     CANCELED = 'CANCELED'
 
+    _FINISHED_STATUSES = {
+        STATIC,
+        SUCCESS,
+        RESTORED,
+        FAILED,
+        CANCELED,
+    }
+
+    @staticmethod
+    def is_finished(node_running_status):
+        return node_running_status in NodeRunningStatus._FINISHED_STATUSES
+
 
 class NodeStatus(object):
     CREATED = 'CREATED'

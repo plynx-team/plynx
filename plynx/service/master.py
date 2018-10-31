@@ -38,86 +38,65 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
         # self.request is the TCP socket connected to the client
         worker_message = recv_msg(self.request)
         worker_id = worker_message.worker_id
-        m = None
+        graph_id = worker_message.graph_id
+        response = None
         if worker_message.message_type == WorkerMessageType.HEARTBEAT:
-            if self.idle_worker(worker_message):
-                self.server.allocate_job(worker_message)
-            m = self.make_aknowledge_message(worker_id)
+            if worker_message.run_status == RunStatus.IDLE:
+                self.server.allocate_job(worker_message.worker_id)
+            elif worker_message.run_status == RunStatus.RUNNING:
+                node = worker_message.body.node
+                node.node_running_status = NodeRunningStatus.RUNNING
+                if not self.server.update_node(worker_id, node):
+                    # Kill the job if it is not found in the scheduler
+                    response = MasterMessage(
+                        worker_id=worker_id,
+                        message_type=MasterMessageType.KILL,
+                        job=node._id,
+                        graph_id=graph_id
+                    )
 
-            if worker_message.body and worker_id in self.server._worker_to_job_description:
-                graph_id = self.server._worker_to_job_description[worker_id].graph_id
-                with self.server._new_schedulers_lock:
-                    scheduler = self.server._graph_id_to_scheduler.get(graph_id, None)
-                    if scheduler and worker_message.run_status == RunStatus.RUNNING:
-                        worker_message.body.node.node_running_status = NodeRunningStatus.RUNNING
-                        scheduler.update_node(worker_message.body.node)
-                    elif not scheduler:
-                        m = MasterMessage(
-                            worker_id=worker_id,
-                            message_type=MasterMessageType.KILL,
-                            job=self.server._worker_to_job_description[worker_id].job.node._id,
-                            graph_id=graph_id
-                        )
+            if not response:
+                response = self.make_aknowledge_message(worker_id)
 
-        elif worker_message.message_type == WorkerMessageType.GET_JOB and worker_id in self.server._worker_to_job_description:
-            m = MasterMessage(
-                worker_id=worker_id,
-                message_type=MasterMessageType.SET_JOB,
-                job=self.server._worker_to_job_description[worker_id].job,
-                graph_id=self.server._worker_to_job_description[worker_id].graph_id
-            )
-            logging.info("SET_JOB worker_id: {}".format(worker_id))
+        elif worker_message.message_type == WorkerMessageType.GET_JOB:
+            job_description = self.server.get_job_description(worker_id)
+            if job_description:
+                response = MasterMessage(
+                    worker_id=worker_id,
+                    message_type=MasterMessageType.SET_JOB,
+                    job=job_description.job,
+                    graph_id=job_description.graph_id
+                )
+                logging.info("SET_JOB worker_id: {}".format(worker_id))
+            else:
+                response = self.make_aknowledge_message(worker_id)
+
         elif worker_message.message_type == WorkerMessageType.JOB_FINISHED_SUCCESS:
-            job = self.server._worker_to_job_description[worker_id].job
-            graph_id = self.server._worker_to_job_description[worker_id].graph_id
-            assert job.node._id == worker_message.body.node._id
-            with self.server._new_schedulers_lock:
-                scheduler = self.server._graph_id_to_scheduler.get(graph_id, None)
-
-            worker_message.body.node.node_running_status = NodeRunningStatus.SUCCESS
-            if scheduler:
-                scheduler.update_node(worker_message.body.node)
-                # scheduler._set_node_status(job._id, NodeRunningStatus.SUCCESS)
-                logging.info("Job `{}` marked as SUCCESSFUL".format(job.node._id))
+            node = worker_message.body.node
+            node.node_running_status = NodeRunningStatus.SUCCESS
+            if self.server.update_node(worker_id, node):
+                logging.info("Job `{}` marked as SUCCESSFUL".format(node._id))
             else:
                 logging.info(
-                    "Scheduler not found for Job `{}`. Graph `{}` might have been be canceled".format(job.node._id, graph_id)
+                    "Scheduler not found for Job `{}`. Graph `{}` might have been be canceled".format(node._id, graph_id)
                 )
 
-            if worker_id in self.server._worker_to_job_description:
-                del self.server._worker_to_job_description[worker_id]
-            m = self.make_aknowledge_message(worker_id)
+            response = self.make_aknowledge_message(worker_id)
 
         elif worker_message.message_type == WorkerMessageType.JOB_FINISHED_FAILED:
-            job = self.server._worker_to_job_description[worker_id].job
-            graph_id = self.server._worker_to_job_description[worker_id].graph_id
-            assert job.node._id == worker_message.body.node._id
-            with self.server._new_schedulers_lock:
-                scheduler = self.server._graph_id_to_scheduler.get(graph_id, None)
-
-            worker_message.body.node.node_running_status = NodeRunningStatus.FAILED
-            if scheduler:
-                scheduler.update_node(worker_message.body.node)
-                # scheduler.set_node_status(job._id, NodeRunningStatus.FAILED)
-                logging.info("Job `{}` marked as FAILED".format(job.node._id))
+            node = worker_message.body.node
+            node.node_running_status = NodeRunningStatus.FAILED
+            if self.server.update_node(worker_id, node):
+                logging.info("Job `{}` marked as FAILED".format(node._id))
             else:
                 logging.info(
-                    "Scheduler not found for Job `{}`. Graph `{}` might have been be canceled".format(job.node._id, graph_id)
+                    "Scheduler not found for Job `{}`. Graph `{}` might have been be canceled".format(node._id, graph_id)
                 )
 
-            if worker_id in self.server._worker_to_job_description:
-                del self.server._worker_to_job_description[worker_id]
-            m = self.make_aknowledge_message(worker_id)
+            response = self.make_aknowledge_message(worker_id)
 
-        if m:
-            send_msg(self.request, m)
-
-        # Respond with AKN
-        # self.request.sendall(worker_message)
-
-    @staticmethod
-    def idle_worker(worker_message):
-        return worker_message.run_status == RunStatus.IDLE
+        if response:
+            send_msg(self.request, response)
 
     @staticmethod
     def make_aknowledge_message(worker_id):
@@ -167,18 +146,18 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self._thread_scheduler.daemon = True   # Daemonize thread
         self._thread_scheduler.start()
 
-    def allocate_job(self, worker_message):
+    def allocate_job(self, worker_id):
         with self._job_description_queue_lock:
             if len(self._job_description_queue) == 0:                        # No jobs to allocate
                 return False
-            if worker_message.worker_id in self._worker_to_job_description:  # worker already has a job
+            if worker_id in self._worker_to_job_description:  # worker already has a job
                 return False
             while self._job_description_queue:
                 job_description = self._job_description_queue.popleft()
                 scheduler = self._graph_id_to_scheduler.get(job_description.graph_id, None)
                 # CANCELED and FAILED Graphs should not have jobs assigned
                 if scheduler and scheduler.graph.graph_running_status == GraphRunningStatus.RUNNING:
-                    self._worker_to_job_description[worker_message.worker_id] = job_description
+                    self._worker_to_job_description[worker_id] = job_description
                     logging.info('Queue length: {}'.format(len(self._job_description_queue)))
                     return True
         return False
@@ -233,6 +212,41 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                     logging.info('Queue length: {}'.format(len(self._job_description_queue)))
 
             sleep(Master.SCHEDULER_TIMEOUT)
+
+    def get_job_description(self, worker_id):
+        with self._job_description_queue_lock:
+            return self._worker_to_job_description.get(worker_id, None)
+
+    def del_job_description(self, worker_id):
+        with self._job_description_queue_lock:
+            if worker_id in self._worker_to_job_description:
+                del self._worker_to_job_description[worker_id]
+                return True
+            return False
+
+    def get_scheduler(self, graph_id):
+        with self._new_schedulers_lock:
+            return self._graph_id_to_scheduler.get(graph_id, None)
+
+    def update_node(self, worker_id, node):
+        """Return True Job is in the queue, else False"""
+        logging.info("update node")
+        job_description = self.get_job_description(worker_id)
+        if job_description:
+            logging.info("descr")
+            graph_id = job_description.graph_id
+            scheduler = self.get_scheduler(job_description.graph_id)
+            logging.info("scheduler " + repr(scheduler))
+            if scheduler:
+                scheduler.update_node(node)
+            if NodeRunningStatus.is_finished(node.node_running_status):
+                logging.info("finished")
+                self.del_job_description(worker_id)
+            return True
+        else:
+            logging.info("Scheduler was not found for worker `{}`".format(worker_id))
+        return False
+
 
 
 def parse_arguments():

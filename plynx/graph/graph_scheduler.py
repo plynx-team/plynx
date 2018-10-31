@@ -118,15 +118,15 @@ class GraphScheduler(object):
                 and GraphScheduler._cacheable(node):
             GraphScheduler.node_cache_manager.post(node, self.graph_id, self.graph.author)
 
+        if self.node_id_to_node[node._id].node_running_status == node.node_running_status:
+            return
+
         self._set_node_status(node._id, node.node_running_status)
         self.node_id_to_node[node._id].load_from_dict(node.to_dict())   # copy
         self.graph.save(force=True)
 
     def _set_node_status(self, node_id, node_running_status):
         node = self.node_id_to_node[node_id]
-        # if node is already up to date
-        if node_running_status == node.node_running_status:
-            return
         node.node_running_status = node_running_status
 
         if node_running_status == NodeRunningStatus.FAILED:
