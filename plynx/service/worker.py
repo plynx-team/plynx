@@ -81,7 +81,7 @@ class Worker:
             # check status
             if master_message.message_type == MasterMessageType.KILL:
                 logging.info("Received KILL message: {}".format(master_message))
-                if not self.killed:
+                if self.job and not self.killed:
                     self.killed = True
                     self.job.kill()
                 else:

@@ -146,22 +146,6 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self._thread_scheduler.daemon = True   # Daemonize thread
         self._thread_scheduler.start()
 
-    def allocate_job(self, worker_id):
-        with self._job_description_queue_lock:
-            if len(self._job_description_queue) == 0:                        # No jobs to allocate
-                return False
-            if worker_id in self._worker_to_job_description:  # worker already has a job
-                return False
-            while self._job_description_queue:
-                job_description = self._job_description_queue.popleft()
-                scheduler = self._graph_id_to_scheduler.get(job_description.graph_id, None)
-                # CANCELED and FAILED Graphs should not have jobs assigned
-                if scheduler and scheduler.graph.graph_running_status == GraphRunningStatus.RUNNING:
-                    self._worker_to_job_description[worker_id] = job_description
-                    logging.info('Queue length: {}'.format(len(self._job_description_queue)))
-                    return True
-        return False
-
     def _run_db_status_update(self):
         while self._alive:
             graphs = graph_collection_manager.get_graphs(GraphRunningStatus.READY)
@@ -213,35 +197,46 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
             sleep(Master.SCHEDULER_TIMEOUT)
 
-    def get_job_description(self, worker_id):
-        with self._job_description_queue_lock:
-            return self._worker_to_job_description.get(worker_id, None)
-
-    def del_job_description(self, worker_id):
+    def _del_job_description(self, worker_id):
         with self._job_description_queue_lock:
             if worker_id in self._worker_to_job_description:
                 del self._worker_to_job_description[worker_id]
                 return True
             return False
 
-    def get_scheduler(self, graph_id):
-        with self._new_schedulers_lock:
-            return self._graph_id_to_scheduler.get(graph_id, None)
+    def allocate_job(self, worker_id):
+        with self._job_description_queue_lock:
+            if len(self._job_description_queue) == 0:                   # No jobs to allocate
+                return False
+            if worker_id in self._worker_to_job_description:            # worker already has a job
+                return False
+            while self._job_description_queue:
+                job_description = self._job_description_queue.popleft()
+                scheduler = self._graph_id_to_scheduler.get(job_description.graph_id, None)
+                # CANCELED and FAILED Graphs should not have jobs assigned
+                if scheduler and scheduler.graph.graph_running_status == GraphRunningStatus.RUNNING:
+                    self._worker_to_job_description[worker_id] = job_description
+                    node = job_description.job.node
+                    node.node_running_status = NodeRunningStatus.IN_QUEUE
+                    scheduler.update_node(node)
+                    logging.info('Queue length: {}'.format(len(self._job_description_queue)))
+                    return True
+        return False
+
+    def get_job_description(self, worker_id):
+        with self._job_description_queue_lock:
+            return self._worker_to_job_description.get(worker_id, None)
 
     def update_node(self, worker_id, node):
         """Return True Job is in the queue, else False"""
-        logging.info("update node")
         job_description = self.get_job_description(worker_id)
         if job_description:
-            logging.info("descr")
-            graph_id = job_description.graph_id
-            scheduler = self.get_scheduler(job_description.graph_id)
-            logging.info("scheduler " + repr(scheduler))
-            if scheduler:
-                scheduler.update_node(node)
+            with self._new_schedulers_lock:
+                scheduler = self._graph_id_to_scheduler.get(job_description.graph_id, None)
+                if scheduler:
+                    scheduler.update_node(node)
             if NodeRunningStatus.is_finished(node.node_running_status):
-                logging.info("finished")
-                self.del_job_description(worker_id)
+                self._del_job_description(worker_id)
             return True
         else:
             logging.info("Scheduler was not found for worker `{}`".format(worker_id))
