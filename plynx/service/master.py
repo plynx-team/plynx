@@ -109,44 +109,61 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
 
 
 class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+    """
+    Master main class: TCP server.
+    """
+
     # Ctrl-C will cleanly kill all spawned threads
     daemon_threads = True
     # much faster rebinding
     allow_reuse_address = True
+    # Define timeout for scheduler iteration
     SCHEDULER_TIMEOUT = 1
+    # Define sync with database timeout
     SDB_STATUS_UPDATE_TIMEOUT = 1
 
     def __init__(self, server_address, RequestHandlerClass):
+        """
+        Args:
+            server_address: tuple (host, port)
+            RequestHandlerClass: TCP handler. Class of SocketServer.BaseRequestHandler
+        """
         SocketServer.TCPServer.__init__(self, server_address, RequestHandlerClass)
         self._alive = True
         self._job_description_queue = deque()
         self._job_description_queue_lock = threading.Lock()
+        # Mapping of Worker ID to the job description
         self._worker_to_job_description = {}
 
+        # Pick up all the graphs with status RUNNING and set it to READY
+        # The have probably been in progress then the their master exited
         running_graphs = graph_collection_manager.get_graphs(GraphRunningStatus.RUNNING)
         if len(running_graphs) > 0:
             logging.info("Found {} running graphs. Setting them to 'READY'".format(len(running_graphs)))
             for graph in running_graphs:
                 graph.graph_running_status = GraphRunningStatus.READY
                 for node in graph.nodes:
-                    if node.node_running_status == NodeRunningStatus.RUNNING:
+                    if node.node_running_status in [NodeRunningStatus.RUNNING, NodeRunningStatus.IN_QUEUE]:
                         node.node_running_status = NodeRunningStatus.CREATED
                 graph.save()
 
         self._graph_id_to_scheduler = {}
-        self._new_graph_id_to_scheduler = []
-        self._new_schedulers_lock = threading.Lock()
+        self._new_graph_schedulers = []
+        self._new_graph_schedulers_lock = threading.Lock()
 
         # Start new threads
         self._thread_db_status_update = threading.Thread(target=self._run_db_status_update, args=())
-        self._thread_db_status_update.daemon = True   # Daemonize thread
+        self._thread_db_status_update.daemon = True     # Daemonize thread
         self._thread_db_status_update.start()
 
         self._thread_scheduler = threading.Thread(target=self._run_scheduler, args=())
-        self._thread_scheduler.daemon = True   # Daemonize thread
+        self._thread_scheduler.daemon = True            # Daemonize thread
         self._thread_scheduler.start()
 
     def _run_db_status_update(self):
+        """
+        Syncing with the database
+        """
         while self._alive:
             graphs = graph_collection_manager.get_graphs(GraphRunningStatus.READY)
             for graph in graphs:
@@ -154,19 +171,24 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                 graph_scheduler.graph.graph_running_status = GraphRunningStatus.RUNNING
                 graph_scheduler.graph.save()
 
-                with self._new_schedulers_lock:
-                    self._new_graph_id_to_scheduler.append(graph_scheduler)
+                with self._new_graph_schedulers_lock:
+                    self._new_graph_schedulers.append(graph_scheduler)
 
             sleep(Master.SDB_STATUS_UPDATE_TIMEOUT)
 
     def _run_scheduler(self):
+        """
+        Synchronization of the Schedules.
+        The process picks up new graphs from _run_db_status_update(). Also it queries each scheduler for new jobs and puts them into the queue.
+        """
         while self._alive:
-            with self._new_schedulers_lock:
+            # add new schedules
+            with self._new_graph_schedulers_lock:
                 self._graph_id_to_scheduler.update(
                     {
-                        graph_scheduler.graph._id: graph_scheduler for graph_scheduler in self._new_graph_id_to_scheduler
+                        graph_scheduler.graph._id: graph_scheduler for graph_scheduler in self._new_graph_schedulers
                     })
-                self._new_graph_id_to_scheduler = []
+                self._new_graph_schedulers = []
 
             # TODO Posibly Race Condition with the DB
             # Some nodes might be updated to "PROCESSING" when shoud stay CANCELED
@@ -231,7 +253,7 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         """Return True Job is in the queue, else False"""
         job_description = self.get_job_description(worker_id)
         if job_description:
-            with self._new_schedulers_lock:
+            with self._new_graph_schedulers_lock:
                 scheduler = self._graph_id_to_scheduler.get(job_description.graph_id, None)
                 if scheduler:
                     scheduler.update_node(node)

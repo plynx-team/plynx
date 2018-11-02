@@ -65,7 +65,7 @@ class Graph(DBObject):
     def cancel(self):
         self.graph_running_status = GraphRunningStatus.CANCELED
         for node in self.nodes:
-            if node.node_running_status == NodeRunningStatus.RUNNING:
+            if node.node_running_status in [NodeRunningStatus.RUNNING, NodeRunningStatus.IN_QUEUE]:
                 node.node_running_status = NodeRunningStatus.CANCELED
         self.save(force=True)
 
