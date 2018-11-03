@@ -7,7 +7,6 @@ import logging
 import Queue
 import time
 from collections import namedtuple
-from time import sleep
 from . import WorkerMessage, RunStatus, WorkerMessageType, MasterMessageType, MasterMessage, send_msg, recv_msg
 from plynx.constants import NodeRunningStatus, GraphRunningStatus
 from plynx.db import GraphCollectionManager
@@ -153,7 +152,7 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             RequestHandlerClass: TCP handler. Class of SocketServer.BaseRequestHandler
         """
         SocketServer.TCPServer.__init__(self, server_address, RequestHandlerClass)
-        self._alive = True
+        self._stop_event = threading.Event()
         self._job_description_queue = Queue.Queue()
         # Mapping of Worker ID to the Job Description
         self._worker_to_job_description = {}
@@ -195,20 +194,24 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self._thread_worker_monitoring.start()
 
     def _run_db_status_update(self):
-        """
-        Syncing with the database
-        """
-        while self._alive:
-            graphs = graph_collection_manager.get_graphs(GraphRunningStatus.READY)
-            for graph in graphs:
-                graph_scheduler = GraphScheduler(graph, node_collection)
-                graph_scheduler.graph.graph_running_status = GraphRunningStatus.RUNNING
-                graph_scheduler.graph.save()
+        """Syncing with the database."""
+        try:
+            while not self._stop_event.is_set():
+                graphs = graph_collection_manager.get_graphs(GraphRunningStatus.READY)
+                for graph in graphs:
+                    graph_scheduler = GraphScheduler(graph, node_collection)
+                    graph_scheduler.graph.graph_running_status = GraphRunningStatus.RUNNING
+                    graph_scheduler.graph.save()
 
-                with self._graph_schedulers_lock:
-                    self._new_graph_schedulers.append(graph_scheduler)
+                    with self._graph_schedulers_lock:
+                        self._new_graph_schedulers.append(graph_scheduler)
 
-            sleep(Master.SDB_STATUS_UPDATE_TIMEOUT)
+                self._stop_event.wait(timeout=Master.SDB_STATUS_UPDATE_TIMEOUT)
+        except:
+            self.stop()
+            raise
+        finally:
+            logging.info("Exit {}".format(self._run_db_status_update.__name__))
 
     def _run_scheduler(self):
         """
@@ -216,76 +219,88 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         The process picks up new Graphs from _run_db_status_update().
         It also queries each Scheduler for the new Jobs and puts them into the queue.
         """
-        while self._alive:
-            with self._graph_schedulers_lock:
-                # add new Schedules
-                self._graph_id_to_scheduler.update(
-                    {
-                        graph_scheduler.graph._id: graph_scheduler 
-                        for graph_scheduler in self._new_graph_schedulers
-                    })
-                self._new_graph_schedulers = []
+        try:
+            while not self._stop_event.is_set():
+                with self._graph_schedulers_lock:
+                    # add new Schedules
+                    self._graph_id_to_scheduler.update(
+                        {
+                            graph_scheduler.graph._id: graph_scheduler
+                            for graph_scheduler in self._new_graph_schedulers
+                        })
+                    self._new_graph_schedulers = []
 
-                # pull Graph cancellation events and cancel the Graphs
-                graph_cancellations = list(graph_cancellation_manager.get_new_graph_cancellations())
-                for graph_cancellation in graph_cancellations:
-                    if graph_cancellation.graph_id in self._graph_id_to_scheduler:
-                        self._graph_id_to_scheduler[graph_cancellation.graph_id].graph.cancel()
-                graph_cancellation_manager.remove([graph_cancellation._id for graph_cancellation in graph_cancellations])
+                    # pull Graph cancellation events and cancel the Graphs
+                    graph_cancellations = list(graph_cancellation_manager.get_new_graph_cancellations())
+                    for graph_cancellation in graph_cancellations:
+                        if graph_cancellation.graph_id in self._graph_id_to_scheduler:
+                            self._graph_id_to_scheduler[graph_cancellation.graph_id].graph.cancel()
+                    graph_cancellation_manager.remove([graph_cancellation._id for graph_cancellation in graph_cancellations])
 
-                # check the running Schedulers
-                new_to_queue = []
-                finished_graph_ids = []
-                for graph_id, scheduler in self._graph_id_to_scheduler.iteritems():
-                    if scheduler.finished():
-                        finished_graph_ids.append(graph_id)
-                        continue
-                    # pop new Jobs
-                    new_to_queue.extend([
-                        MasterJobDescription(graph_id=graph_id, job=job) for job in scheduler.pop_jobs()
-                    ])
+                    # check the running Schedulers
+                    new_to_queue = []
+                    finished_graph_ids = []
+                    for graph_id, scheduler in self._graph_id_to_scheduler.iteritems():
+                        if scheduler.finished():
+                            finished_graph_ids.append(graph_id)
+                            continue
+                        # pop new Jobs
+                        new_to_queue.extend([
+                            MasterJobDescription(graph_id=graph_id, job=job) for job in scheduler.pop_jobs()
+                        ])
 
-                # remove Schedulers with finished Graphs
-                for graph_id in finished_graph_ids:
-                    del self._graph_id_to_scheduler[graph_id]
+                    # remove Schedulers with finished Graphs
+                    for graph_id in finished_graph_ids:
+                        del self._graph_id_to_scheduler[graph_id]
 
-            # End self._graph_schedulers_lock
+                # End self._graph_schedulers_lock
 
-            for job_description in new_to_queue:
-                self._job_description_queue.put(job_description)
-            if new_to_queue:
-                logging.info('Queue length: {}'.format(self._job_description_queue.qsize()))
+                for job_description in new_to_queue:
+                    self._job_description_queue.put(job_description)
+                if new_to_queue:
+                    logging.info('Queue length: {}'.format(self._job_description_queue.qsize()))
 
-            sleep(Master.SCHEDULER_TIMEOUT)
+                self._stop_event.wait(timeout=Master.SCHEDULER_TIMEOUT)
+        except:
+            self.stop()
+            raise
+        finally:
+            logging.info("Exit {}".format(self._run_scheduler.__name__))
 
     def _run_worker_monitoring(self):
-        while self._alive:
-            current_time = time.time()
-            with self._worker_to_job_description_lock:
-                dead_worker_ids = [
-                    worker_id
-                    for worker_id, last_time in self._worker_to_last_heartbeat.iteritems()
-                    if current_time - last_time > Master.MAX_HEARTBEAT_DELAY
-                ]
-            if dead_worker_ids:
-                logging.info("Found {count} dead workers: {ids}".format(
-                    count=len(dead_worker_ids),
-                    ids=dead_worker_ids,
+        try:
+            while not self._stop_event.is_set():
+                current_time = time.time()
+                with self._worker_to_job_description_lock:
+                    dead_worker_ids = [
+                        worker_id
+                        for worker_id, last_time in self._worker_to_last_heartbeat.iteritems()
+                        if current_time - last_time > Master.MAX_HEARTBEAT_DELAY
+                    ]
+                if dead_worker_ids:
+                    logging.info("Found {count} dead workers: {ids}".format(
+                        count=len(dead_worker_ids),
+                        ids=dead_worker_ids,
+                        )
                     )
-                )
-                for worker_id in dead_worker_ids:
-                    job_description = self.get_job_description(worker_id)
-                    with self._graph_schedulers_lock:
-                        scheduler = self._graph_id_to_scheduler.get(job_description.graph_id, None)
-                        if scheduler:
-                            with self._worker_to_job_description_lock:
-                                del self._worker_to_job_description[worker_id]
-                                del self._worker_to_last_heartbeat[worker_id]
-                            node = job_description.job.node
-                            node.node_running_status = NodeRunningStatus.FAILED
-                            scheduler.update_node(node)
+                    for worker_id in dead_worker_ids:
+                        job_description = self.get_job_description(worker_id)
+                        with self._graph_schedulers_lock:
+                            scheduler = self._graph_id_to_scheduler.get(job_description.graph_id, None)
+                            if scheduler:
+                                with self._worker_to_job_description_lock:
+                                    del self._worker_to_job_description[worker_id]
+                                    del self._worker_to_last_heartbeat[worker_id]
+                                node = job_description.job.node
+                                node.node_running_status = NodeRunningStatus.FAILED
+                                scheduler.update_node(node)
 
-            sleep(Master.WORKER_MONITORING_TIMEOUT)
+                self._stop_event.wait(timeout=Master.WORKER_MONITORING_TIMEOUT)
+        except:
+            self.stop()
+            raise
+        finally:
+            logging.info("Exit {}".format(self._run_worker_monitoring.__name__))
 
     def _del_job_description(self, worker_id):
         with self._worker_to_job_description_lock:
@@ -328,7 +343,7 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             return self._worker_to_job_description.get(worker_id, None)
 
     def update_node(self, worker_id, node):
-        """Return True Job is in the queue, else False"""
+        """Return True Job is in the queue, else False."""
         job_description = self.get_job_description(worker_id)
         if job_description:
             with self._graph_schedulers_lock:
@@ -343,9 +358,14 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         return False
 
     def track_worker(self, worker_id):
-        """Track worker existance and responsiveness"""
+        """Track worker existance and responsiveness."""
         with self._worker_to_job_description_lock:
             self._worker_to_last_heartbeat[worker_id] = time.time()
+
+    def stop(self):
+        """Stop Master."""
+        self._stop_event.set()
+        self.shutdown()
 
 
 
@@ -361,13 +381,13 @@ if __name__ == "__main__":
     logging.info("Init master")
 
     master_config = get_master_config()
-    server = Master((master_config.host, master_config.port), ClientTCPHandler)
+    master = Master((master_config.host, master_config.port), ClientTCPHandler)
 
     # Activate the server; this will keep running until you
     # interrupt the program with Ctrl-C
     try:
         logging.info("Start serving")
-        server.serve_forever()
+        master.serve_forever()
     except KeyboardInterrupt:
-        server._alive = False
+        master.stop()
         sys.exit(0)
