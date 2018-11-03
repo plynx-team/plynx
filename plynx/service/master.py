@@ -277,23 +277,18 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                         for worker_id, last_time in self._worker_to_last_heartbeat.iteritems()
                         if current_time - last_time > Master.MAX_HEARTBEAT_DELAY
                     ]
-                if dead_worker_ids:
-                    logging.info("Found {count} dead workers: {ids}".format(
-                        count=len(dead_worker_ids),
-                        ids=dead_worker_ids,
-                        )
-                    )
-                    for worker_id in dead_worker_ids:
-                        job_description = self.get_job_description(worker_id)
-                        with self._graph_schedulers_lock:
-                            scheduler = self._graph_id_to_scheduler.get(job_description.graph_id, None)
-                            if scheduler:
-                                with self._worker_to_job_description_lock:
-                                    del self._worker_to_job_description[worker_id]
-                                    del self._worker_to_last_heartbeat[worker_id]
-                                node = job_description.job.node
-                                node.node_running_status = NodeRunningStatus.FAILED
-                                scheduler.update_node(node)
+                for worker_id in dead_worker_ids:
+                    logging.info("Found dead Worker: worker_id=`{}`".format(worker_id))
+                    job_description = self.get_job_description(worker_id)
+                    self._del_worker_info(worker_id)
+                    if not job_description:
+                        continue
+                    with self._graph_schedulers_lock:
+                        scheduler = self._graph_id_to_scheduler.get(job_description.graph_id, None)
+                        if scheduler:
+                            node = job_description.job.node
+                            node.node_running_status = NodeRunningStatus.FAILED
+                            scheduler.update_node(node)
 
                 self._stop_event.wait(timeout=Master.WORKER_MONITORING_TIMEOUT)
         except:
@@ -301,6 +296,13 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             raise
         finally:
             logging.info("Exit {}".format(self._run_worker_monitoring.__name__))
+
+    def _del_worker_info(self, worker_id):
+        with self._worker_to_job_description_lock:
+            if worker_id in  self._worker_to_job_description:
+                del self._worker_to_job_description[worker_id]
+            if worker_id in  self._worker_to_last_heartbeat:
+                del self._worker_to_last_heartbeat[worker_id]
 
     def _del_job_description(self, worker_id):
         with self._worker_to_job_description_lock:
