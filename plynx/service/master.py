@@ -2,10 +2,10 @@ import argparse
 import socket
 import sys
 import SocketServer
-import pickle
 import threading
 import logging
-from collections import deque, namedtuple
+import Queue
+from collections import namedtuple
 from time import sleep
 from . import WorkerMessage, RunStatus, WorkerMessageType, MasterMessageType, MasterMessage, send_msg, recv_msg
 from plynx.constants import NodeRunningStatus, GraphRunningStatus
@@ -47,7 +47,7 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
                 node = worker_message.body.node
                 node.node_running_status = NodeRunningStatus.RUNNING
                 if not self.server.update_node(worker_id, node):
-                    # Kill the job if it is not found in the scheduler
+                    # Kill the Job if it is not found in the Scheduler
                     response = MasterMessage(
                         worker_id=worker_id,
                         message_type=MasterMessageType.KILL,
@@ -130,16 +130,21 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         """
         SocketServer.TCPServer.__init__(self, server_address, RequestHandlerClass)
         self._alive = True
-        self._job_description_queue = deque()
-        self._job_description_queue_lock = threading.Lock()
-        # Mapping of Worker ID to the job description
+        self._job_description_queue = Queue.Queue()
+        # Mapping of Worker ID to the Job Description
         self._worker_to_job_description = {}
+        self._worker_to_job_description_lock = threading.Lock()
 
-        # Pick up all the graphs with status RUNNING and set it to READY
+        # Pick up all the Graphs with status RUNNING and set it to READY
         # The have probably been in progress then the their master exited
         running_graphs = graph_collection_manager.get_graphs(GraphRunningStatus.RUNNING)
         if len(running_graphs) > 0:
-            logging.info("Found {} running graphs. Setting them to 'READY'".format(len(running_graphs)))
+            logging.info(
+                "Found {} running graphs. Setting them to '{}' state".format(
+                    len(running_graphs),
+                    GraphRunningStatus.READY,
+                )
+            )
             for graph in running_graphs:
                 graph.graph_running_status = GraphRunningStatus.READY
                 for node in graph.nodes:
@@ -149,7 +154,7 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
         self._graph_id_to_scheduler = {}
         self._new_graph_schedulers = []
-        self._new_graph_schedulers_lock = threading.Lock()
+        self._graph_schedulers_lock = threading.Lock()
 
         # Start new threads
         self._thread_db_status_update = threading.Thread(target=self._run_db_status_update, args=())
@@ -171,7 +176,7 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                 graph_scheduler.graph.graph_running_status = GraphRunningStatus.RUNNING
                 graph_scheduler.graph.save()
 
-                with self._new_graph_schedulers_lock:
+                with self._graph_schedulers_lock:
                     self._new_graph_schedulers.append(graph_scheduler)
 
             sleep(Master.SDB_STATUS_UPDATE_TIMEOUT)
@@ -179,81 +184,96 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     def _run_scheduler(self):
         """
         Synchronization of the Schedules.
-        The process picks up new graphs from _run_db_status_update(). Also it queries each scheduler for new jobs and puts them into the queue.
+        The process picks up new Graphs from _run_db_status_update().
+        It also queries each Scheduler for the new Jobs and puts them into the queue.
         """
         while self._alive:
-            # add new schedules
-            with self._new_graph_schedulers_lock:
+            with self._graph_schedulers_lock:
+                # add new Schedules
                 self._graph_id_to_scheduler.update(
                     {
-                        graph_scheduler.graph._id: graph_scheduler for graph_scheduler in self._new_graph_schedulers
+                        graph_scheduler.graph._id: graph_scheduler 
+                        for graph_scheduler in self._new_graph_schedulers
                     })
                 self._new_graph_schedulers = []
 
-            # TODO Posibly Race Condition with the DB
-            # Some nodes might be updated to "PROCESSING" when shoud stay CANCELED
-            graph_cancelations = list(graph_cancelation_manager.get_new_graph_cancelations())
-            for graph_cancelation in graph_cancelations:
-                if graph_cancelation.graph_id in self._graph_id_to_scheduler:
-                    # TODO: check race condition
-                    self._graph_id_to_scheduler[graph_cancelation.graph_id].graph.cancel()
-            graph_cancelation_manager.remove([graph_cancelation._id for graph_cancelation in graph_cancelations])
+                # pull Graph cancellation events and cancel the Graphs
+                graph_cancelations = list(graph_cancelation_manager.get_new_graph_cancelations())
+                for graph_cancelation in graph_cancelations:
+                    if graph_cancelation.graph_id in self._graph_id_to_scheduler:
+                        self._graph_id_to_scheduler[graph_cancelation.graph_id].graph.cancel()
+                graph_cancelation_manager.remove([graph_cancelation._id for graph_cancelation in graph_cancelations])
 
-            new_to_queue = []
-            finished_graph_ids = []
-            for graph_id, scheduler in self._graph_id_to_scheduler.iteritems():
-                if scheduler.finished():
-                    finished_graph_ids.append(graph_id)
-                    continue
-                new_to_queue.extend([
-                    MasterJobDescription(graph_id=graph_id, job=job) for job in scheduler.pop_jobs()
-                ])
+                # check the running Schedulers
+                new_to_queue = []
+                finished_graph_ids = []
+                for graph_id, scheduler in self._graph_id_to_scheduler.iteritems():
+                    if scheduler.finished():
+                        finished_graph_ids.append(graph_id)
+                        continue
+                    # pop new Jobs
+                    new_to_queue.extend([
+                        MasterJobDescription(graph_id=graph_id, job=job) for job in scheduler.pop_jobs()
+                    ])
 
-            for graph_id in finished_graph_ids:
-                del self._graph_id_to_scheduler[graph_id]
+                # remove Schedulers with finished Graphs
+                for graph_id in finished_graph_ids:
+                    del self._graph_id_to_scheduler[graph_id]
 
-            with self._job_description_queue_lock:
-                self._job_description_queue.extend(new_to_queue)
-                if new_to_queue:
-                    logging.info('Queue length: {}'.format(len(self._job_description_queue)))
+            # End self._graph_schedulers_lock
+
+            for job_description in new_to_queue:
+                self._job_description_queue.put(job_description)
+            if new_to_queue:
+                logging.info('Queue length: {}'.format(self._job_description_queue.qsize()))
 
             sleep(Master.SCHEDULER_TIMEOUT)
 
     def _del_job_description(self, worker_id):
-        with self._job_description_queue_lock:
+        with self._worker_to_job_description_lock:
             if worker_id in self._worker_to_job_description:
                 del self._worker_to_job_description[worker_id]
                 return True
             return False
 
+    def _get_job_description_from_queue(self):
+        try:
+            job_description = self._job_description_queue.get_nowait()
+            self._job_description_queue.task_done()
+            return job_description
+        except Queue.Empty:
+            return None
+
     def allocate_job(self, worker_id):
-        with self._job_description_queue_lock:
-            if len(self._job_description_queue) == 0:                   # No jobs to allocate
+        with self._worker_to_job_description_lock:
+            if worker_id in self._worker_to_job_description:            # worker already has a Job
                 return False
-            if worker_id in self._worker_to_job_description:            # worker already has a job
+        while True:
+            job_description = self._get_job_description_from_queue()
+            if not job_description:
                 return False
-            while self._job_description_queue:
-                job_description = self._job_description_queue.popleft()
+            with self._graph_schedulers_lock:
                 scheduler = self._graph_id_to_scheduler.get(job_description.graph_id, None)
-                # CANCELED and FAILED Graphs should not have jobs assigned
+                # CANCELED and FAILED Graphs should not have jobs assigned. Check for RUNNING status
                 if scheduler and scheduler.graph.graph_running_status == GraphRunningStatus.RUNNING:
-                    self._worker_to_job_description[worker_id] = job_description
+                    with self._worker_to_job_description_lock:
+                        self._worker_to_job_description[worker_id] = job_description
                     node = job_description.job.node
                     node.node_running_status = NodeRunningStatus.IN_QUEUE
                     scheduler.update_node(node)
-                    logging.info('Queue length: {}'.format(len(self._job_description_queue)))
+                    logging.info('Queue length: {}'.format(self._job_description_queue.qsize()))
                     return True
         return False
 
     def get_job_description(self, worker_id):
-        with self._job_description_queue_lock:
+        with self._worker_to_job_description_lock:
             return self._worker_to_job_description.get(worker_id, None)
 
     def update_node(self, worker_id, node):
         """Return True Job is in the queue, else False"""
         job_description = self.get_job_description(worker_id)
         if job_description:
-            with self._new_graph_schedulers_lock:
+            with self._graph_schedulers_lock:
                 scheduler = self._graph_id_to_scheduler.get(job_description.graph_id, None)
                 if scheduler:
                     scheduler.update_node(node)
