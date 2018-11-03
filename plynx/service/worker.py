@@ -15,12 +15,24 @@ DEFAULT_HOST, DEFAULT_PORT = "127.0.0.1", 10000
 
 
 class RunningPipelineException(Exception):
+    """Internal Exception which indicates incorrect state of the Worker."""
     pass
 
 
 class Worker:
-    """
-    Worker main class.
+    """Worker main class.
+
+    Worker is a service that executes the commands defined by Operations.
+
+    Args:
+        worker_id   (str):  An arbitary ID of the worker. It must be unique accross the cluster.
+                            If not given or empty, a unique ID will be generated.
+        host        (str):  Host of the Master.
+        port        (int):  Port of the Master.
+
+    Worker is running in several threads:
+        * Main thread: heartbeat iterations.
+        * _run_worker thread. It executes the jobs and handles states.
 
     """
 
@@ -29,6 +41,8 @@ class Worker:
     NUMBER_OF_ATTEMPTS = 10
 
     def __init__(self, worker_id, host, port):
+        if not worker_id:
+            worker_id = str(uuid.uuid1())
         self._stop_event = threading.Event()
         self._job = None
         self._graph_id = None
@@ -39,6 +53,10 @@ class Worker:
         self._set_run_status(RunStatus.IDLE)
 
     def serve_forever(self, number_of_attempts=NUMBER_OF_ATTEMPTS):
+        """Run the worker.
+        Args:
+            number_of_attempts  (int): Number of retries if the connection is not established.
+        """
         self._run_thread = threading.Thread(target=self._run_worker, args=())
         self._run_thread.daemon = True   # Daemonize thread
         self._run_thread.start()
@@ -48,7 +66,7 @@ class Worker:
         while not self._stop_event.is_set():
             try:
                 self._heartbeat_iteration()
-                if attempt > 0 :
+                if attempt > 0:
                     logging.info("Connected")
                 attempt = 0
             except socket.error:
@@ -184,9 +202,11 @@ class Worker:
 
 def run_worker(worker_id=None, verbose=0, host=DEFAULT_HOST, port=DEFAULT_PORT):
     set_logging_level(verbose)
-    if worker_id is None:
-        worker_id = str(uuid.uuid1())
-    worker = Worker(worker_id, host, port)
+    worker = Worker(
+        worker_id=worker_id,
+        host=host,
+        port=port,
+    )
 
     try:
         worker.serve_forever()

@@ -25,8 +25,7 @@ node_collection = NodeCollection()
 
 
 class ClientTCPHandler(SocketServer.BaseRequestHandler):
-    """
-    The request handler class for our server.
+    """The request handler class for Master server.
 
     It is instantiated once per connection to the server, and must
     override the handle() method to implement communication to the
@@ -34,7 +33,7 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
     """
 
     def handle(self):
-        # self.request is the TCP socket connected to the client
+        """Handle TCP connection."""
         worker_message = recv_msg(self.request)
         worker_id = worker_message.worker_id
         graph_id = worker_message.graph_id
@@ -114,6 +113,10 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
 class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     """Master main class.
 
+    Args:
+        server_address      (tuple):        Define the server address (host, port).
+        RequestHandlerClass (TCP handler):  Class of SocketServer.BaseRequestHandler.
+
     Currently implemented as a TCP server.
 
     Only a single instance of the Master class in a cluster is allowed.
@@ -146,11 +149,6 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     WORKER_MONITORING_TIMEOUT = 10
 
     def __init__(self, server_address, RequestHandlerClass):
-        """
-        Args:
-            server_address: tuple (host, port)
-            RequestHandlerClass: TCP handler. Class of SocketServer.BaseRequestHandler
-        """
         SocketServer.TCPServer.__init__(self, server_address, RequestHandlerClass)
         self._stop_event = threading.Event()
         self._job_description_queue = Queue.Queue()
