@@ -15,6 +15,8 @@ from plynx.utils.logs import set_logging_level
 
 DEFAULT_HOST, DEFAULT_PORT = "127.0.0.1", 10000
 HEARTBEAT_TIMEOUT = 1
+ATTEMPT_TO_CONNECT_TIMEOUT = 1
+RUNNER_TIMEOUT = 1
 
 
 class RunningPipelineException(Exception):
@@ -44,7 +46,7 @@ class Worker:
                 sys.exit(0)
             except:
                 logging.info("Failed to connect: #{} / #{}".format(attempt + 1, number_of_attempts))
-                sleep(1)
+                sleep(ATTEMPT_TO_CONNECT_TIMEOUT)
             else:
                 logging.info("Connected")
                 return True
@@ -163,7 +165,7 @@ class Worker:
             finally:
                 sock.close()
 
-            sleep(1)
+            sleep(RUNNER_TIMEOUT)
 
 
 def run_worker(worker_id=None, verbose=0, host=DEFAULT_HOST, port=DEFAULT_PORT):
