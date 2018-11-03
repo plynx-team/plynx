@@ -13,9 +13,8 @@ from plynx.utils.file_handler import upload_file_stream
 from plynx.utils.logs import set_logging_level
 
 
-HOST, PORT = "127.0.0.1", 10000
-
-# Create a socket (SOCK_STREAM means a TCP socket)
+DEFAULT_HOST, DEFAULT_PORT = "127.0.0.1", 10000
+HEARTBEAT_TIMEOUT = 1
 
 
 class RunningPipelineException(Exception):
@@ -41,7 +40,6 @@ class Worker:
         for attempt in range(number_of_attempts):
             try:
                 self.heartbeat_iteration()
-                sleep(1)
             except KeyboardInterrupt:
                 sys.exit(0)
             except:
@@ -60,7 +58,7 @@ class Worker:
         while self.alive:
             try:
                 self.heartbeat_iteration()
-                sleep(1)
+                sleep(HEARTBEAT_TIMEOUT)
             except KeyboardInterrupt:
                 sys.exit(0)
 
@@ -168,10 +166,8 @@ class Worker:
             sleep(1)
 
 
-def run_worker(worker_id=None, verbose=0, host=None, port=None):
+def run_worker(worker_id=None, verbose=0, host=DEFAULT_HOST, port=DEFAULT_PORT):
     set_logging_level(verbose)
-    host = host or HOST
-    port = port or PORT
     if worker_id is None:
         worker_id = str(uuid.uuid1())
     worker = Worker(worker_id, host, port)
@@ -186,8 +182,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run worker')
     parser.add_argument('-i', '--worker-id', help='Any string identificator')
     parser.add_argument('-v', '--verbose', action='count', default=0)
-    parser.add_argument('-H', '--host', default=HOST)
-    parser.add_argument('-P', '--port', default=PORT)
+    parser.add_argument('-H', '--host', default=DEFAULT_HOST)
+    parser.add_argument('-P', '--port', default=DEFAULT_PORT)
     args = parser.parse_args()
 
     run_worker(**vars(args))
