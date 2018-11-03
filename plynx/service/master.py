@@ -5,6 +5,7 @@ import SocketServer
 import threading
 import logging
 import Queue
+import time
 from collections import namedtuple
 from time import sleep
 from . import WorkerMessage, RunStatus, WorkerMessageType, MasterMessageType, MasterMessage, send_msg, recv_msg
@@ -40,6 +41,10 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
         graph_id = worker_message.graph_id
         response = None
         if worker_message.message_type == WorkerMessageType.HEARTBEAT:
+            # track worker existance and responsiveness
+            self.server.track_worker(worker_message.worker_id)
+
+            # check worker status
             if worker_message.run_status == RunStatus.IDLE:
                 self.server.allocate_job(worker_message.worker_id)
             elif worker_message.run_status == RunStatus.RUNNING:
@@ -108,8 +113,24 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
 
 
 class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
-    """
-    Master main class: TCP server.
+    """Master main class.
+
+    Currently implemented as a TCP server.
+
+    Only a single instance of the Master class in a cluster is allowed.
+
+    On the high level Master distributes Jobs over all available Workers
+    and updates statuses of the Graphs in the database.
+
+    Master performs several roles:
+        * Pull graphs in status READY from the database.
+        * Create Schedulers for each Graph.
+        * Populate the queue of the Jobs.
+        * Distribute Jobs accross Workers.
+        * Keep track of Job's statuses.
+        * Process CANCEL requests.
+        * Update Graph's statuses.
+        * Track worker status and last response.
     """
 
     # Ctrl-C will cleanly kill all spawned threads
@@ -120,6 +141,10 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     SCHEDULER_TIMEOUT = 1
     # Define sync with database timeout
     SDB_STATUS_UPDATE_TIMEOUT = 1
+    # Threshold to tolerate delays before declaring worker failed
+    MAX_HEARTBEAT_DELAY = 10
+    # Recalculating Workers' statuses timeout
+    WORKER_MONITORING_TIMEOUT = 10
 
     def __init__(self, server_address, RequestHandlerClass):
         """
@@ -132,6 +157,7 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self._job_description_queue = Queue.Queue()
         # Mapping of Worker ID to the Job Description
         self._worker_to_job_description = {}
+        self._worker_to_last_heartbeat = {}
         self._worker_to_job_description_lock = threading.Lock()
 
         # Pick up all the Graphs with status RUNNING and set it to READY
@@ -163,6 +189,10 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self._thread_scheduler = threading.Thread(target=self._run_scheduler, args=())
         self._thread_scheduler.daemon = True            # Daemonize thread
         self._thread_scheduler.start()
+
+        self._thread_worker_monitoring = threading.Thread(target=self._run_worker_monitoring, args=())
+        self._thread_worker_monitoring.daemon = True    # Daemonize thread
+        self._thread_worker_monitoring.start()
 
     def _run_db_status_update(self):
         """
@@ -228,6 +258,35 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
             sleep(Master.SCHEDULER_TIMEOUT)
 
+    def _run_worker_monitoring(self):
+        while self._alive:
+            current_time = time.time()
+            with self._worker_to_job_description_lock:
+                dead_worker_ids = [
+                    worker_id
+                    for worker_id, last_time in self._worker_to_last_heartbeat.iteritems()
+                    if current_time - last_time > Master.MAX_HEARTBEAT_DELAY
+                ]
+            if dead_worker_ids:
+                logging.info("Found {count} dead workers: {ids}".format(
+                    count=len(dead_worker_ids),
+                    ids=dead_worker_ids,
+                    )
+                )
+                for worker_id in dead_worker_ids:
+                    job_description = self.get_job_description(worker_id)
+                    with self._graph_schedulers_lock:
+                        scheduler = self._graph_id_to_scheduler.get(job_description.graph_id, None)
+                        if scheduler:
+                            with self._worker_to_job_description_lock:
+                                del self._worker_to_job_description[worker_id]
+                                del self._worker_to_last_heartbeat[worker_id]
+                            node = job_description.job.node
+                            node.node_running_status = NodeRunningStatus.FAILED
+                            scheduler.update_node(node)
+
+            sleep(Master.WORKER_MONITORING_TIMEOUT)
+
     def _del_job_description(self, worker_id):
         with self._worker_to_job_description_lock:
             if worker_id in self._worker_to_job_description:
@@ -282,6 +341,11 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         else:
             logging.info("Scheduler was not found for worker `{}`".format(worker_id))
         return False
+
+    def track_worker(self, worker_id):
+        """Track worker existance and responsiveness"""
+        with self._worker_to_job_description_lock:
+            self._worker_to_last_heartbeat[worker_id] = time.time()
 
 
 
