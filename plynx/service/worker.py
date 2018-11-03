@@ -27,16 +27,16 @@ class Worker:
     NUMBER_OF_ATTEMPTS = 10
 
     def __init__(self, worker_id, host, port):
-        self.thread = threading.Thread(target=self.run, args=())
-        self.thread.daemon = True   # Daemonize thread
-        self.job = None
-        self.graph_id = None
-        self.alive = True
-        self.worker_id = worker_id
-        self.host = host
-        self.port = port
-        self.run_status = RunStatus.IDLE
-        self.killed = False
+        self._run_thread = threading.Thread(target=self.run, args=())
+        self._run_thread.daemon = True   # Daemonize thread
+        self._job = None
+        self._graph_id = None
+        self._alive = True
+        self._worker_id = worker_id
+        self._host = host
+        self._port = port
+        self._run_status = RunStatus.IDLE
+        self._job_killed = False
 
     def attempt_to_connect(self, number_of_attempts=NUMBER_OF_ATTEMPTS):
         for attempt in range(number_of_attempts):
@@ -54,10 +54,10 @@ class Worker:
 
     def forever(self):
         #Run run() method
-        self.thread.start()
+        self._run_thread.start()
 
         # run heartbeat_iteration() method
-        while self.alive:
+        while self._alive:
             try:
                 self.heartbeat_iteration()
                 sleep(HEARTBEAT_TIMEOUT)
@@ -68,22 +68,22 @@ class Worker:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             # Connect to server and send data
-            sock.connect((self.host, self.port))
+            sock.connect((self._host, self._port))
             message = WorkerMessage(
-                worker_id=self.worker_id,
-                run_status=self.run_status,
+                worker_id=self._worker_id,
+                run_status=self._run_status,
                 message_type=WorkerMessageType.HEARTBEAT,
-                body=self.job if self.run_status != RunStatus.IDLE else None,
-                graph_id=self.graph_id
+                body=self._job if self._run_status != RunStatus.IDLE else None,
+                graph_id=self._graph_id
             )
             send_msg(sock, message)
             master_message = recv_msg(sock)
             # check status
             if master_message.message_type == MasterMessageType.KILL:
                 logging.info("Received KILL message: {}".format(master_message))
-                if self.job and not self.killed:
-                    self.killed = True
-                    self.job.kill()
+                if self._job and not self._job_killed:
+                    self._job_killed = True
+                    self._job.kill()
                 else:
                     logging.info("Already attempted to KILL")
         finally:
@@ -91,14 +91,14 @@ class Worker:
 
     def run(self):
         while True:
-            logging.info(self.run_status)
+            logging.info(self._run_status)
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             try:
-                if self.run_status == RunStatus.IDLE:
-                    sock.connect((self.host, self.port))
+                if self._run_status == RunStatus.IDLE:
+                    sock.connect((self._host, self._port))
                     message = WorkerMessage(
-                        worker_id=self.worker_id,
-                        run_status=self.run_status,
+                        worker_id=self._worker_id,
+                        run_status=self._run_status,
                         message_type=WorkerMessageType.GET_JOB,
                         body=None,
                         graph_id=None
@@ -113,46 +113,46 @@ class Worker:
                                 job_id=master_message.job.node._id,
                             )
                         )
-                        self.killed = False
-                        self.run_status = RunStatus.RUNNING
-                        self.job = master_message.job
-                        self.graph_id = master_message.graph_id
+                        self._job_killed = False
+                        self._run_status = RunStatus.RUNNING
+                        self._job = master_message.job
+                        self._graph_id = master_message.graph_id
                         try:
-                            status = self.job.run()
+                            status = self._job.run()
                         except Exception as e:
                             try:
                                 status = JobReturnStatus.FAILED
                                 with SpooledTemporaryFile() as f:
                                     f.write(traceback.format_exc())
-                                    self.job.node.get_log_by_name('worker').resource_id = upload_file_stream(f)
+                                    self._job.node.get_log_by_name('worker').resource_id = upload_file_stream(f)
                             except Exception as e:
-                                self.alive = False
+                                self._alive = False
                                 logging.critical(traceback.format_exc())
                                 sys.exit(1)
 
-                        self.killed = True
+                        self._job_killed = True
                         if status == JobReturnStatus.SUCCESS:
-                            self.run_status = RunStatus.SUCCESS
+                            self._run_status = RunStatus.SUCCESS
                         elif status == JobReturnStatus.FAILED:
-                            self.run_status = RunStatus.FAILED
-                        logging.info("WorkerMessageType.FINISHED with status {}".format(self.run_status))
+                            self._run_status = RunStatus.FAILED
+                        logging.info("WorkerMessageType.FINISHED with status {}".format(self._run_status))
 
-                elif self.run_status == RunStatus.RUNNING:
+                elif self._run_status == RunStatus.RUNNING:
                     raise RunningPipelineException("Not supposed to have this state")
-                elif self.run_status in [RunStatus.SUCCESS, RunStatus.FAILED]:
-                    sock.connect((self.host, self.port))
+                elif self._run_status in [RunStatus.SUCCESS, RunStatus.FAILED]:
+                    sock.connect((self._host, self._port))
 
-                    if self.run_status == RunStatus.SUCCESS:
+                    if self._run_status == RunStatus.SUCCESS:
                         status = WorkerMessageType.JOB_FINISHED_SUCCESS
-                    elif self.run_status == RunStatus.FAILED:
+                    elif self._run_status == RunStatus.FAILED:
                         status = WorkerMessageType.JOB_FINISHED_FAILED
 
                     message = WorkerMessage(
-                        worker_id=self.worker_id,
-                        run_status=self.run_status,
+                        worker_id=self._worker_id,
+                        run_status=self._run_status,
                         message_type=status,
-                        body=self.job,
-                        graph_id=self.graph_id
+                        body=self._job,
+                        graph_id=self._graph_id
                     )
 
                     send_msg(sock, message)
@@ -160,7 +160,7 @@ class Worker:
                     master_message = recv_msg(sock)
 
                     if master_message and master_message.message_type == MasterMessageType.AKNOWLEDGE:
-                        self.run_status = RunStatus.IDLE
+                        self._run_status = RunStatus.IDLE
                         logging.info("WorkerMessageType.IDLE")
             finally:
                 sock.close()
