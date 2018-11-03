@@ -297,9 +297,9 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 
     def _del_worker_info(self, worker_id):
         with self._worker_to_job_description_lock:
-            if worker_id in  self._worker_to_job_description:
+            if worker_id in self._worker_to_job_description:
                 del self._worker_to_job_description[worker_id]
-            if worker_id in  self._worker_to_last_heartbeat:
+            if worker_id in self._worker_to_last_heartbeat:
                 del self._worker_to_last_heartbeat[worker_id]
 
     def _del_job_description(self, worker_id):
@@ -366,7 +366,6 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         """Stop Master."""
         self._stop_event.set()
         self.shutdown()
-
 
 
 def parse_arguments():

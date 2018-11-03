@@ -194,7 +194,6 @@ class Worker:
         self._run_status = run_status
         logging.info(self._run_status)
 
-
     def stop(self):
         """Stop Worker."""
         self._stop_event.set()
