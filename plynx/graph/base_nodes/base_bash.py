@@ -1,5 +1,6 @@
 from subprocess import Popen, PIPE
 import os
+import stat
 import shutil
 import signal
 import uuid
@@ -145,6 +146,10 @@ class BaseBash(BaseNode):
                     filename = os.path.join('/tmp', '{}_{}_{}'.format(str(uuid.uuid1()), i, input.name))
                     with open(filename, 'wb') as f:
                         f.write(get_file_stream(value.resource_id).read())
+                    if FileTypes.EXECUTABLE in input.file_types:
+                        # `chmod +x` to the executable file
+                        st = os.stat(filename)
+                        os.chmod(filename, st.st_mode | stat.S_IEXEC)
                     filenames.append(filename)
             if pythonize:
                 if input.min_count == 1 and input.max_count == 1:
@@ -152,7 +157,8 @@ class BaseBash(BaseNode):
                 else:
                     res[input.name] = filenames
             else:
-                res[input.name] = ' '.join(filenames)  # !!!!!!
+                # TODO is ' ' standard separator?
+                res[input.name] = ' '.join(filenames)
         return res
 
     @staticmethod
