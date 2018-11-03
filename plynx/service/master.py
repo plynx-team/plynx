@@ -10,7 +10,7 @@ from time import sleep
 from . import WorkerMessage, RunStatus, WorkerMessageType, MasterMessageType, MasterMessage, send_msg, recv_msg
 from plynx.constants import NodeRunningStatus, GraphRunningStatus
 from plynx.db import GraphCollectionManager
-from plynx.db import GraphCancelationManager
+from plynx.db import GraphCancellationManager
 from plynx.graph.graph_scheduler import GraphScheduler
 from plynx.utils.config import get_master_config
 from plynx.utils.logs import set_logging_level
@@ -20,7 +20,7 @@ from plynx.graph.base_nodes import NodeCollection
 MasterJobDescription = namedtuple('MasterJobDescription', ['graph_id', 'job'])
 
 graph_collection_manager = GraphCollectionManager()
-graph_cancelation_manager = GraphCancelationManager()
+graph_cancellation_manager = GraphCancellationManager()
 node_collection = NodeCollection()
 
 
@@ -197,11 +197,11 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                 self._new_graph_schedulers = []
 
                 # pull Graph cancellation events and cancel the Graphs
-                graph_cancelations = list(graph_cancelation_manager.get_new_graph_cancelations())
-                for graph_cancelation in graph_cancelations:
-                    if graph_cancelation.graph_id in self._graph_id_to_scheduler:
-                        self._graph_id_to_scheduler[graph_cancelation.graph_id].graph.cancel()
-                graph_cancelation_manager.remove([graph_cancelation._id for graph_cancelation in graph_cancelations])
+                graph_cancellations = list(graph_cancellation_manager.get_new_graph_cancellations())
+                for graph_cancellation in graph_cancellations:
+                    if graph_cancellation.graph_id in self._graph_id_to_scheduler:
+                        self._graph_id_to_scheduler[graph_cancellation.graph_id].graph.cancel()
+                graph_cancellation_manager.remove([graph_cancellation._id for graph_cancellation in graph_cancellations])
 
                 # check the running Schedulers
                 new_to_queue = []

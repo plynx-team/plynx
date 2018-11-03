@@ -11,5 +11,5 @@ from .graph import Graph
 from .user import User
 from .feedback import Feedback
 from .graph_collection_manager import GraphCollectionManager
-from .graph_cancelation_manager import GraphCancelationManager
+from .graph_cancellation_manager import GraphCancellationManager
 from .demo_user_manager import DemoUserManager
