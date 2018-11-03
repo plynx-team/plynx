@@ -21,7 +21,6 @@ MasterJobDescription = namedtuple('MasterJobDescription', ['graph_id', 'job'])
 
 graph_collection_manager = GraphCollectionManager()
 graph_cancelation_manager = GraphCancelationManager()
-# TODO node_collection needed?
 node_collection = NodeCollection()
 
 
