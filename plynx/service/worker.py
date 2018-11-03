@@ -1,11 +1,9 @@
 import argparse
 import logging
 import socket
-import sys
 import uuid
 import threading
 import traceback
-from time import sleep
 from tempfile import SpooledTemporaryFile
 from . import WorkerMessage, WorkerMessageType, RunStatus, MasterMessageType, send_msg, recv_msg
 from plynx.constants import JobReturnStatus
@@ -14,9 +12,6 @@ from plynx.utils.logs import set_logging_level
 
 
 DEFAULT_HOST, DEFAULT_PORT = "127.0.0.1", 10000
-HEARTBEAT_TIMEOUT = 1
-ATTEMPT_TO_CONNECT_TIMEOUT = 1
-RUNNER_TIMEOUT = 1
 
 
 class RunningPipelineException(Exception):
@@ -24,47 +19,47 @@ class RunningPipelineException(Exception):
 
 
 class Worker:
+    """
+    Worker main class.
+
+    """
+
+    HEARTBEAT_TIMEOUT = 1
+    RUNNER_TIMEOUT = 1
     NUMBER_OF_ATTEMPTS = 10
 
     def __init__(self, worker_id, host, port):
-        self._run_thread = threading.Thread(target=self.run, args=())
-        self._run_thread.daemon = True   # Daemonize thread
+        self._stop_event = threading.Event()
         self._job = None
         self._graph_id = None
-        self._alive = True
         self._worker_id = worker_id
         self._host = host
         self._port = port
-        self._run_status = RunStatus.IDLE
         self._job_killed = False
+        self._set_run_status(RunStatus.IDLE)
 
-    def attempt_to_connect(self, number_of_attempts=NUMBER_OF_ATTEMPTS):
-        for attempt in range(number_of_attempts):
-            try:
-                self.heartbeat_iteration()
-            except KeyboardInterrupt:
-                sys.exit(0)
-            except:
-                logging.info("Failed to connect: #{} / #{}".format(attempt + 1, number_of_attempts))
-                sleep(ATTEMPT_TO_CONNECT_TIMEOUT)
-            else:
-                logging.info("Connected")
-                return True
-        return False
-
-    def forever(self):
-        #Run run() method
+    def serve_forever(self, number_of_attempts=NUMBER_OF_ATTEMPTS):
+        self._run_thread = threading.Thread(target=self._run_worker, args=())
+        self._run_thread.daemon = True   # Daemonize thread
         self._run_thread.start()
 
-        # run heartbeat_iteration() method
-        while self._alive:
+        # run _heartbeat_iteration()
+        attempt = 0
+        while not self._stop_event.is_set():
             try:
-                self.heartbeat_iteration()
-                sleep(HEARTBEAT_TIMEOUT)
-            except KeyboardInterrupt:
-                sys.exit(0)
+                self._heartbeat_iteration()
+                if attempt > 0 :
+                    logging.info("Connected")
+                attempt = 0
+            except socket.error:
+                logging.warn("Failed to connect: #{}/{}".format(attempt + 1, number_of_attempts))
+                attempt += 1
+                if attempt == number_of_attempts:
+                    self.stop()
+                    raise
+            self._stop_event.wait(timeout=Worker.HEARTBEAT_TIMEOUT)
 
-    def heartbeat_iteration(self):
+    def _heartbeat_iteration(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             # Connect to server and send data
@@ -89,83 +84,102 @@ class Worker:
         finally:
             sock.close()
 
-    def run(self):
-        while True:
-            logging.info(self._run_status)
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    def _run_worker(self):
+        while not self._stop_event.is_set():
             try:
-                if self._run_status == RunStatus.IDLE:
-                    sock.connect((self._host, self._port))
-                    message = WorkerMessage(
-                        worker_id=self._worker_id,
-                        run_status=self._run_status,
-                        message_type=WorkerMessageType.GET_JOB,
-                        body=None,
-                        graph_id=None
-                    )
-                    send_msg(sock, message)
-                    master_message = recv_msg(sock)
-                    logging.debug("Asked for a job; Received mesage: {}".format(master_message))
-                    if master_message and master_message.message_type == MasterMessageType.SET_JOB:
-                        logging.info(
-                            "Got the job: graph_id=`{graph_id}` job_id=`{job_id}`".format(
-                                graph_id=master_message.graph_id,
-                                job_id=master_message.job.node._id,
-                            )
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                try:
+                    if self._run_status == RunStatus.IDLE:
+                        sock.connect((self._host, self._port))
+                        message = WorkerMessage(
+                            worker_id=self._worker_id,
+                            run_status=self._run_status,
+                            message_type=WorkerMessageType.GET_JOB,
+                            body=None,
+                            graph_id=None
                         )
-                        self._job_killed = False
-                        self._run_status = RunStatus.RUNNING
-                        self._job = master_message.job
-                        self._graph_id = master_message.graph_id
-                        try:
-                            status = self._job.run()
-                        except Exception as e:
+                        send_msg(sock, message)
+                        master_message = recv_msg(sock)
+                        logging.debug("Asked for a job; Received mesage: {}".format(master_message))
+                        if master_message and master_message.message_type == MasterMessageType.SET_JOB:
+                            logging.info(
+                                "Got the job: graph_id=`{graph_id}` job_id=`{job_id}`".format(
+                                    graph_id=master_message.graph_id,
+                                    job_id=master_message.job.node._id,
+                                )
+                            )
+                            self._job_killed = False
+                            self._set_run_status(RunStatus.RUNNING)
+                            self._job = master_message.job
+                            self._graph_id = master_message.graph_id
                             try:
-                                status = JobReturnStatus.FAILED
-                                with SpooledTemporaryFile() as f:
-                                    f.write(traceback.format_exc())
-                                    self._job.node.get_log_by_name('worker').resource_id = upload_file_stream(f)
+                                status = self._job.run()
                             except Exception as e:
-                                self._alive = False
-                                logging.critical(traceback.format_exc())
-                                sys.exit(1)
+                                try:
+                                    status = JobReturnStatus.FAILED
+                                    with SpooledTemporaryFile() as f:
+                                        f.write(traceback.format_exc())
+                                        self._job.node.get_log_by_name('worker').resource_id = upload_file_stream(f)
+                                except Exception as e:
+                                    logging.critical(traceback.format_exc())
+                                    self.stop()
 
-                        self._job_killed = True
-                        if status == JobReturnStatus.SUCCESS:
-                            self._run_status = RunStatus.SUCCESS
-                        elif status == JobReturnStatus.FAILED:
-                            self._run_status = RunStatus.FAILED
-                        logging.info("WorkerMessageType.FINISHED with status {}".format(self._run_status))
+                            self._job_killed = True
+                            if status == JobReturnStatus.SUCCESS:
+                                self._set_run_status(RunStatus.SUCCESS)
+                            elif status == JobReturnStatus.FAILED:
+                                self._set_run_status(RunStatus.FAILED)
+                            logging.info(
+                                "Worker(`{worker_id}`) finished with status {status}".format(
+                                    worker_id=self._worker_id,
+                                    status=self._run_status,
+                                )
+                            )
 
-                elif self._run_status == RunStatus.RUNNING:
-                    raise RunningPipelineException("Not supposed to have this state")
-                elif self._run_status in [RunStatus.SUCCESS, RunStatus.FAILED]:
-                    sock.connect((self._host, self._port))
+                    elif self._run_status == RunStatus.RUNNING:
+                        raise RunningPipelineException("Not supposed to have this state")
+                    elif self._run_status in [RunStatus.SUCCESS, RunStatus.FAILED]:
+                        sock.connect((self._host, self._port))
 
-                    if self._run_status == RunStatus.SUCCESS:
-                        status = WorkerMessageType.JOB_FINISHED_SUCCESS
-                    elif self._run_status == RunStatus.FAILED:
-                        status = WorkerMessageType.JOB_FINISHED_FAILED
+                        if self._run_status == RunStatus.SUCCESS:
+                            status = WorkerMessageType.JOB_FINISHED_SUCCESS
+                        elif self._run_status == RunStatus.FAILED:
+                            status = WorkerMessageType.JOB_FINISHED_FAILED
 
-                    message = WorkerMessage(
-                        worker_id=self._worker_id,
-                        run_status=self._run_status,
-                        message_type=status,
-                        body=self._job,
-                        graph_id=self._graph_id
-                    )
+                        message = WorkerMessage(
+                            worker_id=self._worker_id,
+                            run_status=self._run_status,
+                            message_type=status,
+                            body=self._job,
+                            graph_id=self._graph_id
+                        )
 
-                    send_msg(sock, message)
+                        send_msg(sock, message)
 
-                    master_message = recv_msg(sock)
+                        master_message = recv_msg(sock)
 
-                    if master_message and master_message.message_type == MasterMessageType.AKNOWLEDGE:
-                        self._run_status = RunStatus.IDLE
-                        logging.info("WorkerMessageType.IDLE")
-            finally:
-                sock.close()
+                        if master_message and master_message.message_type == MasterMessageType.AKNOWLEDGE:
+                            self._set_run_status(RunStatus.IDLE)
+                finally:
+                    sock.close()
+            except socket.error:
+                pass
+            except Exception as e:
+                self.stop()
+                raise
 
-            sleep(RUNNER_TIMEOUT)
+            self._stop_event.wait(timeout=Worker.RUNNER_TIMEOUT)
+
+        logging.info("Exit {}".format(self._run_worker.__name__))
+
+    def _set_run_status(self, run_status):
+        self._run_status = run_status
+        logging.info(self._run_status)
+
+
+    def stop(self):
+        """Stop Worker."""
+        self._stop_event.set()
 
 
 def run_worker(worker_id=None, verbose=0, host=DEFAULT_HOST, port=DEFAULT_PORT):
@@ -174,10 +188,10 @@ def run_worker(worker_id=None, verbose=0, host=DEFAULT_HOST, port=DEFAULT_PORT):
         worker_id = str(uuid.uuid1())
     worker = Worker(worker_id, host, port)
 
-    if not worker.attempt_to_connect():
-        sys.exit(2)
-
-    worker.forever()
+    try:
+        worker.serve_forever()
+    except KeyboardInterrupt:
+        worker.stop()
 
 
 if __name__ == "__main__":
