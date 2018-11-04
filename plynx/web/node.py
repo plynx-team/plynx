@@ -38,7 +38,7 @@ def get_nodes(node_link=None):
         time.sleep(1)
         try:
             node_id = to_object_id(node_link)
-        except:
+        except Exception:
             return 'Invalid ID', 404
         node = node_collection_manager.get_db_node(node_id, author)
         if node:

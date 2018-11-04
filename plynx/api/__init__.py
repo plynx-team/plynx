@@ -21,6 +21,7 @@ def set_logging_level(verbose):
     }
     logging.basicConfig(level=LOG_LEVELS.get(verbose, 4))
 
+
 set_logging_level(3)
 
 __all__ = [

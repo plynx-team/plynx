@@ -122,7 +122,7 @@ class User(DBObject):
                 data = s.loads(token)
                 if data['type'] != 'refresh':
                     raise Exception('Not refresh token')
-            except:
+            except Exception:
                 return None
         except Exception as e:
             print("Unexpected exception: {}".format(e))

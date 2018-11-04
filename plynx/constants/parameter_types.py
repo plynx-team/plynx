@@ -83,7 +83,7 @@ class ParameterTypes:
         if parameter_type == ParameterTypes.INT:
             try:
                 tmp = int(value)
-            except:
+            except Exception:
                 return False
             return True
         if parameter_type == ParameterTypes.BOOL:

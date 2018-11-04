@@ -7,10 +7,16 @@ import logging
 import Queue
 import time
 from collections import namedtuple
-from . import WorkerMessage, RunStatus, WorkerMessageType, MasterMessageType, MasterMessage, send_msg, recv_msg
+from plynx.service import (
+    WorkerMessage,
+    RunStatus,
+    WorkerMessageType,
+    MasterMessage,
+    send_msg,
+    recv_msg,
+)
 from plynx.constants import NodeRunningStatus, GraphRunningStatus
-from plynx.db import GraphCollectionManager
-from plynx.db import GraphCancellationManager
+from plynx.db import GraphCollectionManager, GraphCancellationManager
 from plynx.graph.graph_scheduler import GraphScheduler
 from plynx.utils.config import get_master_config
 from plynx.utils.logs import set_logging_level
@@ -205,7 +211,7 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                         self._new_graph_schedulers.append(graph_scheduler)
 
                 self._stop_event.wait(timeout=Master.SDB_STATUS_UPDATE_TIMEOUT)
-        except:
+        except Exception:
             self.stop()
             raise
         finally:
@@ -259,7 +265,7 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                     logging.info('Queue length: {}'.format(self._job_description_queue.qsize()))
 
                 self._stop_event.wait(timeout=Master.SCHEDULER_TIMEOUT)
-        except:
+        except Exception:
             self.stop()
             raise
         finally:
@@ -289,7 +295,7 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                             scheduler.update_node(node)
 
                 self._stop_event.wait(timeout=Master.WORKER_MONITORING_TIMEOUT)
-        except:
+        except Exception:
             self.stop()
             raise
         finally:
