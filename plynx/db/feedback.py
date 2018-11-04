@@ -75,11 +75,3 @@ class Feedback(DBObject):
 
     def __getattr__(self, name):
         raise Exception("Can't get attribute '{}'".format(name))
-
-
-if __name__ == "__main__":
-    feedback = Feedback()
-    feedback.user = 'test'
-    feedback.message = 'hello'
-    print(feedback.__repr__())
-    feedback.save()

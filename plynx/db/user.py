@@ -129,11 +129,3 @@ class User(DBObject):
             return None
         user = User.find_user_by_name(data['username'])
         return user
-
-
-if __name__ == "__main__":
-    user = User()
-    user.username = 'test'
-    user.hash_password('test_pass')
-    print(user.__repr__())
-    user.save()
