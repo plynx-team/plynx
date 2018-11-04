@@ -11,6 +11,7 @@ from plynx.service import (
     WorkerMessage,
     RunStatus,
     WorkerMessageType,
+    MasterMessageType,
     MasterMessage,
     send_msg,
     recv_msg,

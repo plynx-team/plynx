@@ -3,6 +3,7 @@ from collections import namedtuple
 
 
 class WorkerMessageType(Enum):
+    """Basic Massage type from Worker"""
     UNKNOWN = 0
     HEARTBEAT = 1
     GET_JOB = 2
@@ -11,6 +12,7 @@ class WorkerMessageType(Enum):
 
 
 class RunStatus(Enum):
+    """Worker running status"""
     IDLE = 0
     RUNNING = 1
     SUCCESS = 2
@@ -18,6 +20,7 @@ class RunStatus(Enum):
 
 
 class MasterMessageType(Enum):
+    """Basic Massage type from Master"""
     UNKNOWN = 0
     AKNOWLEDGE = 1
     SET_JOB = 2
