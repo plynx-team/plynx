@@ -1,3 +1,4 @@
+# TODO use DBObject. The problem is that it will depend on itself recursively
 class ValidationError(object):
     """Basic Validation Error class."""
 
