@@ -16,12 +16,12 @@ class Graph(DBObject):
             ),
         'title': DBObjectField(
             type=str,
-            default='',
+            default='Title',
             is_list=False,
             ),
         'description': DBObjectField(
             type=str,
-            default='',
+            default='Description',
             is_list=False,
             ),
         'graph_running_status': DBObjectField(

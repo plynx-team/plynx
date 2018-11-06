@@ -16,12 +16,12 @@ class Node(DBObject):
             ),
         'title': DBObjectField(
             type=str,
-            default='',
+            default='Title',
             is_list=False,
             ),
         'description': DBObjectField(
             type=str,
-            default='',
+            default='Description',
             is_list=False,
             ),
         'base_node_name': DBObjectField(
