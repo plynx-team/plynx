@@ -141,3 +141,15 @@ class DBObject(object):
             A copy of the Object
         """
         return self.__class__(self.to_dict())
+
+    def __str__(self):
+        return '{cls_name}({value})'.format(
+            cls_name=self.__class__.__name__,
+            value=self.__dict__.get('_id', str(self.to_dict()))
+        )
+
+    def __repr__(self):
+        return '{cls_name}({value})'.format(
+            cls_name=self.__class__.__name__,
+            value=str(self.to_dict()),
+        )
