@@ -1,7 +1,6 @@
 import datetime
 from collections import deque, defaultdict
-from . import DBObject, Node, ValidationError
-from plynx.utils.db_connector import *
+from . import DBObject, DBObjectField, Node, ValidationError
 from plynx.utils.common import to_object_id, ObjectId
 from plynx.constants import GraphRunningStatus, ValidationTargetType, ValidationCode, ParameterTypes, NodeRunningStatus
 
@@ -10,57 +9,44 @@ class Graph(DBObject):
     """
     Basic graph with db interface
     """
-
-    def __init__(self, graph_id=None):
-        super(Graph, self).__init__()
-        self._id = None
-        self.title = 'Title'
-        self.description = 'Description'
-        self.graph_running_status = GraphRunningStatus.CREATED
-        self.author = None
-        self.public = False
-        self.nodes = []
-
-        if graph_id:
-            self._id = to_object_id(graph_id)
-            self.load()
-
-        if not self._id:
-            self._id = ObjectId()
-
-    def to_dict(self):
-        return {
-            "_id": self._id,
-            "title": self.title,
-            "description": self.description,
-            "graph_running_status": self.graph_running_status,
-            "author": self.author,
-            "public": self.public,
-            "nodes": [node.to_dict() for node in self.nodes]
-        }
-
-    def save(self, force=False):
-        assert isinstance(self._id, ObjectId)
-
-        if not self.is_dirty() and not force:
-            return True
-
-        now = datetime.datetime.utcnow()
-
-        graph_dict = self.to_dict()
-        graph_dict["update_date"] = now
-
-        db.graphs.find_one_and_update(
-            {'_id': self._id},
-            {
-                "$setOnInsert": {"insertion_date": now},
-                "$set": graph_dict
-            },
-            upsert=True,
-        )
-
-        self._dirty = False
-        return True
+    FIELDS = {
+        '_id': DBObjectField(
+            type=ObjectId,
+            default=ObjectId,
+            is_list=False,
+            ),
+        'title': DBObjectField(
+            type=str,
+            default='',
+            is_list=False,
+            ),
+        'description': DBObjectField(
+            type=str,
+            default='',
+            is_list=False,
+            ),
+        'graph_running_status': DBObjectField(
+            type=str,
+            default=GraphRunningStatus.CREATED,
+            is_list=False,
+            ),
+        'author': DBObjectField(
+            type=ObjectId,
+            default=None,
+            is_list=False,
+            ),
+        'public': DBObjectField(
+            type=bool,
+            default=False,
+            is_list=False,
+            ),
+        'nodes': DBObjectField(
+            type=Node,
+            default=list,
+            is_list=True,
+            ),
+    }
+    DB_COLLECTION = 'graphs'
 
     def cancel(self):
         self.graph_running_status = GraphRunningStatus.CANCELED
@@ -68,26 +54,6 @@ class Graph(DBObject):
             if node.node_running_status in [NodeRunningStatus.RUNNING, NodeRunningStatus.IN_QUEUE]:
                 node.node_running_status = NodeRunningStatus.CANCELED
         self.save(force=True)
-
-    def load(self):
-        graph = db.graphs.find_one({'_id': self._id})
-        self.load_from_dict(graph)
-
-    def load_from_dict(self, graph):
-        for key, value in graph.iteritems():
-            if key != 'nodes':
-                setattr(self, key, graph[key])
-
-        self._id = to_object_id(self._id)
-        self.author = to_object_id(self.author)
-
-        self.nodes = []
-        for node_dict in graph['nodes']:
-            node = Node()
-            node.load_from_dict(node_dict)
-            self.nodes.append(node)
-
-        self._dirty = False
 
     def get_validation_error(self):
         """Return validation error if found; else None"""
@@ -242,6 +208,3 @@ class Graph(DBObject):
 
     def __repr__(self):
         return 'Graph(_id="{}", title="{}", nodes={})'.format(self._id, self.title, str(self.nodes))
-
-    def __getattr__(self, name):
-        raise Exception("Can't get attribute '{}'".format(name))

@@ -65,8 +65,7 @@ def post_node():
     try:
         body = json.loads(request.data)['body']
 
-        node = Node()
-        node.load_from_dict(body['node'])
+        node = Node.from_dict(body['node'])
         node.author = g.user._id
 
         action = body['action']

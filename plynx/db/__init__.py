@@ -1,4 +1,4 @@
-from .db_object import DBObject
+from .db_object import DBObject, DBObjectField
 from .input import Input, InputValue
 from .parameter import Parameter, ParameterWidget
 from .output import Output

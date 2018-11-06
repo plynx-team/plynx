@@ -10,8 +10,7 @@ from plynx.utils.common import JSONEncoder
 def new_feedback():
     body = json.loads(request.data)['body']
 
-    feedback = Feedback()
-    feedback.load_from_dict(body)
+    feedback = Feedback.from_dict(body)
     feedback.save(force=True)
     return JSONEncoder().encode({
         'status': 'success'

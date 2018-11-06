@@ -28,16 +28,14 @@ class NodeCacheManager(object):
         }).sort('insertion_date', -1).limit(1)
         caches = list(db_node_cache)
         if len(caches):
-            res = NodeCache()
-            res.load_from_dict(caches[0])
-            return res
+            return NodeCache.from_dict(caches[0])
         else:
             return None
 
-    # Demo: remove user_id
+    # TODO Demo: remove user_id
     @staticmethod
     def post(node, graph_id, user_id):
         assert node.node_running_status == NodeRunningStatus.SUCCESS, \
             'Only Nodes with status SUCCESS can be cached'
-        node_cache = NodeCache(node=node, graph_id=graph_id, user_id=user_id)
+        node_cache = NodeCache.instantiate(node=node, graph_id=graph_id, user_id=user_id)
         node_cache.save()

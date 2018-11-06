@@ -28,7 +28,7 @@ class DemoUserManager(object):
     def create_demo_graphs(user):
         res = []
         for graph_id in DemoUserManager.demo_config.graph_ids:
-            graph = Graph(graph_id)
+            graph = Graph.load(graph_id)
             graph._id = ObjectId()
             graph.author = user._id
             graph.save()

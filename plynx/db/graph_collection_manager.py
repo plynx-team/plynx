@@ -63,7 +63,7 @@ class GraphCollectionManager(object):
         new_nodes = [
             GraphCollectionManager._transplant_node(
                 node,
-                Node().load_from_dict(new_node_db_mapping[to_object_id(node.parent_node)])
+                Node.from_dict(new_node_db_mapping[to_object_id(node.parent_node)])
             ) for node in graph.nodes]
 
         updated_nodes_count = sum(1
@@ -78,8 +78,7 @@ class GraphCollectionManager(object):
         db_graphs = db.graphs.find({'graph_running_status': graph_running_status})
         graphs = []
         for db_graph in db_graphs:
-            graphs.append(Graph())
-            graphs[-1].load_from_dict(db_graph)
+            graphs.append(Graph.from_dict(db_graph))
         return graphs
 
     @staticmethod

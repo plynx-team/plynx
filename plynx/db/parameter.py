@@ -1,18 +1,102 @@
-from plynx.constants import ParameterEnum, ParameterCode, ParameterTypes
+from plynx.db import DBObjectField, DBObject
+from plynx.constants import ParameterTypes
 
 
-class ParameterWidget(object):
-    def __init__(self, alias):
-        self.alias = alias
+class ParameterEnum(DBObject):
+    FIELDS = {
+        'values': DBObjectField(
+            type=str,
+            default=list,
+            is_list=True,
+            ),
+        'index': DBObjectField(
+            type=str,
+            default=-1,
+            is_list=False,
+            ),
+    }
 
-    def to_dict(self):
-        return {
-            'alias': self.alias
-        }
+    def __repr__(self):
+        return 'ParameterEnum({})'.format(str(self.to_dict()))
+
+
+class ParameterCode(DBObject):
+    FIELDS = {
+        'value': DBObjectField(
+            type=str,
+            default='',
+            is_list=False,
+            ),
+        'mode': DBObjectField(
+            type=str,
+            default='python',
+            is_list=False,
+            ),
+    }
+
+    MODES = {'python'}
+
+    def __repr__(self):
+        return 'ParameterCode({})'.format(str(self.to_dict()))
+
+
+class ParameterTypesUtils:
+    @staticmethod
+    def get_default_by_type(parameter_type):
+        if parameter_type == ParameterTypes.STR:
+            return ''
+        if parameter_type == ParameterTypes.INT:
+            return 0
+        if parameter_type == ParameterTypes.BOOL:
+            return False
+        if parameter_type == ParameterTypes.TEXT:
+            return ''
+        if parameter_type == ParameterTypes.ENUM:
+            return ParameterEnum()
+        if parameter_type == ParameterTypes.LIST_STR:
+            return []
+        if parameter_type == ParameterTypes.LIST_INT:
+            return []
+        if parameter_type == ParameterTypes.CODE:
+            return ParameterCode()
+        else:
+            return None
 
     @staticmethod
-    def create_from_dict(widget_dict):
-        return ParameterWidget(widget_dict['alias'])
+    def value_is_valid(value, parameter_type):
+        if parameter_type == ParameterTypes.STR:
+            return isinstance(value, basestring)
+        if parameter_type == ParameterTypes.INT:
+            try:
+                tmp = int(value)
+            except Exception:
+                return False
+            return True
+        if parameter_type == ParameterTypes.BOOL:
+            return isinstance(value, int)
+        if parameter_type == ParameterTypes.TEXT:
+            return isinstance(value, basestring)
+        if parameter_type == ParameterTypes.ENUM:
+            return isinstance(value, ParameterEnum)
+        if parameter_type == ParameterTypes.LIST_STR:
+            return isinstance(value, list) and all(ParameterTypesUtils.value_is_valid(x, ParameterTypes.STR) for x in value)
+        if parameter_type == ParameterTypes.LIST_INT:
+            return isinstance(value, list) and all(ParameterTypesUtils.value_is_valid(x, ParameterTypes.INT) for x in value)
+        if parameter_type == ParameterTypes.CODE:
+            return isinstance(value, ParameterCode)
+        else:
+            return False
+
+
+# TODO remove Widget
+class ParameterWidget(DBObject):
+    FIELDS = {
+        'alias': DBObjectField(
+            type=str,
+            default='',
+            is_list=False,
+            ),
+    }
 
     def __str__(self):
         return 'ParameterWidget(alias="{}")'.format(self.alias)
@@ -21,77 +105,61 @@ class ParameterWidget(object):
         return 'ParameterWidget({})'.format(str(self.to_dict()))
 
 
-class Parameter(object):
-    def __init__(self,
-                 name,
-                 parameter_type,
-                 value=None,
-                 widget=None,
-                 mutable_type=True,
-                 removable=True,
-                 publicable=True
-                 ):
-        assert isinstance(name, basestring)
-        assert isinstance(parameter_type, basestring)
-        assert widget is None or isinstance(widget, ParameterWidget)
-        assert type(mutable_type) is bool
-        assert type(publicable) is bool
-        assert type(removable) is bool
-        self.name = name
-        self.parameter_type = parameter_type
-        self.mutable_type = mutable_type
-        self.publicable = publicable
-        self.removable = removable
-        if value is None:
-            self.value = ParameterTypes.get_default_by_type(self.parameter_type)
+class Parameter(DBObject):
+    FIELDS = {
+        'name': DBObjectField(
+            type=str,
+            default='',
+            is_list=False,
+            ),
+        'parameter_type': DBObjectField(
+            type=str,
+            default='',
+            is_list=False,
+            ),
+        # TODO make type factory
+        'value': DBObjectField(
+            type=lambda x: x,   # Preserve type
+            default=None,
+            is_list=False,
+            ),
+        'mutable_type': DBObjectField(
+            type=bool,
+            default=True,
+            is_list=False,
+            ),
+        'removable': DBObjectField(
+            type=bool,
+            default=True,
+            is_list=False,
+            ),
+        'publicable': DBObjectField(
+            type=bool,
+            default=True,
+            is_list=False,
+            ),
+        'widget': DBObjectField(
+            type=ParameterWidget,
+            default=None,
+            is_list=False,
+            ),
+    }
+
+    def __init__(self, obj_dict=None):
+        super(Parameter, self).__init__(obj_dict)
+
+        # `value` field is a special case: the type depends on `parameter_type`
+        if self.value is None:
+            self.value = ParameterTypesUtils.get_default_by_type(self.parameter_type)
         elif self.parameter_type == ParameterTypes.ENUM:
-            self.value = ParameterEnum.create_from_dict(value)
+            self.value = ParameterEnum.from_dict(self.value)
         elif self.parameter_type == ParameterTypes.CODE:
-            self.value = ParameterCode.create_from_dict(value)
-        else:
-            self.value = value
-        assert ParameterTypes.value_is_valid(self.value, self.parameter_type), \
+            self.value = ParameterCode.from_dict(self.value)
+        assert ParameterTypesUtils.value_is_valid(self.value, self.parameter_type), \
             "Invalid parameter value type: {}: {}".format(self.name, self.value)
-        self.widget = widget
-
-    def to_dict(self):
-        value = self.value
-        if self.parameter_type in [ParameterTypes.ENUM, ParameterTypes.CODE]:
-            value = self.value.to_dict()
-        return {
-            'name': self.name,
-            'parameter_type': self.parameter_type,
-            'value': value,
-            'mutable_type': self.mutable_type,
-            'removable': self.removable,
-            'publicable': self.publicable,
-            'widget': self.widget.to_dict() if self.widget else None
-        }
-
-    @staticmethod
-    def create_from_dict(parameter_dict):
-        if parameter_dict['widget']:
-            widget = ParameterWidget.create_from_dict(parameter_dict['widget'])
-        else:
-            widget = None
-
-        return Parameter(
-            name=parameter_dict['name'],
-            parameter_type=parameter_dict['parameter_type'],
-            value=parameter_dict['value'],
-            mutable_type=parameter_dict.get('mutable_type', True),
-            publicable=parameter_dict.get('publicable', True),
-            removable=parameter_dict.get('removable', True),
-            widget=widget
-        )
 
     def __str__(self):
         return 'Parameter(name="{}")'.format(self.name)
 
     def __repr__(self):
         return 'Parameter({})'.format(str(self.to_dict()))
-
-    def __getattr__(self, name):
-        if name.startswith('__') and name.endswith('__'):
-            return super(Parameter, self).__getattr__(name)
-        raise Exception("Can't get attribute '{}'".format(name))

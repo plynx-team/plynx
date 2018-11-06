@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import json
+import traceback
 from plynx.db import GraphCollectionManager, Graph
 from plynx.db import GraphCancellationManager
 from flask import request, g
@@ -57,8 +58,7 @@ def post_graph():
     try:
         body = json.loads(request.data)['body']
 
-        graph = Graph()
-        graph.load_from_dict(body['graph'])
+        graph = Graph.from_dict(body['graph'])
         graph.author = g.user._id
         actions = body['actions']
         extra_response = {}
@@ -115,5 +115,5 @@ def post_graph():
                 'url': '{}/graphs/{}'.format(WEB_CONFIG.endpoint.rstrip('/'), str(graph._id))
             }, **extra_response))
     except Exception as e:
-        app.logger.error(e)
+        app.logger.error(traceback.format_exc())
         return _make_fail_response('Internal error: "{}"'.format(repr(e)))

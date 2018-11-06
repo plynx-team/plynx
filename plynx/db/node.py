@@ -1,8 +1,7 @@
 import copy
 import datetime
-from . import DBObject, Input, Output, Parameter, ParameterWidget, ValidationError
-from plynx.utils.db_connector import *
-from plynx.utils.common import to_object_id, ObjectId
+from . import DBObject, DBObjectField, Input, Output, Parameter, ParameterWidget, ValidationError
+from plynx.utils.common import ObjectId
 from plynx.constants import NodeStatus, NodeRunningStatus, FileTypes, ParameterTypes, ValidationTargetType, ValidationCode
 
 
@@ -10,107 +9,94 @@ class Node(DBObject):
     """
     Basic Node with db interface
     """
-
-    PROPERTIES = {'inputs', 'outputs', 'parameters'}
-
-    def __init__(self, node_id=None):
-        super(Node, self).__init__()
-
-        self._id = None
-        self.title = None
-        self.description = None
-        self.base_node_name = None
-        self.parent_node = None
-        self.successor_node = None
-        self.inputs = []
-        self.outputs = []
-        self.parameters = []
-        self.logs = []
-        self.node_running_status = NodeRunningStatus.CREATED
-        self.node_status = NodeStatus.READY
-        self.cache_url = None
-        self.x = 0
-        self.y = 0
-        self.author = None
-        self.public = False
-
-        if node_id:
-            self._id = to_object_id(node_id)
-            self.load()
-        else:
-            self._id = ObjectId()
-
-    def to_dict(self):
-        return {
-            "_id": self._id,
-            "base_node_name": self.base_node_name,
-            "inputs": [input.to_dict() for input in self.inputs],
-            "outputs": [output.to_dict() for output in self.outputs],
-            "parameters": [parameter.to_dict() for parameter in self.parameters],
-            "logs": [log.to_dict() for log in self.logs],
-            "title": self.title,
-            "description": self.description,
-            "parent_node": self.parent_node,
-            "successor_node": self.successor_node,
-            "node_running_status": self.node_running_status,
-            "node_status": self.node_status,
-            "cache_url": self.cache_url,
-            "x": self.x,
-            "y": self.y,
-            "author": self.author,
-            "public": self.public
-        }
-
-    def load_from_dict(self, node_dict):
-        for key, value in node_dict.iteritems():
-            if key not in Node.PROPERTIES:
-                setattr(self, key, value)
-
-        self._id = to_object_id(self._id)
-        self.author = to_object_id(self.author)
-
-        self.inputs = [Input.create_from_dict(input_dict) for input_dict in node_dict['inputs']]
-        self.outputs = [Output.create_from_dict(output_dict) for output_dict in node_dict['outputs']]
-        self.parameters = [Parameter.create_from_dict(parameters_dict) for parameters_dict in node_dict['parameters']]
-        self.logs = [Output.create_from_dict(logs_dict) for logs_dict in node_dict['logs']]
-        return self
-
-    def copy(self):
-        node = Node()
-        node.load_from_dict(self.to_dict())
-        return node
-
-    def save(self, force=False):
-        if not self.is_dirty() and not force:
-            return True
-
-        now = datetime.datetime.utcnow()
-
-        node_dict = self.to_dict()
-        node_dict["update_date"] = now
-
-        db.nodes.find_one_and_update(
-            {'_id': self._id},
-            {
-                "$setOnInsert": {"insertion_date": now},
-                "$set": node_dict
-            },
-            upsert=True,
-        )
-
-        self._dirty = False
-        return True
-
-    def load(self, node=None):
-        if not node:
-            node = db.nodes.find_one({'_id': self._id})
-
-        self.load_from_dict(node)
-
-        self._dirty = False
-
-    def copy(self):
-        return copy.deepcopy(self)
+    FIELDS = {
+        '_id': DBObjectField(
+            type=ObjectId,
+            default=ObjectId,
+            is_list=False,
+            ),
+        'title': DBObjectField(
+            type=str,
+            default='',
+            is_list=False,
+            ),
+        'description': DBObjectField(
+            type=str,
+            default='',
+            is_list=False,
+            ),
+        'base_node_name': DBObjectField(
+            type=str,
+            default='bash_jinja2',
+            is_list=False,
+            ),
+        'parent_node': DBObjectField(
+            type=ObjectId,
+            default=None,
+            is_list=False,
+            ),
+        'successor_node': DBObjectField(
+            type=ObjectId,
+            default=None,
+            is_list=False,
+            ),
+        'inputs': DBObjectField(
+            type=Input,
+            default=list,
+            is_list=True,
+            ),
+        'outputs': DBObjectField(
+            type=Output,
+            default=list,
+            is_list=True,
+            ),
+        'parameters': DBObjectField(
+            type=Parameter,
+            default=list,
+            is_list=True,
+            ),
+        'logs': DBObjectField(
+            type=Output,
+            default=list,
+            is_list=True,
+            ),
+        'node_running_status': DBObjectField(
+            type=str,
+            default=NodeRunningStatus.CREATED,
+            is_list=False,
+            ),
+        'node_status': DBObjectField(
+            type=str,
+            default=NodeStatus.CREATED,
+            is_list=False,
+            ),
+        'cache_url': DBObjectField(
+            type=str,
+            default='',
+            is_list=False,
+            ),
+        'x': DBObjectField(
+            type=int,
+            default=0,
+            is_list=False,
+            ),
+        'y': DBObjectField(
+            type=int,
+            default=0,
+            is_list=False,
+            ),
+        'author': DBObjectField(
+            type=ObjectId,
+            default=None,
+            is_list=False,
+            ),
+        'public': DBObjectField(
+            type=bool,
+            default=False,
+            is_list=False,
+            ),
+    }
+    DB_COLLECTION = 'nodes'
 
     def get_validation_error(self):
         """Return validation error if found; else None"""
@@ -200,11 +186,6 @@ class Node(DBObject):
 
     def __repr__(self):
         return 'Node({})'.format(str(self.to_dict()))
-
-    def __getattr__(self, name):
-        if name.startswith('__') and name.endswith('__'):
-            return super(Node, self).__getattr__(name)
-        raise Exception("Can't get attribute '{}'".format(name))
 
     def _get_custom_element(self, arr, name):
         for parameter in arr:

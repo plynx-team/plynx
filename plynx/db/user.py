@@ -1,6 +1,6 @@
 import datetime
 from passlib.apps import custom_app_context as pwd_context
-from . import DBObject
+from plynx.db import DBObjectField, DBObject
 from plynx.utils.db_connector import *
 from plynx.utils.common import to_object_id, ObjectId
 from plynx.utils.config import get_auth_config
@@ -13,67 +13,26 @@ class User(DBObject):
     """
     Basic User class with db interface
     """
+    FIELDS = {
+        '_id': DBObjectField(
+            type=ObjectId,
+            default=ObjectId,
+            is_list=False,
+            ),
+        'username': DBObjectField(
+            type=str,
+            default='',
+            is_list=False,
+            ),
+        'password_hash': DBObjectField(
+            type=str,
+            default='',
+            is_list=False,
+            ),
+    }
+    DB_COLLECTION = 'users'
 
     AUTH_CONFIG = get_auth_config()
-
-    def __init__(self, user_id=None):
-        super(User, self).__init__()
-        self._id = None
-        self.username = None
-        self.password_hash = None
-
-        if user_id:
-            self._id = to_object_id(user_id)
-            self.load()
-            assert username is None or self.username == username
-
-        if not self._id:
-            self._id = ObjectId()
-
-    def to_dict(self):
-        return {
-            "_id": self._id,
-            "username": self.username,
-            "password_hash": self.password_hash
-        }
-
-    def save(self, force=False):
-        assert isinstance(self._id, ObjectId)
-        assert self.username
-        assert self.password_hash
-
-        if not self.is_dirty() and not force:
-            return True
-
-        now = datetime.datetime.utcnow()
-
-        user_dict = self.to_dict()
-        user_dict["update_date"] = now
-
-        db.users.find_one_and_update(
-            {'_id': self._id},
-            {
-                "$setOnInsert": {"insertion_date": now},
-                "$set": user_dict
-            },
-            upsert=True,
-        )
-
-        self._dirty = False
-        return True
-
-    def load(self):
-        if self._id:
-            user = db.users.find_one({'_id': self._id})
-        if user is None:
-            raise Exception("User not found")
-        self.load_from_dict(user)
-
-    def load_from_dict(self, user):
-        for key, value in user.iteritems():
-            setattr(self, key, value)
-        self._id = to_object_id(self._id)
-        self._dirty = False
 
     def hash_password(self, password):
         self.password_hash = pwd_context.encrypt(password)
@@ -104,9 +63,7 @@ class User(DBObject):
         if not user_dict:
             return None
 
-        user = User()
-        user.load_from_dict(user_dict)
-        return user
+        return User(user_dict)
 
     @staticmethod
     def verify_auth_token(token):

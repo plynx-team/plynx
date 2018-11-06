@@ -29,7 +29,7 @@ class GraphScheduler(object):
             self.graph = graph
         else:
             self.graph_id = graph
-            self.graph = Graph(self.graph_id)
+            self.graph = Graph.load(self.graph_id)
 
         self.node_id_to_node = {
             node._id: node for node in self.graph.nodes
@@ -113,16 +113,21 @@ class GraphScheduler(object):
         return res
 
     def update_node(self, node):
+        dest_node = self.node_id_to_node[node._id]
         if node.node_running_status == NodeRunningStatus.SUCCESS \
-                and self.node_id_to_node[node._id].node_running_status != node.node_running_status \
+                and dest_node.node_running_status != node.node_running_status \
                 and GraphScheduler._cacheable(node):
             GraphScheduler.node_cache_manager.post(node, self.graph_id, self.graph.author)
 
-        if self.node_id_to_node[node._id].node_running_status == node.node_running_status:
+        if dest_node.node_running_status == node.node_running_status:
             return
 
         self._set_node_status(node._id, node.node_running_status)
-        self.node_id_to_node[node._id].load_from_dict(node.to_dict())   # copy
+        # TODO smarter copy
+        dest_node.logs = node.logs
+        dest_node.outputs = node.outputs
+        dest_node.cache_url = node.node_running_status
+
         self.graph.save(force=True)
 
     def _set_node_status(self, node_id, node_running_status):
