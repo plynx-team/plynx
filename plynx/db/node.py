@@ -1,6 +1,6 @@
 import copy
 import datetime
-from . import DBObject, DBObjectField, Input, Output, Parameter, ParameterWidget, ValidationError
+from plynx.db import DBObject, DBObjectField, Input, Output, Parameter, ParameterWidget, ValidationError
 from plynx.utils.common import ObjectId
 from plynx.constants import NodeStatus, NodeRunningStatus, FileTypes, ParameterTypes, ValidationTargetType, ValidationCode
 

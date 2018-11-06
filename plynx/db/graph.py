@@ -1,6 +1,6 @@
 import datetime
 from collections import deque, defaultdict
-from . import DBObject, DBObjectField, Node, ValidationError
+from plynx.db import DBObject, DBObjectField, Node, ValidationError
 from plynx.utils.common import to_object_id, ObjectId
 from plynx.constants import GraphRunningStatus, ValidationTargetType, ValidationCode, ParameterTypes, NodeRunningStatus
 

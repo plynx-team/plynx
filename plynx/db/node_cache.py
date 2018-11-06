@@ -1,7 +1,7 @@
 import copy
 import datetime
 import hashlib
-from . import DBObject, DBObjectField, Input, Output, Parameter, ParameterWidget, ValidationError
+from plynx.db import DBObject, DBObjectField, Input, Output, Parameter, ParameterWidget, ValidationError
 from plynx.utils.db_connector import *
 from plynx.utils.common import to_object_id, ObjectId
 from plynx.constants import NodeStatus, NodeRunningStatus, FileTypes, ParameterTypes, ValidationTargetType, ValidationCode

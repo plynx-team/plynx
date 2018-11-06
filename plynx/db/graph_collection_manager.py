@@ -1,4 +1,4 @@
-from . import Graph, NodeCollectionManager, Node
+from plynx.db import Graph, NodeCollectionManager, Node
 from plynx.utils.common import to_object_id
 from plynx.utils.db_connector import *
 from plynx.constants import NodeStatus

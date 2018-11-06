@@ -1,4 +1,4 @@
-from . import Node, Input, Output, Parameter, ParameterWidget
+from plynx.db import Node, Input, Output, Parameter, ParameterWidget
 from plynx.constants import FileTypes, ParameterTypes
 import unittest
 

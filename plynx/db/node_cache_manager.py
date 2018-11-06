@@ -1,4 +1,4 @@
-from . import NodeCache
+from plynx.db import NodeCache
 from plynx.utils.common import to_object_id
 from plynx.utils.db_connector import *
 from plynx.constants import NodeRunningStatus
