@@ -72,9 +72,9 @@ def post_graph():
             elif action == GraphPostAction.AUTO_LAYOUT:
                 graph.arrange_auto_layout()
 
-            elif action == GraphPostAction.UPDATE_NODES:
-                upd = graph_collection_manager.update_nodes(graph)
-                extra_response['updated_nodes_count'] = upd
+            elif action == GraphPostAction.UPGRADE_NODES:
+                upd = graph_collection_manager.upgrade_nodes(graph)
+                extra_response['upgraded_nodes_count'] = upd
 
             elif action == GraphPostAction.APPROVE:
                 if graph.graph_running_status != GraphRunningStatus.CREATED:

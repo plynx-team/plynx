@@ -10,9 +10,8 @@ from itsdangerous import (SignatureExpired, BadSignature,
 
 
 class User(DBObject):
-    """
-    Basic User class with db interface
-    """
+    """Basic User class with db interface."""
+
     FIELDS = {
         '_id': DBObjectField(
             type=ObjectId,
@@ -30,21 +29,48 @@ class User(DBObject):
             is_list=False,
             ),
     }
+
     DB_COLLECTION = 'users'
 
     AUTH_CONFIG = get_auth_config()
 
     def hash_password(self, password):
+        """Change password.
+
+        Args:
+            password    (str)   Real password string
+        """
         self.password_hash = pwd_context.encrypt(password)
 
     def verify_password(self, password):
+        """Verify password.
+
+        Args:
+            password    (str)   Real password string
+
+        Return:
+            (bool)    True if password matches else False
+        """
         return pwd_context.verify(password, self.password_hash)
 
     def generate_access_token(self, expiration=600):
+        """Generate access token.
+
+        Args:
+            expiration  (int)   Time to Live (TTL) in sec
+
+        Return:
+            (str)   Secured token
+        """
         s = TimedSerializer(User.AUTH_CONFIG.secret_key, expires_in=expiration)
         return s.dumps({'username': self.username, 'type': 'access'})
 
     def generate_refresh_token(self):
+        """Generate refresh token.
+
+        Return:
+            (str)   Secured token
+        """
         s = Serializer(User.AUTH_CONFIG.secret_key)
         return s.dumps({'username': self.username, 'type': 'refresh'})
 
@@ -59,6 +85,14 @@ class User(DBObject):
 
     @staticmethod
     def find_user_by_name(username):
+        """Find User.
+
+        Args:
+            username    (str)   Username
+
+        Return:
+            (User)   User object or None
+        """
         user_dict = db.users.find_one({'username': username})
         if not user_dict:
             return None
@@ -67,6 +101,14 @@ class User(DBObject):
 
     @staticmethod
     def verify_auth_token(token):
+        """Verify token.
+
+        Args:
+            token   (str)   Token
+
+        Return:
+            (User)   User object or None
+        """
         s = TimedSerializer(User.AUTH_CONFIG.secret_key)
         try:
             data = s.loads(token)

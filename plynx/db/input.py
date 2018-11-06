@@ -3,6 +3,8 @@ from plynx.db import DBObjectField, DBObject
 
 
 class InputValue(DBObject):
+    """Basic Value of the Input structure."""
+
     FIELDS = {
         'node_id': DBObjectField(
             type=str,
@@ -29,6 +31,8 @@ class InputValue(DBObject):
 
 
 class Input(DBObject):
+    """Basic Input structure."""
+
     FIELDS = {
         'name': DBObjectField(
             type=str,

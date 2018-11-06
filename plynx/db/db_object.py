@@ -1,3 +1,6 @@
+"""
+The class defines `DBObject` and `DBObjectField`. This is an abstraction of all of the objects in database.
+"""
 import datetime
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
@@ -25,7 +28,9 @@ class DBObject(object):
         obj_dict    (dict, None):   Representation of the object. If None, an object with default fields will be created.
     """
 
+    # Describe all the fields in the Object
     FIELDS = {}
+    # Name of the collection in the database
     DB_COLLECTION = ''
 
     def __init__(self, obj_dict=None):
@@ -73,7 +78,7 @@ class DBObject(object):
         return cls.from_dict(obj_dict)
 
     def save(self, force=False):
-        """"""
+        """Save Object in the database"""
         if not self.__class__.DB_COLLECTION:
             raise ClassNotSavable(
                 "Class `{}` is not savable.".format(
@@ -107,7 +112,6 @@ class DBObject(object):
         Args:
             obj_dict    (dict):     Representation of the object,
                                     i.e. {'name': 'Obj Name', 'size': 12}
-
         """
         return cls(obj_dict)
 
@@ -133,15 +137,7 @@ class DBObject(object):
     def copy(self):
         """Make a copy
 
-        Returns:
+        Return:
             A copy of the Object
         """
         return self.__class__(self.to_dict())
-
-    """
-    TODO REMOVE?
-    def __getattr__(self, name):
-        if name.startswith('__') and name.endswith('__'):
-            return super(NodeCache, self).__getattr__(name)
-        raise Exception("Can't get attribute '{}'".format(name))
-    """

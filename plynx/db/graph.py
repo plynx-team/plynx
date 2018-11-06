@@ -6,9 +6,8 @@ from plynx.constants import GraphRunningStatus, ValidationTargetType, Validation
 
 
 class Graph(DBObject):
-    """
-    Basic graph with db interface
-    """
+    """Basic graph with db interface."""
+
     FIELDS = {
         '_id': DBObjectField(
             type=ObjectId,
@@ -46,9 +45,11 @@ class Graph(DBObject):
             is_list=True,
             ),
     }
+
     DB_COLLECTION = 'graphs'
 
     def cancel(self):
+        """Cancel the graph."""
         self.graph_running_status = GraphRunningStatus.CANCELED
         for node in self.nodes:
             if node.node_running_status in [NodeRunningStatus.RUNNING, NodeRunningStatus.IN_QUEUE]:
@@ -56,7 +57,11 @@ class Graph(DBObject):
         self.save(force=True)
 
     def get_validation_error(self):
-        """Return validation error if found; else None"""
+        """Validate Graph.
+
+        Return:
+            (ValidationError)   Validation error if found; else None
+        """
         violations = []
         if self.title == '':
             violations.append(
@@ -90,8 +95,7 @@ class Graph(DBObject):
         )
 
     def arrange_auto_layout(self):
-        """Use heuristic to rearange nodes.
-        """
+        """Use heuristic to rearange nodes."""
         HEADER_HEIGHT = 23
         DESCRIPTION_HEIGHT = 20
         FOOTER_HEIGHT = 10

@@ -6,9 +6,8 @@ from plynx.constants import NodeStatus, NodeRunningStatus, FileTypes, ParameterT
 
 
 class Node(DBObject):
-    """
-    Basic Node with db interface
-    """
+    """Basic Node with db interface."""
+
     FIELDS = {
         '_id': DBObjectField(
             type=ObjectId,
@@ -96,10 +95,15 @@ class Node(DBObject):
             is_list=False,
             ),
     }
+
     DB_COLLECTION = 'nodes'
 
     def get_validation_error(self):
-        """Return validation error if found; else None"""
+        """Validate Node.
+
+        Return:
+            (ValidationError)   Validation error if found; else None
+        """
         violations = []
         if self.title == '':
             violations.append(
@@ -162,6 +166,11 @@ class Node(DBObject):
         )
 
     def apply_properties(self, other_node):
+        """Apply Properties and Inputs of another Node.
+
+        Args:
+            other_node  (Node):     A node to copy Properties and Inputs from
+        """
         for other_input in other_node.inputs:
             for input in self.inputs:
                 if other_input.name == input.name:

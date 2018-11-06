@@ -236,7 +236,7 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                     self._new_graph_schedulers = []
 
                     # pull Graph cancellation events and cancel the Graphs
-                    graph_cancellations = list(graph_cancellation_manager.get_new_graph_cancellations())
+                    graph_cancellations = list(graph_cancellation_manager.get_graph_cancellations())
                     for graph_cancellation in graph_cancellations:
                         if graph_cancellation.graph_id in self._graph_id_to_scheduler:
                             self._graph_id_to_scheduler[graph_cancellation.graph_id].graph.cancel()

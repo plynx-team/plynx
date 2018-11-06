@@ -8,8 +8,7 @@ import random
 
 
 class DemoUserManager(object):
-    """
-    """
+    """The class contains Demo user code."""
     demo_config = get_demo_config()
 
     @staticmethod

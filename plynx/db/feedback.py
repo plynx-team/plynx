@@ -5,9 +5,8 @@ from plynx.utils.common import to_object_id, ObjectId
 
 
 class Feedback(DBObject):
-    """
-    Basic Feedback class with db interface
-    """
+    """Basic Feedback class with db interface."""
+
     FIELDS = {
         '_id': DBObjectField(
             type=ObjectId,
@@ -35,6 +34,7 @@ class Feedback(DBObject):
             is_list=False,
             ),
     }
+
     DB_COLLECTION = 'feedback'
 
     def __str__(self):

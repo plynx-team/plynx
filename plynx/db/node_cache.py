@@ -8,9 +8,8 @@ from plynx.constants import NodeStatus, NodeRunningStatus, FileTypes, ParameterT
 
 
 class NodeCache(DBObject):
-    """
-    Basic Node Cache with db interface
-    """
+    """Basic Node Cache with db interface."""
+
     FIELDS = {
         '_id': DBObjectField(
             type=ObjectId,
@@ -43,22 +42,44 @@ class NodeCache(DBObject):
             is_list=True,
             ),
     }
+
     DB_COLLECTION = 'node_cache'
 
     IGNORED_PARAMETERS = {'cmd'}
 
     @staticmethod
     def instantiate(node, graph_id, user_id):
+        """Instantiate a Node Cache from Node.
+
+        Args:
+            node        (Node):             Node object
+            graph_id    (ObjectId, str):    Graph ID
+            user_id     (ObjectId, str):    User ID
+
+        Return:
+            (NodeCache)
+        """
+
         return NodeCache({
             'key': NodeCache.generate_key(node, user_id),
             'node_id': node._id,
+            'graph_id': graph_id,
             'outputs': [output.to_dict() for output in node.outputs],
             'logs': [log.to_dict() for log in node.logs],
         })
 
-    # TODO from Demo: remove user_id
+    # TODO after Demo: remove user_id
     @staticmethod
     def generate_key(node, user_id):
+        """Generate hash.
+
+        Args:
+            node        (Node):             Node object
+            user_id     (ObjectId, str):    User ID
+
+        Return:
+            (str)   Hash value
+        """
         inputs = node.inputs
         parameters = node.parameters
         parent_node = node.parent_node

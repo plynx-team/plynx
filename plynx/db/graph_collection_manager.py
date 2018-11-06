@@ -5,8 +5,7 @@ from plynx.constants import NodeStatus
 
 
 class GraphCollectionManager(object):
-    """
-    """
+    """GraphCollectionManager contains all the operations to work with Graphs in the database."""
 
     node_collection_manager = NodeCollectionManager()
 
@@ -41,7 +40,14 @@ class GraphCollectionManager(object):
         return new_node
 
     @staticmethod
-    def update_nodes(graph):
+    def upgrade_nodes(graph):
+        """Upgrade deprecated Nodes.
+
+        The function does not change the Graph in the database.
+
+        Return:
+            (int)   Number of upgraded Nodes
+        """
         node_ids = set(
             [to_object_id(node.parent_node) for node in graph.nodes]
         )
@@ -66,15 +72,20 @@ class GraphCollectionManager(object):
                 Node.from_dict(new_node_db_mapping[to_object_id(node.parent_node)])
             ) for node in graph.nodes]
 
-        updated_nodes_count = sum(1
-                                  for node, new_node in zip(graph.nodes, new_nodes) if node.parent_node != new_node.parent_node
-                                  )
+        upgraded_nodes_count = sum(
+            1 for node, new_node in zip(graph.nodes, new_nodes) if node.parent_node != new_node.parent_node
+        )
 
         graph.nodes = new_nodes
-        return updated_nodes_count
+        return upgraded_nodes_count
 
     @staticmethod
     def get_graphs(graph_running_status):
+        """Find all the Graphs with a given graph_running_status.
+
+        Args:
+            graph_running_status    (str):  Graph Running Status
+        """
         db_graphs = db.graphs.find({'graph_running_status': graph_running_status})
         graphs = []
         for db_graph in db_graphs:
@@ -94,8 +105,20 @@ class GraphCollectionManager(object):
 
         return and_query
 
+    # TODO remove `author` / make default
     @staticmethod
     def get_db_graphs(author, search=None, per_page=20, offset=0):
+        """Get subset of the Graphs.
+
+        Args:
+            author      (ObjectId):     Author of the Graphs
+            search      (str):          Search pattern
+            per_page    (int):          Number of Graphs per page
+            offset      (int):          Offset
+
+        Return:
+            (list of dicts)     List of Graphs in dict format
+        """
         and_query = GraphCollectionManager._get_basic_query(
             author=author,
             search=search,
@@ -107,6 +130,15 @@ class GraphCollectionManager(object):
 
     @staticmethod
     def get_db_graphs_count(author, search=None):
+        """Get number of the Graphs that satisfy given conditions.
+
+        Args:
+            author      (ObjectId):     Author of the Graphs
+            search      (str):          Search pattern
+
+        Return:
+            (int)   Number of Graphs found.
+        """
         and_query = GraphCollectionManager._get_basic_query(
             author=author,
             search=search,
@@ -117,6 +149,14 @@ class GraphCollectionManager(object):
 
     @staticmethod
     def get_db_graph(graph_id):
+        """Get dict representation of the Graph.
+
+        Args:
+            graph_id    (ObjectId, str):    Graph ID
+
+        Return:
+            (dict)  dict representation of the Graph
+        """
         return GraphCollectionManager._update_node_statuses(
             db.graphs.find_one({'_id': to_object_id(graph_id)})
         )

@@ -4,8 +4,7 @@ from plynx.utils.db_connector import *
 
 
 class NodeCollectionManager(object):
-    """
-    """
+    """NodeCollectionManager contains all the operations to work with Nodes in the database."""
 
     @staticmethod
     def _get_basic_query(author, status, base_node_names, search):
@@ -29,8 +28,22 @@ class NodeCollectionManager(object):
 
         return and_query
 
+    # TODO remove `author` / make default
     @staticmethod
     def get_db_nodes(author, status=None, base_node_names=None, search=None, per_page=20, offset=0):
+        """Get subset of the Nodes.
+
+        Args:
+            author              (ObjectId):                 Author of the Nodes
+            status              (str, None):                Node Running Status
+            base_node_names     (str, list of str, None):   Node Running Status
+            search              (str, None):                Search pattern
+            per_page            (int):                      Number of Nodes per page
+            offset              (int):                      Offset
+
+        Return:
+            (list of dict)  List of Nodes in dict format
+        """
         and_query = NodeCollectionManager._get_basic_query(
             author=author,
             status=status,
@@ -50,6 +63,11 @@ class NodeCollectionManager(object):
 
     @staticmethod
     def get_db_nodes_by_ids(ids):
+        """Find all the Nodes with a given IDs.
+
+        Args:
+            ids    (list of ObjectID):  Node Ids
+        """
         db_nodes = db.nodes.find({
             '_id': {
                 '$in': list(ids)
@@ -60,6 +78,17 @@ class NodeCollectionManager(object):
 
     @staticmethod
     def get_db_nodes_count(author, status=None, base_node_names=None, search=None):
+        """Get number of the Nodes with given conditions.
+
+        Args:
+            author              (ObjectId):                 Author of the Nodes
+            status              (str, None):                Node Running Status
+            base_node_names     (str, list of str, None):   Node Running Status
+            search              (str, None):                Search pattern
+
+        Return:
+            (int)   Number of Nodes
+        """
         and_query = NodeCollectionManager._get_basic_query(
             author=author,
             status=status,
@@ -73,6 +102,15 @@ class NodeCollectionManager(object):
 
     @staticmethod
     def get_db_node(node_id, author=None):
+        """Get dict representation of the Graph.
+
+        Args:
+            node_id     (ObjectId, str):        Node ID
+            author      (str, ObjectId, None):  Author ID
+
+        Return:
+            (dict)  dict representation of the Graph
+        """
         res = db.nodes.find_one({'_id': to_object_id(node_id)})
         if res:
             res['_readonly'] = (author != to_object_id(res['author']))

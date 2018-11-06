@@ -1,4 +1,6 @@
 class ValidationError(object):
+    """Basic Validation Error class."""
+
     def __init__(self, target, object_id, validation_code, children=None):
         children = children or []
         assert isinstance(target, basestring), "validation value error"

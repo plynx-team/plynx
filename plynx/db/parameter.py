@@ -3,6 +3,8 @@ from plynx.constants import ParameterTypes
 
 
 class ParameterEnum(DBObject):
+    """Enum value."""
+
     FIELDS = {
         'values': DBObjectField(
             type=str,
@@ -21,6 +23,8 @@ class ParameterEnum(DBObject):
 
 
 class ParameterCode(DBObject):
+    """Code value."""
+
     FIELDS = {
         'value': DBObjectField(
             type=str,
@@ -34,62 +38,63 @@ class ParameterCode(DBObject):
             ),
     }
 
+    # Unused
     MODES = {'python'}
 
     def __repr__(self):
         return 'ParameterCode({})'.format(str(self.to_dict()))
 
 
-class ParameterTypesUtils:
-    @staticmethod
-    def get_default_by_type(parameter_type):
-        if parameter_type == ParameterTypes.STR:
-            return ''
-        if parameter_type == ParameterTypes.INT:
-            return 0
-        if parameter_type == ParameterTypes.BOOL:
-            return False
-        if parameter_type == ParameterTypes.TEXT:
-            return ''
-        if parameter_type == ParameterTypes.ENUM:
-            return ParameterEnum()
-        if parameter_type == ParameterTypes.LIST_STR:
-            return []
-        if parameter_type == ParameterTypes.LIST_INT:
-            return []
-        if parameter_type == ParameterTypes.CODE:
-            return ParameterCode()
-        else:
-            return None
+def _get_default_by_type(parameter_type):
+    if parameter_type == ParameterTypes.STR:
+        return ''
+    if parameter_type == ParameterTypes.INT:
+        return 0
+    if parameter_type == ParameterTypes.BOOL:
+        return False
+    if parameter_type == ParameterTypes.TEXT:
+        return ''
+    if parameter_type == ParameterTypes.ENUM:
+        return ParameterEnum()
+    if parameter_type == ParameterTypes.LIST_STR:
+        return []
+    if parameter_type == ParameterTypes.LIST_INT:
+        return []
+    if parameter_type == ParameterTypes.CODE:
+        return ParameterCode()
+    else:
+        return None
 
-    @staticmethod
-    def value_is_valid(value, parameter_type):
-        if parameter_type == ParameterTypes.STR:
-            return isinstance(value, basestring)
-        if parameter_type == ParameterTypes.INT:
-            try:
-                tmp = int(value)
-            except Exception:
-                return False
-            return True
-        if parameter_type == ParameterTypes.BOOL:
-            return isinstance(value, int)
-        if parameter_type == ParameterTypes.TEXT:
-            return isinstance(value, basestring)
-        if parameter_type == ParameterTypes.ENUM:
-            return isinstance(value, ParameterEnum)
-        if parameter_type == ParameterTypes.LIST_STR:
-            return isinstance(value, list) and all(ParameterTypesUtils.value_is_valid(x, ParameterTypes.STR) for x in value)
-        if parameter_type == ParameterTypes.LIST_INT:
-            return isinstance(value, list) and all(ParameterTypesUtils.value_is_valid(x, ParameterTypes.INT) for x in value)
-        if parameter_type == ParameterTypes.CODE:
-            return isinstance(value, ParameterCode)
-        else:
+
+def _value_is_valid(value, parameter_type):
+    if parameter_type == ParameterTypes.STR:
+        return isinstance(value, basestring)
+    if parameter_type == ParameterTypes.INT:
+        try:
+            tmp = int(value)
+        except Exception:
             return False
+        return True
+    if parameter_type == ParameterTypes.BOOL:
+        return isinstance(value, int)
+    if parameter_type == ParameterTypes.TEXT:
+        return isinstance(value, basestring)
+    if parameter_type == ParameterTypes.ENUM:
+        return isinstance(value, ParameterEnum)
+    if parameter_type == ParameterTypes.LIST_STR:
+        return isinstance(value, list) and all(_value_is_valid(x, ParameterTypes.STR) for x in value)
+    if parameter_type == ParameterTypes.LIST_INT:
+        return isinstance(value, list) and all(_value_is_valid(x, ParameterTypes.INT) for x in value)
+    if parameter_type == ParameterTypes.CODE:
+        return isinstance(value, ParameterCode)
+    else:
+        return False
 
 
 # TODO remove Widget
 class ParameterWidget(DBObject):
+    """Basic ParameterWidget structure."""
+
     FIELDS = {
         'alias': DBObjectField(
             type=str,
@@ -106,6 +111,8 @@ class ParameterWidget(DBObject):
 
 
 class Parameter(DBObject):
+    """Basic Parameter structure."""
+
     FIELDS = {
         'name': DBObjectField(
             type=str,
@@ -150,12 +157,12 @@ class Parameter(DBObject):
 
         # `value` field is a special case: the type depends on `parameter_type`
         if self.value is None:
-            self.value = ParameterTypesUtils.get_default_by_type(self.parameter_type)
+            self.value = _get_default_by_type(self.parameter_type)
         elif self.parameter_type == ParameterTypes.ENUM:
             self.value = ParameterEnum.from_dict(self.value)
         elif self.parameter_type == ParameterTypes.CODE:
             self.value = ParameterCode.from_dict(self.value)
-        assert ParameterTypesUtils.value_is_valid(self.value, self.parameter_type), \
+        assert _value_is_valid(self.value, self.parameter_type), \
             "Invalid parameter value type: {}: {}".format(self.name, self.value)
 
     def __str__(self):

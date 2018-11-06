@@ -3,6 +3,8 @@ from plynx.db import DBObjectField, DBObject
 
 
 class Output(DBObject):
+    """Basic Output structure."""
+
     FIELDS = {
         'name': DBObjectField(
             type=str,
