@@ -8,12 +8,13 @@ def get_test_node():
     node.title = 'Command 1x1'
     node.description = 'Any command with 1 arg'
     node.base_node_name = "command"
-    node.inputs = [
-        Input.from_args(
-            name='in',
-            file_types=[FileTypes.FILE],
-            values=[])
-    ]
+
+    node.inputs = []
+    node.inputs.append(Input())
+    node.inputs[-1].name = 'in'
+    node.inputs[-1].file_types = [FileTypes.FILE]
+    node.inputs[-1].values = []
+
     node.outputs = []
     node.outputs.append(Output())
     node.outputs[-1].name = 'out'
@@ -23,15 +24,15 @@ def get_test_node():
     node.parameters = []
     node.parameters.append(Parameter())
     node.parameters[-1].name = 'number'
-    node.parameters[-1].parameter_type=ParameterTypes.INT
-    node.parameters[-1].value=-1
-    node.parameters[-1].widget=ParameterWidget.from_args(alias='Number')
+    node.parameters[-1].parameter_type = ParameterTypes.INT
+    node.parameters[-1].value = -1
+    node.parameters[-1].widget = ParameterWidget.from_dict({'alias': 'Number'})
 
     node.parameters.append(Parameter())
     node.parameters[-1].name = 'cmd'
-    node.parameters[-1].parameter_type=ParameterTypes.STR
-    node.parameters[-1].value='cat ${input[in]} | grep ${param[text]} > ${output[out]}'
-    node.parameters[-1].widget=ParameterWidget.from_args(alias='Command line')
+    node.parameters[-1].parameter_type = ParameterTypes.STR
+    node.parameters[-1].value = 'cat ${input[in]} | grep ${param[text]} > ${output[out]}'
+    node.parameters[-1].widget = ParameterWidget.from_dict({'alias': 'Command line'})
 
     return node
 
@@ -65,6 +66,10 @@ class TestNode(unittest.TestCase):
         node1_dict = node1.to_dict()
         node2 = Node.from_dict(node1_dict)
         node2_dict = node2.to_dict()
+
+        print node1_dict
+        print "-"
+        print node2_dict
 
         self.assertTrue(compare_dictionaries(node1_dict, node2_dict), "Serialized nodes are not equal")
 
