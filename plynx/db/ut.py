@@ -1,45 +1,39 @@
-from . import Block, Input, Output, Parameter, ParameterWidget
+from . import Node, Input, Output, Parameter, ParameterWidget
 from plynx.constants import FileTypes, ParameterTypes
 import unittest
 
 
-def get_test_block():
-    block = Block()
-    block.title = 'Command 1x1'
-    block.description = 'Any command with 1 arg'
-    block.base_block_name = "command"
-    block.inputs = [
-        Input(
+def get_test_node():
+    node = Node()
+    node.title = 'Command 1x1'
+    node.description = 'Any command with 1 arg'
+    node.base_node_name = "command"
+    node.inputs = [
+        Input.from_args(
             name='in',
             file_types=[FileTypes.FILE],
             values=[])
     ]
-    block.outputs = [
-        Output(
-            name='out',
-            file_type=FileTypes.FILE,
-            resource_id=None
-        )
-    ]
-    block.parameters = [
-        Parameter(
-            name='text',
-            parameter_type=ParameterTypes.STR,
-            value='test text',
-            widget=ParameterWidget(
-                alias='text'
-            )
-        ),
-        Parameter(
-            name='cmd',
-            parameter_type=ParameterTypes.STR,
-            value='cat ${input[in]} | grep ${param[text]} > ${output[out]}',
-            widget=ParameterWidget(
-                alias='Command line'
-            )
-        ),
-    ]
-    return block
+    node.outputs = []
+    node.outputs.append(Output())
+    node.outputs[-1].name = 'out'
+    node.outputs[-1].file_type = FileTypes.FILE
+    node.outputs[-1].resource_id = None
+
+    node.parameters = []
+    node.parameters.append(Parameter())
+    node.parameters[-1].name = 'number'
+    node.parameters[-1].parameter_type=ParameterTypes.INT
+    node.parameters[-1].value=-1
+    node.parameters[-1].widget=ParameterWidget.from_args(alias='Number')
+
+    node.parameters.append(Parameter())
+    node.parameters[-1].name = 'cmd'
+    node.parameters[-1].parameter_type=ParameterTypes.STR
+    node.parameters[-1].value='cat ${input[in]} | grep ${param[text]} > ${output[out]}'
+    node.parameters[-1].widget=ParameterWidget.from_args(alias='Command line')
+
+    return node
 
 
 def compare_dictionaries(dict1, dict2):
@@ -64,16 +58,15 @@ def compare_dictionaries(dict1, dict2):
     return dicts_are_equal
 
 
-class TestBlock(unittest.TestCase):
+class TestNode(unittest.TestCase):
 
     def test_serialization(self):
-        block1 = get_test_block()
-        block1_dict = block1.to_dict()
-        block2 = Block()
-        block2.load_from_dict(block1_dict)
-        block2_dict = block2.to_dict()
+        node1 = get_test_node()
+        node1_dict = node1.to_dict()
+        node2 = Node.from_dict(node1_dict)
+        node2_dict = node2.to_dict()
 
-        self.assertTrue(compare_dictionaries(block1_dict, block2_dict), "Serialized blocks are not equal")
+        self.assertTrue(compare_dictionaries(node1_dict, node2_dict), "Serialized nodes are not equal")
 
 
 if __name__ == '__main__':

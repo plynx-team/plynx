@@ -121,13 +121,13 @@ class Parameter(DBObject):
             ),
         'parameter_type': DBObjectField(
             type=str,
-            default='',
+            default=ParameterTypes.STR,
             is_list=False,
             ),
         # TODO make type factory
         'value': DBObjectField(
             type=lambda x: x,   # Preserve type
-            default=None,
+            default='',
             is_list=False,
             ),
         'mutable_type': DBObjectField(
