@@ -1,5 +1,7 @@
+from __future__ import print_function
 import argparse
 from collections import namedtuple
+import plynx
 from plynx.utils.config import get_config
 from plynx.service import run_master, run_worker
 from plynx.utils.logs import set_logging_level
@@ -22,6 +24,10 @@ def master(args):
 def worker(args):
     set_logging_level(args.pop('verbose', 0))
     run_worker(**args)
+
+
+def version(args):
+    print('PLynx version: {}'.format(plynx.__version__))
 
 
 class CLIFactory(object):
@@ -63,6 +69,10 @@ class CLIFactory(object):
             'func': worker,
             'help': 'Run Worker',
             'args': ('verbose', 'host', 'port', 'worker_id'),
+        }, {
+            'func': version,
+            'help': "Show the version",
+            'args': tuple(),
         }
     )
 
