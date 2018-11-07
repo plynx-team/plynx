@@ -1,8 +1,9 @@
+import logging
 import yaml
-import os.path
+import os
 from collections import namedtuple
 
-CONFIG_NAME = 'config.yaml'
+PLYNX_CONFIG_PATH = os.getenv('PLYNX_CONFIG_PATH', 'config.yaml')
 _config = None
 
 MasterConfig = namedtuple('MasterConfig', 'host port')
@@ -29,9 +30,12 @@ Config = namedtuple(
 
 def __init__():
     global _config
-    with open(CONFIG_NAME) as f:
-        _config = yaml.safe_load(f)
-    print _config
+    if os.path.exists(PLYNX_CONFIG_PATH):
+        with open(PLYNX_CONFIG_PATH) as f:
+            _config = yaml.safe_load(f)
+    else:
+        logging.critical('PLYNX_CONFIG_PATH `{}` is not found'.format(PLYNX_CONFIG_PATH))
+        _config = {}
 
 
 def get_master_config():
