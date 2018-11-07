@@ -375,19 +375,15 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
         self.shutdown()
 
 
-def parse_arguments():
-    parser = argparse.ArgumentParser(description='Master launcher')
-    parser.add_argument('-v', '--verbose', action='count', default=0)
-    return parser.parse_args()
+def run_master(host, port):
+    """Run master Daemon. It will run in the same thread.
 
-
-if __name__ == "__main__":
-    args = parse_arguments()
-    set_logging_level(args.verbose)
+    Args:
+        host    (str):  Host
+        port    (int):  Port
+    """
     logging.info("Init master")
-
-    master_config = get_master_config()
-    master = Master((master_config.host, master_config.port), ClientTCPHandler)
+    master = Master((host, port), ClientTCPHandler)
 
     # Activate the server; this will keep running until you
     # interrupt the program with Ctrl-C

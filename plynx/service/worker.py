@@ -8,10 +8,6 @@ from tempfile import SpooledTemporaryFile
 from . import WorkerMessage, WorkerMessageType, RunStatus, MasterMessageType, send_msg, recv_msg
 from plynx.constants import JobReturnStatus
 from plynx.utils.file_handler import upload_file_stream
-from plynx.utils.logs import set_logging_level
-
-
-DEFAULT_HOST, DEFAULT_PORT = "127.0.0.1", 10000
 
 
 class RunningPipelineException(Exception):
@@ -199,8 +195,14 @@ class Worker:
         self._stop_event.set()
 
 
-def run_worker(worker_id=None, verbose=0, host=DEFAULT_HOST, port=DEFAULT_PORT):
-    set_logging_level(verbose)
+def run_worker(host, port, worker_id=None):
+    """Run master Daemon. It will run in the same thread.
+
+    Args:
+        worker_id   (str):  Worker ID. It will be generated if empty or not given
+        host    (str):  Master Host
+        port    (int):  Master Port
+    """
     worker = Worker(
         worker_id=worker_id,
         host=host,
@@ -211,14 +213,3 @@ def run_worker(worker_id=None, verbose=0, host=DEFAULT_HOST, port=DEFAULT_PORT):
         worker.serve_forever()
     except KeyboardInterrupt:
         worker.stop()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Run worker')
-    parser.add_argument('-i', '--worker-id', help='Any string identificator')
-    parser.add_argument('-v', '--verbose', action='count', default=0)
-    parser.add_argument('-H', '--host', default=DEFAULT_HOST)
-    parser.add_argument('-P', '--port', default=DEFAULT_PORT)
-    args = parser.parse_args()
-
-    run_worker(**vars(args))
