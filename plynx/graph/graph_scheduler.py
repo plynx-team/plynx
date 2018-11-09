@@ -1,6 +1,5 @@
 import logging
 from abc import ABCMeta, abstractmethod
-from enum import Enum
 from collections import defaultdict
 from plynx.db import Graph, NodeCacheManager
 from plynx.constants import NodeRunningStatus, GraphRunningStatus
@@ -175,21 +174,3 @@ class GraphScheduler(object):
             if parameter.name == 'cacheable':
                 return parameter.value
         return False
-
-
-def main():
-    graph_scheduler = GraphScheduler('5a6d78570310e925ad2437a5')
-
-    while not graph_scheduler.finished():
-        jobs = graph_scheduler.pop_jobs()
-        for job in jobs:
-            node = job.node
-            print(repr(node))
-            for output in node.outputs:
-                output.resource_id = 'A'
-            node.node_running_status = NodeRunningStatus.SUCCESS
-            graph_scheduler.update_node(node)
-
-
-if __name__ == "__main__":
-    main()

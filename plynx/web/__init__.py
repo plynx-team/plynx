@@ -4,4 +4,4 @@ from plynx.web.graph import get_graph, post_graph
 from plynx.web.resource import get_resource, post_resource
 from plynx.web.user import new_user, get_auth_token, post_demo_user
 from plynx.web.feedback import new_feedback
-from gevent.wsgi import WSGIServer
+from gevent.pywsgi import WSGIServer

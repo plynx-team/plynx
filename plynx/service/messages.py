@@ -1,8 +1,7 @@
-from enum import Enum
 from collections import namedtuple
 
 
-class WorkerMessageType(Enum):
+class WorkerMessageType:
     """Basic Massage type from Worker"""
     UNKNOWN = 0
     HEARTBEAT = 1
@@ -11,7 +10,7 @@ class WorkerMessageType(Enum):
     JOB_FINISHED_FAILED = 4
 
 
-class RunStatus(Enum):
+class RunStatus:
     """Worker running status"""
     IDLE = 0
     RUNNING = 1
@@ -19,7 +18,7 @@ class RunStatus(Enum):
     FAILED = 3
 
 
-class MasterMessageType(Enum):
+class MasterMessageType:
     """Basic Massage type from Master"""
     UNKNOWN = 0
     AKNOWLEDGE = 1

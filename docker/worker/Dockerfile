@@ -13,4 +13,4 @@ RUN chmod 1777 /tmp
 EXPOSE 10000
 
 # Run app.py when the container launches
-ENTRYPOINT python -m plynx.bin worker -vvv --host master
+ENTRYPOINT plynx worker -vvv --host master

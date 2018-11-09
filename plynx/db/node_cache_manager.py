@@ -13,13 +13,6 @@ class NodeCacheManager(object):
         - parameters
     """
 
-    def __init__(self):
-        NodeCacheManager._init_index()
-
-    @staticmethod
-    def _init_index():
-        db.node_cache.create_index('key', name='key_index', background=True)
-
     @staticmethod
     def get(node, user_id):
         """Pull NodeCache if exists.

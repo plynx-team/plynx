@@ -1,9 +1,9 @@
-class JobReturnStatus(object):
+class JobReturnStatus:
     SUCCESS = 'SUCCESS'
     FAILED = 'FAILED'
 
 
-class NodeRunningStatus(object):
+class NodeRunningStatus:
     STATIC = 'STATIC'
     CREATED = 'CREATED'
     IN_QUEUE = 'IN_QUEUE'
@@ -26,7 +26,7 @@ class NodeRunningStatus(object):
         return node_running_status in NodeRunningStatus._FINISHED_STATUSES
 
 
-class NodeStatus(object):
+class NodeStatus:
     CREATED = 'CREATED'
     READY = 'READY'
     DEPRECATED = 'DEPRECATED'
@@ -42,7 +42,7 @@ class NodePostAction:
     PREVIEW_CMD = 'PREVIEW_CMD'
 
 
-class NodePostStatus(object):
+class NodePostStatus:
     SUCCESS = 'SUCCESS'
     FAILED = 'FAILED'
     VALIDATION_FAILED = 'VALIDATION_FAILED'

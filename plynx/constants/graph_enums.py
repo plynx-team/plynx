@@ -1,4 +1,4 @@
-class GraphRunningStatus(object):
+class GraphRunningStatus:
     CREATED = 'CREATED'
     READY = 'READY'
     RUNNING = 'RUNNING'
@@ -16,7 +16,7 @@ class GraphPostAction:
     CANCEL = 'CANCEL'
 
 
-class GraphPostStatus(object):
+class GraphPostStatus:
     SUCCESS = 'SUCCESS'
     FAILED = 'FAILED'
     VALIDATION_FAILED = 'VALIDATION_FAILED'

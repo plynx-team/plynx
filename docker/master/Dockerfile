@@ -8,4 +8,4 @@ WORKDIR /app
 EXPOSE 10000
 
 # Run app.py when the container launches
-ENTRYPOINT python -m plynx.bin master -vvv
+ENTRYPOINT plynx master -vvv --host 0.0.0.0

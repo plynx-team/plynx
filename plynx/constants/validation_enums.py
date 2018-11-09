@@ -1,4 +1,4 @@
-class ValidationTargetType(object):
+class ValidationTargetType:
     BLOCK = 'BLOCK'
     GRAPH = 'GRAPH'
     INPUT = 'INPUT'
@@ -7,7 +7,7 @@ class ValidationTargetType(object):
     PROPERTY = 'PROPERTY'
 
 
-class ValidationCode(object):
+class ValidationCode:
     IN_DEPENDENTS = 'IN_DEPENDENTS'
     MISSING_INPUT = 'MISSING_INPUT'
     MISSING_PARAMETER = 'MISSING_PARAMETER'

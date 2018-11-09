@@ -1,4 +1,4 @@
-class FileTypes(object):
+class FileTypes:
     FILE = 'file'
     PDF = 'pdf'
     IMAGE = 'image'

@@ -13,18 +13,13 @@ RUN apt-get install -y \
     bc \
     mongodb-clients
 
-# Copy the current directory contents into the container at /app
-ADD ./docker/base/requirements.txt /app
-
-RUN pip install --upgrade pip
-RUN pip install --trusted-host pypi.python.org -r /app/requirements.txt
-
 # Copy config
 ADD ./docker/base/test_config.yaml /app/config.yaml
 
-# Clean up
-RUN rm /app/requirements.txt
-
 # Copy the current directory contents into the container at /app
-ADD ./plynx /app/plynx
 ADD ./wsgi.py /app/wsgi.py
+
+# Build PLynx package
+ADD ./plynx /tmp/plynx
+ADD ./setup.py /tmp/setup.py
+RUN cd /tmp && python setup.py install

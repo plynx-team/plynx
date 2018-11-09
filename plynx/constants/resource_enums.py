@@ -1,3 +1,3 @@
-class ResourcePostStatus(object):
+class ResourcePostStatus:
     SUCCESS = 'SUCCESS'
     FAILED = 'FAILED'

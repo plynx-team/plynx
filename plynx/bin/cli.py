@@ -27,7 +27,7 @@ def worker(args):
 
 
 def version(args):
-    print('PLynx version: {}'.format(plynx.__version__))
+    print(plynx.__version__)
 
 
 class CLIFactory(object):
