@@ -1,5 +1,5 @@
 import json
-from . import BaseBash
+from plynx.graph.base_nodes import BaseBash
 
 
 class Command(BaseBash):

@@ -1,7 +1,7 @@
 import copy
 from past.builtins import basestring
 from bson.objectid import ObjectId
-from . import InvalidTypeArgumentError, MissingArgumentError, \
+from plynx.api import InvalidTypeArgumentError, MissingArgumentError, \
     Inputs, Outputs, Params, BaseNode
 
 REQUIRED_ARGUMENTS = {

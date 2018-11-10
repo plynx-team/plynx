@@ -1,5 +1,5 @@
 import jinja2
-from . import BaseBash
+from plynx.graph.base_nodes import BaseBash
 
 
 class BashJinja2(BaseBash):

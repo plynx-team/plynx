@@ -1,8 +1,8 @@
-from . import ApiActionError, _GraphPostStatus, _ValidationCode
 import json
 import requests
 import logging
 import time
+from plynx.api import ApiActionError, _GraphPostStatus, _ValidationCode
 
 
 def _get_obj(obj_path, obj_id, client):

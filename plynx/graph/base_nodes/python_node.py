@@ -1,5 +1,5 @@
 from past.builtins import basestring
-from . import BaseBash
+from plynx.graph.base_nodes import BaseBash
 
 
 class PythonNode(BaseBash):

@@ -10,7 +10,7 @@ from plynx.constants import JobReturnStatus, NodeStatus, FileTypes, ParameterTyp
 from plynx.db import Node, Output, Parameter
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
 from plynx.utils.config import get_worker_config
-from . import BaseNode
+from plynx.graph.base_nodes import BaseNode
 
 WORKER_CONFIG = get_worker_config()
 

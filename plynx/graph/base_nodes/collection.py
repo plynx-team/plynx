@@ -1,6 +1,6 @@
 import os
 import sys
-from . import BaseNode
+from plynx.graph.base_nodes import BaseNode
 
 
 class NodeCollection:

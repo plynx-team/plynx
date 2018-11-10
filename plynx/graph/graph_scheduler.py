@@ -3,7 +3,7 @@ from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from plynx.db import Graph, NodeCacheManager
 from plynx.constants import NodeRunningStatus, GraphRunningStatus
-from .base_nodes import NodeCollection
+from plynx.graph.base_nodes import NodeCollection
 from plynx.utils.common import to_object_id
 from plynx.utils.config import get_web_config
 

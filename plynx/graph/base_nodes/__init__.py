@@ -1,3 +1,3 @@
-from .base_node import BaseNode
-from .base_bash import BaseBash
-from .collection import NodeCollection
+from plynx.graph.base_nodes.base_node import BaseNode
+from plynx.graph.base_nodes.base_bash import BaseBash
+from plynx.graph.base_nodes.collection import NodeCollection

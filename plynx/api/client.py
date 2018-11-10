@@ -1,4 +1,4 @@
-from . import _get_access_token
+from plynx.api import _get_access_token
 import os
 
 

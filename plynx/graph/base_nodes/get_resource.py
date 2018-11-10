@@ -1,4 +1,4 @@
-from . import BaseNode
+from plynx.graph.base_nodes import BaseNode
 from plynx.constants import JobReturnStatus, NodeStatus, FileTypes, ParameterTypes
 from plynx.db import Node, Output, Parameter
 
