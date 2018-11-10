@@ -1,7 +1,7 @@
 from past.builtins import basestring
 from plynx.db import Node
 from plynx.utils.common import to_object_id
-from plynx.utils.db_connector import db
+from plynx.utils.db_connector import get_db_connector
 
 
 class NodeCollectionManager(object):
@@ -52,7 +52,7 @@ class NodeCollectionManager(object):
             search=search
         )
 
-        db_nodes = db.nodes.find({
+        db_nodes = get_db_connector().nodes.find({
             '$and': and_query
         }).sort('insertion_date', -1).skip(offset).limit(per_page)
 
@@ -69,7 +69,7 @@ class NodeCollectionManager(object):
         Args:
             ids    (list of ObjectID):  Node Ids
         """
-        db_nodes = db.nodes.find({
+        db_nodes = get_db_connector().nodes.find({
             '_id': {
                 '$in': list(ids)
             }
@@ -97,7 +97,7 @@ class NodeCollectionManager(object):
             search=search,
         )
 
-        return db.nodes.count({
+        return get_db_connector().nodes.count({
             '$and': and_query
         })
 
@@ -112,7 +112,7 @@ class NodeCollectionManager(object):
         Return:
             (dict)  dict representation of the Graph
         """
-        res = db.nodes.find_one({'_id': to_object_id(node_id)})
+        res = get_db_connector().nodes.find_one({'_id': to_object_id(node_id)})
         if res:
             res['_readonly'] = (author != to_object_id(res['author']))
         return res

@@ -1,7 +1,7 @@
 from __future__ import print_function
 import argparse
 from collections import namedtuple
-import plynx
+from plynx import __version__
 from plynx.utils.config import get_config
 from plynx.service import run_master, run_worker
 from plynx.utils.logs import set_logging_level
@@ -17,17 +17,22 @@ _config = get_config()
 
 
 def master(args):
-    set_logging_level(args.pop('verbose', 0))
+    set_logging_level(args.pop('verbose'))
     run_master(**args)
 
 
 def worker(args):
-    set_logging_level(args.pop('verbose', 0))
+    set_logging_level(args.pop('verbose'))
+    run_worker(**args)
+
+
+def backend(args):
+    set_logging_level(args.pop('verbose'))
     run_worker(**args)
 
 
 def version(args):
-    print(plynx.__version__)
+    print(__version__)
 
 
 class CLIFactory(object):
@@ -36,8 +41,8 @@ class CLIFactory(object):
         'verbose': Arg(
             ('-v', '--verbose'),
             help='Set logging output more verbose',
-            action='count',
             default=0,
+            action='count',
             ),
         'host': Arg(
             ('-H', '--host'),
@@ -47,15 +52,16 @@ class CLIFactory(object):
             ),
         'port': Arg(
             ("-P", "--port"),
+            help="Port of Master",
             default=_config.master.port,
             type=int,
-            help="Port of Master"),
+            ),
 
         # Worker
         'worker_id': Arg(
             ('--worker-id',),
-            default='',
             help='Any string identificator',
+            default='',
             type=str,
             ),
     }
@@ -68,6 +74,10 @@ class CLIFactory(object):
         }, {
             'func': worker,
             'help': 'Run Worker',
+            'args': ('verbose', 'host', 'port', 'worker_id'),
+        }, {
+            'func': backend,
+            'help': 'Run backend server',
             'args': ('verbose', 'host', 'port', 'worker_id'),
         }, {
             'func': version,
@@ -89,7 +99,7 @@ class CLIFactory(object):
                 arg = cls.ARGS[arg]
                 kwargs = {
                     f: getattr(arg, f)
-                    for f in arg._fields if f != 'flags' and getattr(arg, f)
+                    for f in arg._fields if f != 'flags' and getattr(arg, f) is not None
                 }
                 sp.add_argument(*arg.flags, **kwargs)
             sp.set_defaults(func=sub['func'], args=sub['args'])

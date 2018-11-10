@@ -1,7 +1,7 @@
 import datetime
 from plynx.db import DBObject, DBObjectField
 from plynx.utils.common import to_object_id, ObjectId
-from plynx.utils.db_connector import db
+from plynx.utils.db_connector import get_db_connector
 from plynx.constants import NodeStatus
 
 
@@ -48,7 +48,7 @@ class GraphCancellationManager(object):
     def get_graph_cancellations():
         """Get all Graph Cancellation events"""
         res = []
-        for graphs_cancellation_dict in db.graphs_cancellations.find():
+        for graphs_cancellation_dict in get_db_connector().graphs_cancellations.find():
             res.append(
                 GraphCancellation.from_dict(graphs_cancellation_dict)
             )
@@ -61,4 +61,4 @@ class GraphCancellationManager(object):
         Args:
             graphs_cancellation_ids     (list of ObjectID)  List of Graph IDs to remove
         """
-        db.graphs_cancellations.delete_many({'_id': {'$in': graphs_cancellation_ids}})
+        get_db_connector().graphs_cancellations.delete_many({'_id': {'$in': graphs_cancellation_ids}})

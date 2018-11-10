@@ -4,7 +4,7 @@ The class defines `DBObject` and `DBObjectField`. This is an abstraction of all 
 import datetime
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
-from plynx.utils.db_connector import db
+from plynx.utils.db_connector import get_db_connector
 from plynx.utils.common import ObjectId
 
 DBObjectField = namedtuple('DBObjectField', ['type', 'default', 'is_list'])
@@ -67,7 +67,7 @@ class DBObject(object):
         Args:
             _id     (str, ObjectId):    ID of the object in DB
         """
-        obj_dict = getattr(db, cls.DB_COLLECTION).find_one({'_id': ObjectId(_id)})
+        obj_dict = getattr(get_db_connector(), cls.DB_COLLECTION).find_one({'_id': ObjectId(_id)})
         if not obj_dict:
             raise DBObjectNotFound(
                 'Object `{_id}` not found in `{collection}` collection'.format(
@@ -93,7 +93,7 @@ class DBObject(object):
         obj_dict = self.to_dict()
         obj_dict["update_date"] = now
 
-        getattr(db, self.__class__.DB_COLLECTION).find_one_and_update(
+        getattr(get_db_connector(), self.__class__.DB_COLLECTION).find_one_and_update(
             {'_id': obj_dict['_id']},
             {
                 "$setOnInsert": {"insertion_date": now},

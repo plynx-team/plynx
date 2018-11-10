@@ -1,7 +1,7 @@
 import datetime
 from passlib.apps import custom_app_context as pwd_context
 from plynx.db import DBObjectField, DBObject
-from plynx.utils.db_connector import db
+from plynx.utils.db_connector import get_db_connector
 from plynx.utils.common import to_object_id, ObjectId
 from plynx.utils.config import get_auth_config
 from itsdangerous import (SignatureExpired, BadSignature,
@@ -93,7 +93,7 @@ class User(DBObject):
         Return:
             (User)   User object or None
         """
-        user_dict = db.users.find_one({'username': username})
+        user_dict = get_db_connector().users.find_one({'username': username})
         if not user_dict:
             return None
 

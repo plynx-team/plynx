@@ -1,6 +1,6 @@
 from plynx.db import Graph, NodeCollectionManager, Node
 from plynx.utils.common import to_object_id
-from plynx.utils.db_connector import db
+from plynx.utils.db_connector import get_db_connector
 from plynx.constants import NodeStatus
 
 
@@ -86,7 +86,7 @@ class GraphCollectionManager(object):
         Args:
             graph_running_status    (str):  Graph Running Status
         """
-        db_graphs = db.graphs.find({'graph_running_status': graph_running_status})
+        db_graphs = get_db_connector().graphs.find({'graph_running_status': graph_running_status})
         graphs = []
         for db_graph in db_graphs:
             graphs.append(Graph.from_dict(db_graph))
@@ -123,7 +123,7 @@ class GraphCollectionManager(object):
             author=author,
             search=search,
         )
-        db_graphs = db.graphs.find({
+        db_graphs = get_db_connector().graphs.find({
             '$and': and_query
         }).sort('insertion_date', -1).skip(offset).limit(per_page)
         return list(db_graphs)
@@ -143,7 +143,7 @@ class GraphCollectionManager(object):
             author=author,
             search=search,
         )
-        return db.graphs.count({
+        return get_db_connector().graphs.count({
             '$and': and_query
         })
 
@@ -158,5 +158,5 @@ class GraphCollectionManager(object):
             (dict)  dict representation of the Graph
         """
         return GraphCollectionManager._update_node_statuses(
-            db.graphs.find_one({'_id': to_object_id(graph_id)})
+            get_db_connector().graphs.find_one({'_id': to_object_id(graph_id)})
         )

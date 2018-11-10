@@ -1,6 +1,6 @@
 from plynx.db import NodeCache
 from plynx.utils.common import to_object_id
-from plynx.utils.db_connector import db
+from plynx.utils.db_connector import get_db_connector
 from plynx.constants import NodeRunningStatus
 
 
@@ -25,7 +25,7 @@ class NodeCacheManager(object):
             (NodeCache)     NodeCache or None
         """
         key = NodeCache.generate_key(node, user_id)
-        db_node_cache = db.node_cache.find({
+        db_node_cache = get_db_connector().node_cache.find({
             'key': key
         }).sort('insertion_date', -1).limit(1)
         caches = list(db_node_cache)

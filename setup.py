@@ -51,15 +51,13 @@ setup(
     keywords='data science, machine learning, pipeline, workflow, experiments',
     packages=find_packages(exclude=['scripts', 'docker']),
     install_requires=install_requires,
-    package_data={  # Optional
-        # 'sample': ['package_data.dat'],
-    },
-    entry_points={  # Optional
+    package_data={},
+    entry_points={
         'console_scripts': [
             'plynx=plynx.bin:main',
         ],
     },
-    project_urls={  # Optional
+    project_urls={
         'Demo': 'https://plynx.com',
         'Source': 'https://github.com/khaxis/plynx',
     },
