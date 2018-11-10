@@ -4,7 +4,6 @@ from plynx.db import Graph
 from plynx.db import User
 from plynx.utils.common import to_object_id, ObjectId
 from plynx.utils.config import get_demo_config
-from plynx.utils.db_connector import *
 
 
 class DemoUserManager(object):

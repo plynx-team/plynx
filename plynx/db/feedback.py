@@ -1,6 +1,5 @@
 import datetime
 from plynx.db import DBObject, DBObjectField
-from plynx.utils.db_connector import *
 from plynx.utils.common import to_object_id, ObjectId
 
 

@@ -1,7 +1,7 @@
 import datetime
 from passlib.apps import custom_app_context as pwd_context
 from plynx.db import DBObjectField, DBObject
-from plynx.utils.db_connector import *
+from plynx.utils.db_connector import db
 from plynx.utils.common import to_object_id, ObjectId
 from plynx.utils.config import get_auth_config
 from itsdangerous import (SignatureExpired, BadSignature,

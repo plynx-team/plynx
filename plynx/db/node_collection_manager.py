@@ -1,7 +1,7 @@
 from past.builtins import basestring
 from plynx.db import Node
 from plynx.utils.common import to_object_id
-from plynx.utils.db_connector import *
+from plynx.utils.db_connector import db
 
 
 class NodeCollectionManager(object):
