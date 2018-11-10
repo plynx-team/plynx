@@ -1,4 +1,4 @@
-# Use an official Python runtime as a parent image
+# Use an Plynx Base runtime as a parent image
 FROM khaxis/plynx:base
 
 # Set the working directory to /app

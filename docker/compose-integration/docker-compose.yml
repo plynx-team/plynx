@@ -22,18 +22,8 @@ services:
             - mongodb
     workers:
         image: khaxis/plynx:worker
-        # deploy:
-        #     replicas: 3
-        #     resources:
-        #         limits:
-        #             cpus: "0.5"
-        #     restart_policy:
-        #         condition: on-failure
         volumes:
             - disk-storage:/data
-            #- type: bind
-            #    source: ~/.boto
-            #    target: /root/.boto
         depends_on:
             - master
         links:
