@@ -1,4 +1,5 @@
 import datetime
+from builtins import filter
 from collections import deque, defaultdict
 from plynx.db import DBObject, DBObjectField, Node, ValidationError
 from plynx.utils.common import to_object_id, ObjectId
@@ -182,12 +183,9 @@ class Graph(DBObject):
 
             for index, node_id in enumerate(level_to_node_ids[level]):
                 node = node_id_to_node[node_id]
-                special_parameters_count = len(
-                    filter(
-                        lambda parameter:
-                            parameter.parameter_type in SPECIAL_PARAMETER_TYPES and parameter.widget,
-                        node.parameters
-                    )
+                special_parameters_count = sum(
+                    1 if parameter.parameter_type in SPECIAL_PARAMETER_TYPES and parameter.widget else 0
+                    for parameter in node.parameters
                 )
                 node_height = sum([
                     min_node_height,

@@ -67,9 +67,9 @@ class TestNode(unittest.TestCase):
         node2 = Node.from_dict(node1_dict)
         node2_dict = node2.to_dict()
 
-        print node1_dict
-        print "-"
-        print node2_dict
+        print(node1_dict)
+        print("-")
+        print(node2_dict)
 
         self.assertTrue(compare_dictionaries(node1_dict, node2_dict), "Serialized nodes are not equal")
 

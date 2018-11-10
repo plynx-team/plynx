@@ -1,4 +1,5 @@
 import copy
+from past.builtins import basestring
 from bson.objectid import ObjectId
 from . import InvalidTypeArgumentError, MissingArgumentError, \
     Inputs, Outputs, Params, BaseNode

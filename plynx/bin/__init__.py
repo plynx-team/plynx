@@ -8,5 +8,5 @@ def main():
     args = parser.parse_args()
     args.func({
         k: v
-        for k, v in vars(args).iteritems() if k in args.args
+        for k, v in vars(args).items() if k in args.args
     })

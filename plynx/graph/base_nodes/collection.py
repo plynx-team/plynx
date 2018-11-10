@@ -25,5 +25,5 @@ class NodeCollection:
 if __name__ == "__main__":
     collection = NodeCollection()
     print("Found classes:")
-    for name, cls in collection.name_to_class.iteritems():
+    for name, cls in collection.name_to_class.items():
         print('- ' + '\t'.join(map(str, [name, cls])))

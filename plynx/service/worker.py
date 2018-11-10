@@ -5,7 +5,7 @@ import uuid
 import threading
 import traceback
 from tempfile import SpooledTemporaryFile
-from . import WorkerMessage, WorkerMessageType, RunStatus, MasterMessageType, send_msg, recv_msg
+from plynx.service import WorkerMessage, WorkerMessageType, RunStatus, MasterMessageType, send_msg, recv_msg
 from plynx.constants import JobReturnStatus
 from plynx.utils.file_handler import upload_file_stream
 
@@ -88,7 +88,7 @@ class Worker:
             send_msg(sock, message)
             master_message = recv_msg(sock)
             # check status
-            if master_message.message_type == MasterMessageType.KILL:
+            if master_message and master_message.message_type == MasterMessageType.KILL:
                 logging.info("Received KILL message: {}".format(master_message))
                 if self._job and not self._job_killed:
                     self._job_killed = True

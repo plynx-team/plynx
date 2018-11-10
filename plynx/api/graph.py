@@ -3,6 +3,7 @@ from . import InvalidTypeArgumentError, BaseNode, File, Node, \
     _GraphPostAction
 from . import _get_obj, _save_graph
 from collections import deque
+from future.utils import lmap
 import json
 import requests
 import copy
@@ -118,7 +119,7 @@ class Graph(object):
                 progress = float(numerator) / denominator
             else:
                 progress = 1.0
-            node_running_statuss = map(
+            node_running_statuss = lmap(
                 lambda r: '{}: {}'.format(r[0], r[1]),
                 counter.items()
             )

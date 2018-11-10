@@ -205,13 +205,13 @@ class BaseBash(BaseNode):
         return res
 
     def _postprocess_outputs(self, outputs):
-        for key, filename in outputs.iteritems():
+        for key, filename in outputs.items():
             if os.path.exists(filename):
                 with open(filename, 'rb') as f:
                     self.node.get_output_by_name(key).resource_id = upload_file_stream(f)
 
     def _postprocess_logs(self, logs):
-        for key, filename in logs.iteritems():
+        for key, filename in logs.items():
             if os.path.exists(filename) and os.stat(filename).st_size != 0:
                 with open(filename, 'rb') as f:
                     self.node.get_log_by_name(key).resource_id = upload_file_stream(f)

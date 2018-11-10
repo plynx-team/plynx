@@ -46,7 +46,7 @@ class DBObject(object):
 
     def __init_fields(self, obj_dict):
         obj_dict = obj_dict or {}
-        for field_name, object_field in self.FIELDS.iteritems():
+        for field_name, object_field in self.FIELDS.items():
             obj_value = obj_dict.get(field_name, None)
             if obj_value:
                 if object_field.is_list:
@@ -124,7 +124,7 @@ class DBObject(object):
     def to_dict(self):
         """Create a dictionary from an object."""
         res = {}
-        for field_name, object_field in self.FIELDS.iteritems():
+        for field_name, object_field in self.FIELDS.items():
             if object_field.is_list:
                 value = [
                     self.__to_dict_single_element(element) for element in getattr(self, field_name)

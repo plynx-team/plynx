@@ -1,10 +1,10 @@
 import argparse
 import socket
 import sys
-import SocketServer
+import socketserver
 import threading
 import logging
-import Queue
+import queue
 import time
 from collections import namedtuple
 from plynx.service import (
@@ -31,7 +31,7 @@ graph_cancellation_manager = GraphCancellationManager()
 node_collection = NodeCollection()
 
 
-class ClientTCPHandler(SocketServer.BaseRequestHandler):
+class ClientTCPHandler(socketserver.BaseRequestHandler):
     """The request handler class for Master server.
 
     It is instantiated once per connection to the server, and must
@@ -117,12 +117,12 @@ class ClientTCPHandler(SocketServer.BaseRequestHandler):
         )
 
 
-class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
     """Master main class.
 
     Args:
         server_address      (tuple):        Define the server address (host, port).
-        RequestHandlerClass (TCP handler):  Class of SocketServer.BaseRequestHandler.
+        RequestHandlerClass (TCP handler):  Class of socketserver.BaseRequestHandler.
 
     Currently implemented as a TCP server.
 
@@ -156,9 +156,9 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     WORKER_MONITORING_TIMEOUT = 10
 
     def __init__(self, server_address, RequestHandlerClass):
-        SocketServer.TCPServer.__init__(self, server_address, RequestHandlerClass)
+        socketserver.TCPServer.__init__(self, server_address, RequestHandlerClass)
         self._stop_event = threading.Event()
-        self._job_description_queue = Queue.Queue()
+        self._job_description_queue = queue.Queue()
         # Mapping of Worker ID to the Job Description
         self._worker_to_job_description = {}
         self._worker_to_last_heartbeat = {}
@@ -245,7 +245,7 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                     # check the running Schedulers
                     new_to_queue = []
                     finished_graph_ids = []
-                    for graph_id, scheduler in self._graph_id_to_scheduler.iteritems():
+                    for graph_id, scheduler in self._graph_id_to_scheduler.items():
                         if scheduler.finished():
                             finished_graph_ids.append(graph_id)
                             continue
@@ -279,7 +279,7 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                 with self._worker_to_job_description_lock:
                     dead_worker_ids = [
                         worker_id
-                        for worker_id, last_time in self._worker_to_last_heartbeat.iteritems()
+                        for worker_id, last_time in self._worker_to_last_heartbeat.items()
                         if current_time - last_time > Master.MAX_HEARTBEAT_DELAY
                     ]
                 for worker_id in dead_worker_ids:
@@ -321,7 +321,7 @@ class Master(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
             job_description = self._job_description_queue.get_nowait()
             self._job_description_queue.task_done()
             return job_description
-        except Queue.Empty:
+        except queue.Empty:
             return None
 
     def allocate_job(self, worker_id):

@@ -1,6 +1,7 @@
 import copy
 import datetime
 import hashlib
+from builtins import str
 from plynx.db import DBObject, DBObjectField, Input, Output, Parameter, ParameterWidget, ValidationError
 from plynx.utils.db_connector import *
 from plynx.utils.common import to_object_id, ObjectId
@@ -107,7 +108,7 @@ class NodeCache(DBObject):
                 parent_node,
                 inputs_hash,
                 parameters_hash,
-                str(user_id))
+                str(user_id)).encode('utf-8')
         ).hexdigest()
 
     def __str__(self):

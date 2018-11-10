@@ -48,7 +48,7 @@ class Command(BaseBash):
     def _get_arguments_string(var_name, arguments):
         res = []
         res.append('declare -A {}'.format(var_name))
-        for key, value in arguments.iteritems():
+        for key, value in arguments.items():
             res.append('{}["{}"]={}'.format(var_name, key, Command._escape_bash(value)))
         return ';'.join(res)
 

@@ -43,8 +43,8 @@ def get_graph(graph_id=None):
     else:
         query = json.loads(request.args.get('query', "{}"))
         query["author"] = to_object_id(g.user._id)
-        count_query = {k: v for k, v in query.iteritems() if k in COUNT_QUERY_KEYS}
-        graphs_query = {k: v for k, v in query.iteritems() if k in PAGINATION_QUERY_KEYS}
+        count_query = {k: v for k, v in query.items() if k in COUNT_QUERY_KEYS}
+        graphs_query = {k: v for k, v in query.items() if k in PAGINATION_QUERY_KEYS}
         return JSONEncoder().encode({
             'graphs': [graph for graph in graph_collection_manager.get_db_graphs(**graphs_query)],
             'total_count': graph_collection_manager.get_db_graphs_count(**count_query),

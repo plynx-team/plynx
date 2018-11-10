@@ -13,6 +13,7 @@ install_requires = [
     'Flask-HTTPAuth>=3.2.3',
     'gevent>=1.3.7',
     'requests>=2.18.4',
+    'future>=0.17.1',
 ]
 
 setup(
@@ -40,7 +41,8 @@ setup(
 
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
-        # 'Programming Language :: Python :: 3'
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.7'
 
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
         'Topic :: Scientific/Engineering :: Information Analysis',

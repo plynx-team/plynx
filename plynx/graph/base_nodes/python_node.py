@@ -1,3 +1,4 @@
+from past.builtins import basestring
 from . import BaseBash
 
 
