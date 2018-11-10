@@ -2,14 +2,14 @@ from __future__ import print_function
 import argparse
 from collections import namedtuple
 from plynx import __version__
-from plynx.utils.config import get_config
+from plynx.utils.config import get_config, set_parameter
 from plynx.service import run_master, run_worker
 from plynx.utils.logs import set_logging_level
 
 
 Arg = namedtuple(
     'Arg',
-    ['flags', 'help', 'action', 'default', 'nargs', 'type']
+    ['flags', 'help', 'action', 'default', 'nargs', 'type', 'levels']
 )
 Arg.__new__.__defaults__ = (None, None, None, None, None, None)
 
@@ -49,12 +49,14 @@ class CLIFactory(object):
             help='Host Master',
             default=_config.master.host,
             type=str,
+            levels=['master', 'host'],
             ),
         'port': Arg(
             ("-P", "--port"),
             help="Port of Master",
             default=_config.master.port,
             type=int,
+            levels=['master', 'port'],
             ),
 
         # Worker
@@ -87,6 +89,16 @@ class CLIFactory(object):
     )
 
     @classmethod
+    def parse_global_config_parameters(cls, args):
+        remove = []
+        for k, v in args.items():
+            if cls.ARGS[k].levels:
+                set_parameter(cls.ARGS[k].levels, v)
+                remove.append(k)
+        for k in remove:
+            del args[k]
+
+    @classmethod
     def get_parser(cls):
         parser = argparse.ArgumentParser()
         subparsers = parser.add_subparsers(
@@ -99,7 +111,7 @@ class CLIFactory(object):
                 arg = cls.ARGS[arg]
                 kwargs = {
                     f: getattr(arg, f)
-                    for f in arg._fields if f != 'flags' and getattr(arg, f) is not None
+                    for f in arg._fields if f not in ['flags', 'levels'] and getattr(arg, f) is not None
                 }
                 sp.add_argument(*arg.flags, **kwargs)
             sp.set_defaults(func=sub['func'], args=sub['args'])

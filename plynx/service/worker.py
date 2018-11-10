@@ -7,6 +7,7 @@ import traceback
 from tempfile import SpooledTemporaryFile
 from plynx.service import WorkerMessage, WorkerMessageType, RunStatus, MasterMessageType, send_msg, recv_msg
 from plynx.constants import JobReturnStatus
+from plynx.utils.config import get_master_config
 from plynx.utils.file_handler import upload_file_stream
 
 
@@ -195,18 +196,19 @@ class Worker:
         self._stop_event.set()
 
 
-def run_worker(host, port, worker_id=None):
+def run_worker(worker_id=None):
     """Run master Daemon. It will run in the same thread.
 
     Args:
         worker_id   (str):  Worker ID. It will be generated if empty or not given
-        host    (str):  Master Host
-        port    (int):  Master Port
     """
+    master_config = get_master_config()
+    logging.info('Init Worker')
+    logging.info(master_config)
     worker = Worker(
         worker_id=worker_id,
-        host=host,
-        port=port,
+        host=master_config.host,
+        port=master_config.port,
     )
 
     try:

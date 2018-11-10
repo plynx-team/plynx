@@ -101,4 +101,19 @@ def get_config():
     )
 
 
+def set_parameter(levels, value):
+    """Set global config parameter
+
+    Args:
+        levels  (list):     List of levels, i.e. ['mongodb', 'user']
+        value   (value):    Value of the parameter
+    """
+    sublevel = _config
+    for level in levels[:-1]:
+        if level not in sublevel:
+            sublevel[level] = {}
+        sublevel = sublevel[level]
+    sublevel[levels[-1]] = value
+
+
 __init__()

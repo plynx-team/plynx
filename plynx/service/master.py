@@ -20,7 +20,6 @@ from plynx.constants import NodeRunningStatus, GraphRunningStatus
 from plynx.db import GraphCollectionManager, GraphCancellationManager
 from plynx.graph.graph_scheduler import GraphScheduler
 from plynx.utils.config import get_master_config
-from plynx.utils.logs import set_logging_level
 from plynx.graph.base_nodes import NodeCollection
 
 
@@ -375,15 +374,12 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
         self.shutdown()
 
 
-def run_master(host, port):
-    """Run master Daemon. It will run in the same thread.
-
-    Args:
-        host    (str):  Host
-        port    (int):  Port
-    """
-    logging.info("Init master")
-    master = Master((host, port), ClientTCPHandler)
+def run_master():
+    """Run master Daemon. It will run in the same thread."""
+    master_config = get_master_config()
+    logging.info('Init Master')
+    logging.info(master_config)
+    master = Master((master_config.host, master_config.port), ClientTCPHandler)
 
     # Activate the server; this will keep running until you
     # interrupt the program with Ctrl-C
