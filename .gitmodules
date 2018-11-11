@@ -1,0 +1,3 @@
+[submodule "plynx-web"]
+	path = plynx-web
+	url = https://github.com/khaxis/plynx-web
