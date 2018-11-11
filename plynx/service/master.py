@@ -373,8 +373,8 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
 def run_master():
     """Run master Daemon. It will run in the same thread."""
-    master_config = get_master_config()
     logging.info('Init Master')
+    master_config = get_master_config()
     logging.info(master_config)
     master = Master((master_config.host, master_config.port), ClientTCPHandler)
 

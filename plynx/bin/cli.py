@@ -3,7 +3,7 @@ import argparse
 from collections import namedtuple
 from plynx import __version__
 from plynx.utils.config import get_config, set_parameter
-from plynx.service import run_master, run_worker
+from plynx.service import run_master, run_worker, run_local
 from plynx.web import run_backend
 from plynx.utils.logs import set_logging_level
 
@@ -25,6 +25,10 @@ def master(args):
 def worker(args):
     set_logging_level(args.pop('verbose'))
     run_worker(**args)
+
+
+def local(args):
+    run_local(**args)
 
 
 def backend(args):
@@ -75,6 +79,14 @@ class CLIFactory(object):
             help='Any string identificator',
             default='',
             type=str,
+            ),
+
+        # Local
+        'num_workers': Arg(
+            ("-n", "--num-workers"),
+            help="Number of workers",
+            default=3,
+            type=int,
             ),
 
         # MongoConfig
@@ -177,6 +189,12 @@ class CLIFactory(object):
             'func': backend,
             'help': 'Run backend server',
             'args': ('verbose', 'secret_key', 'endpoint',
+                     'db_host', 'db_port', 'db_user', 'db_password',
+                     'storage_scheme', 'storage_resources', 'storage_stdout', 'storage_stderr', 'storage_worker'),
+        }, {
+            'func': local,
+            'help': 'Run backend server',
+            'args': ('verbose', 'num_workers', 'internal_master_host', 'master_host', 'master_port', 'secret_key', 'endpoint',
                      'db_host', 'db_port', 'db_user', 'db_password',
                      'storage_scheme', 'storage_resources', 'storage_stdout', 'storage_stderr', 'storage_worker'),
         }, {
