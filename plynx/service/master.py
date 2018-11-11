@@ -1,5 +1,3 @@
-import argparse
-import socket
 import sys
 import socketserver
 import threading
@@ -8,7 +6,6 @@ import queue
 import time
 from collections import namedtuple
 from plynx.service import (
-    WorkerMessage,
     RunStatus,
     WorkerMessageType,
     MasterMessageType,

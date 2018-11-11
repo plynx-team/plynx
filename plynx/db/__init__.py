@@ -1,3 +1,4 @@
+# flake8: noqa
 from plynx.db.db_object import DBObject, DBObjectField
 from plynx.db.input import Input, InputValue
 from plynx.db.parameter import Parameter, ParameterWidget

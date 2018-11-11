@@ -1,4 +1,4 @@
-from plynx.api import MissingArgumentError, InvalidTypeArgumentError, NodeAttributeError
+from plynx.api import InvalidTypeArgumentError, NodeAttributeError
 import abc
 import six
 

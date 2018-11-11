@@ -1,4 +1,3 @@
-import argparse
 import logging
 import socket
 import uuid
@@ -129,13 +128,13 @@ class Worker:
                             self._graph_id = master_message.graph_id
                             try:
                                 status = self._job.run()
-                            except Exception as e:
+                            except Exception:
                                 try:
                                     status = JobReturnStatus.FAILED
                                     with SpooledTemporaryFile() as f:
                                         f.write(traceback.format_exc())
                                         self._job.node.get_log_by_name('worker').resource_id = upload_file_stream(f)
-                                except Exception as e:
+                                except Exception:
                                     logging.critical(traceback.format_exc())
                                     self.stop()
 
@@ -179,7 +178,7 @@ class Worker:
                     sock.close()
             except socket.error:
                 pass
-            except Exception as e:
+            except Exception:
                 self.stop()
                 raise
 

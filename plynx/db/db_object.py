@@ -2,7 +2,6 @@
 The class defines `DBObject` and `DBObjectField`. This is an abstraction of all of the objects in database.
 """
 import datetime
-from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 from plynx.utils.db_connector import get_db_connector
 from plynx.utils.common import ObjectId

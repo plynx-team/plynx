@@ -1,4 +1,3 @@
-from plynx.constants import FileTypes
 from plynx.db import DBObjectField, DBObject
 
 

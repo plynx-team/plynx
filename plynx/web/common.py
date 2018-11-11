@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-from flask import Flask, request, send_file, abort, g, Response
+from flask import Flask, request, g, Response
 from flask_cors import CORS
-from flask_httpauth import HTTPBasicAuth
 from functools import wraps
 from plynx.db import User
 

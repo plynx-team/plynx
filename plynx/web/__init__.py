@@ -1,3 +1,4 @@
+# flake8: noqa
 from plynx.web.common import app, verify_password, authenticate, requires_auth, run_backend
 from plynx.web.node import get_nodes, post_node
 from plynx.web.graph import get_graph, post_graph

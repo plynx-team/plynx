@@ -1,5 +1,4 @@
 import logging
-from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from plynx.db import Graph, NodeCacheManager
 from plynx.constants import NodeRunningStatus, GraphRunningStatus
@@ -101,7 +100,7 @@ class GraphScheduler(object):
                         cached_nodes.append(node)
                         continue
                 except Exception as err:
-                    logging.exception("Unable to update cache")
+                    logging.exception("Unable to update cache: `{}`".format(err))
             job = self.node_collection.make_job(node)
             res.append(job)
         del self.dependency_index_to_node_ids[0]

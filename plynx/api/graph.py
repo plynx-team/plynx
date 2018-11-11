@@ -1,12 +1,10 @@
 from collections import deque
 from future.utils import lmap
-import json
-import requests
 import copy
 import collections
 import time
 import logging
-from plynx.api import InvalidTypeArgumentError, BaseNode, File, Node, \
+from plynx.api import InvalidTypeArgumentError, BaseNode, \
     InvalidUssageError, GraphFailed, _NodeRunningStatus, _GraphRunningStatus, \
     _GraphPostAction
 from plynx.api import _get_obj, _save_graph

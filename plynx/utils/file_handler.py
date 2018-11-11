@@ -26,7 +26,6 @@ def upload_file_stream(fp, prefix=None, file_path=None, seek=True):
     if prefix is None:
         prefix = STORAGE_CONFIG.resources
     content = storage_uri(STORAGE_CONFIG.resources + file_path, STORAGE_CONFIG.scheme)
-    new_key = content.new_key()
     content.new_key().set_contents_from_file(fp)
     return file_path
 

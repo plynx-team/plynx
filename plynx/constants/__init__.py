@@ -1,3 +1,4 @@
+# flake8: noqa
 from plynx.constants.node_enums import NodeRunningStatus, NodeStatus, \
     NodePostAction, NodePostStatus, JobReturnStatus
 from plynx.constants.file_types import FileTypes

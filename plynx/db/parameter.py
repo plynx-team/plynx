@@ -72,7 +72,7 @@ def _value_is_valid(value, parameter_type):
         return isinstance(value, basestring)
     if parameter_type == ParameterTypes.INT:
         try:
-            tmp = int(value)
+            int(value)
         except Exception:
             return False
         return True
