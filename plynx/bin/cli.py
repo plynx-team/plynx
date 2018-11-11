@@ -160,7 +160,7 @@ class CLIFactory(object):
         # AuthConfig
         'secret_key': Arg(
             ('--secret-key',),
-            help='Secret Key (used in auth)',
+            help='Secret Key (used in auth). If not given, a single user mode will be used.',
             default=None,
             type=str,
             levels=['auth', 'secret_key'],

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from flask import request, abort, g
 from plynx.db import User, DemoUserManager
-from plynx.web import app, requires_auth
+from plynx.web import app, requires_auth, register_user
 from plynx.utils.common import JSONEncoder
 
 
@@ -13,16 +13,11 @@ def new_user():
     username = request.json.get('username')
     password = request.json.get('password')
 
-    if username is None or password is None:
-        abort(400, 'Missing username')  # missing arguments
+    message = register_user(username, password)
 
-    if User.find_user_by_name(username):
-        abort(400, 'User with name `{}` already exists'.format(username))
+    if message:
+        abort(400, message)
 
-    user = User()
-    user.username = username
-    user.hash_password(password)
-    user.save()
     return JSONEncoder().encode({
         'status': 'success'
     })

@@ -31,8 +31,6 @@ class User(DBObject):
 
     DB_COLLECTION = 'users'
 
-    AUTH_CONFIG = get_auth_config()
-
     def hash_password(self, password):
         """Change password.
 
@@ -61,7 +59,7 @@ class User(DBObject):
         Return:
             (str)   Secured token
         """
-        s = TimedSerializer(User.AUTH_CONFIG.secret_key, expires_in=expiration)
+        s = TimedSerializer(get_auth_config().secret_key, expires_in=expiration)
         return s.dumps({'username': self.username, 'type': 'access'})
 
     def generate_refresh_token(self):
@@ -70,7 +68,7 @@ class User(DBObject):
         Return:
             (str)   Secured token
         """
-        s = Serializer(User.AUTH_CONFIG.secret_key)
+        s = Serializer(get_auth_config().secret_key)
         return s.dumps({'username': self.username, 'type': 'refresh'})
 
     def __str__(self):
@@ -108,14 +106,14 @@ class User(DBObject):
         Return:
             (User)   User object or None
         """
-        s = TimedSerializer(User.AUTH_CONFIG.secret_key)
+        s = TimedSerializer(get_auth_config().secret_key)
         try:
             data = s.loads(token)
             if data['type'] != 'access':
                 raise Exception('Not access token')
         except (BadSignature, SignatureExpired) as e:
             # access token is not valid or expired
-            s = Serializer(User.AUTH_CONFIG.secret_key)
+            s = Serializer(get_auth_config().secret_key)
             try:
                 data = s.loads(token)
                 if data['type'] != 'refresh':

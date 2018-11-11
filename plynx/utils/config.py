@@ -74,7 +74,7 @@ def get_storage_config():
 
 def get_auth_config():
     return AuthConfig(
-        secret_key=_config.get('auth', {}).get('secret_key', 'SECRET_KEY'),
+        secret_key=_config.get('auth', {}).get('secret_key', ''),
     )
 
 
