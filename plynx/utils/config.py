@@ -6,12 +6,12 @@ from collections import namedtuple
 PLYNX_CONFIG_PATH = os.getenv('PLYNX_CONFIG_PATH', 'config.yaml')
 _config = None
 
-MasterConfig = namedtuple('MasterConfig', 'host port')
+MasterConfig = namedtuple('MasterConfig', 'internal_host host port')
 WorkerConfig = namedtuple('WorkerConfig', 'user')
 MongoConfig = namedtuple('MongoConfig', 'user password host port')
 StorageConfig = namedtuple('StorageConfig', 'scheme resources stderr stdout worker')
 AuthConfig = namedtuple('AuthConfig', 'secret_key')
-WebConfig = namedtuple('WebConfig', 'endpoint')
+WebConfig = namedtuple('WebConfig', 'host port endpoint debug')
 DemoConfig = namedtuple('DemoConfig', 'graph_ids')
 
 Config = namedtuple(
@@ -40,6 +40,7 @@ def __init__():
 
 def get_master_config():
     return MasterConfig(
+        internal_host=_config.get('master', {}).get('internal_host', '0.0.0.0'),
         host=_config.get('master', {}).get('host', '127.0.0.1'),
         port=int(_config.get('master', {}).get('port', 10000)),
     )
@@ -79,7 +80,10 @@ def get_auth_config():
 
 def get_web_config():
     return WebConfig(
+        host=_config.get('web', {}).get('host', '0.0.0.0'),
+        port=int(_config.get('web', {}).get('port', 5000)),
         endpoint=_config.get('web', {}).get('endpoint', 'http://127.0.0.1:3000'),
+        debug=bool(_config.get('web', {}).get('debug', True)),
     )
 
 

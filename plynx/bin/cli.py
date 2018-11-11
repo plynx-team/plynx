@@ -4,6 +4,7 @@ from collections import namedtuple
 from plynx import __version__
 from plynx.utils.config import get_config, set_parameter
 from plynx.service import run_master, run_worker
+from plynx.web import run_backend
 from plynx.utils.logs import set_logging_level
 
 
@@ -28,7 +29,7 @@ def worker(args):
 
 def backend(args):
     set_logging_level(args.pop('verbose'))
-    run_worker(**args)
+    run_backend(**args)
 
 
 def version(args):
@@ -44,16 +45,25 @@ class CLIFactory(object):
             default=0,
             action='count',
             ),
-        'host': Arg(
+
+        # Master
+        'master_host': Arg(
             ('-H', '--host'),
-            help='Host Master',
+            help='Master host',
             default=_config.master.host,
             type=str,
             levels=['master', 'host'],
             ),
-        'port': Arg(
+        'internal_master_host': Arg(
+            ("--internal-master-host",),
+            help="Internal Master host",
+            default=_config.master.internal_host,
+            type=str,
+            levels=['master', 'internal_host'],
+            ),
+        'master_port': Arg(
             ("-P", "--port"),
-            help="Port of Master",
+            help="Master port",
             default=_config.master.port,
             type=int,
             levels=['master', 'port'],
@@ -66,21 +76,109 @@ class CLIFactory(object):
             default='',
             type=str,
             ),
+
+        # MongoConfig
+        'db_host': Arg(
+            ('--db-host',),
+            help='Database host',
+            default=_config.db.host,
+            type=str,
+            levels=['mongodb', 'host'],
+            ),
+        'db_port': Arg(
+            ('--db-port',),
+            help='Database port',
+            default=_config.db.port,
+            type=str,
+            levels=['mongodb', 'port'],
+            ),
+        'db_user': Arg(
+            ('--db-user',),
+            help='Database username',
+            default=None,
+            type=str,
+            levels=['mongodb', 'user'],
+            ),
+        'db_password': Arg(
+            ('--db-password',),
+            help='Database password',
+            default=None,
+            type=str,
+            levels=['mongodb', 'password'],
+            ),
+
+        # StorageConfig
+        'storage_scheme': Arg(
+            ('--storage-scheme',),
+            help='Storage scheme',
+            default=_config.storage.scheme,
+            type=str,
+            levels=['storage', 'scheme'],
+            ),
+        'storage_resources': Arg(
+            ('--storage-resources',),
+            help='Storage resources',
+            default=_config.storage.resources,
+            type=str,
+            levels=['storage', 'resources'],
+            ),
+        'storage_stdout': Arg(
+            ('--storage-stdout',),
+            help='Storage stdout',
+            default=_config.storage.stdout,
+            type=str,
+            levels=['storage', 'stdout'],
+            ),
+        'storage_stderr': Arg(
+            ('--storage-stderr',),
+            help='Storage stderr',
+            default=_config.storage.stderr,
+            type=str,
+            levels=['storage', 'stderr'],
+            ),
+        'storage_worker': Arg(
+            ('--storage-worker',),
+            help='Storage worker',
+            default=_config.storage.worker,
+            type=str,
+            levels=['storage', 'worker'],
+            ),
+
+        # AuthConfig
+        'secret_key': Arg(
+            ('--secret-key',),
+            help='Secret Key (used in auth)',
+            default=None,
+            type=str,
+            levels=['auth', 'secret_key'],
+            ),
+
+        # WebConfig
+        'endpoint': Arg(
+            ('--endpoint',),
+            help='Endpoint of api',
+            default=_config.web.endpoint,
+            type=str,
+            levels=['web', 'endpoint'],
+            ),
     }
 
     SUBPARSERS = (
         {
             'func': master,
             'help': 'Run Master',
-            'args': ('verbose', 'host', 'port'),
+            'args': ('verbose', 'internal_master_host', 'master_port', 'db_host', 'db_port', 'db_user', 'db_password'),
         }, {
             'func': worker,
             'help': 'Run Worker',
-            'args': ('verbose', 'host', 'port', 'worker_id'),
+            'args': ('verbose', 'master_host', 'master_port', 'worker_id',
+                     'storage_scheme', 'storage_resources', 'storage_stdout', 'storage_stderr', 'storage_worker'),
         }, {
             'func': backend,
             'help': 'Run backend server',
-            'args': ('verbose', 'host', 'port', 'worker_id'),
+            'args': ('verbose', 'secret_key', 'endpoint',
+                     'db_host', 'db_port', 'db_user', 'db_password',
+                     'storage_scheme', 'storage_resources', 'storage_stdout', 'storage_stderr', 'storage_worker'),
         }, {
             'func': version,
             'help': "Show the version",
@@ -93,7 +191,9 @@ class CLIFactory(object):
         remove = []
         for k, v in args.items():
             if cls.ARGS[k].levels:
-                set_parameter(cls.ARGS[k].levels, v)
+                if v is not None:
+                    # Do not set parameter if it is undefined
+                    set_parameter(cls.ARGS[k].levels, v)
                 remove.append(k)
         for k in remove:
             del args[k]

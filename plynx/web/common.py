@@ -6,13 +6,9 @@ from functools import wraps
 from plynx.db import User
 
 app = Flask(__name__)
-app.debug = True
-CORS(app, resources={r"/*": {"origins": "*"}})
 
 
 def verify_password(username_or_token, password):
-    # TODO remove this one
-    print(username_or_token, password)
     user = User.verify_auth_token(username_or_token)
     if not user:
         # try to authenticate with username/password
@@ -40,3 +36,10 @@ def requires_auth(f):
             return authenticate()
         return f(*args, **kwargs)
     return decorated
+
+
+def run_backend():
+    import os
+    CORS(app, resources={r"/*": {"origins": "*"}})
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=True, use_reloader=False)

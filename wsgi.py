@@ -1,7 +1,6 @@
 #!/usr/bin/env python
-import os
-from plynx.web import app
+from plynx.web import run_backend
+
 
 if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    run_backend()

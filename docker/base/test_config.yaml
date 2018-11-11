@@ -5,6 +5,7 @@ mongodb:
   port: 27017
 
 master:
+  internal_host: '0.0.0.0'
   host: 'master'
   port: 10000
 
@@ -22,7 +23,10 @@ auth:
   secret_key: SECRET_KEY
 
 web:
+  host: '0.0.0.0'
+  port: 5000
   endpoint: http://localhost:3000
+  debug: true
 
 demo:
   graph_ids: []

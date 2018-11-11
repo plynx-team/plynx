@@ -8,4 +8,4 @@ WORKDIR /app
 EXPOSE 5000
 
 # Run app.py when the container launches
-ENTRYPOINT ./wsgi.py
+ENTRYPOINT plynx backend -vvv
