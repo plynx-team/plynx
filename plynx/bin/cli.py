@@ -28,6 +28,7 @@ def worker(args):
 
 
 def local(args):
+    set_logging_level(args.get('verbose'))
     run_local(**args)
 
 
