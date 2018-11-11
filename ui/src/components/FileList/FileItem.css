@@ -1,0 +1,52 @@
+.FileListItem {
+  border-radius: 4px;
+  margin: 3px;
+  background-color: lightgrey;
+  color: black;
+  font-weight: 409;
+  font-size: 12pt;
+  display: grid;
+  grid-template-columns: 1fr 250px 300px 250px 250px;
+  cursor: pointer;
+  padding: 5px;
+  text-decoration: none;
+
+  -moz-transition: all .1s ease-in;
+  -o-transition: all .1s ease-in;
+  -webkit-transition: all .1s ease-in;
+  transition: all .1s ease-in;
+}
+
+.FileListItem:hover {
+  background-color: darkgrey;
+}
+
+.FileListItem:active {
+  background-color: #62a6f3;
+}
+
+.FileListItem .Title {
+  font-weight: 700;
+  font-size: 15pt;
+}
+
+.FileListItem .Type .Widget {
+  display: inline-block;
+  width: 150px;
+  background-color: #c29b3c;
+  text-align: center;
+  border-radius: 2px;
+  border: 1px darkgrey solid;
+}
+
+.FileListItem .Type .Widget img {
+  vertical-align:middle;
+}
+
+.FileListItem .Status.READY {
+  color:green;
+}
+
+.FileListItem .Status.DEPRECATED {
+  color:red;
+}

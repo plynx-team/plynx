@@ -1,0 +1,47 @@
+.NodeItem {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  -webkit-box-shadow: 6px 6px 28px -2px rgba(0,0,0,0.4);
+  -moz-box-shadow: 6px 6px 28px -2px rgba(0,0,0,0.4);
+  box-shadow: 6px 6px 28px -2px rgba(0,0,0,0.4);
+  background-color: rgba(0,0,0,.7);
+  margin: 3px;
+}
+
+.NodeItem.File {
+  background-color: rgba(128, 96, 44, 0.8);
+}
+
+.NodeHeader {
+  background: black;
+
+  padding-left: 10px;
+  text-transform: uppercase;
+
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+
+  border-bottom: 1px solid #353535;
+
+  padding-top: 3px;
+  height: 23px;
+
+  font-size: 13px;
+  letter-spacing: 1px;
+
+  color:white;
+  font-weight: 600;
+}
+
+.NodeTitle {
+  font-size:10px;
+}
+
+.NodeHeader a {
+  color: white;
+}
+
+.NodeDescription {
+  color: white;
+  padding: 5px;
+}

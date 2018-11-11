@@ -1,0 +1,62 @@
+.EditNodeMain {
+  display: grid;
+  height: 100%;
+  width: 100%;
+  font-family: 'Source Sans Pro', sans-serif;
+}
+
+.EditNodeHeader {
+  background: darkgray;
+  position:fixed;
+  width:100%;
+  top:40px;
+  height: 60px;
+  padding: 3px;
+  border-bottom: 1px solid black;
+}
+
+.EditNodeInputs {
+  position:absolute!important;
+  height: calc(100% - 60px);
+  width:250px;
+  top: 60px;
+  overflow: auto;
+  background: darkgray;
+}
+
+.EditNodeParameters {
+  position:absolute!important;
+  height: calc(100% - 60px);
+  width: calc(100% - 500px);
+  left: 250px;
+  top: 60px;
+  overflow: auto;
+  background: lightgray;
+}
+
+.EditNodeOutputs {
+  position:fixed!important;
+  height: calc(100% - 40px - 60px);
+  width:250px;
+  top: 100px;
+  right: 0px;
+  overflow: auto;
+  background: darkgray;
+}
+
+.EditNodeHeader .ControlButtons {
+  right: 10px;
+}
+
+.EditNodeHeader .ControlButtons .control-button {
+  background-color: #333;
+  border-color: black;
+}
+
+.EditNodeHeader .ControlButtons .control-button:hover {
+  background-color: #666;
+}
+
+.EditNodeHeader .ControlButtons .control-button:active {
+  background-color: #62a6f3;
+}

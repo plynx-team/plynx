@@ -1,0 +1,42 @@
+.ValueList {
+  text-align: center;
+}
+
+.ValueList > .row {
+  display: grid;
+  grid-template-columns: 1fr 40px;
+  margin: 5px;
+}
+
+.ValueList > .row > .remove {
+
+}
+
+.ValueList > a, .ValueList > .row > a {
+  font-family: monospace;
+  text-decoration: none;
+  padding: 0px 10px 0px 10px;
+  border-radius: 3px;
+}
+
+.ValueList > .add {
+  color: white;
+  font-size: 25px;
+}
+
+.ValueList > .add:hover {
+  color: black;
+  cursor: pointer;
+  background-color: #bbb;
+}
+
+.ValueList > .row > .remove {
+  color: red;
+  font-size: 15px;
+}
+
+.ValueList > .row > .remove:hover {
+  color: black;
+  cursor: pointer;
+  background-color: #B00;
+}

@@ -1,0 +1,15 @@
+.SearchBar {
+  border: 1px solid black;
+  display: block;
+  grid-template-columns: auto auto;
+  background-color: white;
+}
+
+.SearchBar > .Bar {
+  border: 0px;
+  font-size: 12pt;
+  padding-left: 20px;
+  background: url(/icons/search.svg) no-repeat scroll 2px 2px;
+  background-size: 16px 16px;
+  width: 100%;
+}

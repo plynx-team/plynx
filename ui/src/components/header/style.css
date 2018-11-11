@@ -1,0 +1,106 @@
+.Header {
+  display: table-cell;
+  vertical-align: middle;
+  padding: 8px 16px;
+  background-color: #111;
+  font-size: 17pt;
+  font-family: monospace;
+  text-align: left;
+}
+
+.Header .logo {
+  color: white;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.Header a:hover {
+  text-decoration: underline;
+}
+
+.Header .Navigation {
+  position: absolute;
+  top: 6px;
+  left: 150px;
+  font-weight: 300;
+  color: #ccc;
+  padding-left: 10px;
+  padding-right: 10px;
+  font-family: 'Source Sans Pro', sans-serif;
+  border-left: 1px #333 solid;
+  border-right: 1px #333 solid;
+}
+
+.Header .NavigationItems {
+  text-align:left;
+  background-color:inherit;
+  color:inherit;
+}
+
+.Header .NavigationItems .Item {
+    display:inline-block;
+    padding: 0px 18px 0px 18px;
+    box-sizing: border-box;
+    text-align:left;
+    background-color:inherit;
+    color:inherit;
+    border:none;
+    outline:none;
+    white-space:normal;
+    text-decoration: none;
+
+    -moz-transition: all .1s ease-in;
+    -o-transition: all .1s ease-in;
+    -webkit-transition: all .1s ease-in;
+    transition: all .1s ease-in;
+}
+
+.Header .NavigationItems .Item:hover:not(.active) {
+    color: white;
+    border-bottom: 1px solid white;
+    background-color: #333;
+}
+
+.Header .NavigationItems .active {
+    color: #2196F3;
+    border-bottom: 3px solid #2196F3;
+}
+
+.Header .NavigationItems .active:hover {
+    background-color: #134177;
+}
+
+.UserButton {
+  position: fixed;
+  top: 8px;
+  right: 10px;
+  padding-left: 10px;
+  font-family: 'Source Sans Pro', sans-serif;
+  border-left: 1px #333 solid;
+}
+
+.UserButton .username {
+  color: white;
+  display: inline-block;
+}
+
+.UserButton .separator {
+  color: white;
+  display: inline-block;
+  padding: 0px 5px 0px 5px;
+}
+
+.UserButton .action {
+  color: white;
+  display: inline-block;
+  cursor: pointer;
+  -moz-transition: all .1s ease-in;
+  -o-transition: all .1s ease-in;
+  -webkit-transition: all .1s ease-in;
+  transition: all .1s ease-in;
+}
+
+.UserButton .action:hover {
+  color: #337ab7;
+  text-decoration: underline;
+}

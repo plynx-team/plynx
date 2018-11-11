@@ -1,0 +1,37 @@
+.NodeProperties {
+  padding: 3px;
+  border: 1px solid black;
+  border-radius: 2px;
+  margin: 0px;
+  max-height: 56px;
+  display: inline-block;
+}
+
+.PropertyCol {
+  display: inline-block;
+  width: 300px;
+  padding-left: 5px;
+}
+
+.PropertyRow {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 35% 65%;
+  grid-row-gap: 3px;
+}
+
+.NodeProperties .PropertyName {
+  color: black;
+}
+
+.NodeProperties .PropertyValue {
+
+}
+
+.NodeProperties .Input {
+  width: 100%;
+}
+
+.NodeProperties .Select {
+  width: 100%;
+}

@@ -1,0 +1,36 @@
+.DeprecateDialog{
+  margin: 5px;
+}
+
+.DeprecateDialog > .MainBlock > .Title{
+  font-weight: 700;
+  font-size: 15pt;
+}
+
+.DeprecateDialog > .MainBlock > .Row{
+  display: grid;
+  grid-template-columns: 1fr 30px 1fr;
+}
+
+.DeprecateDialog > .MainBlock > .Row > .Divider{
+  text-align: center;
+  vertical-align: bottom;
+  display: block;
+}
+
+.DeprecateDialog > .MainBlock > .Row > .Divider > .arrow{
+  position: sticky;
+  top: 45px;
+}
+
+.DeprecateDialog > .MainBlock > .Row > .Col {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+}
+
+.DeprecateDialog > .Controls{
+  text-align: right;
+  position: fixed;
+  right: 5px;
+  bottom: 5px;
+}

@@ -1,0 +1,15 @@
+.ParameterItem {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 30% 70%;
+  margin-bottom: 5px;
+}
+
+.ParameterNameCell {
+  float: left;
+  padding-left: 10px
+}
+
+.ParameterValueCell {
+  float: right;
+}

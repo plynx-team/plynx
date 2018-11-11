@@ -1,0 +1,29 @@
+.ListPage {
+  position: absolute!important;
+  overflow:auto;
+  background-color: #ccc;
+  width: 100%;
+  height: 100%;
+  padding: 0px;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Source Sans Pro', sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  line-height: 20px;
+}
+
+.ListPage > .menu {
+  margin: 4px 4px 4px 12px;
+  border-bottom: 1px #999 solid;
+}
+
+.ListPage > .search {
+  margin: 4px;
+}
+
+.ListPage > .List {
+  flex: 1;
+  overflow:auto;
+  border: 1px solid darkgrey;
+}

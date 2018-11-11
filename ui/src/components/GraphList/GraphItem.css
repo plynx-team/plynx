@@ -1,0 +1,51 @@
+.GraphItem {
+  border-radius: 4px;
+  margin: 3px;
+  background-color: lightgrey;
+  color: black;
+  font-weight: 400;
+  font-size: 13pt;
+  display: grid;
+  grid-template-columns: 1fr 300px 250px 250px;
+  cursor: pointer;
+  padding: 5px;
+  text-decoration: none;
+
+  -moz-transition: all .1s ease-in;
+  -o-transition: all .1s ease-in;
+  -webkit-transition: all .1s ease-in;
+  transition: all .1s ease-in;
+}
+
+.GraphItem:hover {
+  background-color: darkgrey;
+}
+
+.GraphItem:active {
+  background-color: #62a6f3;
+}
+
+.GraphItem .Title {
+  font-weight: 700;
+  font-size: 15pt;
+}
+
+.GraphItem .Status.CREATED {
+  color: black;
+}
+
+.GraphItem .Status.SUCCESS {
+  color: green;
+}
+
+.GraphItem .Status.FAILED {
+  color: red;
+}
+
+.GraphItem .Status.RUNNING {
+  color: blue;
+}
+
+.GraphItem .Status.CANCELED {
+  color: #993366;
+}

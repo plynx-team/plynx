@@ -1,0 +1,48 @@
+{
+  "name": "plynx-web",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "axios": "^0.18.0",
+    "babel": "^6.23.0",
+    "bson": "^1.0.4",
+    "classnames": "^2.2.5",
+    "query-string": "^5.0.1",
+    "react": "^15.4.2",
+    "react-ace": "^6.2.0",
+    "react-addons-css-transition-group": "^15.6.2",
+    "react-alert-es6": "^1.0.0",
+    "react-beautiful-dnd": "^4.0.1",
+    "react-cookie": "^2.1.2",
+    "react-cookies": "^0.1.0",
+    "react-device-detect": "^1.6.1",
+    "react-dnd": "^2.5.4",
+    "react-dnd-html5-backend": "^2.5.4",
+    "react-dnd-touch-backend": "^0.5.2",
+    "react-document-meta": "^2.1.2",
+    "react-dom": "^15.4.2",
+    "react-drag-and-drop": "^2.4.0",
+    "react-file-download": "^0.3.5",
+    "react-hotkeys": "^1.1.4",
+    "react-node-graph": "^1.1.1",
+    "react-paginate": "^5.1.0",
+    "react-pdf": "^2.5.3",
+    "react-resizable": "^1.7.5",
+    "react-rnd": "^7.3.1",
+    "react-router": "^4.2.0",
+    "react-router-dom": "^4.2.2",
+    "react-scripts": "1.0.17",
+    "react-syntax-highlight": "^15.3.1",
+    "react-toolbox": "^2.0.0-beta.12"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
+  },
+  "devDependencies": {
+    "eslint": "^5.6.1",
+    "webpack": "^3.10.0"
+  }
+}

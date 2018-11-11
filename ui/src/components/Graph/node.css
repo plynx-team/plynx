@@ -1,0 +1,385 @@
+/* node stuff */
+.GraphRouter {
+  font-family: 'Source Sans Pro', sans-serif;
+  color: #323232;
+  line-height: 20px;
+  font-size: 14px;
+  font-weight: 400;
+  height: 100%;
+  display: table;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-font-smoothing: antialiased;
+}
+
+.MainGraph {
+  height: 100%;
+}
+
+svg {
+  position: absolute;
+  background: url('gridtile.png');
+  width: 4000px;
+  height: 2000px;
+  display: inline;
+}
+
+.node {
+  position: absolute;
+  width:180px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  -webkit-box-shadow: 6px 6px 28px -2px rgba(0,0,0,0.4);
+  -moz-box-shadow: 6px 6px 28px -2px rgba(0,0,0,0.4);
+  box-shadow: 6px 6px 28px -2px rgba(0,0,0,0.4);
+  background-color: rgba(0,0,0,.7);
+  user-select: none;
+}
+
+.node.selected {
+  border: 1px solid #666;
+  box-shadow: 0 0 8px 3px #555;
+}
+
+.node-seperator {
+  color: black;
+  border-color: black;
+}
+
+.node-content {
+  padding: 0px 0px 10px 0px;
+}
+
+.node-header {
+  cursor: all-scroll;
+
+  background: rgba(248,80,50,1);
+
+  padding-left: 10px;
+  text-transform: uppercase;
+
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+
+  border-bottom: 1px solid #353535;
+
+  padding-top: 3px;
+  height: 23px;
+
+  font-size: 13px;
+  letter-spacing: 1px;
+
+  color:white;
+  font-weight: 600;
+
+  display: grid;
+  grid-template-columns: 1fr 13px;
+}
+
+.node-title {
+  font-size:10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.node-header > .remove {
+  color: pink;
+  float: right;
+  cursor: pointer;
+  width: 12px;
+  font-size: 15px;
+  text-decoration: none;
+}
+
+.node-header > .remove:hover {
+  color: red;
+}
+
+
+.node-description {
+  color: #ccc;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  padding: 0 3px 0 3px;
+}
+
+.node.status-deprecated > .node-header, .node.status-deprecated > .node-description {
+  text-decoration: line-through;
+}
+
+.node.status-mandatory_deprecated > .node-header, .node.status-mandatory_deprecated > .node-description {
+  text-decoration: line-through;
+}
+
+.node.running-status-in_queue {
+  background-color: rgba(100, 100, 100, 0.7);
+}
+
+.node.running-status-running {
+  background-color: rgba(0, 100, 100, 0.6);
+}
+
+.node.running-status-failed {
+  background-color: rgba(100, 0, 0, 0.7);
+}
+
+.node.running-status-success {
+  background-color: rgba(0, 100, 0, 0.7);
+}
+
+.node.running-status-static {
+  background-color: rgba(128, 96, 44, 0.6);
+}
+
+.node.running-status-restored {
+  background-color: rgba(130,160,0, 0.6);
+}
+
+.node.running-status-canceled {
+  background-color: rgba(145, 80, 80, 0.6);
+}
+
+.node.error-highlight {
+  border-color: red;
+}
+
+.connector {
+  fill:none;
+  stroke-opacity: 0.6;
+}
+
+.connector-click-area {
+  cursor: pointer;
+  fill:none;
+  stroke:transparent;
+  stroke-width:15;
+}
+
+.connector-click-area:hover + .connector,
+.connector:hover {
+  cursor: pointer;
+  stroke-opacity: 1.0;
+}
+
+.connector.selected {
+  stroke: #337ab7;
+}
+
+.trash-icon .trash-icon-trashcan {
+  opacity: 0.8;
+}
+
+.trash-icon:hover {
+  cursor: pointer;
+}
+
+.trash-icon:hover .trash-icon-bg {
+  stroke:#337ab7;
+  stroke-width: 2;
+  opacity: 0.5;
+}
+
+.trash-icon:hover .trash-icon-trashcan {
+  opacity: 1;
+}
+
+.nodeInputWrapper {
+  width : 50%;
+  float: left;
+  text-align: left;
+  vertical-align: text-bottom;
+}
+
+.nodeOutputWrapper {
+  width : 50%;
+  float: right;
+  text-align: right;
+}
+
+
+.nodeInputList, .nodeOutputList {
+  list-style: none;
+  padding: 0;
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.nodeOutputList li {
+  cursor: pointer;
+  color: #337ab7;
+  height: 20px !important;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+}
+
+.nodeOutputList li a {
+  font-size:10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  text-decoration: none;
+  background: transparent;
+  box-sizing: border-box;
+  display: block;
+  padding-right: 5px;
+  color: #eee;
+}
+
+.nodeParameterWrapper {
+ margin: 3px;
+}
+
+.nodeParameterWrapper > .parameterItem {
+  cursor: pointer;
+  height: 20px !important;
+  width: 100%;
+  font-size:10px;
+  overflow: hidden;
+  text-decoration: none;
+  display: block;
+  text-align: center;
+  color: #eee;
+}
+
+.nodeParameterWrapper > .parameterItem > .button {
+  width: 100%;
+  border-radius: 2px;
+  border: 1px solid #777;
+  display: block;
+  height: 20px !important;
+  cursor: pointer;
+
+  -moz-transition: all .1s ease-in;
+  -o-transition: all .1s ease-in;
+  -webkit-transition: all .1s ease-in;
+  transition: all .1s ease-in;
+}
+
+.nodeParameterWrapper > .parameterItem > .button img {
+  vertical-align:middle;
+}
+
+.nodeParameterWrapper > .parameterItem > .button:hover {
+  display: inline-block;
+  background-color: rgba(128, 128, 128, 0.5);
+  text-align: center;
+}
+
+.nodeParameterWrapper > .parameterItem > .button:active {
+  background-color: #62a6f3;
+}
+
+
+.editable .nodeOutputList li a {
+  background-color: rgba(33, 150, 243, 0.04);
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
+}
+
+.editable .nodeOutputList li a:hover {
+  background-color: rgba(33, 150, 243, 0.3);
+}
+
+.nodeOutputList li img {
+  vertical-align:middle;
+  margin-left: 2px;
+}
+
+.nodeOutputList li a i {
+  padding-left: 6px;
+}
+
+.nodeOutputList li:hover a i {
+  font-size: 15px;
+  margin-top: 3px;
+  margin-right: -2px;
+  padding-left: 3px;
+}
+
+.nodeOutputList li:hover a {
+  font-weight: bold;
+}
+
+.nodeInputList li {
+  height: 20px !important;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+}
+
+.nodeInputList li a {
+  cursor: default;
+  font-size:10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  display: block;
+  text-decoration: none;
+  background: transparent;
+  box-sizing: border-box;
+  padding-left: 5px;
+  color: #eee;
+}
+
+.editable .nodeInputList li a {
+  background-color: rgba(255, 255, 255, 0.03);
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+}
+
+.editable .nodeInputList li a:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.nodeInputList li img {
+  vertical-align:middle;
+  margin-right: 2px;
+}
+
+.nodeInputList li a i {
+  padding-right: 6px;
+}
+
+.dragging .nodeInputList li a i.hover {
+  vertical-align: middle;
+  font-size: 15px;
+  color: #ffffff;
+  margin-top: 2px;
+  margin-left: -2px;
+  padding-right: 3px;
+}
+
+.dragging .nodeInputList li a i.hover + span {
+  vertical-align: middle;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.inputDot {
+  width: 12px;
+  height: 12px;
+  display: inline-block;
+  position: absolute;
+  background: #e6e6e6;
+  border-radius: 50%;
+  top: 0;
+  right: 3px;
+  left: auto;
+  border: 2px solid #fff;
+}
+
+
+.EndPoint { fill:none; stroke:#888888; stroke-width:2 }
+
+.pin-input {
+  background: transparent;
+  padding: 5px;
+  width: 50px;
+  display: inline-block;
+  margin-left: 16px;
+  border-color: #333333;
+}
+
+.node-menu {
+  display: block;
+  z-index: 10020;
+}

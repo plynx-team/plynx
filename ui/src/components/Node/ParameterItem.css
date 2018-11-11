@@ -1,0 +1,27 @@
+.ParameterItem {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 30% 70%;
+}
+
+.ParameterNameCell {
+  float: left;
+  padding-left: 10px
+}
+
+.ParameterValueCell {
+  float: right;
+}
+
+.ParameterValueCell > .BoolLabel{
+  color: white;
+}
+
+.ParameterSecondItemValue > .Value {
+  width: 100%;
+}
+
+.ParameterSecondItemValue > .Value,textarea {
+  font-family: monospace;
+  font-size: 12pt;
+}

@@ -1,0 +1,49 @@
+.Login {
+  width: 100%;
+  height: 100%;
+}
+
+.LoginBlock {
+  background-color: #bbb;
+  width: 300px;
+  margin: 5px;
+  padding: 5px;
+  left: 50%;
+  margin-right: -50%;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  top: 50%;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+  border: 1px solid #999;
+}
+
+.Login .Items .Item {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 30% 70%;
+}
+
+.Login .Items .Item .NameCell {
+  float: left;
+  padding-left: 10px;
+  padding: 5px;
+}
+
+.Login .Items .Item .ValueCell {
+  float: right;
+}
+
+.Login .Items .Item .ValueCell input {
+  width: 100%;
+  font-size: 13px;
+}
+
+.Login .buttons {
+  text-align: center;
+}
+
+.Login .loginButton {
+  right: 5px;
+  width: 80px;
+  font-size: 15px;
+}

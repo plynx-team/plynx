@@ -1,0 +1,125 @@
+.menu-button {
+  display: inline-block;
+  border-radius: 2px;
+  padding: 2px 10px 2px 10px;
+  text-align: center;
+  cursor: pointer;
+  color: #3363b0;
+  font-weight: 600;
+  font-size: 13pt;
+  text-decoration: none;
+
+  -moz-transition: all .1s ease-in;
+  -o-transition: all .1s ease-in;
+  -webkit-transition: all .1s ease-in;
+  transition: all .1s ease-in;
+}
+
+.menu-button:hover {
+  display: inline-block;
+  background-color: darkgrey;
+  border-radius: 2px;
+  padding: 2px 10px 2px 10px;
+  text-align: center;
+  text-decoration: underline;
+}
+
+
+.menu-button:active {
+  background-color: #62a6f3;
+}
+
+.pagination {
+  padding-left: 0px;
+  margin: 3px;
+  user-select: none;
+  font-size: 13pt;
+  font-weight: 400;
+}
+
+.pagination ul {
+    display: inline-block;
+}
+
+.pagination li {
+    display: inline-block;
+    border-radius: 2px;
+    color: black;
+    font-weight: 400;
+    font-size: 13pt;
+    white-space: nowrap;
+    -moz-transition: all .1s ease-in;
+    -o-transition: all .1s ease-in;
+    -webkit-transition: all .1s ease-in;
+    transition: all .1s ease-in;
+}
+
+.pagination li:hover {
+  background-color: darkgrey;
+}
+
+.pagination li.active {
+    background-color: #62a6f3;
+}
+
+.pagination li.break-me {
+    border: 0px;
+    cursor: inherit;
+}
+
+.pagination li a {
+    padding: 2px 10px 2px 10px;
+    cursor: pointer;
+}
+
+.control-button {
+  display: inline-block;
+  border-radius: 2px;
+  padding: 2px 10px 2px 10px;
+  text-align: center;
+  cursor: pointer;
+  color: #eee;
+  font-weight: 600;
+  font-size: 13pt;
+  text-decoration: none;
+  background-color: rgba(0, 0, 0, 0.5);
+  border: 1px solid #555;
+  margin: 0px 1px 0px 1px;
+
+  -moz-transition: all .1s ease-in;
+  -o-transition: all .1s ease-in;
+  -webkit-transition: all .1s ease-in;
+  transition: all .1s ease-in;
+}
+
+.control-button img {
+  vertical-align:middle;
+}
+
+.control-button:hover {
+  display: inline-block;
+  background-color: #444;
+  border-radius: 2px;
+  padding: 2px 10px 2px 10px;
+  text-align: center;
+}
+
+.control-button:active {
+  background-color: #62a6f3;
+}
+
+.control-button.demo {
+  padding: 5px;
+}
+
+.control-button.demo:hover {
+  -webkit-animation: none;
+  -moz-animation: none;
+  -o-animation: none;
+  animation: none;
+  background-color: #444;
+}
+
+.control-button.demo:active {
+  background-color: #62a6f3;
+}

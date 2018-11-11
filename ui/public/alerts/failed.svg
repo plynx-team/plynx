@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="12px" height="12px" viewBox="0 0 12 12" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: sketchtool 46.2 (44496) - http://www.bohemiancoding.com/sketch -->
+    <title>disabled</title>
+    <desc>Created with sketchtool.</desc>
+    <defs></defs>
+    <g id="web-app" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="disabled" fill="red">
+            <path d="M6,12 C9.3137085,12 12,9.3137085 12,6 C12,2.6862915 9.3137085,0 6,0 C2.6862915,0 0,2.6862915 0,6 C0,9.3137085 2.6862915,12 6,12 Z M2.99979089,10.0002091 C3.83548724,10.6279931 4.87430019,11 6,11 C8.76142375,11 11,8.76142375 11,6 C11,4.87430019 10.6279931,3.83548724 10.0002091,2.99979089 L2.99979089,10.0002091 L2.99979089,10.0002091 Z M1.99979089,9.00020911 C1.37200687,8.16451276 1,7.12569981 1,6 C1,3.23857625 3.23857625,1 6,1 C7.12569981,1 8.16451276,1.37200687 9.00020911,1.99979089 L1.99979089,9.00020911 L1.99979089,9.00020911 Z" id="Shape"></path>
+        </g>
+    </g>
+</svg>

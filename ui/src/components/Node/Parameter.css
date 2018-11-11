@@ -1,0 +1,95 @@
+.ParameterListBackground {
+  padding: grid;
+  min-height: 100%;
+  padding: 2px;
+}
+
+.ParameterListBackgroundDragging {
+  background: lightblue;
+}
+
+.ParameterDiv {
+  user-select: none;
+  padding: 7px;
+  margin: 0;
+
+  // change background colour if dragging
+  background: transparent;
+}
+
+.ParameterDivDragging {
+  background: transparent;
+}
+
+.ParameterListItem {
+  background-color: black;
+  display: grid;
+  width: 100%;
+  color: white;
+  padding: 3px;
+  border: 1px solid white;
+  border-radius: 2px;
+  margin: 0px;
+  grid-template-columns: 200px 1fr;
+}
+
+.ParameterFirstItem {
+  padding-right: 8px;
+}
+
+.ParameterSecondItem {
+  padding-left: 8px;
+  border-left: 1px solid white;
+}
+
+.ParameterSecondItem .Remove {
+  color: pink;
+  float: right;
+  cursor: pointer;
+  width: 12px;
+}
+
+.ParameterSecondItem .Remove.hover {
+  color: red;
+}
+
+
+.ParameterRow {
+  display: grid;
+
+  grid-template-columns: 30% 70%;
+  grid-row-gap: 3px;
+}
+
+.ParameterCellTitle {
+  float: left;
+  padding-left: 5px
+}
+
+.ParameterCellValue {
+  float: left;
+}
+
+.ParameterValue {
+  width: 100%;
+}
+
+.ParameterMonoText {
+  font-family: monospace;
+  font-size: 11pt;
+  width: 100%;
+  resize:vertical;
+}
+
+.ParameterList .Add {
+  font-family: monospace;
+  font-size: 45px;
+  text-align: center;
+  margin: 9px;
+}
+
+.ParameterList .Add.hover {
+  color: #2196F3;
+  cursor: pointer;
+  background-color: #bbb;
+}
