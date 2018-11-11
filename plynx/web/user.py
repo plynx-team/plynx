@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from flask import request, abort, g
-from plynx.db import User, DemoUserManager
+from plynx.db import DemoUserManager
 from plynx.web import app, requires_auth, register_user
 from plynx.utils.common import JSONEncoder
 
