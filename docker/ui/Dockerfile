@@ -4,7 +4,7 @@ FROM node:8-slim
 # Set the working directory to /app
 WORKDIR /app
 
-ADD ./plynx-web /app
+ADD ./ui /app
 RUN npm install -s
 
 
