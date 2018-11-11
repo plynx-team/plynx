@@ -1,4 +1,3 @@
-import sys
 import subprocess
 import logging
 import webbrowser

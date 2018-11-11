@@ -194,7 +194,7 @@ class CLIFactory(object):
                      'storage_scheme', 'storage_resources', 'storage_stdout', 'storage_stderr', 'storage_worker'),
         }, {
             'func': local,
-            'help': 'Run backend server',
+            'help': 'Run local cluster. It consists of the database server, PLynx UI, backend, master and several workers',
             'args': ('verbose', 'num_workers', 'internal_master_host', 'master_host', 'master_port', 'secret_key', 'endpoint',
                      'db_host', 'db_port', 'db_user', 'db_password',
                      'storage_scheme', 'storage_resources', 'storage_stdout', 'storage_stderr', 'storage_worker'),

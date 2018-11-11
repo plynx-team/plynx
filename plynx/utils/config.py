@@ -83,7 +83,7 @@ def get_web_config():
         host=_config.get('web', {}).get('host', '0.0.0.0'),
         port=int(_config.get('web', {}).get('port', 5000)),
         endpoint=_config.get('web', {}).get('endpoint', 'http://127.0.0.1:3000'),
-        debug=bool(_config.get('web', {}).get('debug', True)),
+        debug=bool(_config.get('web', {}).get('debug', False)),
     )
 
 
