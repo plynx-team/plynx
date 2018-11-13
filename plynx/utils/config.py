@@ -42,7 +42,7 @@ def get_master_config():
     return MasterConfig(
         internal_host=_config.get('master', {}).get('internal_host', '0.0.0.0'),
         host=_config.get('master', {}).get('host', '127.0.0.1'),
-        port=int(_config.get('master', {}).get('port', 10000)),
+        port=int(_config.get('master', {}).get('port', 17011)),
     )
 
 

@@ -15,7 +15,7 @@ services:
         image: khaxis/plynx:master
         container_name: "master"
         ports:
-            - "10000:10000"
+            - 17011:17011
         depends_on:
             - mongodb
         links:

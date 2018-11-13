@@ -5,7 +5,7 @@ FROM khaxis/plynx:base
 WORKDIR /app
 
 # Make port ports available to the world outside this container
-EXPOSE 10000
+EXPOSE 17011
 
 # Run app.py when the container launches
 ENTRYPOINT plynx master -vvv

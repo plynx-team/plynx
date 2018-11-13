@@ -274,7 +274,7 @@ mongodb:
 master:
   internal_host: '0.0.0.0'
   host: 'master'
-  port: 10000
+  port: 17011
 
 worker:
   user:
@@ -303,4 +303,3 @@ demo:
 ## External links
 - [PLynx.com](https://plynx.com) demo and main page.
 - [github](https://github.com/khaxis/plynx) page.
-

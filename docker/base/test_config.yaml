@@ -7,7 +7,7 @@ mongodb:
 master:
   internal_host: '0.0.0.0'
   host: 'master'
-  port: 10000
+  port: 17011
 
 worker:
   user:

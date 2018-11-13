@@ -10,7 +10,7 @@ RUN chmod 700 /app
 RUN chmod 1777 /tmp
 
 # Make port ports available to the world outside this container
-EXPOSE 10000
+EXPOSE 17011
 
 # Run app.py when the container launches
 ENTRYPOINT plynx worker -vvv --host master
