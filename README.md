@@ -59,7 +59,7 @@ You can install backend, service and command line utils building them from the s
 
 First clone the ropo:
 ```
-git clone https://github.com/khaxis/plynx   # Clone the repo
+git clone https://github.com/khaxis/plynx.git   # Clone the repo
 ```
 
 Then build it using `setup.py` script:
@@ -124,7 +124,7 @@ Web User Interface is not the only way to create Graphs. Some of the experiments
 #!/usr/bin/env python
 # “WDBC: compare regressors” example
 from collections import namedtuple
-from plynx import Block, File, Graph, Client
+from plynx import Operation, File, Graph, Client
 
 # define the training parameters
 TrainDescriptor = namedtuple('TrainDescriptor', ['method', 'parameters'])
@@ -139,9 +139,9 @@ train_descriptors = [
 # Build Plynx elements
 ##########################################
 
-# Block is a metaclass that declares the interface to an existing block
+# Operation is a metaclass that declares the interface to an existing operation
 # in the Plynx database
-Split = Block(
+Split = Operation(
     id='5ae6b0123136050000d8711a',
     title='Split Train Test',
     inputs=['sample.py', 'data'],
@@ -149,7 +149,7 @@ Split = Block(
     outputs=['train', 'test']
 )
 
-TrainRegression = Block(
+TrainRegression = Operation(
     id='5ae6b023d26111000027a613',
     title='Train regression',
     inputs=['train.py', 'data'],
@@ -157,14 +157,14 @@ TrainRegression = Block(
     outputs=['model']
 )
 
-Predict = Block(
+Predict = Operation(
     id='5ae6b02f0164d80000afd938',
     title='Predict',
     inputs=['predict.py', 'data', 'model'],
     outputs=['prediction']
 )
 
-Compare = Block(
+Compare = Operation(
     id='5aeaa49c16b8b50000abca48',
     title='Compare regressors',
     inputs=['build_roc.py', 'predictions'],
