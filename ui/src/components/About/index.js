@@ -8,7 +8,7 @@ import './python.css';
 const pythonCode =
 `#!/usr/bin/env python
 from collections import namedtuple
-from plynx import Block, File, Graph, Client
+from plynx import Operation, File, Graph, Client
 
 # define the training parameters
 TrainDescriptor = namedtuple('TrainDescriptor', ['method', 'parameters'])
@@ -23,9 +23,9 @@ train_descriptors = [
 # Build Plynx elements
 ##########################################
 
-# Block is a metaclass that declares the interface to an existing block
+# Operation is a metaclass that declares the interface to an existing operation
 # in the Plynx database
-Split = Block(
+Split = Operation(
     id='5ae6b0123136050000d8711a',
     title='Split Train Test',
     inputs=['sample.py', 'data'],
@@ -33,7 +33,7 @@ Split = Block(
     outputs=['train', 'test']
 )
 
-TrainRegression = Block(
+TrainRegression = Operation(
     id='5ae6b023d26111000027a613',
     title='Train regression',
     inputs=['train.py', 'data'],
@@ -41,14 +41,14 @@ TrainRegression = Block(
     outputs=['model']
 )
 
-Predict = Block(
+Predict = Operation(
     id='5ae6b02f0164d80000afd938',
     title='Predict',
     inputs=['predict.py', 'data', 'model'],
     outputs=['prediction']
 )
 
-Compare = Block(
+Compare = Operation(
     id='5aeaa49c16b8b50000abca48',
     title='Compare regressors',
     inputs=['build_roc.py', 'predictions'],
@@ -150,12 +150,12 @@ export default class About extends Component {
           <p>The Plynx Backend is a RESTful web service. It has the same interface for UI and API.</p>
 
           <h3>Database</h3>
-          <p>All of the data is stored in the database. It includes Graphs structures, Blocks, and Files descriptions.</p>
+          <p>All of the data is stored in the database. It includes Graphs structures, Operations, and Files descriptions.</p>
 
           <h3>Master</h3>
-          <p>The Master is a core element in pipeline orchestration. It automatically picks up unfinished graphs and determines which Blocks need execution.</p>
+          <p>The Master is a core element in pipeline orchestration. It automatically picks up unfinished graphs and determines which Operations need execution.</p>
           <p>A Scheduler will distribute computation across all active workers.</p>
-          <p>If specified in Block properties, the results of blocks can be cached. In this case large bulks of the blocks can reuse outputs computed before.</p>
+          <p>If specified in Operations properties, the results of operations can be cached. In this case large bulks of the operations can reuse outputs computed before.</p>
 
           <h3>Workers</h3>
           <p>Workers are constantly collaborating with the Master. They always report their state and statuses of their jobs being executed.</p>
@@ -172,4 +172,4 @@ export default class About extends Component {
   }
 }
 
-// <p>Plynx offers an excellent UI that displays the states of the Blocks, Files, and Graphs.</p>
+// <p>Plynx offers an excellent UI that displays the states of the Operations, Files, and Graphs.</p>
