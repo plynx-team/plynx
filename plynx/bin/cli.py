@@ -84,10 +84,15 @@ class CLIFactory(object):
 
         # Local
         'num_workers': Arg(
-            ("-n", "--num-workers"),
-            help="Number of workers",
+            ('-n', '--num-workers'),
+            help='Number of workers',
             default=3,
             type=int,
+            ),
+        'ignore_containers': Arg(
+            ('--ignore-containers',),
+            help='Do not instantiate docker containers',
+            action='store_true'
             ),
 
         # MongoConfig
@@ -195,7 +200,8 @@ class CLIFactory(object):
         }, {
             'func': local,
             'help': 'Run local cluster. It consists of the database server, PLynx UI, backend, master and several workers',
-            'args': ('verbose', 'num_workers', 'internal_master_host', 'master_host', 'master_port', 'secret_key', 'endpoint',
+            'args': ('verbose', 'num_workers', 'ignore_containers',
+                     'internal_master_host', 'master_host', 'master_port', 'secret_key', 'endpoint',
                      'db_host', 'db_port', 'db_user', 'db_password',
                      'storage_scheme', 'storage_resources', 'storage_stdout', 'storage_stderr', 'storage_worker'),
         }, {

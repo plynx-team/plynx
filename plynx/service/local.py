@@ -8,6 +8,10 @@ DockerDescriptor = namedtuple('DockerDescriptor', ['image', 'ports'])
 
 DOCKER_CONTAINERS = [
     DockerDescriptor(
+        image='mongo:3.6-jessie',
+        ports={27017: 27017},
+    ),
+    DockerDescriptor(
         image='khaxis/plynx:ui',
         ports={3000: 3000},
     ),
@@ -22,15 +26,15 @@ def _get_container_by_tag(client, tag):
     return None
 
 
-def _kill_containers_by_tag(client, tags):
-    for container in client.containers.list():
-        if container.image.attrs['RepoTags'][0] in tags:
-            logging.info('Stopping {}...'.format(container))
-            container.stop()
-            logging.info('Done')
+def _kill_containers(containers):
+    for container in containers:
+        logging.info('Stopping {}...'.format(container))
+        container.stop()
+        logging.info('Done')
 
 
 def _run_docker(client):
+    containers = []
     for descriptor in DOCKER_CONTAINERS:
         container = _get_container_by_tag(client, descriptor.image)
         if container:
@@ -38,21 +42,24 @@ def _run_docker(client):
         else:
             container = client.containers.run(detach=True, **vars(descriptor))
             logging.info("Created new container: {}".format(container))
+        containers.append(container)
+    return containers
 
 
-def run_local(num_workers, verbose):
-    try:
-        import docker   # noqa
-    except ImportError:
-        logging.critical("Docker SDK fro python must be installed. "
-                         "Please visit https://docker-py.readthedocs.io/en/stable/ for instructions")
-        pass
-
-    client = docker.from_env()
+def run_local(num_workers, ignore_containers, verbose):
     assert num_workers > 0, 'There must be one or more Workers'
 
     try:
-        _run_docker(client)
+        containers = []
+        if not ignore_containers:
+            try:
+                import docker   # noqa
+            except ImportError:
+                logging.critical("Docker SDK fro python must be installed. "
+                                 "Please visit https://docker-py.readthedocs.io/en/stable/ for instructions")
+                raise
+            client = docker.from_env()
+            containers = _run_docker(client)
 
         verbose_flags = ['-v'] * verbose
 
@@ -73,4 +80,4 @@ def run_local(num_workers, verbose):
     except KeyboardInterrupt:
         pass
     finally:
-        _kill_containers_by_tag(client, [descriptor.image for descriptor in DOCKER_CONTAINERS])
+        _kill_containers(containers)

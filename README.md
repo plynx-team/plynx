@@ -104,7 +104,7 @@ Another depenency is needed: metadata storage. PLynx curently uses `MongoDB` inf
 
 When your UI and `MongoDB` servers are running, you can call the cluster with master, workers and backend. Make sure you skip the services that are already running.
 ```
-plynx local --skip-db --skip-ui
+plynx local --ignore-containers
 ```
 
 Note that `plynx local` starts up the following services:
