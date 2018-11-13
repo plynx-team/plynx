@@ -8,6 +8,12 @@ Developed for data scientists and data engineers, PLynx provides an easy and fle
 
 ## Features
 
+### Distributed computation
+
+All of the computation is distributed across multiple workers.
+
+![Distributed computation](ui/public/architecture.png?raw=true "Distributed computation")
+
 ### Graph Editor
 
 Interactive User Interface. Create new pipelines based on existing ones and share your workflows with other people. Each of the pipelines is stored and you can always reproduce the results.
