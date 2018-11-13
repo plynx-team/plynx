@@ -96,39 +96,40 @@ class BaseBash(BaseNode):
         node.node_status = NodeStatus.CREATED
         node.public = False
         node.parameters = [
-            Parameter(
-                name='cmd',
-                parameter_type=ParameterTypes.TEXT,
-                value='bash -c " "',
-                mutable_type=False,
-                publicable=False,
-                removable=False
+            Parameter.from_dict({
+                'name': 'cmd',
+                'parameter_type': ParameterTypes.TEXT,
+                'value': 'bash -c " "',
+                'mutable_type': False,
+                'publicable': False,
+                'removable': False,
+                }
             ),
-            Parameter(
-                name='cacheable',
-                parameter_type=ParameterTypes.BOOL,
-                value=True,
-                mutable_type=False,
-                publicable=False,
-                removable=False
-            )
+            Parameter.from_dict({
+                'name': 'cacheable',
+                'parameter_type': ParameterTypes.BOOL,
+                'value': True,
+                'mutable_type': False,
+                'publicable': False,
+                'removable': False,
+            })
         ]
         node.logs = [
-            Output(
-                name='stderr',
-                file_type=FileTypes.FILE,
-                resource_id=None
-            ),
-            Output(
-                name='stdout',
-                file_type=FileTypes.FILE,
-                resource_id=None
-            ),
-            Output(
-                name='worker',
-                file_type=FileTypes.FILE,
-                resource_id=None
-            )
+            Output.from_dict({
+                'name': 'stderr',
+                'file_type': FileTypes.FILE,
+                'resource_id': None,
+            }),
+            Output({
+                'name': 'stdout',
+                'file_type': FileTypes.FILE,
+                'resource_id': None,
+            }),
+            Output({
+                'name': 'worker',
+                'file_type': FileTypes.FILE,
+                'resource_id': None,
+            }),
         ]
         return node
 
