@@ -33,17 +33,24 @@ def _kill_containers(containers):
         logging.info('Done')
 
 
-def _run_docker(client):
-    containers = []
+def _run_containers(client, containers):
     for descriptor in DOCKER_CONTAINERS:
         container = _get_container_by_tag(client, descriptor.image)
         if container:
-            logging.info("Found running docker container: {}".format(container))
+            logging.info(
+                'Found running docker container: `{}` {}'.format(
+                    descriptor.image,
+                    container,
+                )
+            )
         else:
             container = client.containers.run(detach=True, **vars(descriptor))
-            logging.info("Created new container: {}".format(container))
+            logging.info('Created new container: `{}` {}'.format(
+                descriptor.image,
+                container,
+                )
+            )
         containers.append(container)
-    return containers
 
 
 def run_local(num_workers, ignore_containers, verbose):
@@ -59,7 +66,7 @@ def run_local(num_workers, ignore_containers, verbose):
                                  "Please visit https://docker-py.readthedocs.io/en/stable/ for instructions")
                 raise
             client = docker.from_env()
-            containers = _run_docker(client)
+            _run_containers(client, containers)
 
         verbose_flags = ['-v'] * verbose
 
