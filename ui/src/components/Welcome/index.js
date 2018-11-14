@@ -190,7 +190,7 @@ export default class Welcome extends Component {
 
             <div className="item">
               <div className="header">
-                Sharable
+                Shareable
               </div>
               <div className="body">
                 Share your Machine Learning or Analytics pipeline across the organization
