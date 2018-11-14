@@ -106,17 +106,114 @@ export default class Welcome extends Component {
         {this.state.loading &&
           <LoadingScreen />
         }
+        <div className="Top">
+          <video id="background-video" loop autoPlay>
+            <source src="video.mp4" type="video/mp4" />
+          </video>
+        </div>
+
         <div className='WelcomeBlock'>
-          <img className="img"
-               src='01_flexible.png'
-               width="100%"
-               alt="background" />
-          <div className="Demo">
-            {!cookie.load('username') &&
-              <div className="DemoButton" onClick={() => this.handleDemo()}>
-                Try Live Demo
+          {!cookie.load('username') &&
+            <div className="DemoButton" onClick={() => this.handleDemo()}>
+              Try Live Demo
+            </div>
+          }
+        </div>
+
+        <div className="items">
+
+          <div className="items-wrapper">
+
+            <div className="item">
+              <div className="header">
+                Open Source
               </div>
-            }
+              <div className="body">
+                Apache License 2.0
+              </div>
+            </div>
+
+            <div className="item">
+              <div className="header">
+                Reproducibility
+              </div>
+              <div className="body">
+                Go back to your experiments and reproduce them
+              </div>
+            </div>
+
+            <div className="item">
+              <div className="header">
+                Compatibility
+              </div>
+              <div className="body">
+                Works with any language, library and user code
+              </div>
+            </div>
+
+            <div className="item">
+              <div className="header">
+                Interactive interface
+              </div>
+              <div className="body">
+                Interactive and user friendly UI
+              </div>
+            </div>
+
+            <div className="item">
+              <div className="header">
+                python API
+              </div>
+              <div className="body">
+                Create your complex pipelines using python script
+              </div>
+            </div>
+
+            <div className="item">
+              <div className="header">
+                Scalability
+              </div>
+              <div className="body">
+                Scale your cluster of workers. Designed to work on a single workstation and on a cluster with multiple nodes
+              </div>
+            </div>
+
+
+            <div className="item">
+              <div className="header">
+                General
+              </div>
+              <div className="body">
+                Designed to be a solution to many problems
+              </div>
+            </div>
+
+            <div className="item">
+              <div className="header">
+                Sharable
+              </div>
+              <div className="body">
+                Share your Machine Learning or Analytics pipeline across the organization
+              </div>
+            </div>
+
+            <div className="item">
+              <div className="header">
+                Reusable
+              </div>
+              <div className="body">
+                Each Operation and subgraph can be used in different projects
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <div className="footer">
+          <div className="contact">
+            <a href="https://github.com/khaxis/plynx">Github</a>
+            <a href="mailto:ivan@plynx.com">Contact us</a>
           </div>
         </div>
       </div>
