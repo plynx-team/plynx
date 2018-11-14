@@ -83,7 +83,7 @@ export default class PreviewDialog extends Component {
           </div>
         }
         <div className="PreviewBoxContent">
-          { ['executable', 'file', 'tsv', 'csv'].indexOf(this.state.file_type) > -1 &&
+          { ['executable', 'file', 'tsv', 'csv', 'json'].indexOf(this.state.file_type) > -1 &&
             <div>
               {this.previewMessage(this.state.resource_id, this.state.download_name)}
               <pre>

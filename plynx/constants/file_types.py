@@ -5,3 +5,4 @@ class FileTypes:
     EXECUTABLE = 'executable'
     CSV = 'csv'
     TSV = 'tsv'
+    JSON = 'json'

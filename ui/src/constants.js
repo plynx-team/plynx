@@ -59,7 +59,11 @@ export const FILE_TYPES = [
   {
     type: 'tsv',
     alias: 'tsv'
-  }
+  },
+  {
+    type: 'json',
+    alias: 'json'
+  },
 ]
 
 export const ACTION = Object.freeze({
