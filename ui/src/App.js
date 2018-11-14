@@ -12,7 +12,6 @@ import FileRouter from './components/FileRouter.js';
 import GraphRouter from './components/GraphRouter.js';
 import NotFound from './components/NotFound';
 import FeedbackButton from './components/FeedbackButton'
-import FeedbackWindow from './components/FeedbackWindow'
 
 import './App.css';
 
@@ -21,9 +20,6 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.reloadOnChangePath = true;
-    this.state = {
-      feedback: false
-    };
   }
 
   getPathTuple(path) {
@@ -52,24 +48,12 @@ class App extends Component {
     }
   }
 
-  handleFeedback(active) {
-    this.setState({feedback: active});
-  }
-
   render() {
     return (
       <div className="App">
         <Header />
-        {
-          this.state.feedback &&
-          <FeedbackWindow
-            onClose={() => this.handleFeedback(false)}
-          />
-        }
         {cookie.load('username') &&
-          <FeedbackButton
-            onClick={() => this.handleFeedback(true)}
-          />
+          <FeedbackButton/>
         }
         <div className="Content">
           <Switch>

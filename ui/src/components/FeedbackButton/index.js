@@ -4,19 +4,7 @@ import React, { Component } from 'react';
 import './style.css';
 
 export default class FeedbackButton extends Component {
-
-  handleClick() {
-    this.props.onClick();
-  }
-
   render() {
-    var self = this;
-
-    return (
-      <div className='FeedbackButton'
-           onClick={() => self.handleClick()}>
-          Feedback
-      </div>
-    );
+    return <a href="mailto:ivan@plynx.com" className='FeedbackButton'>Contact us</a>
   }
 }
