@@ -47,23 +47,23 @@ User Interface is based on `React` framework.
 
 PLynx is using `MongoDB` as a primary metadata storage. In order to meet diverse data storage requirements, PLynx is using `boto` library as an abstractions. It supports multiple data storages such as `AWS S3`, `Google Cloud Storage` and traditional filesystems.
 
-In order to reduce complyxity on local workstations we recommend to install `docker` framework.
+In order to reduce complexity on local workstations we recommend to install `docker` framework.
 
 [Get started with Docker](https://www.docker.com/get-started)
 
 ## Get started
 
-### Instalation using pip
+### Install using pip
 
 ```
 pip install plynx
 ```
 
-### Instalation from source code
+### Install from source code
 
 You can install backend, service and command line utils building them from the source code.
 
-First clone the ropo:
+First clone the repo:
 ```
 git clone https://github.com/khaxis/plynx.git   # Clone the repo
 ```
@@ -75,7 +75,7 @@ cd plynx
 python setup.py install     # install main PLynx package
 ```
 
-### Ussage
+### Usage
 
 Run the local cluster. Please note `docker` is required. ([Get started with Docker](https://www.docker.com/get-started))
 
@@ -98,7 +98,7 @@ Then in order to start the UI type the following command:
 npm start
 ```
 
-Another depenency is needed: metadata storage. PLynx curently uses `MongoDB` infrastructure for it.
+Another dependency is needed: metadata storage. PLynx currently uses `MongoDB` infrastructure for it.
 
 [Get started with MongoDB](https://docs.mongodb.com/manual/installation/#mongodb-community-edition)
 
@@ -259,7 +259,7 @@ optional arguments:
                         Database password
 ```
 
-Yet it is almost alays more convenient to store the config in a separate file.
+Yet it is almost always more convenient to store the config in a separate file.
 
 PLynx config is located at Env variable `PLYNX_CONFIG_PATH`. If the variable is not defined, PLynx will use a file `config.yaml` in the local directory.
 
