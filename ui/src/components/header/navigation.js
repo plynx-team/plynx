@@ -31,6 +31,8 @@ class Navigation extends Component {
               <NavLink to='/graphs' className="Item">Graphs</NavLink>
             }
             <NavLink to='/about' className="Item">About</NavLink>
+            -
+            <NavLink to='https://github.com/khaxis/plynx' className="Item">Github</NavLink>
           </div>
       </div>
     );
