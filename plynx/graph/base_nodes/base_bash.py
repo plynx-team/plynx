@@ -13,12 +13,14 @@ from plynx.utils.config import get_worker_config
 from plynx.graph.base_nodes import BaseNode
 
 WORKER_CONFIG = get_worker_config()
+TMP_DIR = '/tmp'
 
 
 class BaseBash(BaseNode):
     def __init__(self, node=None):
         super(BaseBash, self).__init__(node)
         self.sp = None
+        self.workdir = os.path.join(TMP_DIR, str(uuid.uuid1()))
 
     def exec_script(self, script_location, logs, command='bash'):
         res = JobReturnStatus.SUCCESS
@@ -45,7 +47,7 @@ class BaseBash(BaseNode):
             self.sp = Popen(
                 [command, script_location],
                 stdout=PIPE, stderr=PIPE,
-                cwd='/tmp', env=env,
+                cwd=self.workdir, env=env,
                 preexec_fn=pre_exec)
 
             line = ''
@@ -79,6 +81,14 @@ class BaseBash(BaseNode):
                 os.killpg(os.getpgid(self.sp.pid), signal.SIGTERM)
             except OSError as e:
                 logging.error('Error: {}'.format(e))
+
+    def init_workdir(self):
+        if not os.path.exists(self.workdir):
+            os.makedirs(self.workdir)
+
+    def clean_up(self):
+        if os.path.exists(self.workdir):
+            shutil.rmtree(self.workdir, ignore_errors=True)
 
     # Hack: do not pickle file
     def __getstate__(self):
@@ -133,18 +143,17 @@ class BaseBash(BaseNode):
         ]
         return node
 
-    @staticmethod
-    def _prepare_inputs(inputs, preview=False, pythonize=False):
+    def _prepare_inputs(self, preview=False, pythonize=False):
         res = {}
-        for input in inputs:
+        for input in self.node.inputs:
             filenames = []
             if preview:
                 for i, value in enumerate(range(input.min_count)):
-                    filename = os.path.join('/tmp', '{}_{}_{}'.format(str(uuid.uuid1())[:8], i, input.name))
+                    filename = os.path.join(self.workdir, 'i_{}_{}'.format(i, input.name))
                     filenames.append(filename)
             else:
                 for i, value in enumerate(input.values):
-                    filename = os.path.join('/tmp', '{}_{}_{}'.format(str(uuid.uuid1()), i, input.name))
+                    filename = os.path.join(self.workdir, 'i_{}_{}'.format(i, input.name))
                     with open(filename, 'wb') as f:
                         f.write(get_file_stream(value.resource_id).read())
                     if FileTypes.EXECUTABLE in input.file_types:
@@ -162,33 +171,29 @@ class BaseBash(BaseNode):
                 res[input.name] = ' '.join(filenames)
         return res
 
-    @staticmethod
-    def _prepare_outputs(outputs, preview=False):
+    def _prepare_outputs(self, preview=False):
         res = {}
-        for output in outputs:
+        for output in self.node.outputs:
             if preview:
-                filename = os.path.join('/tmp', '{}_{}'.format(str(uuid.uuid1())[:8], output.name))
+                filename = os.path.join(self.workdir, 'o_{}'.format(output.name))
             else:
-                filename = os.path.join('/tmp', '{}_{}'.format(str(uuid.uuid1()), output.name))
+                filename = os.path.join(self.workdir, 'o_{}'.format(output.name))
             res[output.name] = filename
         return res
 
-    @staticmethod
-    def _prepare_logs(logs):
+    def _prepare_logs(self):
         res = {}
-        for log in logs:
-            filename = os.path.join('/tmp', '{}_{}'.format(str(uuid.uuid1()), log.name))
+        for log in self.node.logs:
+            filename = os.path.join(self.workdir, 'l_{}'.format(log.name))
             res[log.name] = filename
         return res
 
-    @staticmethod
-    def _get_script_fname(extension='.sh'):
-        return os.path.join('/tmp', '{}_{}'.format(str(uuid.uuid1()), "exec{}".format(extension)))
+    def _get_script_fname(self, extension='.sh'):
+        return os.path.join(self.workdir, "exec{}".format(extension))
 
-    @staticmethod
-    def _prepare_parameters(parameters, pythonize=False):
+    def _prepare_parameters(self, pythonize=False):
         res = {}
-        for parameter in parameters:
+        for parameter in self.node.parameters:
             value = None
             if parameter.parameter_type == ParameterTypes.ENUM:
                 index = max(0, min(len(parameter.value.values) - 1, parameter.value.index))

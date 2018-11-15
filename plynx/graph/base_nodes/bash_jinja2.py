@@ -7,10 +7,10 @@ class BashJinja2(BaseBash):
         super(BashJinja2, self).__init__(node)
 
     def run(self, preview=False):
-        inputs = BaseBash._prepare_inputs(self.node.inputs, preview)
-        parameters = BaseBash._prepare_parameters(self.node.parameters)
-        outputs = BaseBash._prepare_outputs(self.node.outputs, preview)
-        logs = BaseBash._prepare_logs(self.node.logs)
+        inputs = self._prepare_inputs(preview)
+        parameters = self._prepare_parameters()
+        outputs = self._prepare_outputs(preview)
+        logs = self._prepare_logs()
         cmd = self.node.get_parameter_by_name('cmd').value
         cmd_template = jinja2.Template(cmd)
         cmd_string = cmd_template.render(

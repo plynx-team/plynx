@@ -127,6 +127,7 @@ class Worker:
                             self._job = master_message.job
                             self._graph_id = master_message.graph_id
                             try:
+                                self._job.init_workdir()
                                 status = self._job.run()
                             except Exception:
                                 try:
@@ -137,6 +138,8 @@ class Worker:
                                 except Exception:
                                     logging.critical(traceback.format_exc())
                                     self.stop()
+                            finally:
+                                self._job.clean_up()
 
                             self._job_killed = True
                             if status == JobReturnStatus.SUCCESS:
