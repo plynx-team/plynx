@@ -1,3 +1,4 @@
+from __future__ import division
 from collections import deque, defaultdict
 from plynx.db import DBObject, DBObjectField, Node, ValidationError
 from plynx.utils.common import to_object_id, ObjectId
@@ -196,12 +197,16 @@ class Graph(DBObject):
         for index in range(len(row_heights)):
             cum_heights.append(cum_heights[-1] + row_heights[index] + SPACE_HEIGHT)
 
+        max_height = max(cum_heights)
+
         for level in range(max_level, -1, -1):
             level_node_ids = level_to_node_ids[level]
+            level_height = cum_heights[len(level_node_ids)]
+            level_padding = (max_height - level_height) // 2
             for index, node_id in enumerate(level_node_ids):
                 node = node_id_to_node[node_id]
                 node.x = LEFT_PADDING + (max_level - level) * LEVEL_WIDTH
-                node.y = TOP_PADDING + cum_heights[index]
+                node.y = TOP_PADDING + level_padding + cum_heights[index]
 
     def __str__(self):
         return 'Graph(_id="{}", nodes={})'.format(self._id, [str(b) for b in self.nodes])
