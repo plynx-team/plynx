@@ -47,7 +47,7 @@ class DBObject(object):
         obj_dict = obj_dict or {}
         for field_name, object_field in self.FIELDS.items():
             obj_value = obj_dict.get(field_name, None)
-            if obj_value:
+            if obj_value is not None:
                 if object_field.is_list:
                     value = [
                         object_field.type(v) for v in obj_value
