@@ -75,7 +75,7 @@ export default class FileDialog extends Component {
           <div className='Summary'>
             <div className='Item'>
               <div className={'Name'}>Id:</div>
-              <div className={'Id'}>{this.props.fileObj._id}</div>
+              <div className={'Id'}>{this.props.fileObj.parent_node || this.props.fileObj._id}</div>
             </div>
 
             <div className='Item'>
