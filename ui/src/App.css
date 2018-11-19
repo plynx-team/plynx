@@ -4,9 +4,9 @@ html {
 * , *:before, *:after {
   box-sizing:inherit
 }
-/* Extract from normalize.css by Nicolas Gallagher and Jonathan Neal git.io/normalize */
+
 html{
-  background-color: #ccc
+  background-color: #eee
 }
 body{margin:0}
 

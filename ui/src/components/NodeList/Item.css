@@ -1,7 +1,6 @@
 .NodeListItem {
   border-radius: 4px;
   margin: 3px;
-  background-color: lightgrey;
   color: black;
   font-weight: 409;
   font-size: 12pt;
@@ -18,7 +17,7 @@
 }
 
 .NodeListItem:hover {
-  background-color: darkgrey;
+  background-color: #ccc;
 }
 
 .NodeListItem:active {

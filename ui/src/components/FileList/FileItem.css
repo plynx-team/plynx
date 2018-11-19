@@ -1,7 +1,6 @@
 .FileListItem {
   border-radius: 4px;
   margin: 3px;
-  background-color: lightgrey;
   color: black;
   font-weight: 409;
   font-size: 12pt;
@@ -18,7 +17,7 @@
 }
 
 .FileListItem:hover {
-  background-color: darkgrey;
+  background-color: #ccc;
 }
 
 .FileListItem:active {
@@ -36,7 +35,7 @@
   background-color: #c29b3c;
   text-align: center;
   border-radius: 2px;
-  border: 1px darkgrey solid;
+  border: 1px #bbb solid;
 }
 
 .FileListItem .Type .Widget img {

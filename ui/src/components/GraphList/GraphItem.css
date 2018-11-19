@@ -1,7 +1,6 @@
 .GraphItem {
   border-radius: 4px;
   margin: 3px;
-  background-color: lightgrey;
   color: black;
   font-weight: 400;
   font-size: 13pt;
@@ -18,7 +17,7 @@
 }
 
 .GraphItem:hover {
-  background-color: darkgrey;
+  background-color: #ccc;
 }
 
 .GraphItem:active {
