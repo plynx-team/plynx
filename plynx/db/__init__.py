@@ -11,6 +11,7 @@ from plynx.db.node_collection_manager import NodeCollectionManager
 from plynx.db.graph import Graph
 from plynx.db.user import User
 from plynx.db.feedback import Feedback
+from plynx.db.service_state import MasterState, WorkerState
 from plynx.db.graph_collection_manager import GraphCollectionManager
 from plynx.db.graph_cancellation_manager import GraphCancellationManager
 from plynx.db.demo_user_manager import DemoUserManager

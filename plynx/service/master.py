@@ -14,7 +14,12 @@ from plynx.service import (
     recv_msg,
 )
 from plynx.constants import NodeRunningStatus, GraphRunningStatus
-from plynx.db import GraphCollectionManager, GraphCancellationManager
+from plynx.db import (
+    GraphCollectionManager,
+    GraphCancellationManager,
+    MasterState,
+    WorkerState,
+)
 from plynx.graph.graph_scheduler import GraphScheduler
 from plynx.utils.config import get_master_config
 from plynx.graph.base_nodes import NodeCollection
@@ -29,14 +34,12 @@ node_collection = NodeCollection()
 
 class WorkerInfo(object):
     """Worker related information like current job or last heartbeat timestamp."""
-    FIELDS = [
-        'job_description',
-        'last_heartbeat_ts'
-    ]
 
     def __init__(self, **kwargs):
-        for field in type(self).FIELDS:
-            setattr(self, field, kwargs.get(field, None))
+        self.job_description = None
+        self.last_heartbeat_ts = None
+        self.host = ''
+        self.num_finished_jobs = 0
 
 
 class ClientTCPHandler(socketserver.BaseRequestHandler):
@@ -55,7 +58,11 @@ class ClientTCPHandler(socketserver.BaseRequestHandler):
         response = None
         if worker_message.message_type == WorkerMessageType.HEARTBEAT:
             # track worker existance and responsiveness
-            self.server.track_worker(worker_message.worker_id)
+            host, _ = self.request.getpeername()
+            self.server.track_worker(
+                worker_id=worker_message.worker_id,
+                host=host,
+            )
 
             # check worker status
             if worker_message.run_status == RunStatus.IDLE:
@@ -302,6 +309,28 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
                             node.node_running_status = NodeRunningStatus.FAILED
                             scheduler.update_node(node)
 
+                # Update master state
+                master_state = MasterState()
+                with self._worker_to_info_lock:
+                    for worker_id, worker_info in self._worker_to_info.items():
+                        if worker_info.job_description:
+                            graph_id = worker_info.job_description.graph_id
+                            node = worker_info.job_description.job.node.to_dict()
+                        else:
+                            graph_id, node = None, None
+                        worker_state = WorkerState({
+                            'worker_id': worker_id,
+                            'graph_id': graph_id,
+                            'node': node,
+                            'host': worker_info.host,
+                            'num_finished_jobs': worker_info.num_finished_jobs,
+                        })
+                        master_state.workers.append(worker_state)
+
+                        worker_info.num_finished_jobs = 0
+
+                master_state.save()
+
                 self._stop_event.wait(timeout=Master.WORKER_MONITORING_TIMEOUT)
         except Exception:
             self.stop()
@@ -316,8 +345,10 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
     def _del_job_description(self, worker_id):
         with self._worker_to_info_lock:
-            if worker_id in self._worker_to_info:
+            worker_info = self._worker_to_info.get(worker_id, None)
+            if worker_info:
                 self._worker_to_info[worker_id].job_description = None
+                worker_info.num_finished_jobs += 1
                 return True
             return False
 
@@ -378,12 +409,13 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
             logging.info("Scheduler was not found for worker `{}`".format(worker_id))
         return False
 
-    def track_worker(self, worker_id):
+    def track_worker(self, worker_id, host):
         """Track worker existance and responsiveness."""
         with self._worker_to_info_lock:
             worker_info = self._worker_to_info.get(worker_id, None)
             if worker_info:
                 worker_info.last_heartbeat_ts = time.time()
+                worker_info.host = host
 
     def stop(self):
         """Stop Master."""
