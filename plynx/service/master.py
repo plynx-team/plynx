@@ -27,6 +27,18 @@ graph_cancellation_manager = GraphCancellationManager()
 node_collection = NodeCollection()
 
 
+class WorkerInfo(object):
+    """Worker related information like current job or last heartbeat timestamp."""
+    FIELDS = [
+        'job_description',
+        'last_heartbeat_ts'
+    ]
+
+    def __init__(self, **kwargs):
+        for field in type(self).FIELDS:
+            setattr(self, field, kwargs.get(field, None))
+
+
 class ClientTCPHandler(socketserver.BaseRequestHandler):
     """The request handler class for Master server.
 
@@ -155,10 +167,9 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
         socketserver.TCPServer.__init__(self, server_address, RequestHandlerClass)
         self._stop_event = threading.Event()
         self._job_description_queue = queue.Queue()
-        # Mapping of Worker ID to the Job Description
-        self._worker_to_job_description = {}
-        self._worker_to_last_heartbeat = {}
-        self._worker_to_job_description_lock = threading.Lock()
+        # Mapping of Worker ID to WorkerInfo
+        self._worker_to_info = {}
+        self._worker_to_info_lock = threading.Lock()
 
         # Pick up all the Graphs with status RUNNING and set it to READY
         # The have probably been in progress then the their master exited
@@ -216,7 +227,7 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
     def _run_scheduler(self):
         """
-        Synchronization of the Schedules.
+        Synchronization of the Schedulers.
         The process picks up new Graphs from _run_db_status_update().
         It also queries each Scheduler for the new Jobs and puts them into the queue.
         """
@@ -272,11 +283,11 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
         try:
             while not self._stop_event.is_set():
                 current_time = time.time()
-                with self._worker_to_job_description_lock:
+                with self._worker_to_info_lock:
                     dead_worker_ids = [
                         worker_id
-                        for worker_id, last_time in self._worker_to_last_heartbeat.items()
-                        if current_time - last_time > Master.MAX_HEARTBEAT_DELAY
+                        for worker_id, worker_info in self._worker_to_info.items()
+                        if current_time - worker_info.last_heartbeat_ts > Master.MAX_HEARTBEAT_DELAY
                     ]
                 for worker_id in dead_worker_ids:
                     logging.info("Found dead Worker: worker_id=`{}`".format(worker_id))
@@ -299,16 +310,14 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
             logging.info("Exit {}".format(self._run_worker_monitoring.__name__))
 
     def _del_worker_info(self, worker_id):
-        with self._worker_to_job_description_lock:
-            if worker_id in self._worker_to_job_description:
-                del self._worker_to_job_description[worker_id]
-            if worker_id in self._worker_to_last_heartbeat:
-                del self._worker_to_last_heartbeat[worker_id]
+        with self._worker_to_info_lock:
+            if worker_id in self._worker_to_info:
+                del self._worker_to_info[worker_id]
 
     def _del_job_description(self, worker_id):
-        with self._worker_to_job_description_lock:
-            if worker_id in self._worker_to_job_description:
-                del self._worker_to_job_description[worker_id]
+        with self._worker_to_info_lock:
+            if worker_id in self._worker_to_info:
+                self._worker_to_info[worker_id].job_description = None
                 return True
             return False
 
@@ -321,19 +330,25 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
             return None
 
     def allocate_job(self, worker_id):
-        with self._worker_to_job_description_lock:
-            if worker_id in self._worker_to_job_description:            # worker already has a Job
+        with self._worker_to_info_lock:
+            if worker_id not in self._worker_to_info:
+                # Register the worker
+                self._worker_to_info[worker_id] = WorkerInfo()
+            if self._worker_to_info[worker_id].job_description is not None:
+                # worker already has a Job
                 return False
+        # TODO use more verbose loop
         while True:
             job_description = self._get_job_description_from_queue()
             if not job_description:
                 return False
+            # TODO potential deadlock: Two locks in the same time
             with self._graph_schedulers_lock:
                 scheduler = self._graph_id_to_scheduler.get(job_description.graph_id, None)
                 # CANCELED and FAILED Graphs should not have jobs assigned. Check for RUNNING status
                 if scheduler and scheduler.graph.graph_running_status == GraphRunningStatus.RUNNING:
-                    with self._worker_to_job_description_lock:
-                        self._worker_to_job_description[worker_id] = job_description
+                    with self._worker_to_info_lock:
+                        self._worker_to_info.get(worker_id).job_description = job_description
                     node = job_description.job.node
                     node.node_running_status = NodeRunningStatus.IN_QUEUE
                     scheduler.update_node(node)
@@ -342,8 +357,11 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
         return False
 
     def get_job_description(self, worker_id):
-        with self._worker_to_job_description_lock:
-            return self._worker_to_job_description.get(worker_id, None)
+        with self._worker_to_info_lock:
+            worker_info = self._worker_to_info.get(worker_id, None)
+            if worker_info:
+                return worker_info.job_description
+            return None
 
     def update_node(self, worker_id, node):
         """Return True Job is in the queue, else False."""
@@ -362,8 +380,10 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
     def track_worker(self, worker_id):
         """Track worker existance and responsiveness."""
-        with self._worker_to_job_description_lock:
-            self._worker_to_last_heartbeat[worker_id] = time.time()
+        with self._worker_to_info_lock:
+            worker_info = self._worker_to_info.get(worker_id, None)
+            if worker_info:
+                worker_info.last_heartbeat_ts = time.time()
 
     def stop(self):
         """Stop Master."""
