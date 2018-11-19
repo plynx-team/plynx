@@ -90,7 +90,7 @@ class User(DBObject):
         Return:
             (User)   User object or None
         """
-        user_dict = get_db_connector().users.find_one({'username': username})
+        user_dict = getattr(get_db_connector(), User.DB_COLLECTION).find_one({'username': username})
         if not user_dict:
             return None
 

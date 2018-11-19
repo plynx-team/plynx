@@ -1,4 +1,5 @@
 from plynx.db import DBObjectField, DBObject, Node
+from plynx.utils.db_connector import get_db_connector
 from plynx.utils.common import ObjectId
 
 
@@ -55,3 +56,8 @@ class MasterState(DBObject):
     }
 
     DB_COLLECTION = 'master_state'
+
+
+def get_master_state():
+    return getattr(get_db_connector(), MasterState.DB_COLLECTION)\
+           .find({}).sort('insertion_date', -1).limit(1)[0]
