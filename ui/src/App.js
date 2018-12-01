@@ -7,6 +7,7 @@ import Header from './components/header';
 import About from './components/About';
 import LogIn from './components/LogIn';
 import Welcome from './components/Welcome';
+import Dashboard from './components/dashboard';
 import NodeRouter from './components/NodeRouter.js';
 import FileRouter from './components/FileRouter.js';
 import GraphRouter from './components/GraphRouter.js';
@@ -59,6 +60,7 @@ class App extends Component {
           <Switch>
             <Route exact path="/" component={Welcome} />
             <Route exact path="/welcome" component={Welcome} />
+            <Route exact path="/dashboard" component={Dashboard} />
             <Route path="/nodes" component={NodeRouter}/>
             <Route path="/files" component={FileRouter}/>
             <Route path="/graphs" component={GraphRouter}/>

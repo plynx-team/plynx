@@ -22,6 +22,9 @@ class Navigation extends Component {
       <div className="Navigation" onMouseUp={this.onMouseUp}>
           <div className="NavigationItems">
             {this.state.refreshTokenExists &&
+              <NavLink to='/dashboard' className="Item">Dashboard</NavLink>
+            }
+            {this.state.refreshTokenExists &&
               <NavLink to='/files' className="Item">Files</NavLink>
             }
             {this.state.refreshTokenExists &&

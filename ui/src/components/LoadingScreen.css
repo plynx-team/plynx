@@ -6,10 +6,14 @@
   background-color: rgba(0, 0, 0, 0.5);
   width: 100%;
   height: 100%;
+  color: #ffffff;
+}
+
+.simple-loader {
+  color: #000;
 }
 
 .loader {
-  color: #ffffff;
   font-size: 60px;
   text-indent: -9999em;
   overflow: hidden;
