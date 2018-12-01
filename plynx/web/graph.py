@@ -13,8 +13,8 @@ from plynx.utils.config import get_web_config
 graph_collection_manager = GraphCollectionManager()
 graph_cancellation_manager = GraphCancellationManager()
 WEB_CONFIG = get_web_config()
-COUNT_QUERY_KEYS = {'author', 'search'}
-PAGINATION_QUERY_KEYS = COUNT_QUERY_KEYS.union({'per_page', 'offset'})
+COUNT_QUERY_KEYS = {'author', 'search', 'status'}
+PAGINATION_QUERY_KEYS = COUNT_QUERY_KEYS.union({'per_page', 'offset', 'recent'})
 
 
 def _make_fail_response(message):
