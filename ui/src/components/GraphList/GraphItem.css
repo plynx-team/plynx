@@ -1,6 +1,6 @@
 .graph-list-item {
   display: grid;
-  grid-template-columns: 1fr 300px 250px 250px;
+  grid-template-columns: 1fr 300px 250px 250px 250px;
 }
 
 .graph-list-item .Title {

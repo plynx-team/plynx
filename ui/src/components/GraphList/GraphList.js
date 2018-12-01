@@ -16,6 +16,7 @@ export default class GraphList extends Component {
             description={graph.description ? graph.description : "No description"}
             insertion_date={graph.insertion_date}
             graph_running_status={graph.graph_running_status}
+            update_date={graph.update_date}
             />);
 
     return (
@@ -24,7 +25,8 @@ export default class GraphList extends Component {
           <div className='header-item'>Header</div>
           <div className='header-item'>Graph ID</div>
           <div className='header-item'>Status</div>
-          <div className='header-item'>Time created</div>
+          <div className='header-item'>Created</div>
+          <div className='header-item'>Updated</div>
         </div>
         {listItems.length ? listItems : <b>No items to show</b>}
       </div>
