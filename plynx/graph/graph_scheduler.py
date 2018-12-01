@@ -124,7 +124,7 @@ class GraphScheduler(object):
         # TODO smarter copy
         dest_node.logs = node.logs
         dest_node.outputs = node.outputs
-        dest_node.cache_url = node.node_running_status
+        dest_node.cache_url = node.cache_url
 
         self.graph.save(force=True)
 

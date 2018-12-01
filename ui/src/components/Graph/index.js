@@ -184,6 +184,7 @@ export class Graph extends Component {
     }
 
     var nid = queryString.parse(this.props.location.search).nid;
+    console.log('nid', nid);
     if (nid) {
       this.block_lookup[nid].highlight = true;
     }

@@ -10,7 +10,10 @@ class ListItem extends Component {
   render() {
     var isBusy = Boolean(this.props.worker_state.node);
     return (
-      <a className='list-item master-list-item' href={ isBusy ? '/graphs/' + this.props.worker_state.graph_id + '#' + this.props.worker_state.node._id : '#'}>
+      <a className='list-item master-list-item' href={
+        isBusy ?
+        '/graphs/' + this.props.worker_state.graph_id + '?nid=' + this.props.worker_state.node._id:
+        '#'}>
         <div className='host'>{this.props.worker_state.host}</div>
         <div className='worker-id'>{this.props.worker_state.worker_id}</div>
         <div className='graph'>
