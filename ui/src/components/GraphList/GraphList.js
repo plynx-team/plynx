@@ -1,7 +1,7 @@
 // src/components/About/index.js
 import React, { Component } from 'react';
 import GraphItem from './GraphItem.js'
-
+import '../Common/List.css';
 import './style.css';
 
 
@@ -19,7 +19,13 @@ export default class GraphList extends Component {
             />);
 
     return (
-      <div className='List'>
+      <div className='list'>
+        <div className='graph-list-item list-header'>
+          <div className='header-item'>Header</div>
+          <div className='header-item'>Graph ID</div>
+          <div className='header-item'>Status</div>
+          <div className='header-item'>Time created</div>
+        </div>
         {listItems.length ? listItems : <b>No items to show</b>}
       </div>
     );

@@ -1,35 +1,14 @@
-.FileListItem {
-  border-radius: 4px;
-  margin: 3px;
-  color: black;
-  font-weight: 409;
-  font-size: 12pt;
+.file-list-item {
   display: grid;
   grid-template-columns: 1fr 250px 300px 250px 250px;
-  cursor: pointer;
-  padding: 5px;
-  text-decoration: none;
-
-  -moz-transition: all .1s ease-in;
-  -o-transition: all .1s ease-in;
-  -webkit-transition: all .1s ease-in;
-  transition: all .1s ease-in;
 }
 
-.FileListItem:hover {
-  background-color: #ccc;
-}
-
-.FileListItem:active {
-  background-color: #62a6f3;
-}
-
-.FileListItem .Title {
+.file-list-item .Title {
   font-weight: 700;
   font-size: 15pt;
 }
 
-.FileListItem .Type .Widget {
+.file-list-item .Type .Widget {
   display: inline-block;
   width: 150px;
   background-color: #c29b3c;
@@ -38,14 +17,14 @@
   border: 1px #bbb solid;
 }
 
-.FileListItem .Type .Widget img {
+.file-list-item .Type .Widget img {
   vertical-align:middle;
 }
 
-.FileListItem .Status.READY {
+.file-list-item .Status.READY {
   color:green;
 }
 
-.FileListItem .Status.DEPRECATED {
+.file-list-item .Status.DEPRECATED {
   color:red;
 }

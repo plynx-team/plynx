@@ -5,7 +5,7 @@ import './Item.css';
 export default class Item extends Component {
   render() {
     return (
-      <a className='NodeListItem' href={'/nodes/' + this.props._id}>
+      <a className='list-item node-list-item' href={'/nodes/' + this.props._id}>
         <div className='TitleDescription'>
           <div className='Title'>
             {this.props.title}

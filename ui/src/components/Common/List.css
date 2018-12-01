@@ -13,6 +13,8 @@
   padding: 5px;
   text-decoration: none;
 
+  display: grid;
+
   -moz-transition: all .1s ease-in;
   -o-transition: all .1s ease-in;
   -webkit-transition: all .1s ease-in;

@@ -5,7 +5,7 @@ import './GraphItem.css';
 export default class GraphItem extends Component {
   render() {
     return (
-      <a className='GraphItem' href={'/graphs/' + this.props._id}>
+      <a className='list-item graph-list-item' href={'/graphs/' + this.props._id}>
         <div className='TitleDescription'>
           <div className='Title'>
             {this.props.title}

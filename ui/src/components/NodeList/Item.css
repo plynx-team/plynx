@@ -1,42 +1,21 @@
-.NodeListItem {
-  border-radius: 4px;
-  margin: 3px;
-  color: black;
-  font-weight: 409;
-  font-size: 12pt;
+.node-list-item {
   display: grid;
   grid-template-columns: 1fr 300px 250px 250px;
-  cursor: pointer;
-  padding: 5px;
-  text-decoration: none;
-
-  -moz-transition: all .1s ease-in;
-  -o-transition: all .1s ease-in;
-  -webkit-transition: all .1s ease-in;
-  transition: all .1s ease-in;
 }
 
-.NodeListItem:hover {
-  background-color: #ccc;
-}
-
-.NodeListItem:active {
-  background-color: #62a6f3;
-}
-
-.NodeListItem .Title {
+.node-list-item .Title {
   font-weight: 700;
   font-size: 15pt;
 }
 
-.NodeListItem .Status.CREATED {
+.node-list-item .Status.CREATED {
   color:blue;
 }
 
-.NodeListItem .Status.READY {
+.node-list-item .Status.READY {
   color:green;
 }
 
-.NodeListItem .Status.DEPRECATED {
+.node-list-item .Status.DEPRECATED {
   color:red;
 }
