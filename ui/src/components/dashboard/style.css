@@ -1,5 +1,7 @@
 .dashboard {
   height: 100%;
+  background-color: #ccc;
+  display: flow-root;
 }
 
 .dashboard-item  {
