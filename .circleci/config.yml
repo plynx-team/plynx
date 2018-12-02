@@ -4,13 +4,17 @@ jobs:
     machine: true
     working_directory: ~/plynx
     steps:
+
       - checkout
+
       - run:
-          name: Install plynx
+          # note we need to install google-compute-engine due to circleci issue
+          name: python package instalation
           command:
             pip install --upgrade pip &&
             pip install google-compute-engine &&
             python setup.py install
+
       - run:
           name: Run integration tests
           command: ./scripts/run_tests.sh
