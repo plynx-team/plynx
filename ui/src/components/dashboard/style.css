@@ -2,6 +2,7 @@
   height: 100%;
   background-color: #ccc;
   display: flow-root;
+  overflow: auto;
 }
 
 .dashboard-item  {

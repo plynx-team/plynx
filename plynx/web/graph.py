@@ -101,7 +101,10 @@ def post_graph():
                         'validation_error': validation_error.to_dict()
                     })
             elif action == GraphPostAction.CANCEL:
-                if graph.graph_running_status != GraphRunningStatus.RUNNING:
+                if graph.graph_running_status not in [
+                        GraphRunningStatus.RUNNING,
+                        GraphRunningStatus.FAILED_WAITING
+                        ]:
                     return _make_fail_response('Graph status `{}` expected. Found `{}`'.format(GraphRunningStatus.RUNNING, graph.graph_running_status))
                 graph_cancellation_manager.cancel_graph(graph._id)
             else:

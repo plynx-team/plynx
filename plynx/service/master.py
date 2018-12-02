@@ -31,6 +31,11 @@ graph_collection_manager = GraphCollectionManager()
 graph_cancellation_manager = GraphCancellationManager()
 node_collection = NodeCollection()
 
+MESSAGE_TYPE_TO_NODE_RUNNING_STATUS = {
+    WorkerMessageType.JOB_FINISHED_SUCCESS: NodeRunningStatus.SUCCESS,
+    WorkerMessageType.JOB_FINISHED_FAILED: NodeRunningStatus.FAILED,
+}
+
 
 class WorkerInfo(object):
     """Worker related information like current job or last heartbeat timestamp."""
@@ -95,23 +100,11 @@ class ClientTCPHandler(socketserver.BaseRequestHandler):
             else:
                 response = self.make_aknowledge_message(worker_id)
 
-        elif worker_message.message_type == WorkerMessageType.JOB_FINISHED_SUCCESS:
+        elif worker_message.message_type in MESSAGE_TYPE_TO_NODE_RUNNING_STATUS:
             node = worker_message.body.node
-            node.node_running_status = NodeRunningStatus.SUCCESS
+            node.node_running_status = MESSAGE_TYPE_TO_NODE_RUNNING_STATUS[worker_message.message_type]
             if self.server.update_node(worker_id, node):
-                logging.info("Job `{}` marked as SUCCESSFUL".format(node._id))
-            else:
-                logging.info(
-                    "Scheduler not found for Job `{}`. Graph `{}` might have been be canceled".format(node._id, graph_id)
-                )
-
-            response = self.make_aknowledge_message(worker_id)
-
-        elif worker_message.message_type == WorkerMessageType.JOB_FINISHED_FAILED:
-            node = worker_message.body.node
-            node.node_running_status = NodeRunningStatus.FAILED
-            if self.server.update_node(worker_id, node):
-                logging.info("Job `{}` marked as FAILED".format(node._id))
+                logging.info("Job `{}` finished with status `{}`".format(node._id, node.node_running_status))
             else:
                 logging.info(
                     "Scheduler not found for Job `{}`. Graph `{}` might have been be canceled".format(node._id, graph_id)

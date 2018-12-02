@@ -5,6 +5,16 @@ class GraphRunningStatus:
     SUCCESS = 'SUCCESS'
     FAILED = 'FAILED'
     CANCELED = 'CANCELED'
+    FAILED_WAITING = 'FAILED_WAITING'
+
+    _FAILED_STATUSES = {
+        FAILED,
+        FAILED_WAITING,
+    }
+
+    @staticmethod
+    def is_failed(graph_running_status):
+        return graph_running_status in GraphRunningStatus._FAILED_STATUSES
 
 
 class GraphPostAction:

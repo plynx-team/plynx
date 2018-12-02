@@ -25,5 +25,9 @@
 }
 
 .graph-list-item .Status.CANCELED {
-  color: #993366;
+  color: #936;
+}
+
+.graph-list-item .Status.FAILED_WAITING {
+  color: #a0a;
 }

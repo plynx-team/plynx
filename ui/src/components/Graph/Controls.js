@@ -48,7 +48,7 @@ export default class Controls extends Component {
            className={"control-button" + (this.props.readonly ? " demo" : "") }>
            <img src="/icons/copy.svg" alt="clone" /> Clone
         </a>
-        {this.props.graphRunningStatus === GRAPH_RUNNING_STATUS.RUNNING &&
+        {(this.props.graphRunningStatus === GRAPH_RUNNING_STATUS.RUNNING || this.props.graphRunningStatus === GRAPH_RUNNING_STATUS.FAILED_WAITING) &&
           <a href={null}
              onClick={(e) => {e.preventDefault(); this.props.onCancel()}}
              className="control-button">
