@@ -8,8 +8,7 @@ jobs:
       - run:
           name: Install plynx
           command: |
-            pip install --upgrade pip |
-            python setup.py install
+            pip install pyyaml>=3.11
       - run:
           name: Run integration tests
           command: ./scripts/run_tests.sh
