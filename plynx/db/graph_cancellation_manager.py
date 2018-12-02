@@ -1,4 +1,5 @@
 from plynx.db import DBObject, DBObjectField
+from plynx.constants import Collections
 from plynx.utils.common import ObjectId
 from plynx.utils.db_connector import get_db_connector
 
@@ -24,7 +25,7 @@ class GraphCancellation(DBObject):
             ),
     }
 
-    DB_COLLECTION = 'graphs_cancellations'
+    DB_COLLECTION = Collections.GRAPHS_CANCELLATIONS
 
 
 class GraphCancellationManager(object):

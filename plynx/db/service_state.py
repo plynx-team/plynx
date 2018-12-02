@@ -1,3 +1,4 @@
+from plynx.constants import Collections
 from plynx.db import DBObjectField, DBObject, Node
 from plynx.utils.db_connector import get_db_connector
 from plynx.utils.common import ObjectId
@@ -55,7 +56,7 @@ class MasterState(DBObject):
             ),
     }
 
-    DB_COLLECTION = 'master_state'
+    DB_COLLECTION = Collections.MASTER_STATE
 
 
 def get_master_state():

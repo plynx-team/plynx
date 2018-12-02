@@ -1,3 +1,4 @@
+from plynx.constants import Collections
 from plynx.db import DBObject, DBObjectField, Input, Output, Parameter, ValidationError
 from plynx.utils.common import ObjectId
 from plynx.constants import NodeStatus, NodeRunningStatus, ValidationTargetType, ValidationCode
@@ -94,7 +95,7 @@ class Node(DBObject):
             ),
     }
 
-    DB_COLLECTION = 'nodes'
+    DB_COLLECTION = Collections.NODES
 
     def get_validation_error(self):
         """Validate Node.

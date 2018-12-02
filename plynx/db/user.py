@@ -1,4 +1,5 @@
 from passlib.apps import custom_app_context as pwd_context
+from plynx.constants import Collections
 from plynx.db import DBObjectField, DBObject
 from plynx.utils.db_connector import get_db_connector
 from plynx.utils.common import ObjectId
@@ -29,7 +30,7 @@ class User(DBObject):
             ),
     }
 
-    DB_COLLECTION = 'users'
+    DB_COLLECTION = Collections.USERS
 
     def hash_password(self, password):
         """Change password.
