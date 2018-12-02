@@ -7,7 +7,9 @@ jobs:
       - checkout
       - run:
           name: Install plynx
-          command: python setup.py install
+          command:
+            pip install --upgrade pip
+            python setup.py install
       - run:
           name: Run integration tests
           command: ./scripts/run_tests.sh
