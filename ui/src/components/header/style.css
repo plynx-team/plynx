@@ -8,10 +8,28 @@
   text-align: left;
 }
 
-.Header .logo {
-  color: white;
-  font-weight: bold;
-  text-decoration: none;
+.Header > .logo {
+  padding-left: 10px;
+  padding-right: 10px;
+
+  -moz-transition: all .1s ease-in;
+  -o-transition: all .1s ease-in;
+  -webkit-transition: all .1s ease-in;
+  transition: all .1s ease-in;
+}
+
+.Header > .logo:hover {
+    color: white;
+    background-color: #333;
+}
+
+.Header > .logo:active {
+  background-color: #62a6f3;
+}
+
+.Header > .logo > .icon {
+  vertical-align: middle;
+  height: 20px;
 }
 
 .Header a:hover {
@@ -21,7 +39,7 @@
 .Header .Navigation {
   position: absolute;
   top: 6px;
-  left: 150px;
+  left: 180px;
   font-weight: 300;
   color: #ccc;
   padding-left: 10px;
