@@ -10,8 +10,6 @@ def init_indexes():
 
     if Collections.MASTER_STATE not in existing_collections:
         _db.create_collection(Collections.MASTER_STATE, capped=True, size=16777216, max=1)
-    else:
-        print('Collection already exists')
 
     _db[Collections.GRAPHS].create_index('insertion_date')
     _db[Collections.GRAPHS].create_index('update_date')
