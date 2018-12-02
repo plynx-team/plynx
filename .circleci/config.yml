@@ -5,4 +5,9 @@ jobs:
     working_directory: ~/plynx
     steps:
       - checkout
-      - run: ./scripts/run_tests.sh
+      - run:
+          name: Install plynx
+          command: python setup.py install
+      - run:
+          name: Run integration tests
+          command: ./scripts/run_tests.sh
