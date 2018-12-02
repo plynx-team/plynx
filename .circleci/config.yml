@@ -4,8 +4,8 @@
 #
 version: 2
 jobs:
-  machine: true
   build:
+    machine: true
     steps:
       - checkout
       - run: run_tests.sh
