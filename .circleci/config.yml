@@ -7,8 +7,10 @@ jobs:
       - checkout
       - run:
           name: Install plynx
-          command: |
-            pip install pyyaml>=3.11
+          command:
+            pip install --upgrade pip |
+            pip install boto>=2.48.0 |
+            python setup.py install
       - run:
           name: Run integration tests
           command: ./scripts/run_tests.sh
