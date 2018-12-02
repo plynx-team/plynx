@@ -9,4 +9,6 @@ jobs:
     working_directory: ~/plynx
     steps:
       - checkout
+      - run: ls
+      - run: pwd
       - run: run_tests.sh
