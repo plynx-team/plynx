@@ -9,7 +9,7 @@ jobs:
           name: Install plynx
           command:
             pip install --upgrade pip |
-            pip install boto>=2.48.0 |
+            pip install google-compute-engine |
             python setup.py install
       - run:
           name: Run integration tests
