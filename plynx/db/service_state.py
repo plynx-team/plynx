@@ -59,5 +59,6 @@ class MasterState(DBObject):
 
 
 def get_master_state():
-    return getattr(get_db_connector(), MasterState.DB_COLLECTION)\
-           .find({}).sort('insertion_date', -1).limit(1)[0]
+    states = getattr(get_db_connector(), MasterState.DB_COLLECTION)\
+           .find({}).sort('insertion_date', -1).limit(1)
+    return states[0] if states.count() > 0 else None

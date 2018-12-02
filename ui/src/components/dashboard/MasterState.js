@@ -80,14 +80,17 @@ export default class MasterState extends Component {
       var data = response.data;
       console.log(data);
 
-      // Fromat date
-      var date = new Date(data.master_state.update_date + 'Z');  // Make date it UTC
-      data.master_state.update_date = date.toString();
+      // Do not change state if master_state is null (not found)
+      if (data.master_state) {
+        // Format date
+        var date = new Date(data.master_state.update_date + 'Z');  // Make date it UTC
+        data.master_state.update_date = date.toString();
 
-      self.setState(
-        {
-          master_state: data.master_state,
-        });
+        self.setState(
+          {
+            master_state: data.master_state,
+          });
+      }
       loading = false;
     };
 
