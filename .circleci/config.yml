@@ -1,0 +1,8 @@
+version: 2
+jobs:
+  build:
+    machine: true
+    working_directory: ~/plynx
+    steps:
+      - checkout
+      - run: ./scripts/run_tests.sh
