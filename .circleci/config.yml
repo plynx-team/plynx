@@ -11,4 +11,4 @@ jobs:
       - checkout
       - run: ls
       - run: pwd
-      - run: run_tests.sh
+      - run: ./scripts/run_tests.sh
