@@ -6,6 +6,7 @@ import time
 import tempfile
 import yaml
 from collections import namedtuple
+import plynx
 import plynx.utils.config as cfg
 
 DockerDescriptor = namedtuple('DockerDescriptor', ['image', 'ports'])
@@ -16,7 +17,7 @@ DOCKER_CONTAINERS = [
         ports={27017: 27017},
     ),
     DockerDescriptor(
-        image='khaxis/plynx:ui',
+        image='khaxis/plynx_{}:ui'.format(plynx.__version__),
         ports={3000: 3000},
     ),
 ]
