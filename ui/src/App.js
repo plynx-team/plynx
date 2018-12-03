@@ -29,7 +29,7 @@ class App extends Component {
   }
 
   componentDidUpdate(prevProps) {
-    /* A trick: reload the page every time when the url does not ends with '$'*/
+    /* A trick: reload the page every time when the url does not end with '$'*/
     var prevPathTuple = this.getPathTuple(prevProps.location.pathname);
     var pathTuple = this.getPathTuple(this.props.location.pathname);
     if (this.props.location !== prevProps.location) {

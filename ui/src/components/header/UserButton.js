@@ -10,7 +10,7 @@ class UserButton extends Component {
     var username = cookie.load('username');
     this.state = {
       username: username,
-      refreshTokenExists: refreshTokenExists
+      refreshTokenExists: refreshTokenExists,
     }
   }
 
@@ -27,9 +27,19 @@ class UserButton extends Component {
     window.location = "/login";
   }
 
+  handleAPIClick() {
+  }
+
   render() {
     return (
       <div className="UserButton">
+        {this.state.refreshTokenExists &&
+          <div className="api-button">
+            <a className="button logo" href='#' onClick={() => this.handleAPIClick()}>
+              API
+            </a>
+          </div>
+        }
         {this.state.refreshTokenExists &&
           <div className="inner-user-button">
             <div className="username">

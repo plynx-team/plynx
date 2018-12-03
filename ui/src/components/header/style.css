@@ -8,7 +8,7 @@
   text-align: left;
 }
 
-.Header > .logo {
+.Header .logo {
   padding-left: 10px;
   padding-right: 10px;
 
@@ -18,12 +18,12 @@
   transition: all .1s ease-in;
 }
 
-.Header > .logo:hover {
+.Header .logo:hover {
     color: white;
     background-color: #333;
 }
 
-.Header > .logo:active {
+.Header .logo:active {
   background-color: #62a6f3;
 }
 
@@ -92,24 +92,31 @@
   position: fixed;
   top: 8px;
   right: 10px;
-  padding-left: 10px;
   font-family: 'Source Sans Pro', sans-serif;
   border-left: 1px #333 solid;
+  color: white;
+  display: flex;
+}
+
+.UserButton .button {
+  display: inline-block;
+  padding: 0px 15px 0px 15px;
+  border-right: 1px #333 solid;
+  color: white;
+  text-decoration: none;
 }
 
 .UserButton .username {
-  color: white;
+  padding-left: 15px;
   display: inline-block;
 }
 
 .UserButton .separator {
-  color: white;
   display: inline-block;
   padding: 0px 5px 0px 5px;
 }
 
 .UserButton .action {
-  color: white;
   display: inline-block;
   cursor: pointer;
   -moz-transition: all .1s ease-in;
