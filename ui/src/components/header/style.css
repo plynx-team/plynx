@@ -8,6 +8,12 @@
   text-align: left;
 }
 
+.Header .separator {
+  display: inline-block;
+  border-left: 1px #333 solid;
+  width: 0px;
+}
+
 .Header .logo {
   padding-left: 10px;
   padding-right: 10px;
@@ -45,8 +51,6 @@
   padding-left: 10px;
   padding-right: 10px;
   font-family: 'Source Sans Pro', sans-serif;
-  border-left: 1px #333 solid;
-  border-right: 1px #333 solid;
 }
 
 .Header .NavigationItems {
@@ -93,32 +97,27 @@
   top: 8px;
   right: 10px;
   font-family: 'Source Sans Pro', sans-serif;
-  border-left: 1px #333 solid;
   color: white;
   display: flex;
 }
 
 .UserButton .button {
   display: inline-block;
-  padding: 0px 15px 0px 15px;
-  border-right: 1px #333 solid;
+  padding: 0px 15px 0px 15px;;
   color: white;
   text-decoration: none;
 }
 
 .UserButton .username {
   padding-left: 15px;
+  padding-right: 15px;
   display: inline-block;
-}
-
-.UserButton .separator {
-  display: inline-block;
-  padding: 0px 5px 0px 5px;
 }
 
 .UserButton .action {
   display: inline-block;
   cursor: pointer;
+  padding-left: 10px;
   -moz-transition: all .1s ease-in;
   -o-transition: all .1s ease-in;
   -webkit-transition: all .1s ease-in;

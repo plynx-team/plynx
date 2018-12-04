@@ -13,6 +13,7 @@ import FileRouter from './components/FileRouter.js';
 import GraphRouter from './components/GraphRouter.js';
 import NotFound from './components/NotFound';
 import FeedbackButton from './components/FeedbackButton'
+import APIDialog from './components/Dialogs/APIDialog'
 
 import './App.css';
 
@@ -21,6 +22,7 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.reloadOnChangePath = true;
+    this.state = {};
   }
 
   getPathTuple(path) {
@@ -49,14 +51,23 @@ class App extends Component {
     }
   }
 
+  handleAPIDialogClick() {
+    this.setState({showApiDialog: true});
+  }
+
+  handleAPIDialogClose() {
+    this.setState({showApiDialog: false});
+  }
+
   render() {
     return (
       <div className="App">
-        <Header />
+        <Header onAPIDialogClick={() => this.handleAPIDialogClick()}/>
         {cookie.load('username') &&
           <FeedbackButton/>
         }
         <div className="Content">
+          {this.state.showApiDialog && <APIDialog onClose={() => this.handleAPIDialogClose()}/>}
           <Switch>
             <Route exact path="/" component={Welcome} />
             <Route exact path="/welcome" component={Welcome} />

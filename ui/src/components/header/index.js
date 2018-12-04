@@ -11,7 +11,7 @@ class Header extends Component {
       <div className="Header">
         <Link to='/' className="logo"><img src='/logo.png' className='icon' alt='PLynx'/></Link>
         <Navigation />
-        <UserButton />
+        <UserButton onAPIDialogClick={() => this.props.onAPIDialogClick()}/>
       </div>
     );
   }
