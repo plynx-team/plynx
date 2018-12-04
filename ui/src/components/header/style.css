@@ -105,6 +105,7 @@
   display: inline-block;
   padding: 0px 15px 0px 15px;;
   color: white;
+  cursor: pointer;
   text-decoration: none;
 }
 
