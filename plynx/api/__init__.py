@@ -6,7 +6,7 @@ from plynx.api.constants import _NodeRunningStatus, _GraphRunningStatus, \
     _GraphPostAction, _GraphPostStatus, _ValidationCode
 from plynx.api.api import _get_obj, _save_graph, _get_access_token
 from plynx.api.base_node import NodeProps, Inputs, OutputItem, Outputs, Params, BaseNode
-from plynx.api.node import Node, File
+from plynx.api.node import Node, Operation, File
 from plynx.api.client import Client
 from plynx.api.graph import Graph
 
