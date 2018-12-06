@@ -38,6 +38,7 @@ __all__ = [
     MissingArgumentError,
     NodeAttributeError,
     NodeProps,
+    Operation,
     OutputItem,
     Outputs,
     Params,
