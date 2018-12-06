@@ -1,0 +1,13 @@
+.api-dialog-content {
+  margin: 5px;
+}
+
+.token-box .token {
+  width: 100%;
+  resize: none;
+}
+
+.token-box .token-label {
+  font-weight: bold;
+  padding: 5px;
+}

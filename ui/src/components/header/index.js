@@ -9,9 +9,9 @@ class Header extends Component {
   render() {
     return (
       <div className="Header">
-        <Link to='/' className="logo"><font color="#337ab7">>>> </font>PLynx</Link>
+        <Link to='/' className="logo"><img src='/logo.png' className='icon' alt='PLynx'/></Link>
         <Navigation />
-        <UserButton />
+        <UserButton onAPIDialogClick={() => this.props.onAPIDialogClick()}/>
       </div>
     );
   }

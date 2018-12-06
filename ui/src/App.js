@@ -7,11 +7,13 @@ import Header from './components/header';
 import About from './components/About';
 import LogIn from './components/LogIn';
 import Welcome from './components/Welcome';
+import Dashboard from './components/dashboard';
 import NodeRouter from './components/NodeRouter.js';
 import FileRouter from './components/FileRouter.js';
 import GraphRouter from './components/GraphRouter.js';
 import NotFound from './components/NotFound';
 import FeedbackButton from './components/FeedbackButton'
+import APIDialog from './components/Dialogs/APIDialog'
 
 import './App.css';
 
@@ -20,6 +22,7 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.reloadOnChangePath = true;
+    this.state = {};
   }
 
   getPathTuple(path) {
@@ -28,7 +31,7 @@ class App extends Component {
   }
 
   componentDidUpdate(prevProps) {
-    /* A trick: reload the page every time when the url does not ends with '$'*/
+    /* A trick: reload the page every time when the url does not end with '$'*/
     var prevPathTuple = this.getPathTuple(prevProps.location.pathname);
     var pathTuple = this.getPathTuple(this.props.location.pathname);
     if (this.props.location !== prevProps.location) {
@@ -48,17 +51,27 @@ class App extends Component {
     }
   }
 
+  handleAPIDialogClick() {
+    this.setState({showApiDialog: true});
+  }
+
+  handleAPIDialogClose() {
+    this.setState({showApiDialog: false});
+  }
+
   render() {
     return (
       <div className="App">
-        <Header />
+        <Header onAPIDialogClick={() => this.handleAPIDialogClick()}/>
         {cookie.load('username') &&
           <FeedbackButton/>
         }
         <div className="Content">
+          {this.state.showApiDialog && <APIDialog onClose={() => this.handleAPIDialogClose()}/>}
           <Switch>
             <Route exact path="/" component={Welcome} />
             <Route exact path="/welcome" component={Welcome} />
+            <Route exact path="/dashboard" component={Dashboard} />
             <Route path="/nodes" component={NodeRouter}/>
             <Route path="/files" component={FileRouter}/>
             <Route path="/graphs" component={GraphRouter}/>

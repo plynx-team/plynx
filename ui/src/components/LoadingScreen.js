@@ -13,3 +13,15 @@ export default class LoadingScreen extends Component {
     );
   }
 }
+
+export class SimpleLoader extends Component {
+  render() {
+    return (
+      <div className="simple-loader" style={this.props.style}>
+        <div className="loader">
+          Loading...
+        </div>
+      </div>
+    );
+  }
+}

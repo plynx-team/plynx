@@ -17,7 +17,7 @@
 
 .menu-button:hover {
   display: inline-block;
-  background-color: darkgrey;
+  background-color: #ccc;
   border-radius: 2px;
   padding: 2px 10px 2px 10px;
   text-align: center;

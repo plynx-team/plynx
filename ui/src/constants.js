@@ -109,6 +109,7 @@ export const GRAPH_RUNNING_STATUS = Object.freeze({
   SUCCESS: 'SUCCESS',
   FAILED: 'FAILED',
   CANCELED: 'CANCELED',
+  FAILED_WAITING: 'FAILED_WAITING',
 })
 
 export const FILE_STATUS = Object.freeze({

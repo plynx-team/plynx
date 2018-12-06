@@ -73,7 +73,7 @@ plynxApi.createEntity({ name: 'nodes' })
 plynxApi.createEntity({ name: 'graphs' })
 plynxApi.createEntity({ name: 'resource' })
 plynxApi.createEntity({ name: 'token' })
-plynxApi.createEntity({ name: 'feedback' })
 plynxApi.createEntity({ name: 'demo' })
+plynxApi.createEntity({ name: 'master_state' })
 
 export let PlynxApi = plynxApi;

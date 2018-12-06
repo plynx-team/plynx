@@ -1,16 +1,16 @@
 .ListPage {
   position: absolute!important;
   overflow:auto;
-  background-color: #ccc;
+  background-color: #eee;
   width: 100%;
   height: 100%;
   padding: 0px;
   display: flex;
   flex-direction: column;
-  font-family: 'Source Sans Pro', sans-serif;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  line-height: 20px;
+}
+
+.ListPage > .list {
+  border: 1px solid #a9a9a9;
 }
 
 .ListPage > .menu {

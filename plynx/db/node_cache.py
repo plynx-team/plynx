@@ -1,5 +1,6 @@
 import hashlib
 from builtins import str
+from plynx.constants import Collections
 from plynx.db import DBObject, DBObjectField, Output
 from plynx.utils.common import ObjectId
 
@@ -40,7 +41,7 @@ class NodeCache(DBObject):
             ),
     }
 
-    DB_COLLECTION = 'node_cache'
+    DB_COLLECTION = Collections.NODE_CACHE
 
     IGNORED_PARAMETERS = {'cmd'}
 

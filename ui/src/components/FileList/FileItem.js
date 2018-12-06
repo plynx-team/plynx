@@ -15,7 +15,7 @@ export default class FileItem extends Component {
     )[0];
 
     return (
-      <a className='FileListItem' href={null} onClick={(e)=>this.onClick(e)}>
+      <a className='list-item file-list-item' href={null} onClick={(e)=>this.onClick(e)}>
         <div className='TitleDescription'>
           <div className='Title'>
             {this.props.title}

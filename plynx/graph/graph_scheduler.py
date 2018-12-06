@@ -45,12 +45,7 @@ class GraphScheduler(object):
 
         for node in self.graph.nodes:
             # ignore nodes in finished statuses
-            if node.node_running_status in {
-                    NodeRunningStatus.SUCCESS,
-                    NodeRunningStatus.FAILED,
-                    NodeRunningStatus.STATIC,
-                    NodeRunningStatus.RESTORED,
-                    NodeRunningStatus.CANCELED}:
+            if NodeRunningStatus.is_finished(node.node_running_status):
                 continue
             node_id = node._id
             dependency_index = 0
@@ -58,30 +53,32 @@ class GraphScheduler(object):
                 for input_value in node_input.values:
                     parent_node_id = to_object_id(input_value.node_id)
                     self.node_id_to_dependents[parent_node_id].add(node_id)
-                    if self.node_id_to_node[parent_node_id].node_running_status not in {
-                            NodeRunningStatus.SUCCESS,
-                            NodeRunningStatus.FAILED,
-                            NodeRunningStatus.STATIC,
-                            NodeRunningStatus.RESTORED,
-                            NodeRunningStatus.CANCELED}:
+                    if not NodeRunningStatus.is_finished(self.node_id_to_node[parent_node_id].node_running_status):
                         dependency_index += 1
 
-            if node.node_running_status not in {
-                    NodeRunningStatus.SUCCESS,
-                    NodeRunningStatus.FAILED,
-                    NodeRunningStatus.STATIC,
-                    NodeRunningStatus.RESTORED,
-                    NodeRunningStatus.CANCELED}:
+            if not NodeRunningStatus.is_finished(node.node_running_status):
                 self.uncompleted_nodes_count += 1
             self.dependency_index_to_node_ids[dependency_index].add(node_id)
             self.node_id_to_dependency_index[node_id] = dependency_index
 
     def finished(self):
+        if self.graph.graph_running_status == GraphRunningStatus.FAILED_WAITING:
+            # wait for the rest of the running jobs to finish
+            # check running status of each of the nodes
+            for node in self.graph.nodes:
+                if node.node_running_status == NodeRunningStatus.RUNNING:
+                    return False
+            # set status to FAILED
+            self.graph.graph_running_status = GraphRunningStatus.FAILED
+            self.graph.save(force=True)
+            return True
         return self.graph.graph_running_status in {GraphRunningStatus.SUCCESS, GraphRunningStatus.FAILED, GraphRunningStatus.CANCELED}
 
     def pop_jobs(self):
         """Get a set of nodes with satisfied dependencies"""
         res = []
+        if GraphRunningStatus.is_failed(self.graph.graph_running_status):
+            return res
         cached_nodes = []
         for node_id in self.dependency_index_to_node_ids[0]:
             node = self._get_node_with_inputs(node_id).copy()
@@ -124,7 +121,7 @@ class GraphScheduler(object):
         # TODO smarter copy
         dest_node.logs = node.logs
         dest_node.outputs = node.outputs
-        dest_node.cache_url = node.node_running_status
+        dest_node.cache_url = node.cache_url
 
         self.graph.save(force=True)
 
@@ -133,7 +130,7 @@ class GraphScheduler(object):
         node.node_running_status = node_running_status
 
         if node_running_status == NodeRunningStatus.FAILED:
-            self.graph.graph_running_status = GraphRunningStatus.FAILED
+            self.graph.graph_running_status = GraphRunningStatus.FAILED_WAITING
 
         if node_running_status in {NodeRunningStatus.SUCCESS, NodeRunningStatus.FAILED, NodeRunningStatus.RESTORED}:
             for dependent_node_id in self.node_id_to_dependents[node_id]:
@@ -152,7 +149,7 @@ class GraphScheduler(object):
                 self.node_id_to_dependency_index[dependent_node_id] = dependency_index
             self.uncompleted_nodes_count -= 1
 
-        if self.uncompleted_nodes_count == 0 and self.graph.graph_running_status != GraphRunningStatus.FAILED:
+        if self.uncompleted_nodes_count == 0 and not GraphRunningStatus.is_failed(self.graph.graph_running_status):
             self.graph.graph_running_status = GraphRunningStatus.SUCCESS
 
         # self.graph.save()

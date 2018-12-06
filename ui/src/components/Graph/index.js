@@ -18,7 +18,16 @@ import DemoScreen from '../DemoScreen.js'
 import FileDialog from '../Dialogs/FileDialog.js'
 import CodeDialog from '../Dialogs/CodeDialog.js'
 import { ObjectID } from 'bson';
-import { ACTION, RESPONCE_STATUS, ALERT_OPTIONS, VALIDATION_CODES, NODE_RUNNING_STATUS, SPECIAL_TYPE_NAMES, OPERATIONS } from '../../constants.js';
+import {
+  ACTION,
+  RESPONCE_STATUS,
+  ALERT_OPTIONS,
+  VALIDATION_CODES,
+  GRAPH_RUNNING_STATUS,
+  NODE_RUNNING_STATUS,
+  SPECIAL_TYPE_NAMES,
+  OPERATIONS
+} from '../../constants.js';
 import { storeToClipboard, loadFromClipboard } from '../../utils.js';
 
 import "./gridtile.png"
@@ -192,7 +201,7 @@ export class Graph extends Component {
       "blocks": this.blocks,
       "connections": this.connections,
       "graphId": this.graph._id,
-      "editable": this.graph.graph_running_status.toUpperCase() === 'CREATED',
+      "editable": this.graph.graph_running_status.toUpperCase() === GRAPH_RUNNING_STATUS.CREATED,
       "loading": false,
       "title": this.graph.title,
       "description": this.graph.description,
@@ -200,7 +209,7 @@ export class Graph extends Component {
     });
 
     var st = this.graph.graph_running_status.toUpperCase();
-    if (st === 'READY' || st === 'RUNNING') {
+    if (st === 'READY' || st === GRAPH_RUNNING_STATUS.RUNNING || st === GRAPH_RUNNING_STATUS.FAILED_WAITING) {
       this.timeout = setTimeout(() => this.checkGraphStatus(), 1000);
     }
   }
@@ -231,7 +240,7 @@ export class Graph extends Component {
     });
 
     var st = this.graph.graph_running_status.toUpperCase();
-    if (st === 'READY' || st === 'RUNNING') {
+    if (st === 'READY' || st === GRAPH_RUNNING_STATUS.RUNNING || st === GRAPH_RUNNING_STATUS.FAILED_WAITING) {
       this.timeout = setTimeout(() => this.checkGraphStatus(), 1000);
     }
 
@@ -590,7 +599,7 @@ export class Graph extends Component {
   }
 
   handleClone() {
-    this.graph.graph_running_status = 'CREATED';
+    this.graph.graph_running_status = GRAPH_RUNNING_STATUS.CREATED;
     this.graph._id = new ObjectID().toString();
     var j = 0;
     for(var i = 0; i < this.graph.nodes.length; ++i) {

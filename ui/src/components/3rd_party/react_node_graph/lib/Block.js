@@ -49,8 +49,6 @@ class Block extends React.Component {
   }
 
   handleClick(e) {
-    // this.setState({selected: true});
-    e.preventDefault();
     e.stopPropagation();
     if (this.props.onBlockSelect) {
       this.props.onBlockSelect(this.props.nid);

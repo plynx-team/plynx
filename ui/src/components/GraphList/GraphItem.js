@@ -5,7 +5,7 @@ import './GraphItem.css';
 export default class GraphItem extends Component {
   render() {
     return (
-      <a className='GraphItem' href={'/graphs/' + this.props._id}>
+      <a className='list-item graph-list-item' href={'/graphs/' + this.props._id}>
         <div className='TitleDescription'>
           <div className='Title'>
             {this.props.title}
@@ -17,6 +17,8 @@ export default class GraphItem extends Component {
         <div className={'Id'}>{this.props._id}</div>
         <div className={'Status ' + this.props.graph_running_status}>{this.props.graph_running_status}</div>
         <div className='Created'>{this.props.insertion_date}</div>
+        
+        <div className='Updated'>{this.props.update_date}</div>
       </a>
     );
   }

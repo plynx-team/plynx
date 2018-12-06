@@ -19,7 +19,13 @@ export default class List extends Component {
         />);
 
     return (
-      <div className='List'>
+      <div className='list'>
+        <div className='node-list-item list-header'>
+          <div className='header-item'>Header</div>
+          <div className='header-item'>Node ID</div>
+          <div className='header-item'>Status</div>
+          <div className='header-item'>Time created</div>
+        </div>
         {listItems.length ? listItems : <b>No items to show</b>}
       </div>
     );

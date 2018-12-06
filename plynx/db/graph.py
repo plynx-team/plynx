@@ -1,5 +1,6 @@
 from __future__ import division
 from collections import deque, defaultdict
+from plynx.constants import Collections
 from plynx.db import DBObject, DBObjectField, Node, ValidationError
 from plynx.utils.common import to_object_id, ObjectId
 from plynx.constants import GraphRunningStatus, ValidationTargetType, ValidationCode, ParameterTypes, NodeRunningStatus
@@ -46,7 +47,7 @@ class Graph(DBObject):
             ),
     }
 
-    DB_COLLECTION = 'graphs'
+    DB_COLLECTION = Collections.GRAPHS
 
     def cancel(self):
         """Cancel the graph."""

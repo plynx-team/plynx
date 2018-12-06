@@ -93,7 +93,7 @@ class GraphCollectionManager(object):
         return graphs
 
     @staticmethod
-    def _get_basic_query(author, search):
+    def _get_basic_query(author, search, status):
         and_query = []
         and_query.append({
             '$or': [
@@ -102,12 +102,14 @@ class GraphCollectionManager(object):
             ]})
         if search:
             and_query.append({'$text': {'$search': search}})
+        if status:
+            and_query.append({'graph_running_status': status})
 
         return and_query
 
     # TODO remove `author` / make default
     @staticmethod
-    def get_db_graphs(author, search=None, per_page=20, offset=0):
+    def get_db_graphs(author, search=None, per_page=20, offset=0, status=None, recent=False):
         """Get subset of the Graphs.
 
         Args:
@@ -122,14 +124,17 @@ class GraphCollectionManager(object):
         and_query = GraphCollectionManager._get_basic_query(
             author=author,
             search=search,
+            status=status,
         )
+        sort_key = 'update_date' if recent else 'insertion_date'
+
         db_graphs = get_db_connector().graphs.find({
             '$and': and_query
-        }).sort('insertion_date', -1).skip(offset).limit(per_page)
+        }).sort(sort_key, -1).skip(offset).limit(per_page)
         return list(db_graphs)
 
     @staticmethod
-    def get_db_graphs_count(author, search=None):
+    def get_db_graphs_count(author, search=None, status=None):
         """Get number of the Graphs that satisfy given conditions.
 
         Args:
@@ -142,6 +147,7 @@ class GraphCollectionManager(object):
         and_query = GraphCollectionManager._get_basic_query(
             author=author,
             search=search,
+            status=status,
         )
         return get_db_connector().graphs.count({
             '$and': and_query

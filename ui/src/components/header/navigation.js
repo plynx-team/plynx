@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import { NavLink } from 'react-router-dom'
+import { separator } from './common'
 import cookie from 'react-cookies'
 
 import './style.css'
@@ -21,6 +22,10 @@ class Navigation extends Component {
     return (
       <div className="Navigation" onMouseUp={this.onMouseUp}>
           <div className="NavigationItems">
+            {separator()}
+            {this.state.refreshTokenExists &&
+              <NavLink to='/dashboard' className="Item">Dashboard</NavLink>
+            }
             {this.state.refreshTokenExists &&
               <NavLink to='/files' className="Item">Files</NavLink>
             }
@@ -31,8 +36,9 @@ class Navigation extends Component {
               <NavLink to='/graphs' className="Item">Graphs</NavLink>
             }
             <NavLink to='/about' className="Item">About</NavLink>
-            -
+            {separator()}
             <a href='https://github.com/khaxis/plynx' className="Item">Github</a>
+            {separator()}
           </div>
       </div>
     );

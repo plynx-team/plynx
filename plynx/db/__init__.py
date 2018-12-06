@@ -10,7 +10,7 @@ from plynx.db.node_cache_manager import NodeCacheManager
 from plynx.db.node_collection_manager import NodeCollectionManager
 from plynx.db.graph import Graph
 from plynx.db.user import User
-from plynx.db.feedback import Feedback
+from plynx.db.service_state import MasterState, WorkerState, get_master_state
 from plynx.db.graph_collection_manager import GraphCollectionManager
 from plynx.db.graph_cancellation_manager import GraphCancellationManager
 from plynx.db.demo_user_manager import DemoUserManager

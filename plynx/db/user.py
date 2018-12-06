@@ -1,4 +1,5 @@
 from passlib.apps import custom_app_context as pwd_context
+from plynx.constants import Collections
 from plynx.db import DBObjectField, DBObject
 from plynx.utils.db_connector import get_db_connector
 from plynx.utils.common import ObjectId
@@ -29,7 +30,7 @@ class User(DBObject):
             ),
     }
 
-    DB_COLLECTION = 'users'
+    DB_COLLECTION = Collections.USERS
 
     def hash_password(self, password):
         """Change password.
@@ -90,7 +91,7 @@ class User(DBObject):
         Return:
             (User)   User object or None
         """
-        user_dict = get_db_connector().users.find_one({'username': username})
+        user_dict = getattr(get_db_connector(), User.DB_COLLECTION).find_one({'username': username})
         if not user_dict:
             return None
 

@@ -4,5 +4,25 @@ jobs:
     machine: true
     working_directory: ~/plynx
     steps:
+
       - checkout
-      - run: ./scripts/run_tests.sh
+
+      - run:
+          name: install requirements
+          command:
+            pip install --upgrade pip &&
+            pip install google-compute-engine flake8
+
+      - run:
+          # note we need to install google-compute-engine due to circleci issue
+          name: python package instalation
+          command:
+            python setup.py install
+
+      - run:
+          name: Run integration tests
+          command: ./scripts/run_tests.sh
+
+      - run:
+          name: flake8
+          command: flake8

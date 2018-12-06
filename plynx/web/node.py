@@ -34,8 +34,6 @@ def get_nodes(node_link=None):
             'status': 'success'})
     # if node_link is defined (Node id)
     elif node_link:
-        import time
-        time.sleep(1)
         try:
             node_id = to_object_id(node_link)
         except Exception:
@@ -46,7 +44,7 @@ def get_nodes(node_link=None):
                 'data': node,
                 'status': 'success'})
         else:
-            return 'Node was not found', 404
+            return 'Node `{}` was not found'.format(node_link), 404
     else:
         query = json.loads(request.args.get('query', "{}"))
         query["author"] = to_object_id(g.user._id)

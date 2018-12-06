@@ -1,8 +1,13 @@
 #!/bin/bash
 
-docker build --rm -t khaxis/plynx:base    -f docker/base/Dockerfile    .
-docker build --rm -t khaxis/plynx:backend -f docker/backend/Dockerfile .
-docker build --rm -t khaxis/plynx:master  -f docker/master/Dockerfile  .
-docker build --rm -t khaxis/plynx:worker  -f docker/worker/Dockerfile  .
-docker build --rm -t khaxis/plynx:test    -f docker/test/Dockerfile    .
-docker build --rm -t khaxis/plynx:ui      -f docker/ui/Dockerfile      .
+set -e
+
+source ./scripts/version.sh
+
+VERSION=$(plynx-version)
+PLYNX_IMAGES=${PLYNX_IMAGES:="base backend master worker test ui"}
+
+for IMAGE in ${PLYNX_IMAGES}; do
+  docker build --rm -t khaxis/plynx:${IMAGE} -f docker/${IMAGE}/Dockerfile . ;
+  docker tag khaxis/plynx:${IMAGE} khaxis/plynx_${VERSION}:${IMAGE};
+done

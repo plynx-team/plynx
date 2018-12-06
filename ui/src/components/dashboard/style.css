@@ -1,0 +1,33 @@
+.dashboard {
+  height: 100%;
+  background-color: #ccc;
+  display: flow-root;
+  overflow: auto;
+}
+
+.dashboard-item  {
+  border-radius: 4px;
+  margin: 13px;
+  color: black;
+  font-weight: 400;
+  font-size: 13pt;
+  padding: 5px;
+  text-decoration: none;
+  background-color: #eee;
+  border: 1px solid #bbb;
+  box-shadow: 6px 6px 28px -2px rgba(0,0,0,0.4);
+}
+
+.dashboard-item .header {
+  margin: 10px 0px 5px 15px;
+  font-weight: 800;
+  font-size: 16pt;
+}
+
+.dashboard-item .updated {
+  font-size: 10pt;
+  text-align: right;
+}
+
+.dashboard-item .LoadingScreen {
+}
