@@ -1,16 +1,23 @@
 // src/components/About/index.js
 import React, { Component } from 'react';
-import Dialog from './Dialog.js'
+import Dialog from './Dialog'
 import cookie from 'react-cookies'
-import renderValueElement from '../Common/renderValueElement.js';
+import renderValueElement from '../Common/renderValueElement';
+import { API_ENDPOINT } from '../../configConsts'
 import './APIDialog.css'
 
 
 export default class APIDialog extends Component {
   constructor(props) {
     super(props);
+    var token = cookie.load('refresh_token');
+    // TODO remove after demo
+    if (token === 'Not assigned') {
+      token = cookie.load('access_token');
+    }
+
     this.state = {
-      token: cookie.load('refresh_token'),
+      token: token,
     }
   }
 
@@ -21,11 +28,11 @@ export default class APIDialog extends Component {
 from plynx.api import Operation, Graph, Client
 
 TOKEN = '` + token +`'
-ENDPOINT = 'http://127.0.0.1:5000/plynx/api/v0'
+ENDPOINT = '` + API_ENDPOINT + `'
 
 Echo = Operation(
-    id='5bbadd0a0310e96ed992b968',
-    outputs=['out'],
+    id='5bb5a424fad58d56ffa84952',
+    outputs=['output'],
     params=['text'],
 )
 
