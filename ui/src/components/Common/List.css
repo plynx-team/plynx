@@ -1,6 +1,7 @@
 .list {
   background-color: #eee;
   overflow: auto;
+  flex: 1 1;
 }
 
 .list-item {
@@ -8,7 +9,7 @@
   margin: 3px;
   color: black;
   font-weight: 400;
-  font-size: 13pt;
+  font-size: 12pt;
   cursor: pointer;
   padding: 5px;
   text-decoration: none;
@@ -19,6 +20,7 @@
   -o-transition: all .1s ease-in;
   -webkit-transition: all .1s ease-in;
   transition: all .1s ease-in;
+  background-color: #eee;
 }
 
 .list-header {
