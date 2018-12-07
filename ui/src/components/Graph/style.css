@@ -49,6 +49,7 @@
   flex: 1;
   overflow:auto;
   background: url('dark-circles.png');
+  height: 1px;
 }
 
 .NodeItemDnD {
