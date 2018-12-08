@@ -3,7 +3,7 @@ import plynx
 from setuptools import setup, find_packages
 
 install_requires = [
-    'boto>=2.48.0',
+    'boto>=2.48.0',     # TODO remove
     'pymongo>=3.5.1',
     'pyyaml>=3.11',
     'passlib>=1.7.1',
@@ -16,6 +16,18 @@ install_requires = [
     'future>=0.17.1',
     'docker>=3.5.1',    # Needed for local cluster
 ]
+
+# Extra dependencies for storage
+gs = [
+    "google-cloud-storage>=1.13.0",
+]
+s3 = [
+    "boto3>=1.9.62",
+]
+ssh = [
+    "paramiko>=2.4.2",
+]
+all_remotes = gs + s3 + ssh
 
 setup(
     name='plynx',
@@ -52,6 +64,12 @@ setup(
     keywords='data science, machine learning, pipeline, workflow, experiments',
     packages=find_packages(exclude=['scripts', 'docker']),
     install_requires=install_requires,
+    extras_require={
+        'all': all_remotes,
+        'gs': gs,
+        's3': s3,
+        'ssh': ssh,
+    },
     package_data={},
     entry_points={
         'console_scripts': [
