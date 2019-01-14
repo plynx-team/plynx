@@ -9,7 +9,7 @@ _config = None
 MasterConfig = namedtuple('MasterConfig', 'internal_host host port')
 WorkerConfig = namedtuple('WorkerConfig', 'user')
 MongoConfig = namedtuple('MongoConfig', 'user password host port')
-StorageConfig = namedtuple('StorageConfig', 'scheme resources stderr stdout worker')
+StorageConfig = namedtuple('StorageConfig', 'scheme prefix credential_path')
 AuthConfig = namedtuple('AuthConfig', 'secret_key')
 WebConfig = namedtuple('WebConfig', 'host port endpoint debug')
 DemoConfig = namedtuple('DemoConfig', 'graph_ids')
@@ -32,6 +32,7 @@ def __init__():
     global _config
     if os.path.exists(PLYNX_CONFIG_PATH):
         with open(PLYNX_CONFIG_PATH) as f:
+            logging.info('Using config `{}`'.format(PLYNX_CONFIG_PATH))
             _config = yaml.safe_load(f)
     else:
         logging.critical('PLYNX_CONFIG_PATH `{}` is not found'.format(PLYNX_CONFIG_PATH))
@@ -62,13 +63,13 @@ def get_db_config():
 
 
 def get_storage_config():
-    home = os.path.expanduser("~")
     return StorageConfig(
-        scheme=_config.get('storage', {}).get('scheme', 'file'),
-        resources=_config.get('storage', {}).get('resources', os.path.join(home, 'plynx', 'data')),
-        stderr=_config.get('storage', {}).get('stderr', os.path.join(home, 'plynx', 'data')),
-        stdout=_config.get('storage', {}).get('stdout', os.path.join(home, 'plynx', 'data')),
-        worker=_config.get('storage', {}).get('worker', os.path.join(home, 'plynx', 'data')),
+        scheme=_config.get('storage', {}).get('scheme', 'local'),
+        prefix=_config.get('storage', {}).get(
+            'prefix',
+            os.path.join(os.path.expanduser("~"), 'plynx', 'data')
+        ),
+        credential_path=_config.get('storage', {}).get('credential_path', None),
     )
 
 

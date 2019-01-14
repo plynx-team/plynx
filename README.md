@@ -281,10 +281,7 @@ worker:
 
 storage:
   scheme: file
-  resources: /data/resources/
-  stdout: /data/stdout/
-  stderr: /data/stderr/
-  worker: /data/worker/
+  prefix: /data/resources/
 
 auth:
   secret_key: SECRET_KEY

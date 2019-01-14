@@ -3,7 +3,6 @@ import plynx
 from setuptools import setup, find_packages
 
 install_requires = [
-    'boto>=2.48.0',     # TODO remove
     'pymongo>=3.5.1',
     'pyyaml>=3.11',
     'passlib>=1.7.1',
