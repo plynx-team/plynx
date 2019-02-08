@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom'
-import { separator } from './common'
 import Navigation from './navigation.js'
 import UserButton from './UserButton.js'
 
