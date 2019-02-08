@@ -8,28 +8,52 @@
   text-align: left;
 }
 
-.Header .separator {
-  display: inline-block;
-  border-left: 1px #333 solid;
-  width: 0px;
-}
-
 .Header .logo {
   padding-left: 10px;
   padding-right: 10px;
+}
 
+.Header .menu-sl-show {
+  display: block;
+}
+
+.Header .menu-sl-hide {
+  display: none;
+}
+
+.Header .menu-button-sl {
+  padding: 5px;
+  position: absolute;
+  top: 2px;
+  left: 200px;
+  cursor: pointer;
+  display: flex;
+}
+
+.Header .menu-button-sl img {
+  display:block;
+}
+
+.menu-button-sl-text {
+  font-weight: 300;
+  color: #ccc;
+  font-family: 'Source Sans Pro', sans-serif;
+  padding-left: 10px;
+}
+
+.Header .logo, .Header .menu-button-sl {
   -moz-transition: all .1s ease-in;
   -o-transition: all .1s ease-in;
   -webkit-transition: all .1s ease-in;
   transition: all .1s ease-in;
 }
 
-.Header .logo:hover {
+.Header .logo:hover, .Header .menu-button-sl:hover {
     color: white;
     background-color: #333;
 }
 
-.Header .logo:active {
+.Header .logo:active, .Header .menu-button-sl:active {
   background-color: #62a6f3;
 }
 
@@ -44,8 +68,6 @@
 
 .Header .Navigation {
   position: absolute;
-  top: 6px;
-  left: 180px;
   font-weight: 300;
   color: #ccc;
   padding-left: 10px;
@@ -75,21 +97,6 @@
     -o-transition: all .1s ease-in;
     -webkit-transition: all .1s ease-in;
     transition: all .1s ease-in;
-}
-
-.Header .NavigationItems .Item:hover:not(.active) {
-    color: white;
-    border-bottom: 1px solid white;
-    background-color: #333;
-}
-
-.Header .NavigationItems .active {
-    color: #2196F3;
-    border-bottom: 3px solid #2196F3;
-}
-
-.Header .NavigationItems .active:hover {
-    background-color: #134177;
 }
 
 .UserButton {
@@ -128,4 +135,81 @@
 .UserButton .action:hover {
   color: #337ab7;
   text-decoration: underline;
+}
+
+/* Mobile dependent */
+
+.Header .Navigation {
+  background-color: #111;
+}
+
+.Header .NavigationItems {
+  display: grid;
+  padding: 5px;
+}
+
+.Header .separator {
+  display: inline-block;
+  border-bottom: 1px #333 solid;
+  height: 0px;
+}
+
+.Header .Navigation {
+  top: 40px;
+  left: 0px;
+  width: 100%;
+}
+
+.Header .NavigationItems .Item:hover:not(.active) {
+    color: white;
+    background-color: #333;
+}
+
+.Header .NavigationItems .Item {
+  padding: 8px;
+  margin: 5px;
+}
+
+.Header .NavigationItems .active {
+    color: #2196F3;
+    border-left: 3px solid #2196F3;
+}
+
+.Header .NavigationItems .active:hover {
+    background-color: #134177;
+}
+
+@media (min-width: 1100px) {
+  .Header .NavigationItems {
+    display: block;
+    padding: 0;
+  }
+
+  .Header .separator {
+    display: inline-block;
+    border-left: 1px #333 solid;
+    width: 0px;
+    height: auto;
+  }
+
+  .Header .Navigation {
+    top: 6px;
+    left: 180px;
+    width: auto;
+    height: auto;
+  }
+
+  .Header .NavigationItems .Item:hover:not(.active) {
+    border-bottom: 1px solid white;
+  }
+
+  .Header .NavigationItems .active {
+    border-left: 0;
+    border-bottom: 3px solid #2196F3;
+  }
+
+  .Header .NavigationItems .Item {
+    padding: 0px 18px 0px 18px;
+    margin: 0px;
+  }
 }

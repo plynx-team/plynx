@@ -18,7 +18,6 @@ class Navigation extends Component {
   }
 
   render() {
-    console.log(...this.props);
     return (
       <div className="Navigation" onMouseUp={this.onMouseUp}>
           <div className="NavigationItems">
