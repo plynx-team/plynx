@@ -1,6 +1,5 @@
 .file-list-item {
-  display: grid;
-  grid-template-columns: 1fr 250px 300px 250px 250px;
+  grid-template-columns: 200px 200px 100px 1fr 200px;
 }
 
 .file-list-item .Title {
@@ -17,6 +16,11 @@
   border: 1px #bbb solid;
 }
 
+.file-list-item .Id {
+  min-width: 300px;
+}
+
+
 .file-list-item .Type .Widget img {
   vertical-align:middle;
 }
@@ -27,4 +31,10 @@
 
 .file-list-item .Status.DEPRECATED {
   color:red;
+}
+
+@media (min-width: 1100px) {
+  .file-list-item {
+    grid-template-columns: 300px 300px 300px 250px 250px;
+  }
 }

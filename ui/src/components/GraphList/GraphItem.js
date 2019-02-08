@@ -1,5 +1,6 @@
 // src/components/About/index.js
 import React, { Component } from 'react';
+import { listTextElement } from '../Common/listElements';
 import './GraphItem.css';
 
 export default class GraphItem extends Component {
@@ -14,11 +15,11 @@ export default class GraphItem extends Component {
             &ldquo;{this.props.description}&rdquo;
           </div>
         </div>
-        <div className={'Id'}>{this.props._id}</div>
-        <div className={'Status ' + this.props.graph_running_status}>{this.props.graph_running_status}</div>
-        <div className='Created'>{this.props.insertion_date}</div>
-        
-        <div className='Updated'>{this.props.update_date}</div>
+
+        { listTextElement('Status ' + this.props.graph_running_status, this.props.graph_running_status) }
+        { listTextElement('Id', this.props._id) }
+        { listTextElement('Created', this.props.insertion_date) }
+        { listTextElement('Updated', this.props.update_date) }
       </a>
     );
   }

@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { listTextElement } from '../Common/listElements';
 import { FILE_TYPES } from '../../constants.js'
 import './FileItem.css';
 
@@ -30,9 +31,9 @@ export default class FileItem extends Component {
             {typeTuple.alias}
           </div>
         </div>
-        <div className={'Id'}>{this.props._id}</div>
-        <div className={'Status ' + this.props.node_status}>{this.props.node_status}</div>
-        <div className='Created'>{this.props.insertion_date}</div>
+        { listTextElement('Status ' + this.props.node_status, this.props.node_status) }
+        { listTextElement('Id', this.props._id) }
+        { listTextElement('Created', this.props.insertion_date) }
       </a>
     );
   }
