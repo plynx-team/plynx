@@ -5,19 +5,6 @@
 .graph-list-item .TitleDescription {
   min-width: 200px;
   text-overflow: inherit;
-  overflow: inherit;
-}
-
-.graph-list-item .TitleDescription .Title {
-  font-weight: 700;
-  font-size: 15pt;
-  text-overflow: inherit;
-  overflow: inherit;
-}
-
-.graph-list-item .TitleDescription .Description {
-  text-overflow: inherit;
-  overflow: inherit;
 }
 
 .graph-list-item .Id {

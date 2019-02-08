@@ -2,11 +2,6 @@
   grid-template-columns: 200px 200px 100px 1fr 200px;
 }
 
-.file-list-item .Title {
-  font-weight: 700;
-  font-size: 15pt;
-}
-
 .file-list-item .Type .Widget {
   display: inline-block;
   width: 150px;

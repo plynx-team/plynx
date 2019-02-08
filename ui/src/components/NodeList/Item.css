@@ -2,11 +2,6 @@
   grid-template-columns: 200px 200px 1fr 200px 200px;
 }
 
-.node-list-item .Title {
-  font-weight: 700;
-  font-size: 15pt;
-}
-
 .node-list-item .Id {
   min-width: 300px;
 }
