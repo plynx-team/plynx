@@ -16,7 +16,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 
-  display: grid;
+  display: inline-grid;
 
   -moz-transition: all .1s ease-in;
   -o-transition: all .1s ease-in;
