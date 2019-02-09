@@ -305,32 +305,51 @@ export default class Node extends Component {
           />
         </div>
         <div className='EditNodeComponents'>
-          <div className='EditNodeInputs'>
-            <InOutList
-              varName='inputs'
-              items={node.inputs}
-              key={key}
-              onChanged={(value) => this.handleParameterChanged('inputs', value)}
-              readOnly={this.state.readOnly}
-            />
+
+          <div className='EditNodeColumn EditNodeInputs'>
+            <div className='EditNodePropTitle'>
+              Inputs
+            </div>
+            <div className='EditNodeList'>
+              <InOutList
+                varName='inputs'
+                items={node.inputs}
+                key={key}
+                onChanged={(value) => this.handleParameterChanged('inputs', value)}
+                readOnly={this.state.readOnly}
+              />
+            </div>
           </div>
-          <div className='EditNodeParameters'>
-            <ParameterList
-              items={node.parameters}
-              key={key}
-              onChanged={(value) => this.handleParameterChanged('parameters', value)}
-              readOnly={this.state.readOnly}
-            />
+
+          <div className='EditNodeColumn EditNodeParameters'>
+            <div className='EditNodePropTitle'>
+              Parameters
+            </div>
+            <div className='EditNodeList'>
+              <ParameterList
+                items={node.parameters}
+                key={key}
+                onChanged={(value) => this.handleParameterChanged('parameters', value)}
+                readOnly={this.state.readOnly}
+              />
+            </div>
           </div>
-          <div className='EditNodeOutputs'>
-            <InOutList
-              varName='outputs'
-              items={node.outputs}
-              key={key}
-              onChanged={(value) => this.handleParameterChanged('outputs', value)}
-              readOnly={this.state.readOnly}
-            />
+
+          <div className='EditNodeColumn EditNodeOutputs'>
+            <div className='EditNodePropTitle'>
+              Outputs
+            </div>
+            <div className='EditNodeList'>
+              <InOutList
+                varName='outputs'
+                items={node.outputs}
+                key={key}
+                onChanged={(value) => this.handleParameterChanged('outputs', value)}
+                readOnly={this.state.readOnly}
+              />
+            </div>
           </div>
+
         </div>
       </div>
     );
