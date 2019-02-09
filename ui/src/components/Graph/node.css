@@ -1,23 +1,9 @@
 /* node stuff */
-.GraphNode {
-  font-family: 'Source Sans Pro', sans-serif;
-  color: #323232;
-  line-height: 20px;
-  font-size: 14px;
-  font-weight: 400;
-  height: 100%;
-  display: table;
-  text-rendering:optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-font-smoothing: antialiased;
-}
-
 .MainGraph {
   height: 100%;
 }
 
 svg {
-  position: absolute;
   background: url('gridtile.png');
   width: 4000px;
   height: 2000px;

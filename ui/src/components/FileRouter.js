@@ -7,7 +7,7 @@ import NotFound from './NotFound';
 export default class FileRouter extends Component {
   render() {
     return (
-      <div className="FileRouter">
+      <div className="Router FileRouter">
         <Switch>
           <Route exact path="/files" component={FileList}/>
           <Route path="/files/:file_id" component={FileList} />

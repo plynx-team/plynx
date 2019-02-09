@@ -338,7 +338,7 @@ class ReactBlockGraph extends React.Component {
     return connectDropTarget(
       <div className={'GraphRoot' + (this.state.editable ? ' editable' : ' readonly')} >
         <HotKeys handlers={keyHandlers} keyMap={KEY_MAP}>
-          {blocks.map((block)=> {
+          {blocks.map((block) => {
             var selectedBlock = selectedNIDs.indexOf(block.nid) > -1;
             return <Block
                       index={i++}

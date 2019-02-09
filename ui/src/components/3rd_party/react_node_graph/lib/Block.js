@@ -71,7 +71,7 @@ class Block extends React.Component {
       + (this.state.readonly ? ' readonly' : ' editable');
 
     return (
-      <div onClick={(e) => {this.handleClick(e)}}>
+      <div onClick={(e) => {this.handleClick(e)}} style={{position: 'relative'}}>
         <Draggable
           start={{x:this.props.pos.x,y:this.props.pos.y}}
           handle=".node-header,.node-title,.node-content"

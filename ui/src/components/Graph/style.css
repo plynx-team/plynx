@@ -14,9 +14,16 @@
 }
 
 .GraphNode {
-  position: absolute!important;
-  width: 100%;
+  font-family: 'Source Sans Pro', sans-serif;
+  color: #323232;
+  line-height: 20px;
+  font-size: 14px;
+  font-weight: 400;
   height: 100%;
+  display: flex;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-font-smoothing: antialiased;
 }
 
 .NodesBar {
@@ -56,14 +63,6 @@
   cursor: grab;
 }
 
-.GraphRoot.readonly {
-  width: 100%;
-}
-
-.GraphRoot.editable {
-  width: calc(100% - 250px);
-}
-
 .BackgroundLabels {
   position: fixed;
   z-index: 10000;
@@ -89,7 +88,7 @@
 }
 
 .GraphRoot {
-  position: absolute;
+  flex: 1;
   overflow: scroll;
   display: inline-block;
   height: 100%;

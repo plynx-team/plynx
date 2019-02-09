@@ -1,16 +1,11 @@
 .Header {
-  display: table-cell;
+  display: block;
   vertical-align: middle;
-  padding: 8px 16px;
+  /*padding: 8px 16px;*/
   background-color: #111;
   font-size: 17pt;
   font-family: monospace;
   text-align: left;
-}
-
-.Header .logo {
-  padding-left: 10px;
-  padding-right: 10px;
 }
 
 .Header .menu-sl-show {
@@ -19,26 +14,6 @@
 
 .Header .menu-sl-hide {
   display: none;
-}
-
-.Header .menu-button-sl {
-  padding: 5px;
-  position: absolute;
-  top: 2px;
-  left: 200px;
-  cursor: pointer;
-  display: flex;
-}
-
-.Header .menu-button-sl img {
-  display:block;
-}
-
-.menu-button-sl-text {
-  font-weight: 300;
-  color: #ccc;
-  font-family: 'Source Sans Pro', sans-serif;
-  padding-left: 10px;
 }
 
 .Header .logo, .Header .menu-button-sl {
@@ -139,6 +114,34 @@
 
 /* Mobile dependent */
 
+.Header .logo {
+  top: 5px;
+  left: 50%;
+  margin-left: -100px;
+  position: absolute;
+  padding: 3px 15px 3px 15px;
+}
+
+.Header .menu-button-sl {
+  padding: 5px;
+  position: absolute;
+  top: 2px;
+  left: 10px;
+  cursor: pointer;
+  display: flex;
+}
+
+.Header .menu-button-sl img {
+  display:block;
+}
+
+.menu-button-sl-text {
+  font-weight: 300;
+  color: #ccc;
+  font-family: 'Source Sans Pro', sans-serif;
+  padding-left: 10px;
+}
+
 .Header .Navigation {
   background-color: #111;
 }
@@ -158,6 +161,7 @@
   top: 40px;
   left: 0px;
   width: 100%;
+  z-index: 22000;
 }
 
 .Header .NavigationItems .Item:hover:not(.active) {
@@ -180,6 +184,12 @@
 }
 
 @media (min-width: 1100px) {
+
+  .Header .logo {
+    left: 10px;
+    margin-left: 0;
+  }
+
   .Header .NavigationItems {
     display: block;
     padding: 0;
