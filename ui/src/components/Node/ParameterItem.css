@@ -11,6 +11,7 @@
 
 .ParameterValueCell {
   float: right;
+  padding-right: 50px;
 }
 
 .ParameterValueCell > .BoolLabel{

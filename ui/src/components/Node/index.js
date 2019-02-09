@@ -304,31 +304,33 @@ export default class Node extends Component {
             key={"controls_" + key}
           />
         </div>
-        <div className='EditNodeInputs'>
-          <InOutList
-            varName='inputs'
-            items={node.inputs}
-            key={key}
-            onChanged={(value) => this.handleParameterChanged('inputs', value)}
-            readOnly={this.state.readOnly}
-          />
-        </div>
-        <div className='EditNodeParameters'>
-          <ParameterList
-            items={node.parameters}
-            key={key}
-            onChanged={(value) => this.handleParameterChanged('parameters', value)}
-            readOnly={this.state.readOnly}
-          />
-        </div>
-        <div className='EditNodeOutputs'>
-          <InOutList
-            varName='outputs'
-            items={node.outputs}
-            key={key}
-            onChanged={(value) => this.handleParameterChanged('outputs', value)}
-            readOnly={this.state.readOnly}
-          />
+        <div className='EditNodeComponents'>
+          <div className='EditNodeInputs'>
+            <InOutList
+              varName='inputs'
+              items={node.inputs}
+              key={key}
+              onChanged={(value) => this.handleParameterChanged('inputs', value)}
+              readOnly={this.state.readOnly}
+            />
+          </div>
+          <div className='EditNodeParameters'>
+            <ParameterList
+              items={node.parameters}
+              key={key}
+              onChanged={(value) => this.handleParameterChanged('parameters', value)}
+              readOnly={this.state.readOnly}
+            />
+          </div>
+          <div className='EditNodeOutputs'>
+            <InOutList
+              varName='outputs'
+              items={node.outputs}
+              key={key}
+              onChanged={(value) => this.handleParameterChanged('outputs', value)}
+              readOnly={this.state.readOnly}
+            />
+          </div>
         </div>
       </div>
     );

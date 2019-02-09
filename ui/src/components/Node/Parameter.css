@@ -38,7 +38,7 @@
 }
 
 .ParameterSecondItem {
-  padding-left: 8px;
+  padding: 0 8px 0 8px;
   border-left: 1px solid white;
 }
 
@@ -68,10 +68,6 @@
 
 .ParameterCellValue {
   float: left;
-}
-
-.ParameterValue {
-  width: 100%;
 }
 
 .ParameterMonoText {

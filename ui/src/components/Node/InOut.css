@@ -53,6 +53,7 @@
 
 .InOutCellValue {
   float: left;
+  padding-right: 5px;
 }
 
 .InOutValue {
