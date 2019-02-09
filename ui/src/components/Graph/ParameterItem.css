@@ -1,15 +1,21 @@
+.PropertiesBoxContent {
+  padding: 5px;
+  border: 1px solid #202020;
+  border-radius: 4px;
+}
+
+
 .ParameterItem {
   display: grid;
   width: 100%;
-  grid-template-columns: 30% 70%;
-  margin-bottom: 5px;
+  grid-template-columns: 40% 60%;
+  margin: 5px 0px;
 }
 
-.ParameterNameCell {
+.PropertiesBoxContent .ParameterNameCell {
   float: left;
-  padding-left: 10px
 }
 
-.ParameterValueCell {
-  float: right;
+.PropertiesBoxContent .ParameterValueCell {
+  width: 100%;
 }

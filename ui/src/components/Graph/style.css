@@ -95,23 +95,18 @@
 }
 
 .PropertiesBar {
-  position: fixed!important;
-  background-color: rgba(0, 0, 0, 0.5);
-  min-width: 400px;
+  background-color: #2b2b2b;
+  width: 300px;
   padding: 5px;
-  z-index: 20000;
-  top: 50px;
-  right: 25px;
-  border: 2px solid white;
-  border-radius: 5px;
+  overflow: auto;
 }
 
 .PropertiesHeader {
-  background-color: #000;
   color: #fff;
   vertical-align: middle;
   font-weight: 900;
-  padding: 4px 8px;
+  font-size: 17px;
+  padding: 4px;
   cursor: pointer;
 }
 
@@ -123,8 +118,25 @@ a .PropertiesHeader:hover {
   text-decoration: underline;
 }
 
-.ParametersHeader, .OutputsHeader, .LogsHeader, .ParameterNameCell, .OutputNameCell {
+.PropertiesBoxRoot {
+  padding-top: 10px;
+}
+
+.PropertiesBox {
   color: #fff;
+}
+
+.PropertiesBoxHeader {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 5px 0px 3px 5px;
+}
+
+.PropertiesBoxContent {
+  color: #fff;
+  background-color: #404040;
+  padding: 4px 0px 4px 0px;
 }
 
 .PreviewBoxContent {

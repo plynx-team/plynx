@@ -5,6 +5,18 @@ import OutputItem from './OutputItem.js'
 import { Link } from 'react-router-dom';
 import './style.css';
 
+
+function makeBox(title, content) {
+  return  <div className="PropertiesBox">
+            <div className="PropertiesBoxHeader">
+              { title }
+            </div>
+            <div className="PropertiesBoxContent">
+              { content }
+            </div>
+          </div>;
+}
+
 export default class PropertiesBar extends Component {
   constructor(props) {
     super(props);
@@ -177,26 +189,12 @@ export default class PropertiesBar extends Component {
           </a>
         }
 
+        <div className='PropertiesBoxRoot'>
+          {parametersList.length > 0 && makeBox('Parameters', parametersList)}
+          {!this.state.editable && outputsList.length > 0 && makeBox('Outputs', outputsList)}
+          {!this.state.editable && logsList.length > 0 && makeBox('Logs', logsList)}
+        </div>
 
-
-        <div className="ParametersHeader">Parameters</div>
-        {parametersList}
-        {!this.state.editable &&
-          <div className="OptionalOutputsBox">
-            {outputsList.length > 0 &&
-              <div className="OutputsBox">
-                <div className="OutputsHeader">Outputs</div>
-                {outputsList}
-              </div>
-            }
-            {logsList.length > 0 &&
-              <div className="LogsBox">
-                <div className="LogsHeader">Logs</div>
-                {logsList}
-              </div>
-            }
-          </div>
-        }
       </div>
     );
   }
