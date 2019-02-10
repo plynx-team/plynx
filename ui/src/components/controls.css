@@ -73,7 +73,7 @@
 }
 
 .control-button {
-  display: inline-block;
+  display: inline-flex;
   border-radius: 2px;
   padding: 2px 10px 2px 10px;
   text-align: center;
@@ -97,7 +97,6 @@
 }
 
 .control-button:hover {
-  display: inline-block;
   background-color: #444;
   border-radius: 2px;
   padding: 2px 10px 2px 10px;
@@ -122,4 +121,18 @@
 
 .control-button.demo:active {
   background-color: #62a6f3;
+}
+
+.control-button-text {
+  padding-left: 5px;
+}
+
+.control-button-text {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .control-button-text {
+    display: block;
+  }
 }

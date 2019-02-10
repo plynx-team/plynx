@@ -1,59 +1,58 @@
 // src/components/About/index.js
 import React, { Component } from 'react';
 import { GRAPH_RUNNING_STATUS } from '../../constants.js';
+import makeControlButton from '../Common/controlButton.js'
 import './OutputItem.css';
+
 
 export default class Controls extends Component {
   render() {
-    //{{pathname: '/graphs/' + this.state.graphId, query: {node: this.state.nodeId, output_preview: this.state.resourceName}}}
     return (
       <div className={this.props.className + ' ' + (this.props.readonly ? 'readonly' : 'editable')}>
         {!this.props.readonly &&
-          <a href={null}
-             onClick={(e) => {e.preventDefault(); this.props.onSave()}}
-             className="control-button">
-             <img src="/icons/save.svg" alt="save" /> Save
-          </a>
+          makeControlButton({
+            img: 'save.svg',
+            text: 'Save',
+            func: () => {this.props.onSave()},
+          })
         }
         {!this.props.readonly &&
-          <a href={null}
-             onClick={(e) => {e.preventDefault(); this.props.onValidate()}}
-             className="control-button">
-             <img src="/icons/check-square.svg" alt="validate" /> Validate
-          </a>
+          makeControlButton({
+            img: 'check-square.svg',
+            text: 'Validate',
+            func: () => {this.props.onValidate()},
+          })
         }
         {!this.props.readonly &&
-          <a href={null}
-             onClick={(e) => {e.preventDefault(); this.props.onApprove()}}
-             className="control-button demo"
-             >
-             <img src="/icons/play.svg" alt="run" /> Run
-          </a>
+          makeControlButton({
+            img: 'play.svg',
+            text: 'Run',
+            func: () => {this.props.onApprove()},
+          })
         }
         {!this.props.readonly &&
-          <a href={null}
-             onClick={(e) => {e.preventDefault(); this.props.onUpgradeNodes()}}
-             className="control-button"
-             >
-             <img src="/icons/trending-up.svg" alt="upgrade" /> Upgrade Nodes
-          </a>
+          makeControlButton({
+            img: 'trending-up.svg',
+            text: 'Upgrade Nodes',
+            func: () => {this.props.onUpgradeNodes()},
+          })
         }
-        <a href={null}
-           onClick={(e) => {e.preventDefault(); this.props.onRearrange()}}
-           className={"control-button"}>
-           <img src="/icons/rearrange.svg" alt="rearrange" /> Rearrange nodes
-        </a>
-        <a href={null}
-           onClick={(e) => {e.preventDefault(); this.props.onClone()}}
-           className={"control-button" + (this.props.readonly ? " demo" : "") }>
-           <img src="/icons/copy.svg" alt="clone" /> Clone
-        </a>
+        {makeControlButton({
+          img: 'rearrange.svg',
+          text: 'Rearrange nodes',
+          func: () => {this.props.onRearrange()},
+        })}
+        {makeControlButton({
+          img: 'copy.svg',
+          text: 'Clone',
+          func: () => {this.props.onClone()},
+        })}
         {(this.props.graphRunningStatus === GRAPH_RUNNING_STATUS.RUNNING || this.props.graphRunningStatus === GRAPH_RUNNING_STATUS.FAILED_WAITING) &&
-          <a href={null}
-             onClick={(e) => {e.preventDefault(); this.props.onCancel()}}
-             className="control-button">
-             <img src="/icons/x.svg" alt="deprecate"/> Cancel
-          </a>
+          makeControlButton({
+            img: 'x.svg',
+            text: 'Cancel',
+            func: () => {this.props.onCancel()},
+          })
         }
       </div>
     );

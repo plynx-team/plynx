@@ -67,7 +67,3 @@
 .EditNodeHeader .ControlButtons .control-button:hover {
   background-color: #666;
 }
-
-.EditNodeHeader .ControlButtons .control-button:active {
-  background-color: #62a6f3;
-}
