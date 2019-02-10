@@ -1,18 +1,4 @@
 
-.ControlButtons {
-  z-index: 21050;
-  position: fixed;
-  top: 50px;
-}
-
-.ControlButtons.readonly {
-  left: 10px;
-}
-
-.ControlButtons.editable {
-  left: 260px;
-}
-
 .GraphNode {
   font-family: 'Source Sans Pro', sans-serif;
   color: #323232;
