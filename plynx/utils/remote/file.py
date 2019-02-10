@@ -1,3 +1,4 @@
+import os
 import shutil
 from plynx.utils.remote.base import ContentsHandlerBase, RemoteBase
 
@@ -19,3 +20,7 @@ class ContentsHandlerFile(ContentsHandlerBase):
 class RemoteFile(RemoteBase):
     def __init__(self, storage_config):
         super(RemoteFile, self).__init__(ContentsHandlerFile, storage_config)
+
+        # make sure directory exists
+        if not os.path.exists(self._storage_config.prefix):
+            os.makedirs(self._storage_config.prefix)
