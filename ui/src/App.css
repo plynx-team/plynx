@@ -59,3 +59,26 @@ body{
             user-select: text; /* Non-prefixed version, currently
                                   supported by Chrome and Opera */
 }
+
+.ControlButtons {
+  z-index: 21050;
+  position: fixed;
+  top: 100px;
+}
+
+
+/* Mobile dependent */
+
+.Header {
+  height: 80px;
+}
+
+@media (min-width: 1100px) {
+  .Header {
+    height: 40px;
+  }
+
+  .ControlButtons {
+    top: 50px;
+  }
+}

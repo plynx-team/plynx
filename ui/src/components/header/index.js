@@ -49,7 +49,6 @@ class Header extends Component {
           showMenuButton &&
           <a className="menu-button-sl" href={null} onMouseUp={(e) => this.onMenuClick(e)}>
             <img src="/icons/menu.svg" alt="menu" />
-            <div className='menu-button-sl-text'>Menu</div>
           </a>
         }
         <UserButton onAPIDialogClick={() => this.props.onAPIDialogClick()}/>
