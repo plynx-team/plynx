@@ -20,11 +20,11 @@ train_descriptors = [
 ]
 
 ##########################################
-# Build Plynx elements
+# Build PLynx elements
 ##########################################
 
 # Operation is a metaclass that declares the interface to an existing operation
-# in the Plynx database
+# in the PLynx database
 Split = Operation(
     id='5ae6b0123136050000d8711a',
     title='Split Train Test',
@@ -138,16 +138,16 @@ export default class About extends Component {
           <img src='/architecture.png' alt="architecture"/>
 
           <h3>UI</h3>
-          <p>The Plynx UI make it easy to create, monitor, and troubleshoot your data pipelines. All of the components and Graphs can be defined in the UI.</p>
+          <p>The PLynx UI make it easy to create, monitor, and troubleshoot your data pipelines. All of the components and Graphs can be defined in the UI.</p>
 
           <h3>API</h3>
-          <p>While Plynx offers an excellent UI, Plynx API is the most common way of creating and running Graphs. Your pipeline can be defined in a python script.</p>
-          <p>Yet Plynx is a PipeLine as a Service (PLaaS) platform. It means the pipelines are dynamic by their nature. The platform is separated from your data pipelines. An individual Graph can be altered to satisfy your business needs.</p>
+          <p>While PLynx offers an excellent UI, PLynx API is the most common way of creating and running Graphs. Your pipeline can be defined in a python script.</p>
+          <p>Yet PLynx is a PipeLine as a Service (PLaaS) platform. It means the pipelines are dynamic by their nature. The platform is separated from your data pipelines. An individual Graph can be altered to satisfy your business needs.</p>
           <p>The following python script builds the pipeline <b>&ldquo;WDBC: compare regressors&rdquo;</b> from the demo.</p>
           <Highlight lang={'python'} value={pythonCode} />
 
           <h3>Backend</h3>
-          <p>The Plynx Backend is a RESTful web service. It has the same interface for UI and API.</p>
+          <p>The PLynx Backend is a RESTful web service. It has the same interface for UI and API.</p>
 
           <h3>Database</h3>
           <p>All of the data is stored in the database. It includes Graphs structures, Operations, and Files descriptions.</p>
@@ -172,4 +172,4 @@ export default class About extends Component {
   }
 }
 
-// <p>Plynx offers an excellent UI that displays the states of the Operations, Files, and Graphs.</p>
+// <p>PLynx offers an excellent UI that displays the states of the Operations, Files, and Graphs.</p>

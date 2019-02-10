@@ -1,6 +1,6 @@
 // src/components/NotFound/index.js
 import React, { Component } from 'react';
-import { PlynxApi } from '../../API.js';
+import { PLynxApi } from '../../API.js';
 import LoadingScreen from '../LoadingScreen.js'
 import { SPECIAL_USERS } from '../../constants.js';
 import cookie from 'react-cookies'
@@ -10,7 +10,7 @@ import './style.css';
 export default class Welcome extends Component {
   constructor(props) {
     super(props);
-    document.title = "Plynx";
+    document.title = "PLynx";
 
     this.state = {
       loading: false
@@ -42,7 +42,7 @@ export default class Welcome extends Component {
     var promise = null;
 
     if (specialUser === SPECIAL_USERS.DEMO) {
-      promise = PlynxApi.endpoints.demo.getCustom({
+      promise = PLynxApi.endpoints.demo.getCustom({
           method: 'post'
         });
       handleResponse = response => {
@@ -54,7 +54,7 @@ export default class Welcome extends Component {
         loading = false;
       };
     } else if (specialUser === SPECIAL_USERS.DEFAULT) {
-      promise = PlynxApi.endpoints.token.getCustom({
+      promise = PLynxApi.endpoints.token.getCustom({
           method: 'get',
           auth:
                 {

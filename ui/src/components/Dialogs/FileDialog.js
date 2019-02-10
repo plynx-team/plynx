@@ -1,7 +1,7 @@
 // src/components/NotFound/index.js
 import React, { Component } from 'react';
 import Dialog from './Dialog.js'
-import { PlynxApi } from '../../API.js';
+import { PLynxApi } from '../../API.js';
 import { FILE_STATUS, FILE_TYPES } from '../../constants.js'
 import { API_ENDPOINT } from '../../configConsts.js';
 
@@ -25,7 +25,7 @@ export default class FileDialog extends Component {
   download() {
     var resourceId = this.props.fileObj.outputs[0].resource_id;
     var filename = this.props.fileObj.title;
-    PlynxApi.endpoints.resource.getCustom({
+    PLynxApi.endpoints.resource.getCustom({
         method: 'get',
         url: API_ENDPOINT + '/resource/' + resourceId,
         responseType: 'blob'

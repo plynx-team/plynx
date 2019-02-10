@@ -1,7 +1,7 @@
 // src/components/About/index.js
 import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
-import { PlynxApi } from '../../API.js';
+import { PLynxApi } from '../../API.js';
 import NodeBarHeader from './NodeBarHeader.js';
 import NodeBarList from './NodeBarList.js';
 import ReactPaginate from 'react-paginate';
@@ -62,7 +62,7 @@ export default class NodesBar extends Component {
     var handleError = function (error) {
       console.error(error);
       if (error.response.status === 401) {
-        PlynxApi.getAccessToken()
+        PLynxApi.getAccessToken()
         .then(function (isSuccessfull) {
           if (!isSuccessfull) {
             console.error("Could not refresh token");
@@ -75,7 +75,7 @@ export default class NodesBar extends Component {
     };
 
     while (loading) {
-      await PlynxApi.endpoints.nodes.getAll( {
+      await PLynxApi.endpoints.nodes.getAll( {
         query: {
           offset: self.state.offset,
           per_page: self.perPage,

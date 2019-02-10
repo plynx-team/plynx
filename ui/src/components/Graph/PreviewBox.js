@@ -2,7 +2,7 @@
 import React, { Component } from 'react';
 import ParameterItem from './ParameterItem.js'
 import OutputItem from './OutputItem.js'
-import { PlynxApi } from '../../API.js';
+import { PLynxApi } from '../../API.js';
 import { API_ENDPOINT } from '../../constants.js';
 import './style.css';
 
@@ -19,7 +19,7 @@ export default class PreviewBox extends Component {
 
     if (props.fileType != 'image' && props.fileType != 'pdf') {
       var self = this;
-      PlynxApi.endpoints.resource.getOne({ id: props.resourceId})
+      PLynxApi.endpoints.resource.getOne({ id: props.resourceId})
         .then(function (response) {
           self.setState({content: response.data});
         })

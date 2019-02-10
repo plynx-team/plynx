@@ -1,6 +1,6 @@
 // src/components/About/index.js
 import React, { Component } from 'react';
-import { PlynxApi } from '../../API.js';
+import { PLynxApi } from '../../API.js';
 import { API_ENDPOINT } from '../../configConsts.js';
 import './OutputItem.css';
 
@@ -19,7 +19,7 @@ export default class OutputItem extends Component {
 
   download(e) {
     var resourceId = this.props.resourceId;
-    PlynxApi.endpoints.resource.getCustom({
+    PLynxApi.endpoints.resource.getCustom({
         method: 'get',
         url: API_ENDPOINT + '/resource/' + resourceId,
         responseType: 'blob'

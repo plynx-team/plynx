@@ -2,7 +2,7 @@
 import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
 import AlertContainer from 'react-alert-es6';
-import { PlynxApi } from '../../API.js';
+import { PLynxApi } from '../../API.js';
 import GraphList from './GraphList.js'
 import ReactPaginate from 'react-paginate';
 import LoadingScreen from '../LoadingScreen.js'
@@ -16,7 +16,7 @@ import '../controls.css';
 export default class GraphListPage extends Component {
   constructor(props) {
     super(props);
-    document.title = "Graph List - Plynx";
+    document.title = "Graph List - PLynx";
     this.state = {
       graphs: [],
       loading: true,
@@ -73,7 +73,7 @@ export default class GraphListPage extends Component {
 
     var handleError = function (error) {
       if (error.response.status === 401) {
-        PlynxApi.getAccessToken()
+        PLynxApi.getAccessToken()
         .then(function (isSuccessfull) {
           if (!isSuccessfull) {
             console.error("Could not refresh token");
@@ -86,7 +86,7 @@ export default class GraphListPage extends Component {
     };
 
     while (loading) {
-      await PlynxApi.endpoints.graphs.getAll( {
+      await PLynxApi.endpoints.graphs.getAll( {
         query: {
           offset: self.state.offset,
           per_page: self.perPage,

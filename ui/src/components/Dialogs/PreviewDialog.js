@@ -2,7 +2,7 @@
 import React, { Component } from 'react';
 import Dialog from './Dialog.js'
 import LoadingScreen from '../LoadingScreen.js'
-import { PlynxApi } from '../../API.js';
+import { PLynxApi } from '../../API.js';
 import { API_ENDPOINT } from '../../configConsts.js';
 
 const FileDownload = require('react-file-download');
@@ -22,7 +22,7 @@ export default class PreviewDialog extends Component {
 
     if (isText) {
       var self = this;
-      PlynxApi.endpoints.resource.getCustom({
+      PLynxApi.endpoints.resource.getCustom({
           method: 'get',
           url: API_ENDPOINT + '/resource/' + props.resource_id,
           params: {preview: true},
@@ -43,7 +43,7 @@ export default class PreviewDialog extends Component {
   }
 
   download(resource_id, download_name) {
-    PlynxApi.endpoints.resource.getCustom({
+    PLynxApi.endpoints.resource.getCustom({
         method: 'get',
         url: API_ENDPOINT + '/resource/' + resource_id,
         responseType: 'blob'

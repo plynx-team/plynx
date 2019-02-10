@@ -1,7 +1,7 @@
 // src/components/About/index.js
 import React, { Component } from 'react';
 import AlertContainer from 'react-alert-es6';
-import { PlynxApi } from '../../API.js';
+import { PLynxApi } from '../../API.js';
 import NodeProperties from './NodeProperties.js'
 import ControlButtons from './ControlButtons.js'
 import InOutList from './InOutList.js'
@@ -59,7 +59,7 @@ export default class Node extends Component {
         loading = false;
       }
       if (error.response.status === 401) {
-        PlynxApi.getAccessToken()
+        PLynxApi.getAccessToken()
         .then(function (isSuccessfull) {
           if (!isSuccessfull) {
             console.error("Could not refresh token");
@@ -72,7 +72,7 @@ export default class Node extends Component {
     };
 
     while (loading) {
-      await PlynxApi.endpoints.nodes.getOne({ id: node_id === 'new' ? 'bash_jinja2' : node_id})
+      await PLynxApi.endpoints.nodes.getOne({ id: node_id === 'new' ? 'bash_jinja2' : node_id})
       .then(processResponse)
       .catch(processError);
       if (loading) {
@@ -90,7 +90,7 @@ export default class Node extends Component {
   loadNodeFromJson(data) {
     console.log("loadNodeFromJson", data);
     this.setState({node: data});
-    document.title = data.title + " - Node - Plynx";
+    document.title = data.title + " - Node - PLynx";
     var node_status = data.node_status;
     this.setState({readOnly: node_status !== NODE_RUNNING_STATUS.CREATED});
 
@@ -166,7 +166,7 @@ export default class Node extends Component {
     /*action might be in {'save', 'validate', 'approve', 'deprecate'}*/
     var self = this;
     self.setState({loading: true});
-    PlynxApi.endpoints.nodes
+    PLynxApi.endpoints.nodes
     .create({
       body: {
         node: node,
@@ -209,7 +209,7 @@ export default class Node extends Component {
     })
     .catch(function (error) {
       if (error.response.status === 401) {
-        PlynxApi.getAccessToken()
+        PLynxApi.getAccessToken()
         .then(function (isSuccessfull) {
           if (!isSuccessfull) {
             console.error("Could not refresh token");

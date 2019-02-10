@@ -1,6 +1,6 @@
 // src/components/NotFound/index.js
 import React, { Component } from 'react';
-import { PlynxApi } from '../../API.js';
+import { PLynxApi } from '../../API.js';
 import Button from 'react-toolbox/lib/button/Button'
 import cookie from 'react-cookies'
 
@@ -9,7 +9,7 @@ import './style.css';
 export default class LogIn extends Component {
   constructor(props) {
     super(props);
-    document.title = "Log In - Plynx";
+    document.title = "Log In - PLynx";
     this.state = {
       username: '',
       password: ''
@@ -32,7 +32,7 @@ export default class LogIn extends Component {
   }
 
   loginUser({ username, password }) {
-    PlynxApi.endpoints.token.getCustom({
+    PLynxApi.endpoints.token.getCustom({
         method: 'get',
         auth:
               {

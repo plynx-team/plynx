@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
 import AlertContainer from 'react-alert-es6';
-import { PlynxApi } from '../../API.js';
+import { PLynxApi } from '../../API.js';
 import List from './List.js'
 import ReactPaginate from 'react-paginate';
 import LoadingScreen from '../LoadingScreen.js'
@@ -15,7 +15,7 @@ import '../controls.css';
 export default class ListPage extends Component {
   constructor(props) {
     super(props);
-    document.title = "Node List - Plynx";
+    document.title = "Node List - PLynx";
     this.state = {
       nodes: [],
       loading: true,
@@ -72,7 +72,7 @@ export default class ListPage extends Component {
 
     var handleError = function (error) {
       if (error.response.status === 401) {
-        PlynxApi.getAccessToken()
+        PLynxApi.getAccessToken()
         .then(function (isSuccessfull) {
           if (!isSuccessfull) {
             console.error("Could not refresh token");
@@ -85,7 +85,7 @@ export default class ListPage extends Component {
     };
 
     while (loading) {
-      await PlynxApi.endpoints.nodes.getAll( {
+      await PLynxApi.endpoints.nodes.getAll( {
         query: {
           offset: self.state.offset,
           per_page: self.perPage,

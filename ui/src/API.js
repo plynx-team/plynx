@@ -76,4 +76,4 @@ plynxApi.createEntity({ name: 'token' })
 plynxApi.createEntity({ name: 'demo' })
 plynxApi.createEntity({ name: 'master_state' })
 
-export let PlynxApi = plynxApi;
+export let PLynxApi = plynxApi;

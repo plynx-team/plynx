@@ -8,7 +8,7 @@ import './style.css';
 export default class Dashboard extends Component {
   constructor(props) {
     super(props);
-    document.title = "Dashboard - Plynx";
+    document.title = "Dashboard - PLynx";
   }
 
   render() {

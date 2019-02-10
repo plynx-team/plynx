@@ -3,7 +3,7 @@ import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
 import Dialog from './Dialog.js'
 import NodeItem from '../Common/NodeItem.js'
-import { PlynxApi } from '../../API.js';
+import { PLynxApi } from '../../API.js';
 import { ACTION } from '../../constants.js';
 
 import './DeprecateDialog.css';
@@ -47,7 +47,7 @@ export default class DeprecateDialog extends Component {
   updateNode(node_id, destination, retryCount = 3) {
     console.log("update_node");
     var self = this;
-    PlynxApi.endpoints.nodes.getOne({ id: node_id})
+    PLynxApi.endpoints.nodes.getOne({ id: node_id})
     .then(function (response) {
       var node = response.data.data;
       self.setState({[destination]: node});
@@ -60,7 +60,7 @@ export default class DeprecateDialog extends Component {
         self.setState({[destination + '_loading']: false})
       }
       if (error.response.status === 401) {
-        PlynxApi.getAccessToken()
+        PLynxApi.getAccessToken()
         .then(function (isSuccessfull) {
           if (!isSuccessfull) {
             self.setState({[destination + '_loading']: false});

@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import queryString from 'query-string';
 import ReactNodeGraph from '../3rd_party/react_node_graph';
 import AlertContainer from 'react-alert-es6';
-import { PlynxApi } from '../../API.js';
+import { PLynxApi } from '../../API.js';
 import { typesValid } from '../../graphValidation.js';
 import { DragDropContextProvider } from 'react-dnd'
 import TouchBackend from 'react-dnd-touch-backend';
@@ -93,7 +93,7 @@ export class Graph extends Component {
         loading = false;
       }
       if (error.response.status === 401) {
-        PlynxApi.getAccessToken()
+        PLynxApi.getAccessToken()
         .then(function (isSuccessfull) {
           if (!isSuccessfull) {
             console.error("Could not refresh token");
@@ -106,7 +106,7 @@ export class Graph extends Component {
     }
 
     while (loading) {
-      await PlynxApi.endpoints.graphs.getOne({ id: graph_id})
+      await PLynxApi.endpoints.graphs.getOne({ id: graph_id})
       .then(loadGraph)
       .catch(handleError);
       if (loading) {
@@ -123,7 +123,7 @@ export class Graph extends Component {
 
   loadGraphFromJson(data) {
     this.graph = data;
-    document.title = this.graph.title + " - Graph - Plynx";
+    document.title = this.graph.title + " - Graph - PLynx";
     console.log(this.graph);
     this.connections = [];
     this.blocks = [];
@@ -256,14 +256,14 @@ export class Graph extends Component {
   checkGraphStatus() {
     var self = this;
     var graph_id =  self.graph._id;
-    PlynxApi.endpoints.graphs.getOne({ id: graph_id})
+    PLynxApi.endpoints.graphs.getOne({ id: graph_id})
     .then(function (response) {
       self.updateGraphFromJson(response.data.data);
     })
     .catch(function (error) {
       console.log(error);
       if (error.response.status === 401) {
-        PlynxApi.getAccessToken()
+        PLynxApi.getAccessToken()
         .then(function (isSuccessfull) {
           if (isSuccessfull) {
             self.timeout = setTimeout(() => self.checkGraphStatus(), 1000);
@@ -780,7 +780,7 @@ export class Graph extends Component {
     /*action might be in {'save', 'validate', 'approve', 'deprecate'}*/
     var self = this;
     self.setState({loading: true});
-    PlynxApi.endpoints.graphs
+    PLynxApi.endpoints.graphs
     .create({
       body: {
         graph: graph,
@@ -831,7 +831,7 @@ export class Graph extends Component {
     })
     .catch(function (error) {
       if (error.response.status === 401) {
-        PlynxApi.getAccessToken()
+        PLynxApi.getAccessToken()
         .then(function (isSuccessfull) {
           if (!isSuccessfull) {
             console.error("Could not refresh token");

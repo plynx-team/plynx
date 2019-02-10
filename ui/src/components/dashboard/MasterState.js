@@ -1,6 +1,6 @@
 // src/components/About/index.js
 import React, { Component } from 'react';
-import { PlynxApi } from '../../API.js';
+import { PLynxApi } from '../../API.js';
 import { SimpleLoader } from '../LoadingScreen.js'
 import NodeItem from '../Common/NodeItem.js'
 import '../Common/List.css';
@@ -96,7 +96,7 @@ export default class MasterState extends Component {
 
     var handleError = function (error) {
       if (error.response && error.response.status === 401) {
-        PlynxApi.getAccessToken()
+        PLynxApi.getAccessToken()
         .then(function (isSuccessfull) {
           if (!isSuccessfull) {
             console.error("Could not refresh token");
@@ -109,7 +109,7 @@ export default class MasterState extends Component {
     };
 
     while (loading) {
-      await PlynxApi.endpoints.master_state.getAll( {
+      await PLynxApi.endpoints.master_state.getAll( {
         query: {
         }
       })

@@ -1,7 +1,7 @@
 // src/components/NotFound/index.js
 import React, { Component } from 'react';
 import Dialog from './Dialog.js'
-import { PlynxApi } from '../../API.js';
+import { PLynxApi } from '../../API.js';
 import LoadingScreen from '../LoadingScreen.js'
 import { NODE_STATUS, FILE_TYPES, RESPONCE_STATUS, NODE_RUNNING_STATUS } from '../../constants.js'
 
@@ -59,7 +59,7 @@ export default class FileUploadDialog extends Component {
     }
 
     self.setState({loading: true});
-    PlynxApi.endpoints.resource.upload(formData, config)
+    PLynxApi.endpoints.resource.upload(formData, config)
     .then(function (response) {
       var data = response.data;
       console.log(data);
@@ -91,7 +91,7 @@ export default class FileUploadDialog extends Component {
       console.error('error', error);
 
       if (error.response.status === 401) {
-        PlynxApi.getAccessToken()
+        PLynxApi.getAccessToken()
         .then(function (isSuccessfull) {
           if (!isSuccessfull) {
             console.error("Could not refresh token");

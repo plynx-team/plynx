@@ -1,6 +1,6 @@
 // src/components/About/index.js
 import React, { Component } from 'react';
-import { PlynxApi } from '../../API';
+import { PLynxApi } from '../../API';
 import { SimpleLoader } from '../LoadingScreen'
 import GraphList from '../GraphList/GraphList'
 import '../Common/List.css';
@@ -52,7 +52,7 @@ export default class Graphs extends Component {
 
     var handleError = function (error) {
       if (error.response && error.response.status === 401) {
-        PlynxApi.getAccessToken()
+        PLynxApi.getAccessToken()
         .then(function (isSuccessfull) {
           if (!isSuccessfull) {
             console.error("Could not refresh token");
@@ -65,7 +65,7 @@ export default class Graphs extends Component {
     };
 
     while (loading) {
-      await PlynxApi.endpoints.graphs.getAll( {
+      await PLynxApi.endpoints.graphs.getAll( {
         query: {
           offset: 0,
           per_page: 10,

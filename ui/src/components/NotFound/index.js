@@ -6,7 +6,7 @@ import './style.css';
 export default class NotFound extends Component {
   constructor(props) {
     super(props);
-    document.title = "404 - Plynx";
+    document.title = "404 - PLynx";
   }
   render() {
     return (
