@@ -64,7 +64,7 @@ def get_db_config():
 
 def get_storage_config():
     return StorageConfig(
-        scheme=_config.get('storage', {}).get('scheme', 'local'),
+        scheme=_config.get('storage', {}).get('scheme', 'file'),
         prefix=_config.get('storage', {}).get(
             'prefix',
             os.path.join(os.path.expanduser("~"), 'plynx', 'data')
