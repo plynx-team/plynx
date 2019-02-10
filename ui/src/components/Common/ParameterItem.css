@@ -1,0 +1,40 @@
+.PropertiesBoxContent {
+  padding: 5px;
+  border: 1px solid #202020;
+  border-radius: 4px;
+}
+
+
+.ParameterItem {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 40% 59%;
+  margin: 5px 0px;
+}
+
+.PropertiesBoxContent .ParameterNameCell {
+  float: left;
+}
+
+.PropertiesBoxContent .ParameterValueCell {
+  width: 100%;
+}
+
+.ParameterValueCell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+}
+
+.ParameterValueCell a {
+  color: #fff;
+  text-decoration: none;
+}
+
+.ParameterValueCell a:hover {
+  text-decoration: underline;
+}
+
+.ParameterValueCell > .BoolLabel{
+  color: white;
+}

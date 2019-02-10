@@ -1,21 +1,11 @@
 // src/components/About/index.js
 import React, { Component } from 'react';
-import ParameterItem from './ParameterItem.js'
 import OutputItem from './OutputItem.js'
+import ParameterItem from '../Common/ParameterItem.js'
+import makePropertiesBox from '../Common/makePropertiesBox.js'
 import { Link } from 'react-router-dom';
 import './style.css';
 
-
-function makeBox(title, content) {
-  return  <div className="PropertiesBox">
-            <div className="PropertiesBoxHeader">
-              { title }
-            </div>
-            <div className="PropertiesBoxContent">
-              { content }
-            </div>
-          </div>;
-}
 
 export default class PropertiesBar extends Component {
   constructor(props) {
@@ -190,9 +180,9 @@ export default class PropertiesBar extends Component {
         }
 
         <div className='PropertiesBoxRoot'>
-          {parametersList.length > 0 && makeBox('Parameters', parametersList)}
-          {!this.state.editable && outputsList.length > 0 && makeBox('Outputs', outputsList)}
-          {!this.state.editable && logsList.length > 0 && makeBox('Logs', logsList)}
+          {parametersList.length > 0 && makePropertiesBox('Parameters', parametersList)}
+          {!this.state.editable && outputsList.length > 0 && makePropertiesBox('Outputs', outputsList)}
+          {!this.state.editable && logsList.length > 0 && makePropertiesBox('Logs', logsList)}
         </div>
 
       </div>

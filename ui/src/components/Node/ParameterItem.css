@@ -1,21 +1,6 @@
-.ParameterItem {
-  display: grid;
-  width: 100%;
-  grid-template-columns: 30% 70%;
-}
-
 .ParameterNameCell {
   float: left;
-  padding-left: 10px
-}
-
-.ParameterValueCell {
-  float: right;
-  padding-right: 50px;
-}
-
-.ParameterValueCell > .BoolLabel{
-  color: white;
+  padding-left: 5px
 }
 
 .ParameterSecondItemValue > .Value {

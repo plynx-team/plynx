@@ -7,7 +7,7 @@
 }
 
 .EditNodeHeader {
-  background: darkgray;
+  background-color: #3b3b3b;
   width: 100%;
   padding: 3px;
   border-bottom: 1px solid black;
@@ -30,6 +30,8 @@
   font-weight: 600;
   font-size: 16pt;
   text-align: center;
+  background-color: #2b2b2b;
+  color: #fff;
 }
 
 .EditNodeList {
@@ -37,27 +39,20 @@
   overflow: auto;
 }
 
-.EditNodeInputs {
-  width:250px;
-  background: darkgray;
-}
-
-.EditNodeInputs .EditNodePropTitle, .EditNodeOutputs .EditNodePropTitle {
-  background-color: #888;
-}
-
-.EditNodeParameters .EditNodePropTitle {
-  background-color: #999;
+.EditNodeColumn {
+  background-color: #5b5b5b;
 }
 
 .EditNodeParameters {
   flex: 1;
-  background: lightgray;
+}
+
+.EditNodeInputs {
+  width:250px;
 }
 
 .EditNodeOutputs {
   width:250px;
-  background: darkgray;
 }
 
 .EditNodeHeader .ControlButtons {

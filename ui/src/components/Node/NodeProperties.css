@@ -1,13 +1,10 @@
 .NodeProperties {
   padding: 3px;
-  border: 1px solid black;
-  border-radius: 2px;
   margin: 0px;
-  display: inline-block;
 }
 
 .PropertyCol {
-  display: inline-block;
+  display: inline-grid;
   width: 300px;
   padding-left: 5px;
 }

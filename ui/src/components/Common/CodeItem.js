@@ -11,6 +11,7 @@ const languages = [
 
 const themes = [
   'monokai',
+  'chaos',
 ];
 
 languages.forEach(lang => {
@@ -63,7 +64,7 @@ export default class EnumItem extends Component {
           onChange={this.handleChange}
           editorProps={{$blockScrolling: true}}
           value={this.state.value}
-          theme="monokai"
+          theme="chaos"
           fontSize={14}
           showPrintMargin={true}
           showGutter={true}

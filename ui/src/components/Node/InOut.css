@@ -20,11 +20,11 @@
 }
 
 .InOutItem {
-  background-color: black;
+  background-color: #404040;
   color: white;
   padding: 3px;
-  border: 1px solid white;
-  border-radius: 2px;
+  border: 1px solid #202020;
+  border-radius: 4px;
   margin: 0px;
 }
 

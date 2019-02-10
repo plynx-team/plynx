@@ -1,6 +1,6 @@
 // src/components/About/index.js
 import React, { Component } from 'react';
-import renderValueElement from '../Common/renderValueElement.js';
+import renderValueElement from './renderValueElement.js';
 import './ParameterItem.css';
 
 export default class ParameterItem extends Component {
