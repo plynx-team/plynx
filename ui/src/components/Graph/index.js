@@ -957,18 +957,9 @@ export class Graph extends Component {
             />
           }
 
-          <PropertiesBar className="PropertiesBar"
-                        ref={(child) => { this.propertiesBar = child; }}
-                        onParameterChanged={(nodeId, name, value) => this.handleParameterChanged(nodeId, name, value)}
-                        editable={this.state.editable}
-                        onPreview={(previewData) => this.handlePreview(previewData)}
-                        graphId={this.graph._id}
-                        graphTitle={this.state.title}
-                        graphDescription={this.state.description}
-                        key={"prop" + this.state.graphId + this.state.loading}
-                        onFileShow={(nid) => this.handleShowFile(nid)}
-          />
+          {/* Visible and flex layout blocks */}
           {this.state.editable && <NodesBar/> }
+
           <ReactNodeGraph className="MainGraph"
             ref={(child) => { this.mainGraph = child; }}
             data={this.state}
@@ -989,6 +980,18 @@ export class Graph extends Component {
             onAllBlocksDeselect={() => this.handleAllBlocksDeselect()}
             onSavePressed={() => this.handleSave()}
             key={'graph' + this.state.graphId + this.state.loading}
+          />
+
+          <PropertiesBar className="PropertiesBar"
+                        ref={(child) => { this.propertiesBar = child; }}
+                        onParameterChanged={(nodeId, name, value) => this.handleParameterChanged(nodeId, name, value)}
+                        editable={this.state.editable}
+                        onPreview={(previewData) => this.handlePreview(previewData)}
+                        graphId={this.graph._id}
+                        graphTitle={this.state.title}
+                        graphDescription={this.state.description}
+                        key={"prop" + this.state.graphId + this.state.loading}
+                        onFileShow={(nid) => this.handleShowFile(nid)}
           />
         </div>
       </DragDropContextProvider>

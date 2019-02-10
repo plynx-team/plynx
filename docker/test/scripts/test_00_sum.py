@@ -3,6 +3,7 @@ import os
 import json
 import requests
 import argparse
+import logging
 from bson.objectid import ObjectId
 from plynx.api import Node, File, Graph, Client
 
@@ -132,14 +133,19 @@ def run_graph(access_token, file_id, operations):
 
 
 def main(endpoint, data_path):
+    logging.info('Using endpoint: {}'.format(endpoint))
     access_token = get_access_token(endpoint)
+    logging.info('Access token: {}'.format(access_token))
     file_id = upload_file(endpoint, access_token, data_path, os.path.join(data_path, SEQ_FILE))
+    logging.info('File ID: {}'.format(file_id))
     operations = create_operations(endpoint, access_token, os.path.join(data_path, NODES_FILE))
+    logging.info('Operations: {}'.format(operations))
 
     run_graph(access_token, file_id, operations)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     parser = argparse.ArgumentParser(description='Run test')
     parser.add_argument('-e', '--endpoint', help='Endpoint of the backend')
     parser.add_argument('-d', '--data-path', help='Path to test data')

@@ -2,7 +2,23 @@
 import React, { Component } from 'react';
 import { Link } from 'react-router-dom';
 import { PROGRAMMABLE_OPERATIONS } from '../../constants.js';
+import ParameterItem from '../Common/ParameterItem.js'
+import makePropertiesBox from '../Common/makePropertiesBox.js'
 import './NodeProperties.css'
+
+
+function makeKeyValueRow(name, value, key) {
+  return (
+    <div className='ParameterItem' key={key}>
+      <div className='ParameterNameCell'>
+        { name }
+      </div>
+      <div className='ParameterValueCell'>
+        { value }
+      </div>
+    </div>
+  );
+}
 
 export default class NodeProperties extends Component {
   constructor(props) {
@@ -16,133 +32,93 @@ export default class NodeProperties extends Component {
       created: this.props.created,
       readOnly: this.props.readOnly
     };
-
-    this.handleChange = this.handleChange.bind(this);
   }
 
-  handleChange(event) {
+  handleParameterChanged(name, value) {
     if (this.state.readOnly) {
       return;
     }
-    var name = event.target.name;
-    var value = event.target.value;
+    if (name === 'base_node_name') {
+      value = value.values[value.index];
+    }
     this.setState({[name]: value});
     this.props.onParameterChanged(name, value);
   }
 
   render() {
+    // Find index of base_node_name
+    var base_node_index = PROGRAMMABLE_OPERATIONS.indexOf(this.state.base_node_name);
+    var base_nodes = null;
+    if (base_node_index < 0) {
+      base_node_index = 0;
+      base_nodes = [this.state.base_node_name];
+    } else {
+      base_nodes = PROGRAMMABLE_OPERATIONS
+    }
+
+    var customPropertiesItems = [
+      {
+        name: 'title',
+        widget: { alias: 'Title' },
+        value: this.state.title,
+        parameter_type: 'str',
+        read_only: this.state.readOnly,
+      },
+      {
+        name: 'description',
+        widget: { alias: 'Description' },
+        value: this.state.description,
+        parameter_type: 'str',
+        read_only: this.state.readOnly,
+      },
+      {
+        name: 'base_node_name',
+        widget: { alias: 'Base Node' },
+        value: {
+          index: base_node_index,
+          values: base_nodes,
+        },
+        parameter_type: 'enum',
+        read_only: this.state.readOnly,
+      },
+    ].map(
+      (parameter) => <ParameterItem
+        name={parameter.name}
+        alias={parameter.widget.alias}
+        value={parameter.value}
+        parameterType={parameter.parameter_type}
+        key={parameter.name}
+        readOnly={parameter.read_only}
+        onParameterChanged={(name, value)=>this.handleParameterChanged(name, value)}
+        />
+      );
+
+    var internalPropertiesItems = [
+        makeKeyValueRow('Node Status', <i>{this.state.nodeStatus}</i>, 'node_status'),
+        makeKeyValueRow(
+          'Parent Node',
+          this.state.parentNode ? <Link to={'/nodes/' + this.state.parentNode}>{this.state.parentNode}</Link> : <i>null</i>,
+          'parent_node'
+        ),
+        makeKeyValueRow(
+          'Successor',
+          this.props.successorNode ? <Link to={'/nodes/' + this.props.successorNode}>this.props.successorNode</Link>: <i>null</i>,
+          'successor'
+        ),
+        makeKeyValueRow('Created', <i>{this.props.created}</i>, 'created'),
+        makeKeyValueRow('Updated', <i>{this.props.updated}</i>, 'updated'),
+    ];
+
     return (
       <div className='NodeProperties'>
         <div className='PropertyCol'>
-          <div className='PropertyRow'>
-            <div className='PropertyName'>
-              Title:
-            </div>
-            <div className='PropertyValue'>
-              <input type="text"
-                className='Input'
-                name='title'
-                value={this.state.title}
-                onChange={this.handleChange}
-                readOnly={this.state.readOnly}
-              />
-            </div>
-          </div>
-          <div className='PropertyRow'>
-            <div className='PropertyName'>
-              Description:
-            </div>
-            <div className='PropertyValue'>
-              <input type="text"
-                className='Input'
-                name='description'
-                value={this.state.description}
-                onChange={this.handleChange}
-                readOnly={this.state.readOnly}
-              />
-            </div>
-          </div>
+          { makePropertiesBox('Custom properties', customPropertiesItems) }
         </div>
-
         <div className='PropertyCol'>
-          <div className='PropertyRow'>
-            <div className='PropertyName'>
-              Base Node:
-            </div>
-            <div className='PropertyValue'>
-              <select
-                className='Select'
-                name='base_node_name'
-                value={this.state.base_node_name}
-                onChange={this.handleChange}
-                readOnly={this.state.readOnly}
-              >
-                {PROGRAMMABLE_OPERATIONS.map((base_node_name) =>
-                  <option
-                    value={base_node_name}
-                    key={base_node_name}
-                  >{base_node_name}</option>
-                )}
-              </select>
-            </div>
-          </div>
-
-          <div className='PropertyRow'>
-            <div className='PropertyName'>
-              Node Status:
-            </div>
-            <div className='PropertyValue'>
-              <i>{this.state.nodeStatus}</i>
-            </div>
-          </div>
-
+          { makePropertiesBox('Internal properties', internalPropertiesItems) }
         </div>
-
-        <div className='PropertyCol'>
-          <div className='PropertyRow'>
-            <div className='PropertyName'>
-              Parent Node:
-            </div>
-            <div className='PropertyValue'>
-              {this.state.parentNode && <Link to={'/nodes/' + this.state.parentNode}>{this.state.parentNode}</Link> }
-              {!this.state.parentNode && <i>null</i> }
-            </div>
-          </div>
-
-          <div className='PropertyRow'>
-            <div className='PropertyName'>
-              Successor:
-            </div>
-            <div className='PropertyValue'>
-              {this.props.successorNode && <Link to={'/nodes/' + this.props.successorNode}>{this.props.successorNode}</Link> }
-              {!this.props.successorNode && <i>null</i> }
-            </div>
-          </div>
-
-        </div>
-
-        <div className='PropertyCol'>
-          <div className='PropertyRow'>
-            <div className='PropertyName'>
-              Created:
-            </div>
-            <div className='PropertyValue'>
-              <i>{this.props.created}</i>
-            </div>
-          </div>
-
-          <div className='PropertyRow'>
-            <div className='PropertyName'>
-              Updated:
-            </div>
-            <div className='PropertyValue'>
-              <i>{this.props.updated}</i>
-            </div>
-          </div>
-
-        </div>
-
       </div>
+
     );
   }
 }

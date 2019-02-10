@@ -1,6 +1,6 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
 import Item from './Item.js'
+import { listTextElement } from '../Common/listElements';
 
 import './style.css';
 
@@ -14,6 +14,7 @@ export default class List extends Component {
         key={node._id}
         description={node.description ? node.description : "No description"}
         insertion_date={node.insertion_date}
+        update_date={node.update_date}
         node_running_status={node.node_running_status}
         node_status={node.node_status}
         />);
@@ -21,10 +22,11 @@ export default class List extends Component {
     return (
       <div className='list'>
         <div className='node-list-item list-header'>
-          <div className='header-item'>Header</div>
-          <div className='header-item'>Node ID</div>
-          <div className='header-item'>Status</div>
-          <div className='header-item'>Time created</div>
+          { listTextElement('header-item', 'Header') }
+          { listTextElement('header-item Status', 'Status') }
+          { listTextElement('header-item Id', 'Node Id') }
+          { listTextElement('header-item Created', 'Created') }
+          { listTextElement('header-item Updated', 'Updated') }
         </div>
         {listItems.length ? listItems : <b>No items to show</b>}
       </div>

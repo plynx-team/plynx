@@ -1,6 +1,6 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
 import FileItem from './FileItem.js'
+import { listTextElement } from '../Common/listElements';
 import '../Common/List.css';
 import './style.css';
 
@@ -23,11 +23,11 @@ export default class FileList extends Component {
     return (
       <div className='list'>
         <div className='file-list-item list-header'>
-          <div className='header-item'>Header</div>
-          <div className='header-item'>Type</div>
-          <div className='header-item'>Node ID</div>
-          <div className='header-item'>Status</div>
-          <div className='header-item'>Time created</div>
+          { listTextElement('header-item', 'Header') }
+          { listTextElement('header-item Type', 'Type') }
+          { listTextElement('header-item Status', 'Status') }
+          { listTextElement('header-item Id', 'Node Id') }
+          { listTextElement('header-item Created', 'Created') }
         </div>
         {listItems.length ? listItems : <b>No items to show</b>}
       </div>

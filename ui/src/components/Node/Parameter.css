@@ -13,7 +13,7 @@
   padding: 7px;
   margin: 0;
 
-  // change background colour if dragging
+  /* change background colour if dragging */
   background: transparent;
 }
 
@@ -22,14 +22,15 @@
 }
 
 .ParameterListItem {
-  background-color: black;
-  display: grid;
-  width: 100%;
+  background-color: #404040;
   color: white;
   padding: 3px;
-  border: 1px solid white;
-  border-radius: 2px;
+  border: 1px solid #202020;
+  border-radius: 4px;
   margin: 0px;
+
+  display: grid;
+  width: 100%;
   grid-template-columns: 200px 1fr;
 }
 
@@ -38,7 +39,7 @@
 }
 
 .ParameterSecondItem {
-  padding-left: 8px;
+  padding: 0 8px 0 8px;
   border-left: 1px solid white;
 }
 
@@ -68,10 +69,6 @@
 
 .ParameterCellValue {
   float: left;
-}
-
-.ParameterValue {
-  width: 100%;
 }
 
 .ParameterMonoText {

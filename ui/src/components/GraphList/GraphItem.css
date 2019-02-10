@@ -1,11 +1,14 @@
 .graph-list-item {
-  display: grid;
-  grid-template-columns: 1fr 300px 250px 250px 250px;
+  grid-template-columns: 200px 100px 1fr 200px 200px;
 }
 
-.graph-list-item .Title {
-  font-weight: 700;
-  font-size: 15pt;
+.graph-list-item .TitleDescription {
+  min-width: 200px;
+  text-overflow: inherit;
+}
+
+.graph-list-item .Id {
+  min-width: 300px;
 }
 
 .graph-list-item .Status.CREATED {
@@ -30,4 +33,11 @@
 
 .graph-list-item .Status.FAILED_WAITING {
   color: #a0a;
+}
+
+
+@media (min-width: 1100px) {
+  .graph-list-item {
+    grid-template-columns: 300px 200px 300px 250px 250px;
+  }
 }

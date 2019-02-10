@@ -133,33 +133,19 @@ class CLIFactory(object):
             type=str,
             levels=['storage', 'scheme'],
             ),
-        'storage_resources': Arg(
-            ('--storage-resources',),
-            help='Storage resources',
-            default=_config.storage.resources,
+        'storage_prefix': Arg(
+            ('--storage-prefix',),
+            help='Storage prefix',
+            default=_config.storage.prefix,
             type=str,
-            levels=['storage', 'resources'],
+            levels=['storage', 'prefix'],
             ),
-        'storage_stdout': Arg(
-            ('--storage-stdout',),
-            help='Storage stdout',
-            default=_config.storage.stdout,
+        'credential_path': Arg(
+            ('--credential-path',),
+            help='Path to the credentials, i.e. $GOOGLE_APPLICATION_CREDENTIALS',
+            default=_config.storage.credential_path,
             type=str,
-            levels=['storage', 'stdout'],
-            ),
-        'storage_stderr': Arg(
-            ('--storage-stderr',),
-            help='Storage stderr',
-            default=_config.storage.stderr,
-            type=str,
-            levels=['storage', 'stderr'],
-            ),
-        'storage_worker': Arg(
-            ('--storage-worker',),
-            help='Storage worker',
-            default=_config.storage.worker,
-            type=str,
-            levels=['storage', 'worker'],
+            levels=['storage', 'credential_path'],
             ),
 
         # AuthConfig
@@ -190,20 +176,20 @@ class CLIFactory(object):
             'func': worker,
             'help': 'Run Worker',
             'args': ('verbose', 'master_host', 'master_port', 'worker_id',
-                     'storage_scheme', 'storage_resources', 'storage_stdout', 'storage_stderr', 'storage_worker'),
+                     'storage_scheme', 'storage_prefix', 'credential_path'),
         }, {
             'func': backend,
             'help': 'Run backend server',
             'args': ('verbose', 'secret_key', 'endpoint',
                      'db_host', 'db_port', 'db_user', 'db_password',
-                     'storage_scheme', 'storage_resources', 'storage_stdout', 'storage_stderr', 'storage_worker'),
+                     'storage_scheme', 'storage_prefix', 'credential_path'),
         }, {
             'func': local,
             'help': 'Run local cluster. It consists of the database server, PLynx UI, backend, master and several workers',
             'args': ('verbose', 'num_workers', 'ignore_containers',
                      'internal_master_host', 'master_host', 'master_port', 'secret_key', 'endpoint',
                      'db_host', 'db_port', 'db_user', 'db_password',
-                     'storage_scheme', 'storage_resources', 'storage_stdout', 'storage_stderr', 'storage_worker'),
+                     'storage_scheme', 'storage_prefix', 'credential_path'),
         }, {
             'func': version,
             'help': "Show the version",

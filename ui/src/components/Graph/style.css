@@ -1,22 +1,15 @@
 
-.ControlButtons {
-  z-index: 21050;
-  position: fixed;
-  top: 50px;
-}
-
-.ControlButtons.readonly {
-  left: 10px;
-}
-
-.ControlButtons.editable {
-  left: 260px;
-}
-
 .GraphNode {
-  position: absolute!important;
-  width: 100%;
+  font-family: 'Source Sans Pro', sans-serif;
+  color: #323232;
+  line-height: 20px;
+  font-size: 14px;
+  font-weight: 400;
   height: 100%;
+  display: flex;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-font-smoothing: antialiased;
 }
 
 .NodesBar {
@@ -56,14 +49,6 @@
   cursor: grab;
 }
 
-.GraphRoot.readonly {
-  width: 100%;
-}
-
-.GraphRoot.editable {
-  width: calc(100% - 250px);
-}
-
 .BackgroundLabels {
   position: fixed;
   z-index: 10000;
@@ -89,30 +74,25 @@
 }
 
 .GraphRoot {
-  position: absolute;
+  flex: 1;
   overflow: scroll;
   display: inline-block;
   height: 100%;
 }
 
 .PropertiesBar {
-  position: fixed!important;
-  background-color: rgba(0, 0, 0, 0.5);
-  min-width: 400px;
+  background-color: #2b2b2b;
+  width: 300px;
   padding: 5px;
-  z-index: 20000;
-  top: 50px;
-  right: 25px;
-  border: 2px solid white;
-  border-radius: 5px;
+  overflow: auto;
 }
 
 .PropertiesHeader {
-  background-color: #000;
   color: #fff;
   vertical-align: middle;
   font-weight: 900;
-  padding: 4px 8px;
+  font-size: 17px;
+  padding: 4px;
   cursor: pointer;
 }
 
@@ -124,8 +104,25 @@ a .PropertiesHeader:hover {
   text-decoration: underline;
 }
 
-.ParametersHeader, .OutputsHeader, .LogsHeader, .ParameterNameCell, .OutputNameCell {
+.PropertiesBoxRoot {
+  padding-top: 10px;
+}
+
+.PropertiesBox {
   color: #fff;
+}
+
+.PropertiesBoxHeader {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 5px 0px 3px 5px;
+}
+
+.PropertiesBoxContent {
+  color: #fff;
+  background-color: #404040;
+  padding: 4px 0px 4px 0px;
 }
 
 .PreviewBoxContent {

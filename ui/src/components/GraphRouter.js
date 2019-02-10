@@ -8,7 +8,7 @@ import NotFound from './NotFound';
 export default class GraphRouter extends Component {
   render() {
     return (
-      <div className="GraphRouter">
+      <div className="Router GraphRouter">
         <Switch>
           <Route exact path="/graphs" component={GraphList}/>
           <Route path="/graphs/:graph_id" component={Graph} />

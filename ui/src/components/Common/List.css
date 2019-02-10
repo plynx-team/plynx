@@ -13,14 +13,22 @@
   cursor: pointer;
   padding: 5px;
   text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 
-  display: grid;
+  display: inline-grid;
 
   -moz-transition: all .1s ease-in;
   -o-transition: all .1s ease-in;
   -webkit-transition: all .1s ease-in;
   transition: all .1s ease-in;
   background-color: #eee;
+}
+
+.header-item .list-field, .list-item .list-field {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .list-header {
@@ -31,6 +39,7 @@
   padding: 5px;
   text-decoration: none;
   border-bottom: 1px solid #aaa;
+  display: inline-grid;
 }
 
 .list-item:hover {
@@ -39,4 +48,21 @@
 
 .list-item:active {
   background-color: #62a6f3;
+}
+
+.list-item .TitleDescription {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.list-item .TitleDescription .Title {
+  font-weight: 700;
+  font-size: 15pt;
+  text-overflow: inherit;
+  overflow: inherit;
+}
+
+.list-item .TitleDescription .Description {
+  text-overflow: inherit;
+  overflow: inherit;
 }

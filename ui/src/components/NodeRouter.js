@@ -8,7 +8,7 @@ import NotFound from './NotFound';
 export default class NodeRouter extends Component {
   render() {
     return (
-      <div className="NodeRouter">
+      <div className="Router NodeRouter">
         <Switch>
           <Route exact path="/nodes" component={NodeList}/>
           <Route path="/nodes/:node_id" component={Node} />

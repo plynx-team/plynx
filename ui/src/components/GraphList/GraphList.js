@@ -1,6 +1,7 @@
 // src/components/About/index.js
 import React, { Component } from 'react';
 import GraphItem from './GraphItem.js'
+import { listTextElement } from '../Common/listElements';
 import '../Common/List.css';
 import './style.css';
 
@@ -22,11 +23,11 @@ export default class GraphList extends Component {
     return (
       <div className='list'>
         <div className='graph-list-item list-header'>
-          <div className='header-item'>Header</div>
-          <div className='header-item'>Graph ID</div>
-          <div className='header-item'>Status</div>
-          <div className='header-item'>Created</div>
-          <div className='header-item'>Updated</div>
+          { listTextElement('header-item', 'Header') }
+          { listTextElement('header-item Status', 'Status') }
+          { listTextElement('header-item Id', 'Graph ID') }
+          { listTextElement('header-item Created', 'Created') }
+          { listTextElement('header-item Updated', 'Updated') }
         </div>
         {listItems.length ? listItems : <b>No items to show</b>}
       </div>

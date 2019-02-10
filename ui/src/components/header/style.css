@@ -1,41 +1,35 @@
 .Header {
-  display: table-cell;
+  display: block;
   vertical-align: middle;
-  padding: 8px 16px;
+  /*padding: 8px 16px;*/
   background-color: #111;
   font-size: 17pt;
   font-family: monospace;
   text-align: left;
 }
 
-.Header .separator {
-  display: inline-block;
-  border-left: 1px #333 solid;
-  width: 0px;
+.Header .menu-sl-show {
+  display: block;
 }
 
-.Header .logo {
-  padding-left: 10px;
-  padding-right: 10px;
+.Header .menu-sl-hide {
+  display: none;
+}
 
+.Header .logo, .Header .menu-button-sl {
   -moz-transition: all .1s ease-in;
   -o-transition: all .1s ease-in;
   -webkit-transition: all .1s ease-in;
   transition: all .1s ease-in;
 }
 
-.Header .logo:hover {
+.Header .logo:hover, .Header .menu-button-sl:hover {
     color: white;
     background-color: #333;
 }
 
-.Header .logo:active {
+.Header .logo:active, .Header .menu-button-sl:active {
   background-color: #62a6f3;
-}
-
-.Header > .logo > .icon {
-  vertical-align: middle;
-  height: 20px;
 }
 
 .Header a:hover {
@@ -44,12 +38,8 @@
 
 .Header .Navigation {
   position: absolute;
-  top: 6px;
-  left: 180px;
   font-weight: 300;
   color: #ccc;
-  padding-left: 10px;
-  padding-right: 10px;
   font-family: 'Source Sans Pro', sans-serif;
 }
 
@@ -75,21 +65,6 @@
     -o-transition: all .1s ease-in;
     -webkit-transition: all .1s ease-in;
     transition: all .1s ease-in;
-}
-
-.Header .NavigationItems .Item:hover:not(.active) {
-    color: white;
-    border-bottom: 1px solid white;
-    background-color: #333;
-}
-
-.Header .NavigationItems .active {
-    color: #2196F3;
-    border-bottom: 3px solid #2196F3;
-}
-
-.Header .NavigationItems .active:hover {
-    background-color: #134177;
 }
 
 .UserButton {
@@ -128,4 +103,134 @@
 .UserButton .action:hover {
   color: #337ab7;
   text-decoration: underline;
+}
+
+/* Mobile dependent */
+
+.Header .logo {
+  top: 20px;
+  left: 50%;
+  margin-left: -200px;
+  position: absolute;
+  padding: 3px 15px 3px 15px;
+}
+
+.Header > .logo > .icon {
+  vertical-align: middle;
+  height: 40px;
+}
+
+.Header .menu-button-sl {
+  padding: 5px;
+  position: absolute;
+  top: 5px;
+  left: 10px;
+  cursor: pointer;
+  display: flex;
+}
+
+.Header .menu-button-sl img {
+  display:block;
+  width: 60px;
+  height: 60px;
+}
+
+.Header .Navigation {
+  background-color: #111;
+}
+
+.Header .NavigationItems {
+  display: grid;
+  padding: 5px;
+}
+
+.Header .separator {
+  display: inline-block;
+  border-bottom: 1px #333 solid;
+  height: 0px;
+}
+
+.Header .Navigation {
+  top: 80px;
+  left: 0px;
+  width: 100%;
+  height: calc(100% - 80px);
+  z-index: 22000;
+}
+
+.Header .NavigationItems .Item:hover:not(.active) {
+    color: white;
+    background-color: #333;
+}
+
+.Header .NavigationItems .Item {
+  padding: 8px;
+  margin: 5px;
+}
+
+.Header .NavigationItems .active {
+    color: #2196F3;
+    border-left: 3px solid #2196F3;
+}
+
+.Header .NavigationItems .active:hover {
+    background-color: #134177;
+}
+
+.UserButton {
+  top: 20px;
+  font-size: 20pt;
+}
+
+@media (min-width: 1100px) {
+
+  .Header .logo {
+    top: 4px;
+    left: 10px;
+    margin-left: 0;
+  }
+
+  .Header > .logo > .icon {
+    height: 20px;
+  }
+
+  .Header .NavigationItems {
+    display: block;
+    padding: 0;
+  }
+
+  .Header .separator {
+    display: inline-block;
+    border-left: 1px #333 solid;
+    width: 0px;
+    height: auto;
+  }
+
+  .Header .Navigation {
+    top: 6px;
+    left: 180px;
+    width: auto;
+    height: auto;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .Header .NavigationItems .Item:hover:not(.active) {
+    border-bottom: 1px solid white;
+  }
+
+  .Header .NavigationItems .active {
+    border-left: 0;
+    border-bottom: 3px solid #2196F3;
+  }
+
+  .Header .NavigationItems .Item {
+    padding: 0px 18px 0px 18px;
+    margin: 0px;
+  }
+
+  .UserButton {
+    top: 8px;
+    font-size: 17pt;
+  }
 }
