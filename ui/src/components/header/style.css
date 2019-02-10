@@ -40,8 +40,6 @@
   position: absolute;
   font-weight: 300;
   color: #ccc;
-  padding-left: 10px;
-  padding-right: 10px;
   font-family: 'Source Sans Pro', sans-serif;
 }
 
@@ -156,6 +154,7 @@
   top: 80px;
   left: 0px;
   width: 100%;
+  height: calc(100% - 80px);
   z-index: 22000;
 }
 
@@ -186,6 +185,7 @@
 @media (min-width: 1100px) {
 
   .Header .logo {
+    top: 4px;
     left: 10px;
     margin-left: 0;
   }
@@ -211,6 +211,8 @@
     left: 180px;
     width: auto;
     height: auto;
+    padding-left: 10px;
+    padding-right: 10px;
   }
 
   .Header .NavigationItems .Item:hover:not(.active) {
