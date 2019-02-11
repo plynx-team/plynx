@@ -25,7 +25,10 @@ export default class PreviewDialog extends Component {
       PLynxApi.endpoints.resource.getCustom({
           method: 'get',
           url: API_ENDPOINT + '/resource/' + props.resource_id,
-          params: {preview: true},
+          params: {
+            preview: true,
+            file_type: props.file_type,
+          },
         }).then(function (response) {
           self.setState({
             content: response.data,
@@ -83,7 +86,7 @@ export default class PreviewDialog extends Component {
           </div>
         }
         <div className="PreviewBoxContent">
-          { ['executable', 'file', 'tsv', 'csv', 'json'].indexOf(this.state.file_type) > -1 &&
+          { ['executable', 'file', 'tsv', 'csv', 'json', 'directory'].indexOf(this.state.file_type) > -1 &&
             <div>
               {this.previewMessage(this.state.resource_id, this.state.download_name)}
               <pre>

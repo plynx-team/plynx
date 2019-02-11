@@ -6,8 +6,10 @@ import signal
 import uuid
 import logging
 import pwd
+import zipfile
 from plynx.constants import JobReturnStatus, NodeStatus, FileTypes, ParameterTypes
 from plynx.db import Node, Output, Parameter
+from plynx.utils.common import zipdir
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
 from plynx.utils.config import get_worker_config
 from plynx.graph.base_nodes import BaseNode
@@ -160,6 +162,13 @@ class BaseBash(BaseNode):
                         # `chmod +x` to the executable file
                         st = os.stat(filename)
                         os.chmod(filename, st.st_mode | stat.S_IEXEC)
+                    if FileTypes.DIRECTORY in input.file_types:
+                        # extract zip file
+                        zip_filename = '{}.zip'.format(filename)
+                        os.rename(filename, zip_filename)
+                        os.mkdir(filename)
+                        with zipfile.ZipFile(zip_filename) as zf:
+                            zf.extractall(filename)
                     filenames.append(filename)
             if pythonize:
                 if input.min_count == 1 and input.max_count == 1:
@@ -178,6 +187,8 @@ class BaseBash(BaseNode):
                 filename = os.path.join(self.workdir, 'o_{}'.format(output.name))
             else:
                 filename = os.path.join(self.workdir, 'o_{}'.format(output.name))
+                if output.file_type == FileTypes.DIRECTORY:
+                    os.mkdir(filename)
             res[output.name] = filename
         return res
 
@@ -213,8 +224,16 @@ class BaseBash(BaseNode):
     def _postprocess_outputs(self, outputs):
         for key, filename in outputs.items():
             if os.path.exists(filename):
+                matching_outputs = filter(lambda o: o.name == key, self.node.outputs)
+                assert len(matching_outputs) == 1, "Found more that 1 output with the same name `{}`".format(key)
+                if matching_outputs[0].file_type == FileTypes.DIRECTORY:
+                    zip_filename = '{}.zip'.format(filename)
+                    with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zf:
+                        zipdir(filename, zf)
+                    filename = zip_filename
                 with open(filename, 'rb') as f:
                     self.node.get_output_by_name(key).resource_id = upload_file_stream(f)
+
 
     def _postprocess_logs(self, logs):
         for key, filename in logs.items():
