@@ -102,7 +102,7 @@ export default class NodeProperties extends Component {
         ),
         makeKeyValueRow(
           'Successor',
-          this.props.successorNode ? <Link to={'/nodes/' + this.props.successorNode}>this.props.successorNode</Link>: <i>null</i>,
+          this.props.successorNode ? <Link to={'/nodes/' + this.props.successorNode}>{this.props.successorNode}</Link>: <i>null</i>,
           'successor'
         ),
         makeKeyValueRow('Created', <i>{this.props.created}</i>, 'created'),
