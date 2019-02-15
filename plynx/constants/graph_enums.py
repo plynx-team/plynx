@@ -24,6 +24,7 @@ class GraphPostAction:
     AUTO_LAYOUT = 'AUTO_LAYOUT'
     UPGRADE_NODES = 'UPGRADE_NODES'
     CANCEL = 'CANCEL'
+    GENERATE_CODE = 'GENERATE_CODE'
 
 
 class GraphPostStatus:

@@ -80,6 +80,7 @@ export const ACTION = Object.freeze({
   UPGRADE_NODES: 'UPGRADE_NODES',
   PREVIEW_CMD: 'PREVIEW_CMD',
   CANCEL: 'CANCEL',
+  GENERATE_CODE: 'GENERATE_CODE',
 })
 
 export const RESPONCE_STATUS = Object.freeze({

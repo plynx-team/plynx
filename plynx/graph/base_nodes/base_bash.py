@@ -234,7 +234,6 @@ class BaseBash(BaseNode):
                 with open(filename, 'rb') as f:
                     self.node.get_output_by_name(key).resource_id = upload_file_stream(f)
 
-
     def _postprocess_logs(self, logs):
         for key, filename in logs.items():
             if os.path.exists(filename) and os.stat(filename).st_size != 0:
