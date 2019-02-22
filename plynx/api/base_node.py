@@ -133,8 +133,8 @@ class Params(NodeProps):
 
     def _dictify(self):
         return [
-            {'name': pyname, 'value': getattr(self, pyname)}
-            for pyname in self._pyname_to_name.keys()
+            {'name': name, 'value': getattr(self, pyname)}
+            for pyname, name in self._pyname_to_name.items()
         ]
 
 

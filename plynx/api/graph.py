@@ -4,27 +4,56 @@ import copy
 import collections
 import time
 import logging
+from plynx.constants import ParameterTypes
 from plynx.api import InvalidTypeArgumentError, BaseNode, \
     InvalidUssageError, GraphFailed, _NodeRunningStatus, _GraphRunningStatus, \
     _GraphPostAction
 from plynx.api import _get_obj, _save_graph
 
 
-def update_recursive(d, u):
-    for k, v in u.items():
+def _update_parameter(dest, recp):
+    if recp['value'] is None:
+        return
+    parameter_type = dest['parameter_type']
+
+    if parameter_type == ParameterTypes.ENUM:
+        try:
+            dest['value']['index'] = dest['value']['values'].index(recp['value'])
+        except ValueError:
+            raise InvalidTypeArgumentError(
+                'Enum is invalid. Expected one of `{}`, but got `{}`.'.format(
+                    dest['value']['values'],
+                    recp['value'],
+                )
+            )
+
+    elif parameter_type == ParameterTypes.CODE:
+        dest['value']['value'] = recp['value']
+    else:
+        dest['value'] = recp['value']
+    return dest
+
+
+# TODO clean the code. Use more explicit definitions
+def update_recursive(dest, recp):
+    for k, v in recp.items():
         if isinstance(v, collections.Mapping):
-            d[k] = update_recursive(d.get(k, {}), v)
+            dest[k] = update_recursive(dest.get(k, {}), v)
         elif isinstance(v, list):
             for v_item in v:
                 if 'name' in v_item:
-                    for d_item in d[k]:
+                    for d_item in dest[k]:
                         if 'name' in d_item and d_item['name'] == v_item['name']:
-                            update_recursive(d_item, v_item)
+                            if 'parameter_type' in d_item:
+                                _update_parameter(d_item, v_item)
+                            else:
+                                update_recursive(d_item, v_item)
                 else:
-                    d[k].append(v_item)
+                    dest[k].append(v_item)
         else:
-            d[k] = v if v else d[k]
-    return d
+            dest[k] = v if v else dest[k]
+
+    return dest
 
 
 def traverse_nodes(graph, targets):
