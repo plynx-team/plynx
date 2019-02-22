@@ -10,4 +10,5 @@
 .ParameterSecondItemValue > .Value,textarea {
   font-family: monospace;
   font-size: 12pt;
+  resize: vertical;
 }

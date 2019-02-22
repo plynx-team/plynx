@@ -69,16 +69,3 @@
 .InOutValue > .CountsBlock > .Cell {
   text-align: center;
 }
-
-.InOutList .Add {
-  font-family: monospace;
-  font-size: 35px;
-  text-align: center;
-  margin: 9px;
-}
-
-.InOutList .Add.hover {
-  color: #2196F3;
-  cursor: pointer;
-  background-color: #bbb;
-}

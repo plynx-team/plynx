@@ -77,16 +77,3 @@
   width: 100%;
   resize:vertical;
 }
-
-.ParameterList .Add {
-  font-family: monospace;
-  font-size: 45px;
-  text-align: center;
-  margin: 9px;
-}
-
-.ParameterList .Add.hover {
-  color: #2196F3;
-  cursor: pointer;
-  background-color: #bbb;
-}

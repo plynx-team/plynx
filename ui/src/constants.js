@@ -68,6 +68,10 @@ export const FILE_TYPES = [
     type: 'directory',
     alias: 'Directory',
   },
+  {
+    type: 'cloud-storage',
+    alias: 'Cloud Storage',
+  },
 ]
 
 export const ACTION = Object.freeze({

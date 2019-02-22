@@ -48,7 +48,7 @@ export default function renderValueElement(args) {
     case 'text':
       return <textarea
               className={className}
-              rows='2'
+              rows='10'
               name="value"
               value={value}
               onChange={handleChange}
