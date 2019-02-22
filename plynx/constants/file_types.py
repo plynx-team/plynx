@@ -7,3 +7,4 @@ class FileTypes:
     TSV = 'tsv'
     JSON = 'json'
     DIRECTORY = 'directory'
+    CLOUD_STORAGE = 'cloud-storage'
