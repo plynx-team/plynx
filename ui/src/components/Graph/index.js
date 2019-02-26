@@ -28,6 +28,7 @@ import {
   SPECIAL_TYPE_NAMES,
   OPERATIONS
 } from '../../constants.js';
+import { API_ENDPOINT } from '../../configConsts'
 import { storeToClipboard, loadFromClipboard } from '../../utils.js';
 
 import "./gridtile.png"
@@ -58,7 +59,24 @@ export class Graph extends Component {
       description: "",
       graphRunningStatus: null,
       previewData: null,
+      generatedCode: "",
     };
+
+    var token = cookie.load('refresh_token');
+    // TODO remove after demo
+    if (token === 'Not assigned') {
+      token = cookie.load('access_token');
+    }
+
+    this.generatedCodeHeader =
+`#!/usr/bin/env python
+from plynx.api import Operation, File, Graph, Client
+
+TOKEN = '` + token +`'
+ENDPOINT = '` + API_ENDPOINT + `'
+
+
+`
   }
 
   sleep(ms) {
@@ -594,6 +612,10 @@ export class Graph extends Component {
     this.postGraph(this.graph, false, ACTION.AUTO_LAYOUT);
   }
 
+  handleGenerateCode() {
+    this.postGraph(this.graph, false, ACTION.GENERATE_CODE);
+  }
+
   handleUpgradeNodes() {
     this.postGraph(this.graph, false, ACTION.UPGRADE_NODES);
   }
@@ -680,11 +702,17 @@ export class Graph extends Component {
     });
   }
 
-  handleCodeDialog() {
+  handleCloseCodeDialog() {
     this.setState({
       nodeId: undefined,
       parameterName: undefined,
       parameterValue: undefined,
+    })
+  }
+
+  handleCloseGeneratedCodeDialog() {
+    this.setState({
+      generatedCode: undefined,
     })
   }
 
@@ -812,6 +840,10 @@ export class Graph extends Component {
             message = "No Nodes upgraded";
           }
           self.showAlert(message, 'success');
+        } else if (action === ACTION.GENERATE_CODE) {
+            self.setState({
+              generatedCode: data.code
+            })
         } else {
           self.showAlert("Success", 'success');
         }
@@ -932,6 +964,7 @@ export class Graph extends Component {
                     onValidate={() => this.handleValidate()}
                     onApprove={() => this.handleApprove()}
                     onRearrange={() => this.handleRearrange()}
+                    onGenerateCode={() => this.handleGenerateCode()}
                     onUpgradeNodes={() => this.handleUpgradeNodes()}
                     onClone={() => this.handleClone()}
                     onCancel={() => this.handleCancel()}
@@ -951,9 +984,21 @@ export class Graph extends Component {
             <CodeDialog
               title={this.state.parameterName}
               value={this.state.parameterValue}
-              onClose={() => this.handleCodeDialog()}
+              onClose={() => this.handleCloseCodeDialog()}
               readOnly={!this.state.editable}
               onParameterChanged={(value) => this.handleParameterChanged(this.state.nodeId, this.state.parameterName, value)}
+            />
+          }
+          {
+            this.state.generatedCode &&
+            <CodeDialog
+              title={"API Code"}
+              value={{
+                mode: "python",
+                value: this.generatedCodeHeader + this.state.generatedCode,
+              }}
+              onClose={() => this.handleCloseGeneratedCodeDialog()}
+              readOnly={true}
             />
           }
 

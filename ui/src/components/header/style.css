@@ -135,13 +135,13 @@
   height: 60px;
 }
 
-.Header .Navigation {
-  background-color: #111;
-}
-
 .Header .NavigationItems {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  width: 50%;
   padding: 5px;
+  background-color: #111;
+  font-size: 25pt;
 }
 
 .Header .separator {
@@ -156,6 +156,8 @@
   width: 100%;
   height: calc(100% - 80px);
   z-index: 22000;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
 }
 
 .Header .NavigationItems .Item:hover:not(.active) {
@@ -197,6 +199,8 @@
   .Header .NavigationItems {
     display: block;
     padding: 0;
+    font-size: 17pt;
+    width: auto;
   }
 
   .Header .separator {
@@ -213,6 +217,7 @@
     height: auto;
     padding-left: 10px;
     padding-right: 10px;
+    background-color: inherit;
   }
 
   .Header .NavigationItems .Item:hover:not(.active) {

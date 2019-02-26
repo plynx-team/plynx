@@ -107,6 +107,13 @@ def post_graph():
                         ]:
                     return _make_fail_response('Graph status `{}` expected. Found `{}`'.format(GraphRunningStatus.RUNNING, graph.graph_running_status))
                 graph_cancellation_manager.cancel_graph(graph._id)
+            elif action == GraphPostAction.GENERATE_CODE:
+                code = graph.generate_code()
+                return JSONEncoder().encode({
+                    'status': GraphPostStatus.SUCCESS,
+                    'message': 'Graph code generated',
+                    'code': code,
+                })
             else:
                 return _make_fail_response('Unknown action `{}`'.format(action))
 

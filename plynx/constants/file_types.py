@@ -6,3 +6,5 @@ class FileTypes:
     CSV = 'csv'
     TSV = 'tsv'
     JSON = 'json'
+    DIRECTORY = 'directory'
+    CLOUD_STORAGE = 'cloud-storage'

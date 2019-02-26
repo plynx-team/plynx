@@ -21,9 +21,11 @@
 }
 
 .Welcome > .items > .items-wrapper {
-  max-width: 900px;
+  max-width: 950px;
   display: flex;
   flex-wrap: wrap;
+  flex-direction: row;
+  justify-content: center;
   margin: 0 auto;
   padding: 0 0 100px;
 }

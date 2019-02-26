@@ -1,35 +1,35 @@
 export const PARAMETER_TYPES = [
   {
     type: 'str',
-    alias: 'String'
+    alias: 'String',
   },
   {
     type: 'int',
-    alias: 'Integer'
+    alias: 'Integer',
   },
   {
     type: 'bool',
-    alias: 'Boolean'
+    alias: 'Boolean',
   },
   {
     type: 'text',
-    alias: 'Text'
+    alias: 'Text',
   },
   {
     type: 'enum',
-    alias: 'Enum'
+    alias: 'Enum',
   },
   {
     type: 'list_str',
-    alias: 'List of Strings'
+    alias: 'List of Strings',
   },
   {
     type: 'list_int',
-    alias: 'List of Integers'
+    alias: 'List of Integers',
   },
   {
     type: 'code',
-    alias: 'Code'
+    alias: 'Code',
   },
 ]
 
@@ -38,31 +38,39 @@ export const SPECIAL_TYPE_NAMES = ['code']
 export const FILE_TYPES = [
   {
     type: 'file',
-    alias: 'File'
+    alias: 'File',
   },
   {
     type: 'pdf',
-    alias: 'pdf'
+    alias: 'pdf',
   },
   {
     type: 'image',
-    alias: 'Image'
+    alias: 'Image',
   },
   {
     type: 'executable',
-    alias: 'Executable'
+    alias: 'Executable',
   },
   {
     type: 'csv',
-    alias: 'csv'
+    alias: 'csv',
   },
   {
     type: 'tsv',
-    alias: 'tsv'
+    alias: 'tsv',
   },
   {
     type: 'json',
-    alias: 'json'
+    alias: 'json',
+  },
+  {
+    type: 'directory',
+    alias: 'Directory',
+  },
+  {
+    type: 'cloud-storage',
+    alias: 'Cloud Storage',
   },
 ]
 
@@ -76,6 +84,7 @@ export const ACTION = Object.freeze({
   UPGRADE_NODES: 'UPGRADE_NODES',
   PREVIEW_CMD: 'PREVIEW_CMD',
   CANCEL: 'CANCEL',
+  GENERATE_CODE: 'GENERATE_CODE',
 })
 
 export const RESPONCE_STATUS = Object.freeze({

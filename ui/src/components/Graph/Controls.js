@@ -43,6 +43,11 @@ export default class Controls extends Component {
           func: () => {this.props.onRearrange()},
         })}
         {makeControlButton({
+          img: 'preview.svg',
+          text: 'API',
+          func: () => {this.props.onGenerateCode()},
+        })}
+        {makeControlButton({
           img: 'copy.svg',
           text: 'Clone',
           func: () => {this.props.onClone()},

@@ -1,5 +1,7 @@
 from __future__ import division
 from collections import deque, defaultdict
+import re
+import uuid
 from plynx.constants import Collections
 from plynx.db import DBObject, DBObjectField, Node, ValidationError
 from plynx.utils.common import to_object_id, ObjectId
@@ -95,7 +97,7 @@ class Graph(DBObject):
             children=violations
         )
 
-    def arrange_auto_layout(self):
+    def arrange_auto_layout(self, readonly=False):
         """Use heuristic to rearange nodes."""
         HEADER_HEIGHT = 23
         DESCRIPTION_HEIGHT = 20
@@ -170,6 +172,8 @@ class Graph(DBObject):
         for node_id, level in node_id_to_level.items():
             level_to_node_ids[level].append(node_id)
 
+        # level_to_node_ids, node_id_to_node,
+
         for level in range(max_level, -1, -1):
             level_node_ids = level_to_node_ids[level]
             index_to_node_id = []
@@ -194,6 +198,10 @@ class Graph(DBObject):
                 ])
                 row_heights[index] = max(row_heights[index], node_height)
 
+        # TODO compute grid in a separate function
+        if readonly:
+            return level_to_node_ids, node_id_to_node
+
         cum_heights = [0]
         for index in range(len(row_heights)):
             cum_heights.append(cum_heights[-1] + row_heights[index] + SPACE_HEIGHT)
@@ -208,6 +216,136 @@ class Graph(DBObject):
                 node = node_id_to_node[node_id]
                 node.x = LEFT_PADDING + (max_level - level) * LEVEL_WIDTH
                 node.y = TOP_PADDING + level_padding + cum_heights[index]
+
+        return None, None
+
+    def generate_code(self):
+        code_blocks = []
+
+        unique_nodes = {node.parent_node: node for node in self.nodes}
+
+        def name_iteration_handler(lst):
+            return ', '.join(map(lambda element: "'{}'".format(element.name), lst))
+
+        def generate_class_name(title):
+            return ''.join(
+                map(
+                    lambda s: s.title(),
+                    re.split('[^a-zA-Z]', title)
+                )
+            )
+
+        def generate_var_name(title):
+            return '_'.join(re.split('[^a-zA-Z0-9]', title))
+
+        def param_to_value(param):
+            if param.parameter_type == ParameterTypes.INT:
+                return param.value
+            elif param.parameter_type == ParameterTypes.ENUM:
+                return repr(param.value.values[int(param.value.index)])
+            elif param.parameter_type == ParameterTypes.ENUM:
+                return param.value.values[param.value.index]
+            elif param.parameter_type == ParameterTypes.LIST_INT:
+                return map(int, param.value)
+            elif param.parameter_type == ParameterTypes.CODE:
+                return repr(param.value.value)
+
+            return repr(param.value)
+
+        used_class_names = set()
+        node_id_to_class_name = {}
+
+        for node_id, node in unique_nodes.items():
+            if node.base_node_name == 'file':
+                class_type = 'File'
+                content = '\n    '.join([
+                    "",
+                    "id='{}',".format(node_id),
+                    "title='{}',".format(node.title),
+                    "description='{}',".format(node.description),
+                ])
+                orig_class_name = generate_var_name(node.title)
+            else:
+                class_type = 'Operation'
+                content = '\n    '.join([
+                    "",
+                    "id='{}',".format(node_id),
+                    "title='{}',".format(node.title),
+                    "inputs=[{}],".format(name_iteration_handler(node.inputs)),
+                    "params=[{}],".format(name_iteration_handler(node.parameters)),
+                    "outputs=[{}],".format(name_iteration_handler(node.outputs)),
+                ])
+                orig_class_name = generate_class_name(node.title)
+
+            class_name = orig_class_name
+            while class_name in used_class_names:
+                class_name = '{}_{}'.format(orig_class_name, str(uuid.uuid1())[:4])
+            used_class_names.add(class_name)
+            node_id_to_class_name[node_id] = class_name
+
+            code = "{class_name} = {class_type}({content}\n)\n".format(
+                class_name=class_name,
+                class_type=class_type,
+                content=content,
+            )
+            code_blocks.append(code)
+
+        level_to_node_ids, node_id_to_node = self.arrange_auto_layout(readonly=True)
+        max_level = max(level_to_node_ids.keys())
+        node_id_to_var_name = {}
+        for level in range(max_level, -1, -1):
+            for row, node_id in enumerate(level_to_node_ids[level]):
+                node = node_id_to_node[node_id]
+                if node.base_node_name == 'file':
+                    node_id_to_var_name[node_id] = node_id_to_class_name[node.parent_node]
+                    continue
+                var_name = '{}_{}_{}'.format(
+                    generate_var_name(node.title.lower()),
+                    max_level - level,
+                    row
+                )
+                # generate args
+                args = []
+                for input in node.inputs:
+                    values = []
+                    for value in input.values:
+                        values.append('{}.outputs.{}'.format(node_id_to_var_name[to_object_id(value.node_id)], value.output_id))
+                    if values:
+                        args.append(
+                            '    {}={},'.format(generate_var_name(input.name), values[0] if len(values) == 1 else '[{}]'.format(', '.join(values)))
+                        )
+                for param in node.parameters:
+                    if param.widget:
+                        args.append(
+                            '    {}={},'.format(generate_var_name(param.name), param_to_value(param))
+                        )
+                # generate var declaration
+                node_id_to_var_name[node_id] = var_name
+                content = '{var_name} = {class_name}(\n{args}\n)\n'.format(
+                    var_name=var_name,
+                    class_name=node_id_to_class_name[node.parent_node],
+                    args='\n'.join(args)
+                )
+                code_blocks.append(content)
+
+        code_blocks.append(
+            "graph = Graph(\n"
+            "    Client(\n"
+            "        token=TOKEN,\n"
+            "        endpoint=ENDPOINT,\n"
+            "    ),\n"
+            "    title='{title}',\n"
+            "    description='{description}',\n"
+            "    targets=[{targets}]\n"
+            ")\n\n"
+            "graph.approve().wait()\n".format(
+                title=self.title,
+                description=self.description,
+                targets=", ".join(map(lambda node_id: node_id_to_var_name[node_id], level_to_node_ids[0]))
+            )
+        )
+
+        return '\n'.join(code_blocks)
 
     def __str__(self):
         return 'Graph(_id="{}", nodes={})'.format(self._id, [str(b) for b in self.nodes])

@@ -39,7 +39,9 @@ export default class CodeDialog extends Component {
   }
 
   handleClose() {
-    this.props.onParameterChanged(this.value);
+    if (this.props.onParameterChanged) {
+      this.props.onParameterChanged(this.value);
+    }
     this.props.onClose();
   }
 

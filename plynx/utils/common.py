@@ -1,3 +1,4 @@
+import os
 import json
 from datetime import datetime
 from bson import ObjectId
@@ -16,3 +17,10 @@ class JSONEncoder(json.JSONEncoder):
         if isinstance(o, datetime):
             return str(o)
         return json.JSONEncoder.default(self, o)
+
+
+def zipdir(path, zf):
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            arcname = os.path.relpath(os.path.join(root, file), os.path.join(path))
+            zf.write(os.path.join(root, file), arcname)

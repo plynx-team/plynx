@@ -17,7 +17,10 @@ def _make_fail_response(message):
 @app.route('/plynx/api/v0/resource/<resource_id>', methods=['GET'])
 def get_resource(resource_id):
     preview = json.loads(request.args.get('preview', 'false'))
-    return send_file(get_file_stream(resource_id, preview=preview), attachment_filename=resource_id)
+    file_type = request.args.get('file_type', None)
+    return send_file(
+        get_file_stream(resource_id, preview=preview, file_type=file_type),
+        attachment_filename=resource_id)
 
 
 @app.route('/plynx/api/v0/resource', methods=['POST'])

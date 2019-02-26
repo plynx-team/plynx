@@ -7,10 +7,14 @@ import { API_ENDPOINT } from '../../configConsts.js';
 
 const FileDownload = require('react-file-download');
 
+function FileTypeIsText(file_type) {
+  return file_type !== 'image' && file_type !== 'pdf';
+}
+
 export default class PreviewDialog extends Component {
   constructor(props) {
     super(props);
-    var isText = (props.file_type !== 'image' && props.file_type !== 'pdf');
+    var isText = FileTypeIsText(props.file_type)
     this.state = {
       title: props.title,
       file_type: props.file_type,
@@ -25,7 +29,10 @@ export default class PreviewDialog extends Component {
       PLynxApi.endpoints.resource.getCustom({
           method: 'get',
           url: API_ENDPOINT + '/resource/' + props.resource_id,
-          params: {preview: true},
+          params: {
+            preview: true,
+            file_type: props.file_type,
+          },
         }).then(function (response) {
           self.setState({
             content: response.data,
@@ -83,7 +90,7 @@ export default class PreviewDialog extends Component {
           </div>
         }
         <div className="PreviewBoxContent">
-          { ['executable', 'file', 'tsv', 'csv', 'json'].indexOf(this.state.file_type) > -1 &&
+          { FileTypeIsText(this.state.file_type) &&
             <div>
               {this.previewMessage(this.state.resource_id, this.state.download_name)}
               <pre>

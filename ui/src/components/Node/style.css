@@ -67,3 +67,20 @@
 .EditNodeHeader .ControlButtons .control-button:hover {
   background-color: #666;
 }
+
+.EditNodeList .Add {
+  font-family: monospace;
+  font-size: 35px;
+  text-align: center;
+  margin: 9px;
+  color: #fff;
+  background-color: #777;
+  border-radius: 5px;
+  border: 1px solid #888;
+}
+
+.EditNodeList .Add.hover {
+  color: #2196F3;
+  cursor: pointer;
+  background-color: #aaa;
+}
