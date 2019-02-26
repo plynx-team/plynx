@@ -272,7 +272,7 @@ class Graph(DBObject):
                     "id='{}',".format(node_id),
                     "title='{}',".format(node.title),
                     "inputs=[{}],".format(name_iteration_handler(node.inputs)),
-                    "params=[{}],".format(name_iteration_handler(node.parameters)),
+                    "params=[{}],".format(name_iteration_handler(filter(lambda p: p.widget, node.parameters))),
                     "outputs=[{}],".format(name_iteration_handler(node.outputs)),
                 ])
                 orig_class_name = generate_class_name(node.title)
