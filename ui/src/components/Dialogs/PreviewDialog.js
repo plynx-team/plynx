@@ -1,20 +1,19 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
 import Dialog from './Dialog.js'
 import LoadingScreen from '../LoadingScreen.js'
 import { PLynxApi } from '../../API.js';
-import { API_ENDPOINT } from '../../configConsts.js';
+import { API_ENDPOINT, CLOUD_STORAGE_PREFIX, CLOUD_STORAGE_POSTFIX } from '../../configConsts.js';
 
 const FileDownload = require('react-file-download');
 
-function FileTypeIsText(file_type) {
-  return file_type !== 'image' && file_type !== 'pdf';
-}
+const SPECIAL_PREVIEW_TYPES = ['image', 'pdf', 'cloud-storage']
+const NON_TEXT_TYPES = ['image', 'pdf']
+
 
 export default class PreviewDialog extends Component {
   constructor(props) {
     super(props);
-    var isText = FileTypeIsText(props.file_type)
+    var isText = NON_TEXT_TYPES.indexOf(props.file_type) < 0
     this.state = {
       title: props.title,
       file_type: props.file_type,
@@ -90,7 +89,7 @@ export default class PreviewDialog extends Component {
           </div>
         }
         <div className="PreviewBoxContent">
-          { FileTypeIsText(this.state.file_type) &&
+          { SPECIAL_PREVIEW_TYPES.indexOf(this.state.file_type) < 0 &&
             <div>
               {this.previewMessage(this.state.resource_id, this.state.download_name)}
               <pre>
@@ -111,6 +110,14 @@ export default class PreviewDialog extends Component {
           }
           { this.state.file_type === 'image' &&
             <img src={API_ENDPOINT + '/resource/' + this.state.resource_id} width="100%" alt="preview" />
+          }
+          { this.state.file_type === 'cloud-storage' &&
+            <div>
+              {
+                this.state.content.path &&
+                <a href={CLOUD_STORAGE_PREFIX + this.state.content.path.split('//')[1] + CLOUD_STORAGE_POSTFIX}>{this.state.content.path}</a>
+              }
+            </div>
           }
         </div>
 

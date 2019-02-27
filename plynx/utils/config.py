@@ -13,6 +13,7 @@ StorageConfig = namedtuple('StorageConfig', 'scheme prefix credential_path')
 AuthConfig = namedtuple('AuthConfig', 'secret_key')
 WebConfig = namedtuple('WebConfig', 'host port endpoint debug')
 DemoConfig = namedtuple('DemoConfig', 'graph_ids')
+CloudServiceConfig = namedtuple('CloudServiceConfig', 'prefix')
 
 Config = namedtuple(
     'Config',
@@ -24,6 +25,7 @@ Config = namedtuple(
         'auth',
         'web',
         'demo',
+        'cloud_service',
     ]
 )
 
@@ -94,6 +96,11 @@ def get_demo_config():
     )
 
 
+def get_cloud_service_config():
+    return CloudServiceConfig(
+        prefix=_config.get('cloud_service', {}).get('prefix', 'gs://sample'),
+    )
+
 def get_config():
     return Config(
         master=get_master_config(),
@@ -103,6 +110,7 @@ def get_config():
         auth=get_auth_config(),
         web=get_web_config(),
         demo=get_demo_config(),
+        cloud_service=get_cloud_service_config(),
     )
 
 

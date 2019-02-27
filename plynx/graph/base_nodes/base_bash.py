@@ -6,15 +6,17 @@ import signal
 import uuid
 import logging
 import pwd
+import json
 import zipfile
 from plynx.constants import JobReturnStatus, NodeStatus, FileTypes, ParameterTypes
 from plynx.db import Node, Output, Parameter
 from plynx.utils.common import zipdir
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
-from plynx.utils.config import get_worker_config
+from plynx.utils.config import get_worker_config, get_cloud_service_config
 from plynx.graph.base_nodes import BaseNode
 
 WORKER_CONFIG = get_worker_config()
+CLOUD_SERVICE_CONFIG = get_cloud_service_config()
 TMP_DIR = '/tmp'
 
 
@@ -22,7 +24,8 @@ class BaseBash(BaseNode):
     def __init__(self, node=None):
         super(BaseBash, self).__init__(node)
         self.sp = None
-        self.workdir = os.path.join(TMP_DIR, str(uuid.uuid1()))
+        self.base_workdir = str(uuid.uuid1())
+        self.workdir = os.path.join(TMP_DIR, self.base_workdir)
 
     def exec_script(self, script_location, logs, command='bash'):
         res = JobReturnStatus.SUCCESS
@@ -146,11 +149,21 @@ class BaseBash(BaseNode):
         return node
 
     def _prepare_inputs(self, preview=False, pythonize=False):
-        res = {}
+        res_inputs, res_cloud_inputs = {}, {}
         for input in self.node.inputs:
-            filenames = []
+            filenames, cloud_filenames = [], []
             if preview:
                 for i, value in enumerate(range(input.min_count)):
+                    if FileTypes.CLOUD_STORAGE in input.file_types:
+                        cloud_filename = os.path.join(
+                            '{prefix}/{workdir}/i_{index}_{name}'.format(
+                                prefix=CLOUD_SERVICE_CONFIG.prefix,
+                                workdir=self.base_workdir,
+                                index=i,
+                                name=input.name,
+                            )
+                        )
+                        cloud_filenames.append(cloud_filename)
                     filename = os.path.join(self.workdir, 'i_{}_{}'.format(i, input.name))
                     filenames.append(filename)
             else:
@@ -162,35 +175,64 @@ class BaseBash(BaseNode):
                         # `chmod +x` to the executable file
                         st = os.stat(filename)
                         os.chmod(filename, st.st_mode | stat.S_IEXEC)
-                    if FileTypes.DIRECTORY in input.file_types:
+                    elif FileTypes.DIRECTORY in input.file_types:
                         # extract zip file
                         zip_filename = '{}.zip'.format(filename)
                         os.rename(filename, zip_filename)
                         os.mkdir(filename)
                         with zipfile.ZipFile(zip_filename) as zf:
                             zf.extractall(filename)
+                    elif FileTypes.CLOUD_STORAGE in input.file_types:
+                        with open(filename) as f:
+                            cloud_filename = json.load(f)['path']
+                        cloud_filenames.append(cloud_filename)
                     filenames.append(filename)
             if pythonize:
                 if input.min_count == 1 and input.max_count == 1:
-                    res[input.name] = filenames[0]
+                    res_inputs[input.name] = filenames[0]
+                    if FileTypes.CLOUD_STORAGE in input.file_types:
+                        res_cloud_inputs[input.name] = cloud_filenames[0]
                 else:
-                    res[input.name] = filenames
+                    res_inputs[input.name] = filenames
+                    if FileTypes.CLOUD_STORAGE in input.file_types:
+                        res_cloud_inputs[input.name] = cloud_filenames
             else:
                 # TODO is ' ' standard separator?
-                res[input.name] = ' '.join(filenames)
-        return res
+                res_inputs[input.name] = ' '.join(filenames)
+                if FileTypes.CLOUD_STORAGE in input.file_types:
+                    res_cloud_inputs[input.name] = ' '.join(cloud_filenames)
+        return res_inputs, res_cloud_inputs
 
     def _prepare_outputs(self, preview=False):
-        res = {}
+        res_outputs, res_cloud_outputs = {}, {}
         for output in self.node.outputs:
             if preview:
+                if output.file_type == FileTypes.CLOUD_STORAGE:
+                    res_cloud_outputs[output.name] = os.path.join(
+                        '{prefix}/{workdir}/o_{name}'.format(
+                            prefix=CLOUD_SERVICE_CONFIG.prefix,
+                            workdir=self.base_workdir,
+                            name=output.name,
+                        )
+                    )
                 filename = os.path.join(self.workdir, 'o_{}'.format(output.name))
             else:
                 filename = os.path.join(self.workdir, 'o_{}'.format(output.name))
                 if output.file_type == FileTypes.DIRECTORY:
                     os.mkdir(filename)
-            res[output.name] = filename
-        return res
+                elif FileTypes.CLOUD_STORAGE == output.file_type:
+                    cloud_filename = os.path.join(
+                        '{prefix}/{workdir}/o_{name}'.format(
+                            prefix=CLOUD_SERVICE_CONFIG.prefix,
+                            workdir=self.base_workdir,
+                            name=output.name,
+                        )
+                    )
+                    with open(filename, 'w') as f:
+                        json.dump({"path": cloud_filename}, f)
+                    res_cloud_outputs[output.name] = cloud_filename
+            res_outputs[output.name] = filename
+        return res_outputs, res_cloud_outputs
 
     def _prepare_logs(self):
         res = {}
