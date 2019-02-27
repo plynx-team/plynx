@@ -88,7 +88,7 @@ export default class PreviewDialog extends Component {
             <LoadingScreen />
           </div>
         }
-        <div className="PreviewBoxContent">
+        <div className="PreviewBoxContent selectable">
           { SPECIAL_PREVIEW_TYPES.indexOf(this.state.file_type) < 0 &&
             <div>
               {this.previewMessage(this.state.resource_id, this.state.download_name)}
