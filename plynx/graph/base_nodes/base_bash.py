@@ -1,4 +1,4 @@
-from subprocess import Popen, PIPE
+from subprocess import Popen
 import os
 import stat
 import shutil
@@ -49,20 +49,14 @@ class BaseBash(BaseNode):
 
             env = os.environ.copy()
             shutil.copyfile(script_location, logs['worker'])
-            self.sp = Popen(
-                [command, script_location],
-                stdout=PIPE, stderr=PIPE,
-                cwd=self.workdir, env=env,
-                preexec_fn=pre_exec)
+            with open(logs['stdout'], 'wb') as stdout_file, open(logs['stderr'], 'wb') as stderr_file:
+                self.sp = Popen(
+                    [command, script_location],
+                    stdout=stdout_file, stderr=stderr_file,
+                    cwd=self.workdir, env=env,
+                    preexec_fn=pre_exec)
 
-            line = ''
-            with open(logs['stdout'], 'w') as f:
-                for line in iter(self.sp.stdout.readline, b''):
-                    f.write(line)
-            with open(logs['stderr'], 'w') as f:
-                for line in iter(self.sp.stderr.readline, b''):
-                    f.write(line)
-            self.sp.wait()
+                self.sp.wait()
 
             if self.sp.returncode:
                 raise Exception("Process returned non-zero value")

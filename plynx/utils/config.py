@@ -101,6 +101,7 @@ def get_cloud_service_config():
         prefix=_config.get('cloud_service', {}).get('prefix', 'gs://sample'),
     )
 
+
 def get_config():
     return Config(
         master=get_master_config(),
