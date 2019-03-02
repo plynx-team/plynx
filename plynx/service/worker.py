@@ -3,6 +3,7 @@ import socket
 import uuid
 import threading
 import traceback
+import datetime
 from tempfile import SpooledTemporaryFile
 from plynx.service import WorkerMessage, WorkerMessageType, RunStatus, MasterMessageType, send_msg, recv_msg
 from plynx.constants import JobReturnStatus
@@ -46,6 +47,8 @@ class Worker:
         self._host = host
         self._port = port
         self._job_killed = False
+        self._started_at = None
+        self._ttl = None
         self._set_run_status(RunStatus.IDLE)
 
     def serve_forever(self, number_of_attempts=NUMBER_OF_ATTEMPTS):
@@ -63,6 +66,7 @@ class Worker:
             try:
                 self._upload_logs()
                 self._heartbeat_iteration()
+                self._check_ttl()
                 if attempt > 0:
                     logging.info("Connected")
                 attempt = 0
@@ -91,17 +95,31 @@ class Worker:
             # check status
             if master_message and master_message.message_type == MasterMessageType.KILL:
                 logging.info("Received KILL message: {}".format(master_message))
-                if self._job and not self._job_killed:
-                    self._job_killed = True
-                    self._job.kill()
-                else:
-                    logging.info("Already attempted to KILL")
+                self._kill()
         finally:
             sock.close()
 
     def _upload_logs(self):
         if self._run_status == RunStatus.RUNNING:
             self._job.upload_logs()
+
+    def _check_ttl(self):
+        if self._run_status == RunStatus.RUNNING and self._started_at and self._ttl:
+            dt = datetime.datetime.now()
+            diff = (dt - self._started_at).total_seconds() / 60
+            if diff > self._ttl:
+                self._kill()
+                with open(self._job.logs['worker'], 'a') as f:
+                    f.write('#' * 30 + '\n')
+                    f.write('# killed: timed out after {} minutes\n'.format(diff))
+                    f.write('#' * 30 + '\n')
+
+    def _kill(self):
+        if self._job and not self._job_killed:
+            self._job_killed = True
+            self._job.kill()
+        else:
+            logging.info("Already attempted to KILL")
 
     def _run_worker(self):
         while not self._stop_event.is_set():
@@ -128,9 +146,17 @@ class Worker:
                                 )
                             )
                             self._job_killed = False
-                            self._set_run_status(RunStatus.RUNNING)
+                            self._started_at = datetime.datetime.now()
                             self._job = master_message.job
                             self._graph_id = master_message.graph_id
+                            self._set_run_status(RunStatus.RUNNING)
+
+                            ttl_parameter = self._job.node.get_parameter_by_name('ttl', throw=False)
+                            if ttl_parameter:
+                                self._ttl = int(ttl_parameter.value)
+                            else:
+                                self._ttl = None
+
                             try:
                                 self._job.init_workdir()
                                 status = self._job.run()

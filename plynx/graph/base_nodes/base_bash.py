@@ -54,7 +54,14 @@ class BaseBash(BaseNode):
                 os.setsid()
 
             env = os.environ.copy()
-            shutil.copyfile(script_location, self.logs['worker'])
+
+            # append running script to worker log
+            with open(script_location, 'r') as sf, open(self.logs['worker'], 'a') as wf:
+                wf.write('# Running script:\n')
+                wf.write('#' * 20 + '\n')
+                wf.write(sf.read())
+                wf.write('# End script\n')
+
             with open(self.logs['stdout'], 'wb') as stdout_file, open(self.logs['stderr'], 'wb') as stderr_file:
                 self.sp = Popen(
                     [command, script_location],
@@ -127,7 +134,18 @@ class BaseBash(BaseNode):
                 'mutable_type': False,
                 'publicable': False,
                 'removable': False,
-            })
+            }),
+            Parameter.from_dict({
+                'name': 'ttl',
+                'parameter_type': ParameterTypes.INT,
+                'value': 600,
+                'mutable_type': False,
+                'publicable': True,
+                'removable': False,
+                'widget': {
+                    'alias': "TTL (in minutes)",
+                },
+            }),
         ]
         node.logs = [
             Output.from_dict({

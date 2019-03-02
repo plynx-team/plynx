@@ -287,7 +287,7 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
                     dead_worker_ids = [
                         worker_id
                         for worker_id, worker_info in self._worker_to_info.items()
-                        if current_time - worker_info.last_heartbeat_ts > Master.MAX_HEARTBEAT_DELAY
+                        if worker_info.last_heartbeat_ts and current_time - worker_info.last_heartbeat_ts > Master.MAX_HEARTBEAT_DELAY
                     ]
                 for worker_id in dead_worker_ids:
                     logging.info("Found dead Worker: worker_id=`{}`".format(worker_id))
