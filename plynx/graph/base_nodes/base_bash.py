@@ -8,6 +8,7 @@ import logging
 import pwd
 import json
 import zipfile
+import threading
 from plynx.constants import JobReturnStatus, NodeStatus, FileTypes, ParameterTypes
 from plynx.db import Node, Output, Parameter
 from plynx.utils.common import zipdir
@@ -21,13 +22,18 @@ TMP_DIR = '/tmp'
 
 
 class BaseBash(BaseNode):
+    logs_lock = threading.Lock()
+
     def __init__(self, node=None):
         super(BaseBash, self).__init__(node)
         self.sp = None
         self.base_workdir = str(uuid.uuid1())
         self.workdir = os.path.join(TMP_DIR, self.base_workdir)
+        self.logs_sizes = {}
+        self.final_logs_uploaded = False
+        self.logs = {}
 
-    def exec_script(self, script_location, logs, command='bash'):
+    def exec_script(self, script_location, command='bash'):
         res = JobReturnStatus.SUCCESS
 
         try:
@@ -48,8 +54,8 @@ class BaseBash(BaseNode):
                 os.setsid()
 
             env = os.environ.copy()
-            shutil.copyfile(script_location, logs['worker'])
-            with open(logs['stdout'], 'wb') as stdout_file, open(logs['stderr'], 'wb') as stderr_file:
+            shutil.copyfile(script_location, self.logs['worker'])
+            with open(self.logs['stdout'], 'wb') as stdout_file, open(self.logs['stderr'], 'wb') as stderr_file:
                 self.sp = Popen(
                     [command, script_location],
                     stdout=stdout_file, stderr=stderr_file,
@@ -64,7 +70,7 @@ class BaseBash(BaseNode):
         except Exception as e:
             res = JobReturnStatus.FAILED
             logging.exception("Job failed")
-            with open(logs['worker'], 'a+') as worker_log_file:
+            with open(self.logs['worker'], 'a+') as worker_log_file:
                 worker_log_file.write('\n' * 3)
                 worker_log_file.write('#' * 60 + '\n')
                 worker_log_file.write('JOB FAILED\n')
@@ -229,11 +235,13 @@ class BaseBash(BaseNode):
         return res_outputs, res_cloud_outputs
 
     def _prepare_logs(self):
-        res = {}
-        for log in self.node.logs:
-            filename = os.path.join(self.workdir, 'l_{}'.format(log.name))
-            res[log.name] = filename
-        return res
+        with BaseBash.logs_lock:
+            self.logs = {}
+            for log in self.node.logs:
+                filename = os.path.join(self.workdir, 'l_{}'.format(log.name))
+                self.logs[log.name] = filename
+                self.logs_sizes[log.name] = 0
+            return self.logs
 
     def _get_script_fname(self, extension='.sh'):
         return os.path.join(self.workdir, "exec{}".format(extension))
@@ -252,6 +260,8 @@ class BaseBash(BaseNode):
                     value = ' '.join(map(str, parameter.value))  # !!!!!!!!!
             elif parameter.parameter_type == ParameterTypes.CODE:
                 value = parameter.value.value
+            elif parameter.parameter_type == ParameterTypes.INT and pythonize:
+                value = int(parameter.value)
             else:
                 value = parameter.value
             res[parameter.name] = value
@@ -270,8 +280,21 @@ class BaseBash(BaseNode):
                 with open(filename, 'rb') as f:
                     self.node.get_output_by_name(key).resource_id = upload_file_stream(f)
 
-    def _postprocess_logs(self, logs):
-        for key, filename in logs.items():
-            if os.path.exists(filename) and os.stat(filename).st_size != 0:
-                with open(filename, 'rb') as f:
-                    self.node.get_log_by_name(key).resource_id = upload_file_stream(f)
+    def _postprocess_logs(self):
+        self.upload_logs(final=True)
+
+    def upload_logs(self, final=False):
+        with BaseBash.logs_lock:
+            if self.final_logs_uploaded:
+                return
+            self.final_logs_uploaded = final
+            for key, filename in self.logs.items():
+                if key not in self.logs_sizes:
+                    # the logs have not been initialized yey
+                    continue
+                if os.path.exists(filename) and os.stat(filename).st_size != self.logs_sizes[key]:
+                    log = self.node.get_log_by_name(key)
+                    with open(filename, 'rb') as f:
+                        # resource_id should be None if the file has not been uploaded yet
+                        # otherwise assign it
+                        log.resource_id = upload_file_stream(f, log.resource_id)

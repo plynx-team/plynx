@@ -29,10 +29,10 @@ class Command(BaseBash):
         with open(script_location, 'w') as script_file:
             script_file.write(cmd_string)
 
-        res = self.exec_script(script_location, logs)
+        res = self.exec_script(script_location)
 
         self._postprocess_outputs(outputs)
-        self._postprocess_logs(logs)
+        self._postprocess_logs()
 
         return res
 

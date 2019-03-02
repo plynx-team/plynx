@@ -62,6 +62,7 @@ class Worker:
         while not self._stop_event.is_set():
             try:
                 self._heartbeat_iteration()
+                self._upload_logs()
                 if attempt > 0:
                     logging.info("Connected")
                 attempt = 0
@@ -97,6 +98,10 @@ class Worker:
                     logging.info("Already attempted to KILL")
         finally:
             sock.close()
+
+    def _upload_logs(self):
+        if self._run_status == RunStatus.RUNNING:
+            self._job.upload_logs()
 
     def _run_worker(self):
         while not self._stop_event.is_set():

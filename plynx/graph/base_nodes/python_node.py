@@ -34,10 +34,10 @@ class PythonNode(BaseBash):
                 cmd_string
             )
 
-        res = self.exec_script(script_location, logs, command='python')
+        res = self.exec_script(script_location, command='python')
 
         self._postprocess_outputs(outputs)
-        self._postprocess_logs(logs)
+        self._postprocess_logs()
 
         return res
 

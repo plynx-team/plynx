@@ -27,7 +27,7 @@ export default class PreviewDialog extends Component {
       var self = this;
       PLynxApi.endpoints.resource.getCustom({
           method: 'get',
-          url: API_ENDPOINT + '/resource/' + props.resource_id,
+          url: API_ENDPOINT + '/resource/' + props.resource_id + '?' + Math.random(), // Hack: "?"... is needed for life logs. Otherwise the result is cached and logs do not update
           params: {
             preview: true,
             file_type: props.file_type,
