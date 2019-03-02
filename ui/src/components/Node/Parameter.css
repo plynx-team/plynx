@@ -71,6 +71,10 @@
   float: left;
 }
 
+.ParameterCellValue > .ParameterValue {
+  width: 100%;
+}
+
 .ParameterMonoText {
   font-family: monospace;
   font-size: 11pt;
