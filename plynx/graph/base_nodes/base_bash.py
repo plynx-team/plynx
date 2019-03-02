@@ -294,6 +294,7 @@ class BaseBash(BaseNode):
                     continue
                 if os.path.exists(filename) and os.stat(filename).st_size != self.logs_sizes[key]:
                     log = self.node.get_log_by_name(key)
+                    self.logs_sizes[key] = os.stat(filename).st_size
                     with open(filename, 'rb') as f:
                         # resource_id should be None if the file has not been uploaded yet
                         # otherwise assign it

@@ -61,8 +61,8 @@ class Worker:
         attempt = 0
         while not self._stop_event.is_set():
             try:
-                self._heartbeat_iteration()
                 self._upload_logs()
+                self._heartbeat_iteration()
                 if attempt > 0:
                     logging.info("Connected")
                 attempt = 0
