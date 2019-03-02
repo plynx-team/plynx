@@ -9,4 +9,5 @@ def set_logging_level(verbose):
         3: logging.INFO,
         4: logging.DEBUG
     }
-    logging.basicConfig(level=levels.get(verbose, 4))
+    root = logging.getLogger()
+    root.setLevel(levels.get(verbose, logging.DEBUG))
