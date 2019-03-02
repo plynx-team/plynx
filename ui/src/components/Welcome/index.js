@@ -212,8 +212,7 @@ export default class Welcome extends Component {
 
         <div className="footer">
           <div className="contact">
-            <a href="https://github.com/khaxis/plynx">Github</a>
-            <a href="mailto:ivan@plynx.com">Contact us</a>
+
           </div>
         </div>
       </div>

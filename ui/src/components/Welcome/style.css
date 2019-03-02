@@ -17,7 +17,7 @@
   width: 100%;
   background-color: #ccc;
   text-align: center;
-  padding: 30px;
+  padding: 30px 0 30px 0;
 }
 
 .Welcome > .items > .items-wrapper {
@@ -32,7 +32,7 @@
 
 .Welcome > .items > .items-wrapper > .item {
   width: 290px;
-  border: 1px #666 solid;
+  border: 1px #aaa solid;
   border-radius: 3px;
   max-width: 300px;
   margin: 3px;
@@ -90,7 +90,7 @@
 
 .Welcome > .footer {
   bottom: 0;
-  height: 30px;
+  height: 18px;
   left: 0;
   position: absolute;
   width: 100%;
