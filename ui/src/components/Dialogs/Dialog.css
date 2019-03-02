@@ -36,6 +36,7 @@
   color: black;
   padding-left: 4px;
   text-decoration: none;
+  cursor: pointer;
 }
 
 .dialog .dialog-window .header .close-button:hover {

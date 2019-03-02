@@ -18,6 +18,7 @@ import DemoScreen from '../DemoScreen.js'
 import FileDialog from '../Dialogs/FileDialog.js'
 import CodeDialog from '../Dialogs/CodeDialog.js'
 import { ObjectID } from 'bson';
+import {HotKeys} from 'react-hotkeys';
 import {
   ACTION,
   RESPONCE_STATUS,
@@ -26,7 +27,8 @@ import {
   GRAPH_RUNNING_STATUS,
   NODE_RUNNING_STATUS,
   SPECIAL_TYPE_NAMES,
-  OPERATIONS
+  OPERATIONS,
+  KEY_MAP,
 } from '../../constants.js';
 import { API_ENDPOINT } from '../../configConsts'
 import { storeToClipboard, loadFromClipboard } from '../../utils.js';
@@ -728,6 +730,19 @@ ENDPOINT = '` + API_ENDPOINT + `'
     });
   }
 
+  closeAllDialogs() {
+    this.handleClosePreview();
+    this.handleCloseCodeDialog();
+    this.handleCloseGeneratedCodeDialog();
+    this.handleCloseFileDialog();
+  }
+
+  keyHandlers = {
+    escPressed: () => {
+      this.closeAllDialogs();
+    },
+  }
+
   handleDrop(blockObj, replaceParentNode) {
     blockObj = JSON.parse(JSON.stringify(blockObj)); // copy
     var node = blockObj.nodeContent;
@@ -935,7 +950,9 @@ ENDPOINT = '` + API_ENDPOINT + `'
 
     return (
       <DragDropContextProvider backend={isMobile ? TouchBackend : HTML5Backend}>
-        <div className="GraphNode">
+        <HotKeys className="GraphNode"
+                 handlers={this.keyHandlers} keyMap={KEY_MAP}
+        >
           <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
           { demoPreview &&
             <DemoScreen onApprove={() => this.handleApprove()} onClose={() => {cookie.remove('demoPreview', { path: '/' }); this.forceUpdate()}} />
@@ -1038,7 +1055,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
                         key={"prop" + this.state.graphId + this.state.loading}
                         onFileShow={(nid) => this.handleShowFile(nid)}
           />
-        </div>
+        </HotKeys>
       </DragDropContextProvider>
     );
 
