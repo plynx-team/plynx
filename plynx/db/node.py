@@ -195,20 +195,22 @@ class Node(DBObject):
     def __repr__(self):
         return 'Node({})'.format(str(self.to_dict()))
 
-    def _get_custom_element(self, arr, name):
+    def _get_custom_element(self, arr, name, throw):
         for parameter in arr:
             if parameter.name == name:
                 return parameter
-        raise Exception('Parameter "{}" not found in {}'.format(name, self.title))
+        if throw:
+            raise Exception('Parameter "{}" not found in {}'.format(name, self.title))
+        return None
 
-    def get_input_by_name(self, name):
-        return self._get_custom_element(self.inputs, name)
+    def get_input_by_name(self, name, throw=True):
+        return self._get_custom_element(self.inputs, name, throw)
 
-    def get_parameter_by_name(self, name):
-        return self._get_custom_element(self.parameters, name)
+    def get_parameter_by_name(self, name, throw=True):
+        return self._get_custom_element(self.parameters, name, throw)
 
-    def get_output_by_name(self, name):
-        return self._get_custom_element(self.outputs, name)
+    def get_output_by_name(self, name, throw=True):
+        return self._get_custom_element(self.outputs, name, throw)
 
-    def get_log_by_name(self, name):
-        return self._get_custom_element(self.logs, name)
+    def get_log_by_name(self, name, throw=True):
+        return self._get_custom_element(self.logs, name, throw)

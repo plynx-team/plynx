@@ -161,6 +161,7 @@ export const KEY_MAP = {
   pastePressed: ['command+v', 'ctrl+v'],
   savePressed: ['command+s', 'ctrl+s'],
   deletePressed: ['del', 'backspace'],
+  escPressed: ['esc'],
   commandDown: {
     sequence: ['command', 'ctrl'],
     action: 'keydown'

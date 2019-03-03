@@ -9,8 +9,9 @@ import LoadingScreen from '../LoadingScreen.js'
 import FileDialog from '../Dialogs/FileDialog.js'
 import FileUploadDialog from '../Dialogs/FileUploadDialog.js'
 import PreviewDialog from '../Dialogs/PreviewDialog.js'
-import { ACTION, ALERT_OPTIONS, RESPONCE_STATUS } from '../../constants.js';
+import { ACTION, ALERT_OPTIONS, RESPONCE_STATUS, KEY_MAP } from '../../constants.js';
 import SearchBar from '../Common/SearchBar.js';
+import {HotKeys} from 'react-hotkeys';
 import './style.css';
 import '../Common/ListPage.css';
 import '../controls.css';
@@ -32,6 +33,12 @@ export default class FileListPage extends Component {
     this.perPage = 20;
 
     this.loadFiles();
+  }
+
+  keyHandlers = {
+    escPressed: () => {
+      this.handleCloseDialog();
+    },
   }
 
   showAlert(message, type) {
@@ -240,7 +247,9 @@ export default class FileListPage extends Component {
 
   render() {
     return (
-      <div className='ListPage'>
+      <HotKeys className='ListPage'
+               handlers={this.keyHandlers} keyMap={KEY_MAP}
+      >
         {this.state.loading &&
           <LoadingScreen />
         }
@@ -298,7 +307,7 @@ export default class FileListPage extends Component {
                        containerClassName={"pagination"}
                        subContainerClassName={"pages pagination"}
                        activeClassName={"active"} />
-      </div>
+      </HotKeys>
     );
   }
 }

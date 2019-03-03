@@ -10,7 +10,8 @@ import DeprecateDialog from '../Dialogs/DeprecateDialog.js'
 import TextViewDialog from '../Dialogs/TextViewDialog.js'
 import LoadingScreen from '../LoadingScreen.js'
 import { ObjectID } from 'bson';
-import { ACTION, RESPONCE_STATUS, ALERT_OPTIONS, NODE_RUNNING_STATUS } from '../../constants.js';
+import {HotKeys} from 'react-hotkeys';
+import { ACTION, RESPONCE_STATUS, ALERT_OPTIONS, NODE_RUNNING_STATUS, KEY_MAP } from '../../constants.js';
 
 import './style.css';
 
@@ -26,6 +27,12 @@ export default class Node extends Component {
       deprecateQuestionDialog: false,
       deprecateParentDialog: false
     }
+  }
+
+  keyHandlers = {
+    escPressed: () => {
+      this.closeAllDialogs();
+    },
   }
 
   sleep(ms) {
@@ -154,6 +161,11 @@ export default class Node extends Component {
     this.setState({preview_text: null});
   }
 
+  closeAllDialogs() {
+    this.handleCloseDeprecateDialog();
+    this.handleClosePreview();
+  }
+
   handleDeprecateClick() {
     this.setState({deprecateQuestionDialog: true});
   }
@@ -245,7 +257,9 @@ export default class Node extends Component {
     }
 
     return (
-      <div className='EditNodeMain'>
+      <HotKeys className='EditNodeMain'
+               handlers={this.keyHandlers} keyMap={KEY_MAP}
+      >
         <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
         {this.state.loading &&
           <LoadingScreen
@@ -351,7 +365,7 @@ export default class Node extends Component {
           </div>
 
         </div>
-      </div>
+      </HotKeys>
     );
   }
 }

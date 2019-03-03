@@ -7,14 +7,16 @@ class Command(BaseBash):
         super(Command, self).__init__(node)
 
     def run(self, preview=False):
-        inputs = self._prepare_inputs(preview)
+        inputs, cloud_inputs = self._prepare_inputs(preview)
         parameters = self._prepare_parameters()
-        outputs = self._prepare_outputs()
+        outputs, cloud_outputs = self._prepare_outputs()
         logs = self._prepare_logs()
         cmd_command = self.node.get_parameter_by_name('cmd').value
         cmd_array = [
             self._get_arguments_string('input', inputs),
+            self._get_arguments_string('cloud_input', cloud_inputs),
             self._get_arguments_string('output', outputs),
+            self._get_arguments_string('cloud_output', cloud_outputs),
             self._get_arguments_string('param', parameters),
             self._get_arguments_string('log', logs),
             cmd_command
@@ -27,18 +29,15 @@ class Command(BaseBash):
         with open(script_location, 'w') as script_file:
             script_file.write(cmd_string)
 
-        res = self.exec_script(script_location, logs)
+        res = self.exec_script(script_location)
 
         self._postprocess_outputs(outputs)
-        self._postprocess_logs(logs)
+        self._postprocess_logs()
 
         return res
 
     def status(self):
         pass
-
-    def kill(self):
-        return self.kill_process()
 
     @staticmethod
     def get_base_name():

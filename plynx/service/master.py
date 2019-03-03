@@ -251,10 +251,10 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
                     # check the running Schedulers
                     new_to_queue = []
-                    finished_graph_ids = []
+                    finished_graph_ids = set()
                     for graph_id, scheduler in self._graph_id_to_scheduler.items():
                         if scheduler.finished():
-                            finished_graph_ids.append(graph_id)
+                            finished_graph_ids.add(graph_id)
                             continue
                         # pop new Jobs
                         new_to_queue.extend([
@@ -287,7 +287,7 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
                     dead_worker_ids = [
                         worker_id
                         for worker_id, worker_info in self._worker_to_info.items()
-                        if current_time - worker_info.last_heartbeat_ts > Master.MAX_HEARTBEAT_DELAY
+                        if worker_info.last_heartbeat_ts and current_time - worker_info.last_heartbeat_ts > Master.MAX_HEARTBEAT_DELAY
                     ]
                 for worker_id in dead_worker_ids:
                     logging.info("Found dead Worker: worker_id=`{}`".format(worker_id))
@@ -397,7 +397,10 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
                     scheduler.update_node(node)
             if NodeRunningStatus.is_finished(node.node_running_status):
                 self._del_job_description(worker_id)
-            return True
+
+            # If scheduler was not found, it means the graph was canceled, failed, finished, etc.
+            # if scheduler is None, the graph can't be updated.
+            return scheduler is not None
         else:
             logging.info("Scheduler was not found for worker `{}`".format(worker_id))
         return False

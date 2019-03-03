@@ -128,7 +128,7 @@ svg {
 }
 
 .node.error-highlight {
-  border-color: red;
+  border-color: #bb0000;
 }
 
 .connector {
