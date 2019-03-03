@@ -40,9 +40,6 @@ class BashJinja2(BaseBash):
     def status(self):
         pass
 
-    def kill(self):
-        return self.kill_process()
-
     @staticmethod
     def get_base_name():
         return 'bash_jinja2'
