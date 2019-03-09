@@ -29,7 +29,7 @@ export default class FileList extends Component {
           { listTextElement('header-item Id', 'Node Id') }
           { listTextElement('header-item Created', 'Created') }
         </div>
-        {listItems.length ? listItems : <b>No items to show</b>}
+        {listItems}
       </div>
     );
   }
