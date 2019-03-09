@@ -1,25 +1,19 @@
 // src/components/About/index.js
 import React, { Component } from 'react';
 import AceEditor from 'react-ace';
+import {CODE_LANGUAGES, CODE_THEMES} from '../../constants'
 import 'brace/ext/language_tools';
+
+import './CodeItem.css';
 
 // Init react-ace
 
-const languages = [
-  'python',
-];
-
-const themes = [
-  'monokai',
-  'chaos',
-];
-
-languages.forEach(lang => {
+CODE_LANGUAGES.forEach(lang => {
   require(`brace/mode/${lang}`);
   require(`brace/snippets/${lang}`);
 });
 
-themes.forEach(theme => {
+CODE_THEMES.forEach(theme => {
   require(`brace/theme/${theme}`);
 });
 
@@ -29,12 +23,25 @@ export default class EnumItem extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      readOnly: this.props.readOnly,
+      readOnly: this.props.readOnly || !this.props.showEnumOptions,
       value: this.props.value.value,
       mode: this.props.value.mode,
     };
 
     this.handleChange = this.handleChange.bind(this);
+  }
+
+  handleCommunacation() {
+    this.props.onChange({
+        target: {
+          name: this.props.name,
+          value: {
+            mode: this.state.mode,
+            value: this.state.value,
+          },
+          type: 'code'
+        }
+    });
   }
 
   handleChange(value) {
@@ -43,24 +50,46 @@ export default class EnumItem extends Component {
     }
 
     this.setState({value: value}, () => {
-      this.props.onChange({
-          target: {
-            name: this.props.name,
-            value: {
-              mode: this.state.mode,
-              value: this.state.value,
-            },
-            type: 'code'
-          }
-      });
+      this.handleCommunacation();
     });
+  }
+
+  handleChangeMode(event) {
+    if (this.state.readOnly) {
+      return;
+    }
+    if (event.target.name === 'index') {
+      this.setState({mode: CODE_LANGUAGES[event.target.value]}, () => {
+        this.handleCommunacation();
+      });
+    }
   }
 
   render() {
     return (
-      <div className='EnumItem'>
+      <div className='CodeItem'>
+        <div className='code-mode'>
+          <select className='code-mode-select'
+              type='text'
+              name='index'
+              value={CODE_LANGUAGES.indexOf(this.state.mode)}
+              onChange={(e) => {this.handleChangeMode(e)}}
+              readOnly={this.state.readOnly}
+            >
+              {
+                CODE_LANGUAGES.map((value, index) =>
+                  <option
+                    value={index}
+                    key={index}
+                    >
+                    {value}
+                    </option>
+                )
+              }
+          </select>
+        </div>
         <AceEditor
-          mode="python"
+          mode={this.state.mode}
           onChange={this.handleChange}
           editorProps={{$blockScrolling: true}}
           value={this.state.value}

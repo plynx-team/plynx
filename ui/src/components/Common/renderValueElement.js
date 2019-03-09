@@ -94,6 +94,7 @@ export default function renderValueElement(args) {
               readOnly={readOnly}
               key={parameterType}
               height={height ? height : "200px"}
+              showEnumOptions={showEnumOptions}
               />;
     default:
       return <div>NULL</div>;
