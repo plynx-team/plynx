@@ -877,6 +877,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
       }
     })
     .catch(function (error) {
+      console.log(error);
       if (error.response.status === 401) {
         PLynxApi.getAccessToken()
         .then(function (isSuccessfull) {
@@ -927,9 +928,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
           this.showAlert("Missing input `" + child.object_id + "` in node `" + node.title + "`", 'warning');
           break;
         case VALIDATION_CODES.MISSING_PARAMETER:
-          nodeId = validationError.object_id;
-          node = this.node_lookup[nodeId];
-          this.showAlert("Missing parameter `" + child.object_id + "` in node `" + node.title + "`", 'warning');
+          this.showAlert("Missing parameter `" + child.object_id + "`", 'warning');
           break;
         default:
 

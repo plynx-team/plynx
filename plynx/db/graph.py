@@ -81,6 +81,14 @@ class Graph(DBObject):
                     validation_code=ValidationCode.MISSING_PARAMETER
                 ))
 
+        if len(self.nodes) == 0:
+            violations.append(
+                ValidationError(
+                    target=ValidationTargetType.PROPERTY,
+                    object_id=str(self._id),
+                    validation_code=ValidationCode.EMPTY_GRAPH
+                ))
+
         # Meaning the node is in the graph. Otherwise souldn't be in validation step
         for node in self.nodes:
             node_violation = node.get_validation_error()
