@@ -11,7 +11,7 @@ class Command(BaseBash):
         parameters = self._prepare_parameters()
         outputs, cloud_outputs = self._prepare_outputs()
         logs = self._prepare_logs()
-        cmd_command = self.node.get_parameter_by_name('cmd').value
+        cmd_command = self._extract_cmd_text()
         cmd_array = [
             self._get_arguments_string('input', inputs),
             self._get_arguments_string('cloud_input', cloud_inputs),

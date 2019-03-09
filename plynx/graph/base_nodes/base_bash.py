@@ -122,8 +122,11 @@ class BaseBash(BaseNode):
         node.parameters = [
             Parameter.from_dict({
                 'name': 'cmd',
-                'parameter_type': ParameterTypes.TEXT,
-                'value': 'bash -c " "',
+                'parameter_type': ParameterTypes.CODE,
+                'value': {
+                    'mode': 'sh',
+                    'value': 'bash -c " "',
+                },
                 'mutable_type': False,
                 'publicable': False,
                 'removable': False,
@@ -143,10 +146,7 @@ class BaseBash(BaseNode):
                 'value': 600,
                 'mutable_type': False,
                 'publicable': True,
-                'removable': False,
-                'widget': {
-                    'alias': "TTL (in minutes)",
-                },
+                'removable': False
             }),
         ]
         node.logs = [
@@ -302,6 +302,15 @@ class BaseBash(BaseNode):
 
     def _postprocess_logs(self):
         self.upload_logs(final=True)
+
+    def _extract_cmd_text(self):
+        parameter = self.node.get_parameter_by_name('cmd')
+        if parameter.parameter_type == ParameterTypes.CODE:
+            return parameter.value.value
+        elif parameter.parameter_type == ParameterTypes.TEXT:
+            # backward compatibility: `cmd` used to have type of TEXT
+            return parameter.value
+        raise TypeError("Process returned non-zero value")
 
     def upload_logs(self, final=False):
         with BaseBash.logs_lock:
