@@ -17,7 +17,7 @@ export default class TextViewDialog extends Component {
       <Dialog className='TextViewDialog'
               onClose={() => {this.props.onClose()}}
               width={900}
-              height={300}
+              height={600}
               title={this.state.title}
               enableResizing={true}
       >
