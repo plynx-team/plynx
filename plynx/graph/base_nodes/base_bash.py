@@ -60,7 +60,8 @@ class BaseBash(BaseNode):
                 wf.write('# Running script:\n')
                 wf.write('#' * 20 + '\n')
                 wf.write(sf.read())
-                wf.write('# End script\n')
+                wf.write('\n' + '#' * 20 + '\n')
+                wf.write('\n# End script\n')
 
             with open(self.logs['stdout'], 'wb') as stdout_file, open(self.logs['stderr'], 'wb') as stderr_file:
                 self.sp = Popen(
