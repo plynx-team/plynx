@@ -57,11 +57,9 @@ class BaseBash(BaseNode):
 
             # append running script to worker log
             with open(script_location, 'r') as sf, open(self.logs['worker'], 'a') as wf:
-                wf.write('# Running script:\n')
-                wf.write('#' * 20 + '\n')
+                wf.write(self._make_debug_text("Running script:"))
                 wf.write(sf.read())
-                wf.write('\n' + '#' * 20 + '\n')
-                wf.write('\n# End script\n')
+                wf.write(self._make_debug_text("End script"))
 
             with open(self.logs['stdout'], 'wb') as stdout_file, open(self.logs['stderr'], 'wb') as stderr_file:
                 self.sp = Popen(
@@ -79,10 +77,7 @@ class BaseBash(BaseNode):
             res = JobReturnStatus.FAILED
             logging.exception("Job failed")
             with open(self.logs['worker'], 'a+') as worker_log_file:
-                worker_log_file.write('\n' * 3)
-                worker_log_file.write('#' * 60 + '\n')
-                worker_log_file.write('JOB FAILED\n')
-                worker_log_file.write('#' * 60 + '\n')
+                worker_log_file.write(self._make_debug_text("JOB FAILED"))
                 worker_log_file.write(str(e))
 
         return res
@@ -110,6 +105,14 @@ class BaseBash(BaseNode):
         if 'sp' in d:
             del d['sp']
         return d
+
+    @staticmethod
+    def _make_debug_text(text):
+        content = '\n'.join(['# {}'.format(line) for line in text.split('\n')])
+        return "{border}\n{content}\n{border}\n".format(
+            border='#' * 40,
+            content=content
+        )
 
     @classmethod
     def get_default(cls):
