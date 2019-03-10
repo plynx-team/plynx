@@ -51,7 +51,7 @@ class PythonNode(BaseBash):
     @classmethod
     def _get_arguments_string(cls, var_name, arguments):
         res = ['{} = {{}}'.format(var_name)]
-        for key, value in arguments.iteritems():
+        for key, value in arguments.items():
             res.append('{var_name}["{key}"] = {value}'.format(
                 var_name=var_name,
                 key=key,
