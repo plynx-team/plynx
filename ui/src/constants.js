@@ -176,3 +176,12 @@ export const SPECIAL_USERS = Object.freeze({
   DEMO: 'demo',
   DEFAULT: 'default',
 })
+
+export const CODE_LANGUAGES = [
+  'python',
+  'sh',
+];
+
+export const CODE_THEMES = [
+  'chaos',
+];

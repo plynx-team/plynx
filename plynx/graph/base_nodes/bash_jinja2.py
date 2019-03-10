@@ -11,7 +11,7 @@ class BashJinja2(BaseBash):
         parameters = self._prepare_parameters()
         outputs, cloud_outputs = self._prepare_outputs(preview)
         logs = self._prepare_logs()
-        cmd = self.node.get_parameter_by_name('cmd').value
+        cmd = self._extract_cmd_text()
         cmd_template = jinja2.Template(cmd)
         cmd_string = cmd_template.render(
             input=inputs,

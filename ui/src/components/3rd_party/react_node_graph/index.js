@@ -18,7 +18,15 @@ const boxTarget = {
     var mousePos = monitor.getClientOffset();
 
     if (graphProps.onDrop) {
-      graphProps.onDrop({nodeContent: blockObj.nodeContent, mousePos: mousePos});
+      // Hack: use GraphRoot scroll position
+      var el = document.getElementsByClassName('GraphRoot')[0];
+      graphProps.onDrop({
+        nodeContent: blockObj.nodeContent,
+        mousePos: {
+          x: mousePos.x + el.scrollLeft,
+          y: mousePos.y + el.scrollTop
+        },
+      });
     }
     return { name: 'ReactBlockGraph' }
   },

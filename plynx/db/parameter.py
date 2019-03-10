@@ -39,9 +39,6 @@ class ParameterCode(DBObject):
             ),
     }
 
-    # Unused
-    MODES = {'python'}
-
     def __repr__(self):
         return 'ParameterCode({})'.format(str(self.to_dict()))
 

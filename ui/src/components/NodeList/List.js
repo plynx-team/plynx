@@ -28,7 +28,7 @@ export default class List extends Component {
           { listTextElement('header-item Created', 'Created') }
           { listTextElement('header-item Updated', 'Updated') }
         </div>
-        {listItems.length ? listItems : <b>No items to show</b>}
+        {listItems}
       </div>
     );
   }

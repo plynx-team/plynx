@@ -2,24 +2,17 @@
 import React, { Component } from 'react';
 import Dialog from './Dialog.js'
 import AceEditor from 'react-ace';
+import {CODE_LANGUAGES, CODE_THEMES} from '../../constants'
 import 'brace/ext/language_tools';
 
 // Init react-ace
 
-const languages = [
-  'python',
-];
-
-const themes = [
-  'monokai',
-];
-
-languages.forEach(lang => {
+CODE_LANGUAGES.forEach(lang => {
   require(`brace/mode/${lang}`);
   require(`brace/snippets/${lang}`);
 });
 
-themes.forEach(theme => {
+CODE_THEMES.forEach(theme => {
   require(`brace/theme/${theme}`);
 });
 
@@ -60,7 +53,7 @@ export default class CodeDialog extends Component {
             onChange={(value) => this.handleChange(value)}
             editorProps={{$blockScrolling: true}}
             value={this.props.value.value}
-            theme="monokai"
+            theme="chaos"
             fontSize={14}
             showPrintMargin={true}
             showGutter={true}

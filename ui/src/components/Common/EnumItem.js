@@ -46,23 +46,23 @@ export default class EnumItem extends Component {
   render() {
     return (
       <div className='EnumItem'>
-      <select className='Index'
-          type='text'
-          name='index'
-          value={this.state.index}
-          onChange={this.handleChange}
-          readOnly={this.state.readOnly}
-        >
-          {
-            this.state.values.map((value, index) =>
-              <option
-                value={index}
-                key={index}
-                >
-                {value}
-                </option>
-            )
-          }
+        <select className='Index'
+            type='text'
+            name='index'
+            value={this.state.index}
+            onChange={this.handleChange}
+            readOnly={this.state.readOnly}
+          >
+            {
+              this.state.values.map((value, index) =>
+                <option
+                  value={index}
+                  key={index}
+                  >
+                  {value}
+                  </option>
+              )
+            }
         </select>
         {this.props.showEnumOptions &&
           <div>

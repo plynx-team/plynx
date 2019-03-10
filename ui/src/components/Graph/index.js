@@ -414,8 +414,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
         {
           nodeContent: blockJson,
           mousePos: {
-            x: blockJson.x + 320,
-            y: blockJson.y + 20,
+            x: blockJson.x + 380,
+            y: blockJson.y + 120,
           },
         },
         false);
@@ -777,8 +777,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
         specialParameterNames.push(node.parameters[i].name);
       }
     }
-    node.x = blockObj.mousePos.x - 300;
-    node.y = blockObj.mousePos.y - 40;
+    node.x = blockObj.mousePos.x - 340;
+    node.y = blockObj.mousePos.y - 80;
 
 
     console.log(node);
@@ -877,6 +877,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
       }
     })
     .catch(function (error) {
+      console.log(error);
       if (error.response.status === 401) {
         PLynxApi.getAccessToken()
         .then(function (isSuccessfull) {
@@ -927,9 +928,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
           this.showAlert("Missing input `" + child.object_id + "` in node `" + node.title + "`", 'warning');
           break;
         case VALIDATION_CODES.MISSING_PARAMETER:
-          nodeId = validationError.object_id;
-          node = this.node_lookup[nodeId];
-          this.showAlert("Missing parameter `" + child.object_id + "` in node `" + node.title + "`", 'warning');
+          this.showAlert("Missing parameter `" + child.object_id + "`", 'warning');
           break;
         default:
 

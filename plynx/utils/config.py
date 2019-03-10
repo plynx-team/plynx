@@ -34,7 +34,7 @@ def __init__():
     global _config
     if os.path.exists(PLYNX_CONFIG_PATH):
         with open(PLYNX_CONFIG_PATH) as f:
-            logging.info('Using config `{}`'.format(PLYNX_CONFIG_PATH))
+            logging.critical('Using config `{}`'.format(PLYNX_CONFIG_PATH))
             _config = yaml.safe_load(f)
     else:
         logging.critical('PLYNX_CONFIG_PATH `{}` is not found'.format(PLYNX_CONFIG_PATH))
@@ -77,7 +77,7 @@ def get_storage_config():
 
 def get_auth_config():
     return AuthConfig(
-        secret_key=_config.get('auth', {}).get('secret_key', ''),
+        secret_key=_config.get('auth', {}).get('secret_key', '') or '',
     )
 
 
