@@ -414,8 +414,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
         {
           nodeContent: blockJson,
           mousePos: {
-            x: blockJson.x + 320,
-            y: blockJson.y + 20,
+            x: blockJson.x + 380,
+            y: blockJson.y + 120,
           },
         },
         false);
