@@ -34,9 +34,12 @@
         "publicable": false,
         "widget": null,
         "name": "cmd",
-        "value": "cat {{ input[\"input\"] }} | grep \"{{ param['template'] }}\" > {{ output[\"output\"] }}",
+        "value": {
+          "mode": "sh",
+          "value": "cat {{ input[\"input\"] }} | grep \"{{ param['template'] }}\" > {{ output[\"output\"] }}"
+        },
         "mutable_type": false,
-        "parameter_type": "text",
+        "parameter_type": "code",
         "removable": false
       },
       {
@@ -112,9 +115,12 @@
         "publicable": false,
         "widget": null,
         "name": "cmd",
-        "value": "cat {{ input[\"input\"] }} | paste -sd+ - | bc > {{ output[\"output\"] }}",
+        "value": {
+          "mode": "python",
+          "value": "s = 0\nfor filename in input[\"input\"]:\n    with open(filename) as fi:\n        s += sum([int(line) for line in fi])\nwith open(output[\"output\"], \"w\") as fo:\n    fo.write(\"{}\\n\".format(s))\n"
+        },
         "mutable_type": false,
-        "parameter_type": "text",
+        "parameter_type": "code",
         "removable": false
       },
       {
@@ -135,7 +141,7 @@
         "resource_id": null
       }
     ],
-    "base_node_name": "bash_jinja2",
+    "base_node_name": "python",
     "cache_url": null,
     "node_running_status": "CREATED",
     "node_status": "CREATED",
