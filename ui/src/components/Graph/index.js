@@ -777,8 +777,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
         specialParameterNames.push(node.parameters[i].name);
       }
     }
-    node.x = blockObj.mousePos.x - 300;
-    node.y = blockObj.mousePos.y - 40;
+    node.x = blockObj.mousePos.x - 340;
+    node.y = blockObj.mousePos.y - 80;
 
 
     console.log(node);
