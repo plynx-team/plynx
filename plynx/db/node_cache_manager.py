@@ -1,3 +1,4 @@
+import logging
 from plynx.db import NodeCache
 from plynx.utils.db_connector import get_db_connector
 from plynx.constants import NodeRunningStatus
@@ -42,8 +43,16 @@ class NodeCacheManager(object):
             node        (Node):             Node object
             graph_id    (ObjectId, str):    Graph ID
             user_id     (ObjectId, str):    User ID
+
+        Return:
+            True if cache saved else False
         """
         assert node.node_running_status == NodeRunningStatus.SUCCESS, \
             'Only Nodes with status SUCCESS can be cached'
         node_cache = NodeCache.instantiate(node=node, graph_id=graph_id, user_id=user_id)
-        node_cache.save()
+        try:
+            node_cache.save()
+        except Exception as e:
+            logging.error('Could not save cache: `{}`'.format(e))
+            return False
+        return True
