@@ -120,7 +120,7 @@ svg {
 }
 
 .node.running-status-restored {
-  background-color: rgba(130,160,0, 0.6);
+  background-color: rgba(0, 100, 0, 0.7);
 }
 
 .node.running-status-canceled {
