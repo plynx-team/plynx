@@ -3,6 +3,7 @@ import React, { Component } from 'react';
 import AceEditor from 'react-ace';
 import {CODE_LANGUAGES, CODE_THEMES} from '../../constants'
 import 'brace/ext/language_tools';
+import 'brace/ext/searchbox';
 
 import './CodeItem.css';
 
@@ -67,7 +68,9 @@ export default class EnumItem extends Component {
 
   render() {
     return (
-      <div className='CodeItem'>
+      <div className='CodeItem'
+           onMouseDown={(e) => {e.stopPropagation()}}
+      >
         <div className='code-mode'>
           <select className='code-mode-select'
               type='text'

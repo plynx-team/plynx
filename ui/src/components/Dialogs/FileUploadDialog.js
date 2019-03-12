@@ -6,11 +6,13 @@ import LoadingScreen from '../LoadingScreen.js'
 import { NODE_STATUS, FILE_TYPES, RESPONCE_STATUS, NODE_RUNNING_STATUS } from '../../constants.js'
 
 
+const DEFAULT_TITLE = 'File';
+
 export default class FileUploadDialog extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      title: 'File',
+      title: DEFAULT_TITLE,
       description: 'Uploaded custom file',
       file_type: 'file',
       file_path: null,
@@ -34,7 +36,7 @@ export default class FileUploadDialog extends Component {
       this.setState({
         file_path: this.file,
         file_name: this.file ? this.file.name : null,
-        title: this.file ? this.file.name : 'File'
+        title: this.file && this.state.title == DEFAULT_TITLE ? this.file.name : this.state.title
       })
     }
   }
