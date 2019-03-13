@@ -1,10 +1,10 @@
+import six
 import logging
 import socket
 import uuid
 import threading
 import traceback
 import datetime
-from tempfile import SpooledTemporaryFile
 from plynx.service import WorkerMessage, WorkerMessageType, RunStatus, MasterMessageType, send_msg, recv_msg
 from plynx.constants import JobReturnStatus
 from plynx.utils.config import get_master_config
@@ -163,9 +163,9 @@ class Worker:
                             except Exception:
                                 try:
                                     status = JobReturnStatus.FAILED
-                                    with SpooledTemporaryFile(mode='w+') as f:
-                                        f.write(traceback.format_exc())
-                                        self._job.node.get_log_by_name('worker').resource_id = upload_file_stream(f)
+                                    f = six.BytesIO()
+                                    f.write(traceback.format_exc().encode())
+                                    self._job.node.get_log_by_name('worker').resource_id = upload_file_stream(f)
                                 except Exception:
                                     logging.critical(traceback.format_exc())
                                     self.stop()

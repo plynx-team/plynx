@@ -128,7 +128,7 @@ class BaseBash(BaseNode):
                 'parameter_type': ParameterTypes.CODE,
                 'value': {
                     'mode': 'sh',
-                    'value': 'bash -c " "',
+                    'value': 'set -e\n\n',
                 },
                 'mutable_type': False,
                 'publicable': False,
