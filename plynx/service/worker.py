@@ -163,7 +163,7 @@ class Worker:
                             except Exception:
                                 try:
                                     status = JobReturnStatus.FAILED
-                                    with SpooledTemporaryFile() as f:
+                                    with SpooledTemporaryFile(mode='w+') as f:
                                         f.write(traceback.format_exc())
                                         self._job.node.get_log_by_name('worker').resource_id = upload_file_stream(f)
                                 except Exception:
