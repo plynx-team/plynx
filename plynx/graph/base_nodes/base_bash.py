@@ -254,6 +254,10 @@ class BaseBash(BaseNode):
                     with open(filename, 'w') as f:
                         json.dump({"path": cloud_filename}, f)
                     res_cloud_outputs[output.name] = cloud_filename
+                else:
+                    # the rest of types: create empty files
+                    with open(filename, 'a'):
+                        pass
             res_outputs[output.name] = filename
         return res_outputs, res_cloud_outputs
 
