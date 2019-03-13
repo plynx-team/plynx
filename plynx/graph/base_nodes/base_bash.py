@@ -293,7 +293,7 @@ class BaseBash(BaseNode):
     def _postprocess_outputs(self, outputs):
         for key, filename in outputs.items():
             if os.path.exists(filename):
-                matching_outputs = filter(lambda o: o.name == key, self.node.outputs)
+                matching_outputs = list(filter(lambda o: o.name == key, self.node.outputs))
                 assert len(matching_outputs) == 1, "Found more that 1 output with the same name `{}`".format(key)
                 if matching_outputs[0].file_type == FileTypes.DIRECTORY:
                     zip_filename = '{}.zip'.format(filename)
