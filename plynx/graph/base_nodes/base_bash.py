@@ -302,6 +302,8 @@ class BaseBash(BaseNode):
                     filename = zip_filename
                 with open(filename, 'rb') as f:
                     self.node.get_output_by_name(key).resource_id = upload_file_stream(f)
+            else:
+                raise IOError("Output `{}` (filename: `{}`) does not exist".format(key, filename))
 
     def _postprocess_logs(self):
         self.upload_logs(final=True)
