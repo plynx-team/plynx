@@ -278,9 +278,12 @@ class BaseBash(BaseNode):
                 value = parameter.value.values[index]
             elif parameter.parameter_type in [ParameterTypes.LIST_STR, ParameterTypes.LIST_INT]:
                 if pythonize:
-                    value = parameter.value
+                    if parameter.parameter_type == ParameterTypes.LIST_INT:
+                        value = map(int, parameter.value)
+                    else:
+                        value = parameter.value
                 else:
-                    value = ' '.join(map(str, parameter.value))  # !!!!!!!!!
+                    value = ' '.join(map(str, parameter.value))  # !! in bash, it will always be space separated string
             elif parameter.parameter_type == ParameterTypes.CODE:
                 value = parameter.value.value
             elif parameter.parameter_type == ParameterTypes.INT and pythonize:
