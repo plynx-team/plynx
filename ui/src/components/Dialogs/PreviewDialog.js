@@ -1,12 +1,14 @@
 import React, { Component } from 'react';
+import { CsvToHtmlTable } from 'react-csv-to-table';
 import Dialog from './Dialog.js'
 import LoadingScreen from '../LoadingScreen.js'
 import { PLynxApi } from '../../API.js';
 import { API_ENDPOINT, CLOUD_STORAGE_PREFIX, CLOUD_STORAGE_POSTFIX } from '../../configConsts.js';
+import './PreviewDialog.css';
 
 const FileDownload = require('react-file-download');
 
-const SPECIAL_PREVIEW_TYPES = ['image', 'pdf', 'cloud-storage']
+const SPECIAL_PREVIEW_TYPES = ['image', 'pdf', 'cloud-storage', 'csv']
 const NON_TEXT_TYPES = ['image', 'pdf']
 
 
@@ -117,6 +119,19 @@ export default class PreviewDialog extends Component {
                 this.state.content.path &&
                 <a href={CLOUD_STORAGE_PREFIX + this.state.content.path.split('//')[1] + CLOUD_STORAGE_POSTFIX}>{this.state.content.path}</a>
               }
+            </div>
+          }
+          { (this.state.file_type === 'csv' || this.state.file_type === 'tsv') &&
+            <div>
+              {this.previewMessage(this.state.resource_id, this.state.download_name)}
+              <CsvToHtmlTable
+                data={this.state.content}
+                csvDelimiter={this.state.file_type === 'tsv' ? "\t" : ","}
+                tableClassName="preview-table"
+                tableRowClassName="preview-table-row"
+                tableColumnClassName="preview-table-col"
+                hasHeader={false}
+              />
             </div>
           }
         </div>
