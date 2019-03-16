@@ -33,6 +33,7 @@ export default class FileItem extends Component {
         </div>
         { listTextElement('Status ' + this.props.node_status, this.props.node_status) }
         { listTextElement('Id', this.props._id) }
+        { listTextElement('Author', this.props.user.username) }
         { listTextElement('Created', this.props.insertion_date) }
       </a>
     );

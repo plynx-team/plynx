@@ -5,7 +5,7 @@ from plynx.db import GraphCollectionManager, Graph
 from plynx.db import GraphCancellationManager
 from flask import request, g
 from plynx.web import app, requires_auth
-from plynx.utils.common import to_object_id, JSONEncoder
+from plynx.utils.common import JSONEncoder
 from plynx.constants import GraphRunningStatus, GraphPostAction, GraphPostStatus
 from plynx.utils.config import get_web_config
 
@@ -13,8 +13,7 @@ from plynx.utils.config import get_web_config
 graph_collection_manager = GraphCollectionManager()
 graph_cancellation_manager = GraphCancellationManager()
 WEB_CONFIG = get_web_config()
-COUNT_QUERY_KEYS = {'author', 'search', 'status'}
-PAGINATION_QUERY_KEYS = COUNT_QUERY_KEYS.union({'per_page', 'offset', 'recent'})
+PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'recent', 'search', 'status'}
 
 
 def _make_fail_response(message):
@@ -42,12 +41,12 @@ def get_graph(graph_id=None):
             return 'Graph was not found', 404
     else:
         query = json.loads(request.args.get('query', "{}"))
-        query["author"] = to_object_id(g.user._id)
-        count_query = {k: v for k, v in query.items() if k in COUNT_QUERY_KEYS}
         graphs_query = {k: v for k, v in query.items() if k in PAGINATION_QUERY_KEYS}
+        res = graph_collection_manager.get_db_graphs(**graphs_query)
+
         return JSONEncoder().encode({
-            'graphs': [graph for graph in graph_collection_manager.get_db_graphs(**graphs_query)],
-            'total_count': graph_collection_manager.get_db_graphs_count(**count_query),
+            'graphs': res['list'],
+            'total_count': res['metadata'][0]['total'] if res['metadata'] else 0,
             'status': 'success'})
 
 

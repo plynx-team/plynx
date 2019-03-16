@@ -18,6 +18,7 @@ export default class GraphItem extends Component {
 
         { listTextElement('Status ' + this.props.graph_running_status, this.props.graph_running_status) }
         { listTextElement('Id', this.props._id) }
+        { listTextElement('Author', this.props.user.username) }
         { listTextElement('Created', this.props.insertion_date) }
         { listTextElement('Updated', this.props.update_date) }
       </a>

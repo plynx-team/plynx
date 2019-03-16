@@ -5,11 +5,13 @@ import './SearchBar.css';
 const WAIT_INTERVAL = 400;
 
 export default class SearchBar extends Component {
-  search = '';
-
-  state = {
-    search: this.search
-  };
+  constructor(props) {
+    super(props);
+    this.search = this.props.search || '';
+    this.state = {
+      search: this.search
+    };
+  }
 
   componentWillMount() {
     this.timer = null;

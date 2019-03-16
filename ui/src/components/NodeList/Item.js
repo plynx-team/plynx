@@ -17,6 +17,7 @@ export default class Item extends Component {
 
         { listTextElement('Status ' + this.props.node_status, this.props.node_status) }
         { listTextElement('Id', this.props._id) }
+        { listTextElement('Author', this.props.user.username) }
         { listTextElement('Created', this.props.insertion_date) }
         { listTextElement('Updated', this.props.update_date) }
       </a>
