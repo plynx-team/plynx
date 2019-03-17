@@ -36,7 +36,7 @@ export default class FileUploadDialog extends Component {
       this.setState({
         file_path: this.file,
         file_name: this.file ? this.file.name : null,
-        title: this.file && this.state.title == DEFAULT_TITLE ? this.file.name : this.state.title
+        title: this.file && this.state.title === DEFAULT_TITLE ? this.file.name : this.state.title
       })
     }
   }
