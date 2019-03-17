@@ -4,7 +4,7 @@ import traceback
 from plynx.db import GraphCollectionManager, Graph
 from plynx.db import GraphCancellationManager
 from flask import request, g
-from plynx.web import app, requires_auth
+from plynx.web import app, requires_auth, make_fail_response
 from plynx.utils.common import JSONEncoder
 from plynx.constants import GraphRunningStatus, GraphPostAction, GraphPostStatus
 from plynx.utils.config import get_web_config
@@ -14,13 +14,6 @@ graph_collection_manager = GraphCollectionManager()
 graph_cancellation_manager = GraphCancellationManager()
 WEB_CONFIG = get_web_config()
 PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'recent', 'search', 'status'}
-
-
-def _make_fail_response(message):
-    return JSONEncoder().encode({
-        'status': GraphPostStatus.FAILED,
-        'message': message
-    })
 
 
 @app.route('/plynx/api/v0/graphs', methods=['GET'])
@@ -65,7 +58,7 @@ def post_graph():
         for action in actions:
             if action == GraphPostAction.SAVE:
                 if graph.graph_running_status != GraphRunningStatus.CREATED:
-                    return _make_fail_response('Cannot save graph with status `{}`'.format(graph.graph_running_status))
+                    return make_fail_response('Cannot save graph with status `{}`'.format(graph.graph_running_status))
                 graph.save(force=True)
 
             elif action == GraphPostAction.AUTO_LAYOUT:
@@ -77,7 +70,7 @@ def post_graph():
 
             elif action == GraphPostAction.APPROVE:
                 if graph.graph_running_status != GraphRunningStatus.CREATED:
-                    return _make_fail_response('Graph status `{}` expected. Found `{}`'.format(GraphRunningStatus.CREATED, graph.graph_running_status))
+                    return make_fail_response('Graph status `{}` expected. Found `{}`'.format(GraphRunningStatus.CREATED, graph.graph_running_status))
 
                 validation_error = graph.get_validation_error()
                 if validation_error:
@@ -104,7 +97,7 @@ def post_graph():
                         GraphRunningStatus.RUNNING,
                         GraphRunningStatus.FAILED_WAITING
                         ]:
-                    return _make_fail_response('Graph status `{}` expected. Found `{}`'.format(GraphRunningStatus.RUNNING, graph.graph_running_status))
+                    return make_fail_response('Graph status `{}` expected. Found `{}`'.format(GraphRunningStatus.RUNNING, graph.graph_running_status))
                 graph_cancellation_manager.cancel_graph(graph._id)
             elif action == GraphPostAction.GENERATE_CODE:
                 code = graph.generate_code()
@@ -114,7 +107,7 @@ def post_graph():
                     'code': code,
                 })
             else:
-                return _make_fail_response('Unknown action `{}`'.format(action))
+                return make_fail_response('Unknown action `{}`'.format(action))
 
         return JSONEncoder().encode(dict(
             {
@@ -125,4 +118,4 @@ def post_graph():
             }, **extra_response))
     except Exception as e:
         app.logger.error(traceback.format_exc())
-        return _make_fail_response('Internal error: "{}"'.format(repr(e)))
+        return make_fail_response('Internal error: "{}"'.format(repr(e)))

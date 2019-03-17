@@ -16,6 +16,9 @@ class DemoUserManager(object):
 
     @staticmethod
     def create_demo_user():
+        if not DemoUserManager.demo_config.enabled:
+            return None
+
         user = User()
         user.username = 'demo-{}'.format(DemoUserManager._id_generator())
         user.hash_password(DemoUserManager._id_generator(size=8))

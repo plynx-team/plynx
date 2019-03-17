@@ -1,7 +1,7 @@
 #!/usr/bin/env python
-from flask import request, abort, g
+from flask import g
 from plynx.db import DemoUserManager
-from plynx.web import app, requires_auth, register_user
+from plynx.web import app, requires_auth, make_fail_response
 from plynx.utils.common import JSONEncoder
 
 
@@ -22,6 +22,8 @@ def get_auth_token():
 @app.route('/plynx/api/v0/demo', methods=['POST'])
 def post_demo_user():
     user = demo_user_manager.create_demo_user()
+    if not user:
+        return make_fail_response('Failed to create demo user')
     demo_user_manager.create_demo_graphs(user)
 
     access_token = user.generate_access_token(expiration=1800)

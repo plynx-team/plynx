@@ -4,7 +4,7 @@ import json
 from plynx.db import Node, NodeCollectionManager
 from flask import request, g
 from plynx.graph.base_nodes import NodeCollection
-from plynx.web import app, requires_auth
+from plynx.web import app, requires_auth, make_fail_response
 from plynx.utils.common import to_object_id, JSONEncoder
 from plynx.constants import NodeStatus, NodePostAction, NodePostStatus
 
@@ -12,13 +12,6 @@ PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'base_node_names', 'sea
 
 node_collection_manager = NodeCollectionManager()
 node_collection = NodeCollection()
-
-
-def _make_fail_response(message):
-    return JSONEncoder().encode({
-        'status': NodePostStatus.FAILED,
-        'message': message
-    })
 
 
 @app.route('/plynx/api/v0/nodes', methods=['GET'])
@@ -68,13 +61,13 @@ def post_node():
         action = body['action']
         if action == NodePostAction.SAVE:
             if node.node_status != NodeStatus.CREATED and node.base_node_name != 'file':
-                return _make_fail_response('Cannot save node with status `{}`'.format(node.node_status))
+                return make_fail_response('Cannot save node with status `{}`'.format(node.node_status))
 
             node.save(force=True)
 
         elif action == NodePostAction.APPROVE:
             if node.node_status != NodeStatus.CREATED:
-                return _make_fail_response('Node status `{}` expected. Found `{}`'.format(NodeStatus.CREATED, node.node_status))
+                return make_fail_response('Node status `{}` expected. Found `{}`'.format(NodeStatus.CREATED, node.node_status))
             validation_error = node.get_validation_error()
             if validation_error:
                 return JSONEncoder().encode({
@@ -97,13 +90,13 @@ def post_node():
                 })
         elif action == NodePostAction.DEPRECATE:
             if node.node_status == NodeStatus.CREATED:
-                return _make_fail_response('Node status `{}` not expected.'.format(node.node_status))
+                return make_fail_response('Node status `{}` not expected.'.format(node.node_status))
 
             node.node_status = NodeStatus.DEPRECATED
             node.save(force=True)
         elif action == NodePostAction.MANDATORY_DEPRECATE:
             if node.node_status == NodeStatus.CREATED:
-                return _make_fail_response('Node status `{}` not expected.'.format(node.node_status))
+                return make_fail_response('Node status `{}` not expected.'.format(node.node_status))
 
             node.node_status = NodeStatus.MANDATORY_DEPRECATED
             node.save(force=True)
@@ -118,7 +111,7 @@ def post_node():
                 })
 
         else:
-            return _make_fail_response('Unknown action `{}`'.format(action))
+            return make_fail_response('Unknown action `{}`'.format(action))
 
         return JSONEncoder().encode(
             {
@@ -127,4 +120,4 @@ def post_node():
             })
     except Exception as e:
         app.logger.error(e)
-        return _make_fail_response('Internal error: "{}"'.format(str(e)))
+        return make_fail_response('Internal error: "{}"'.format(str(e)))
