@@ -3,7 +3,7 @@ import argparse
 from collections import namedtuple
 from plynx import __version__
 from plynx.utils.config import get_config, set_parameter
-from plynx.service import run_master, run_worker, run_local
+from plynx.service import run_master, run_worker, run_local, run_users
 from plynx.web import run_backend
 from plynx.utils.logs import set_logging_level
 
@@ -39,6 +39,10 @@ def backend(args):
 
 def version(args):
     print(__version__)
+
+
+def users(args):
+    run_users(**args)
 
 
 class CLIFactory(object):
@@ -165,6 +169,21 @@ class CLIFactory(object):
             type=str,
             levels=['web', 'endpoint'],
             ),
+
+        # Users
+        'username': Arg(
+            ('--username',),
+            help='Username of the user, required to create/delete a user',
+            type=str),
+        'password': Arg(
+            ('--password',),
+            help='Password of the user, required to create a user '
+                 'without --use_random_password',
+            type=str),
+        'mode': Arg(
+            ('--mode',),
+            help='Mode',
+            type=str),
     }
 
     SUBPARSERS = (
@@ -194,6 +213,10 @@ class CLIFactory(object):
             'func': version,
             'help': "Show the version",
             'args': tuple(),
+        }, {
+            'func': users,
+            'help': "Users cli utils",
+            'args': ('mode', 'username', 'password'),
         }
     )
 

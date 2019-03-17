@@ -4,3 +4,4 @@ from plynx.service.messages import WorkerMessage, RunStatus, WorkerMessageType, 
 from plynx.service.master import Master, run_master
 from plynx.service.worker import Worker, run_worker
 from plynx.service.local import run_local
+from plynx.service.users import run_users
