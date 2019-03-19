@@ -50,6 +50,11 @@
   background-color: #62a6f3;
 }
 
+.list-item .ItemHeader {
+  display: inline-grid;
+  grid-template-columns: 1fr 40px;
+}
+
 .list-item .TitleDescription {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -65,4 +70,12 @@
 .list-item .TitleDescription .Description {
   text-overflow: inherit;
   overflow: inherit;
+}
+
+.list-item .star-hidden {
+  display: none;
+}
+
+.list-item .star-visible {
+  display: block;
 }

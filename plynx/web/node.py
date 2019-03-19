@@ -57,6 +57,7 @@ def post_node():
 
         node = Node.from_dict(body['node'])
         node.author = g.user._id
+        node.starred = False
 
         action = body['action']
         if action == NodePostAction.SAVE:

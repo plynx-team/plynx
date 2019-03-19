@@ -6,12 +6,17 @@ export default class Item extends Component {
   render() {
     return (
       <a className='list-item node-list-item' href={'/nodes/' + this.props._id}>
-        <div className='TitleDescription'>
-          <div className='Title'>
-            {this.props.title}
+        <div className='ItemHeader'>
+          <div className='TitleDescription'>
+            <div className='Title'>
+              {this.props.title}
+            </div>
+            <div className='Description'>
+              &ldquo;{this.props.description}&rdquo;
+            </div>
           </div>
-          <div className='Description'>
-            &ldquo;{this.props.description}&rdquo;
+          <div className={this.props.starred ? 'star-visible' : 'star-hidden'}>
+            <img src="/icons/star.svg" alt="star" />
           </div>
         </div>
 

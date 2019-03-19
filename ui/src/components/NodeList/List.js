@@ -18,6 +18,7 @@ export default class List extends Component {
         node_running_status={node.node_running_status}
         node_status={node.node_status}
         user={node._user[0]}
+        starred={node.starred}
         />);
 
     return (

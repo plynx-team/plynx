@@ -37,11 +37,6 @@ class Graph(DBObject):
             default=None,
             is_list=False,
             ),
-        'public': DBObjectField(
-            type=bool,
-            default=False,
-            is_list=False,
-            ),
         'nodes': DBObjectField(
             type=Node,
             default=list,

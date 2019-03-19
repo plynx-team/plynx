@@ -19,6 +19,7 @@ export default class FileList extends Component {
         fileObj={file}
         onClick={(fileObj) => this.props.onClick(fileObj)}
         user={file._user[0]}
+        starred={file.starred}
         />);
 
     return (

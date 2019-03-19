@@ -28,7 +28,7 @@ class File(BaseNode):
         node.base_node_name = cls.get_base_name()
         node.node_status = NodeStatus.READY
         node.node_running_status = NodeRunningStatus.STATIC
-        node.public = False
+        node.starred = False
         node.parameters = []
         node.outputs = [
             Output(

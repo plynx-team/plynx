@@ -76,7 +76,7 @@
     "y": 0,
     "x": 0,
     "parent_node": null,
-    "public": true,
+    "starred": true,
     "description": "Grep node",
     "insertion_date": "2018-09-11T05:17:54.426Z"
   },
@@ -149,7 +149,7 @@
     "y": 0,
     "x": 0,
     "parent_node": null,
-    "public": true,
+    "starred": true,
     "description": "Sum values",
     "insertion_date": "2018-09-11T05:17:54.426Z"
   }

@@ -17,14 +17,21 @@ export default class FileItem extends Component {
 
     return (
       <a className='list-item file-list-item' href={null} onClick={(e)=>this.onClick(e)}>
-        <div className='TitleDescription'>
-          <div className='Title'>
-            {this.props.title}
+
+        <div className='ItemHeader'>
+          <div className='TitleDescription'>
+            <div className='Title'>
+              {this.props.title}
+            </div>
+            <div className='Description'>
+              &ldquo;{this.props.description}&rdquo;
+            </div>
           </div>
-          <div className='Description'>
-            &ldquo;{this.props.description}&rdquo;
+          <div className={this.props.starred ? 'star-visible' : 'star-hidden'}>
+            <img src="/icons/star.svg" alt="star" />
           </div>
         </div>
+
         <div className={'Type'}>
           <div className='Widget'>
             <img src={"/icons/file_types/" + this.props.file_type + ".svg"} width="20" height="20" alt={this.props.file_type}/>
