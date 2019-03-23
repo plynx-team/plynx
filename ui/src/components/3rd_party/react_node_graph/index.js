@@ -382,7 +382,6 @@ class ReactBlockGraph extends React.Component {
             return <Block
                       index={i++}
                       nid={block.nid}
-                      color="#000000"
                       title={block.title}
                       description={block.description}
                       inputs={block.fields.in}

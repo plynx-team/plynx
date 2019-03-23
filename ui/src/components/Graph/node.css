@@ -39,7 +39,7 @@ svg {
 .node-header {
   cursor: all-scroll;
 
-  background: rgba(248,80,50,1);
+  background: #000;
 
   padding-left: 10px;
   text-transform: uppercase;
@@ -60,6 +60,10 @@ svg {
 
   display: grid;
   grid-template-columns: 1fr 13px;
+}
+
+.node.selected .node-header {
+  background: #335;
 }
 
 .node-title {
