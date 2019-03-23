@@ -1,4 +1,5 @@
 from past.builtins import basestring
+from collections import OrderedDict
 from plynx.utils.common import to_object_id, parse_search_string
 from plynx.utils.db_connector import get_db_connector
 
@@ -63,8 +64,15 @@ class NodeCollectionManager(object):
             aggregate_list.append({"$match": and_query})
 
         # sort
+        sort_dict = OrderedDict()
+        if 'sort' in search_parameters:
+            # TODO more sort options
+            if search_parameters['sort'] == 'starred':
+                sort_dict['starred'] = -1
+        sort_dict['insertion_date'] = -1
+
         aggregate_list.append({
-            "$sort": {"insertion_date": -1}
+            "$sort": sort_dict
             }
         )
         # counts and pagination
