@@ -1,4 +1,4 @@
-from pymongo import MongoClient, TEXT
+import pymongo
 from plynx.constants import Collections
 from plynx.utils.config import get_db_config
 
@@ -13,11 +13,16 @@ def init_indexes():
 
     _db[Collections.GRAPHS].create_index('insertion_date')
     _db[Collections.GRAPHS].create_index('update_date')
-    _db[Collections.GRAPHS].create_index([('title', TEXT), ('description', TEXT)])
+    _db[Collections.GRAPHS].create_index([('title', pymongo.TEXT), ('description', pymongo.TEXT)])
 
     _db[Collections.NODE_CACHE].create_index('key', unique=True)
 
-    _db[Collections.NODES].create_index([('title', TEXT), ('description', TEXT)])
+    _db[Collections.NODES].create_index('insertion_date')
+    _db[Collections.NODES].create_index([
+        ('starred', pymongo.DESCENDING),
+        ('insertion_date', pymongo.DESCENDING)
+    ])
+    _db[Collections.NODES].create_index([('title', pymongo.TEXT), ('description', pymongo.TEXT)])
 
     _db[Collections.USERS].create_index('username', unique=True)
 
@@ -27,7 +32,7 @@ def get_db_connector():
     if _db:
         return _db
     connectionConfig = get_db_config()
-    client = MongoClient(connectionConfig.host, connectionConfig.port)
+    client = pymongo.MongoClient(connectionConfig.host, connectionConfig.port)
     _db = client['plynx']
     if connectionConfig.user:
         _db.authenticate(connectionConfig.user, connectionConfig.password)
