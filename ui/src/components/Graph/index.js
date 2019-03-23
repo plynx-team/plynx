@@ -519,10 +519,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
     node.y = pos.top;
   }
 
-  onBlockStartMove(nid) {
-    console.log('start move : ' + nid)
-  }
-
   handleBlocksSelect(nids) {
     console.log('blocks selected : ' + nids);
 
@@ -1027,7 +1023,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
             graphId={this.state.graphId}
             editable={this.state.editable}
             onBlockMove={(nid, pos)=>this.onBlockMove(nid, pos)}
-            onBlockStartMove={(nid)=>this.onBlockStartMove(nid)}
             onNewConnector={(n1,o,n2,i)=>this.onNewConnector(n1,o,n2,i)}
             onRemoveConnector={(connector)=>this.onRemoveConnector(connector)}
             onOutputClick={(nid, outputIndex)=>this.onOutputClick(nid, outputIndex)}

@@ -17,7 +17,7 @@ class Block extends React.Component {
   }
 
   handleDragStart(event, ui) {
-    this.props.onBlockStart(this.props.nid, ui);
+    this.props.onBlockStart(this.props.nid, ui.position);
   }
 
   handleDragStop(event, ui) {
@@ -25,7 +25,7 @@ class Block extends React.Component {
   }
 
   handleDrag(event, ui) {
-    this.props.onBlockMove(this.props.index, ui.position);
+    this.props.onBlockMove(this.props.index, this.props.nid, ui.position);
   }
 
   shouldComponentUpdate(nextProps, nextState) {

@@ -4,6 +4,7 @@ import Block from './lib/Block';
 import Spline from './lib/Spline';
 import SVGComponent from './lib/SVGComponent';
 
+import { ObjectID } from 'bson';
 import PropTypes from 'prop-types'
 import { DropTarget } from 'react-dnd'
 import ItemTypes from '../../../DragAndDropsItemTypes'
@@ -96,10 +97,10 @@ class ReactBlockGraph extends React.Component {
   onMouseMove(e) {
     e.stopPropagation();
 
-      const {svgComponent: {refs: {svg}}} = this.refs;
+    const {svgComponent: {refs: {svg}}} = this.refs;
 
-      //Get svg element position to substract offset top and left
-      const svgRect = svg.getBoundingClientRect();
+    //Get svg element position to substract offset top and left
+    const svgRect = svg.getBoundingClientRect();
 
     this.setState({
         mousePos: {
@@ -109,19 +110,49 @@ class ReactBlockGraph extends React.Component {
       });
   }
 
-  handleBlockStart(nid) {
-    this.props.onBlockStartMove(nid);
+  handleBlockStart(nid, pos) {
+    if (this.props.onBlockStartMove) {
+      this.props.onBlockStartMove(nid, pos);
+    }
+    this.initialPos = pos;
   }
 
   handleBlockStop(nid, pos) {
-    this.props.onBlockMove(nid, pos);
+    let d = this.state.data;
+    const selectedNIDs = new Set(this.selectedNIDs);
+    for (var ii = 0; ii < d.blocks.length; ++ii) {
+      if (!selectedNIDs.has(d.blocks[ii].nid)) {
+        continue
+      }
+      var blockPos = {
+        left: d.blocks[ii].x,
+        top: d.blocks[ii].y,
+      }
+      this.props.onBlockMove(d.blocks[ii].nid, blockPos);
+    }
   }
 
-  handleBlockMove(index, pos) {
+  handleBlockMove(index, nid, pos) {
     let d = this.state.data;
 
+    // For some reason, we need to treat dragged object differently from selected
     d.blocks[index].x = pos.left;
     d.blocks[index].y = pos.top;
+
+    var dx = pos.left - this.initialPos.left;
+    var dy = pos.top - this.initialPos.top;
+    var ts = new ObjectID().toString();
+    var idx;
+    for (var ii = 0; ii < d.blocks.length; ++ii) {
+      idx = this.selectedNIDs.indexOf(d.blocks[ii].nid);
+      if (idx < 0 || ii === index) {
+        continue;
+      }
+      d.blocks[ii].x += dx;
+      d.blocks[ii].y += dy;
+      d.blocks[ii]._ts = ts;
+    }
+    this.initialPos = pos;
 
     this.setState({data : d});
   }
@@ -373,9 +404,9 @@ class ReactBlockGraph extends React.Component {
 
                       specialParameterNames={block.specialParameterNames}
 
-                      onBlockStart={(nid)=>this.handleBlockStart(nid)}
+                      onBlockStart={(nid, pos)=>this.handleBlockStart(nid, pos)}
                       onBlockStop={(nid, pos)=>this.handleBlockStop(nid, pos)}
-                      onBlockMove={(index,pos)=>this.handleBlockMove(index,pos)}
+                      onBlockMove={(index, nid, pos)=>this.handleBlockMove(index, nid, pos)}
 
                       onStartConnector={(nid, outputIndex)=>this.handleStartConnector(nid, outputIndex)}
                       onCompleteConnector={(nid, inputIndex)=>this.handleCompleteConnector(nid, inputIndex)}
