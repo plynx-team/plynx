@@ -131,20 +131,24 @@ class ReactBlockGraph extends React.Component {
       this.props.onBlockStartMove(nid, pos);
     }
     this.initialPos = pos;
+    if (this.selectedNIDs.indexOf(nid) < 0) {
+      this.moveOnlyCurrentBlock = true;
+    } else {
+      this.moveOnlyCurrentBlock = false;
+    }
   }
 
   handleBlockStop(nid, pos) {
     let d = this.state.data;
     const selectedNIDs = new Set(this.selectedNIDs);
     for (var ii = 0; ii < d.blocks.length; ++ii) {
-      if (!selectedNIDs.has(d.blocks[ii].nid)) {
-        continue
+      if (selectedNIDs.has(d.blocks[ii].nid) || (this.moveOnlyCurrentBlock && d.blocks[ii].nid === nid)) {
+        var blockPos = {
+          left: d.blocks[ii].x,
+          top: d.blocks[ii].y,
+        }
+        this.props.onBlockMove(d.blocks[ii].nid, blockPos);
       }
-      var blockPos = {
-        left: d.blocks[ii].x,
-        top: d.blocks[ii].y,
-      }
-      this.props.onBlockMove(d.blocks[ii].nid, blockPos);
     }
   }
 
@@ -155,18 +159,23 @@ class ReactBlockGraph extends React.Component {
     d.blocks[index].x = pos.left;
     d.blocks[index].y = pos.top;
 
-    var dx = pos.left - this.initialPos.left;
-    var dy = pos.top - this.initialPos.top;
-    var ts = new ObjectID().toString();
-    var idx;
-    for (var ii = 0; ii < d.blocks.length; ++ii) {
-      idx = this.selectedNIDs.indexOf(d.blocks[ii].nid);
-      if (idx < 0 || ii === index) {
-        continue;
+    if (!this.moveOnlyCurrentBlock) {
+      var dx = pos.left - this.initialPos.left;
+      var dy = pos.top - this.initialPos.top;
+      var ts = new ObjectID().toString();
+      var idx;
+      for (var ii = 0; ii < d.blocks.length; ++ii) {
+        if (ii === index) {
+          continue;
+        }
+        idx = this.selectedNIDs.indexOf(d.blocks[ii].nid);
+        if (idx < 0) {
+          continue;
+        }
+        d.blocks[ii].x += dx;
+        d.blocks[ii].y += dy;
+        d.blocks[ii]._ts = ts;
       }
-      d.blocks[ii].x += dx;
-      d.blocks[ii].y += dy;
-      d.blocks[ii]._ts = ts;
     }
     this.initialPos = pos;
 
@@ -249,7 +258,7 @@ class ReactBlockGraph extends React.Component {
         return;
       }
       for (var ii = 0; ii < this.selectedNIDs.length; ++ii) {
-          this.props.onBlockDeselect(this.selectedNIDs[ii]);
+        this.props.onBlockDeselect(this.selectedNIDs[ii]);
       }
       this.selectedNIDs = [nid];
     }
