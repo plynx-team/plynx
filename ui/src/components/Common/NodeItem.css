@@ -44,4 +44,15 @@
 .NodeDescription {
   color: white;
   padding: 5px;
+  display: inline-grid;
+  grid-template-columns: 1fr 40px;
+  width: 100%;
+}
+
+.NodeItem .star-hidden {
+  display: none;
+}
+
+.NodeItem .star-visible {
+  display: block;
 }
