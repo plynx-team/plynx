@@ -24,7 +24,7 @@ svg {
 
 .node.selected {
   border: 1px solid #666;
-  box-shadow: 0 0 8px 3px #555;
+  box-shadow: 0 0 8px 3px #99F;
 }
 
 .node-seperator {
