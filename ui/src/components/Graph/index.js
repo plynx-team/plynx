@@ -213,9 +213,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
     }
 
     var nid = queryString.parse(this.props.location.search).nid;
-    if (nid) {
-      this.block_lookup[nid].highlight = true;
-    }
 
     this.setState({
       "blocks": this.blocks,
@@ -226,6 +223,10 @@ ENDPOINT = '` + API_ENDPOINT + `'
       "title": this.graph.title,
       "description": this.graph.description,
       "graphRunningStatus": this.graph.graph_running_status,
+    }, () => {
+      if (nid) {
+        this.mainGraph.decoratedComponentInstance.selectBlocks([nid]);
+      }
     });
 
     var st = this.graph.graph_running_status.toUpperCase();
