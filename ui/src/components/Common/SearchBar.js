@@ -31,8 +31,8 @@ export default class SearchBar extends Component {
     }
   }
 
-  clear() {
-    this.searchUpdate('');
+  update(newSearch) {
+    this.searchUpdate(newSearch);
     this.triggerChange();
   }
 
