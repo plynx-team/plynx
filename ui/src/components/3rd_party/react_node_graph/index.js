@@ -12,6 +12,8 @@ import ItemTypes from '../../../DragAndDropsItemTypes'
 import {computeOutOffsetByIndex, computeInOffsetByIndex} from './lib/util';
 import { KEY_MAP, NODE_RUNNING_STATUS } from '../../../constants.js';
 
+const STEP = 224;
+
 const boxTarget = {
   drop(props, monitor, component) {
     var graphProps = props;
@@ -68,6 +70,7 @@ class ReactBlockGraph extends React.Component {
     this.onMouseMove = this.onMouseMove.bind(this);
     this.onMouseUp = this.onMouseUp.bind(this);
     this.commandPressed = false;
+    this.recalcSize();
   }
 
   static propTypes = {
@@ -90,8 +93,21 @@ class ReactBlockGraph extends React.Component {
     this.setState({data: nextProps.data});
   }
 
+  recalcSize() {
+    let blocks = this.state.data.blocks;
+    var width = STEP * 10;
+    var height = STEP * 8;
+    for(var ii = 0; ii < blocks.length; ++ii) {
+      width = Math.max(width, blocks[ii].x + 500);
+      height = Math.max(height, blocks[ii].y + 500);
+    }
+    this.width = Math.floor(width / STEP) * STEP + 2;
+    this.height = Math.floor(height / STEP) * STEP + 2;
+  }
+
   onMouseUp(e) {
     this.setState({dragging:false, });
+    this.recalcSize();
   }
 
   onMouseMove(e) {
@@ -423,7 +439,7 @@ class ReactBlockGraph extends React.Component {
 
           {/* render our connectors */}
 
-          <SVGComponent height="100%" width="100%" ref="svgComponent"
+          <SVGComponent height={this.height} width={this.width} ref="svgComponent"
             onClick={() => {this.handleBackgroundClick()}}>
 
             {
