@@ -1,4 +1,4 @@
-![PLynx](docs/img/logo.png?raw=true | width=200)
+![PLynx](docs/img/logo.png?raw=true "plynx" | width=200)
 
 [![Website shields.io](https://img.shields.io/circleci/project/github/khaxis/plynx.svg)](http://shields.io/)
 [![Website shields.io](https://img.shields.io/github/license/khaxis/plynx.svg)](http://shields.io/)
