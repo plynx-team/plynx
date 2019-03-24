@@ -1,5 +1,6 @@
 import os
 import boto3
+from botocore.errorfactory import ClientError
 from urllib.parse import urlparse
 from plynx.utils.remote.base import ContentsHandlerBase, RemoteBase
 
@@ -10,10 +11,20 @@ class ContentsHandlerS3(ContentsHandlerBase):
         self.path = urlparse(path).path[1:]     # get the file path in the bucket
 
     def get_contents_to_file(self, file_obj):
-        self.remote.s3.download_fileobj(self.remote.bucket_name, self.path, file_obj)
+        self.remote.s3.download_fileobj(Bucket=self.remote.bucket_name, Key=self.path, Fileobj=file_obj)
 
     def set_contents_from_file(self, file_obj):
-        self.remote.s3.upload_fileobj(file_obj, self.remote.bucket_name, self.path)
+        self.remote.s3.upload_fileobj(Fileobj=file_obj, Bucket=self.remote.bucket_name, Key=self.path)
+
+    def remove(self):
+        self.remote.s3.delete_object(Bucket=self.remote.bucket_name, Key=self.path)
+
+    def exists(self):
+        try:
+            self.remote.s3.head_object(Bucket=self.remote.bucket_name, Key=self.path)
+        except ClientError:
+            return False
+        return True
 
 
 class RemoteS3(RemoteBase):
