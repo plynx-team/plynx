@@ -144,7 +144,7 @@ class BaseBash(BaseNode):
                 'removable': False,
             }),
             Parameter.from_dict({
-                'name': 'ttl',
+                'name': '_timeout',
                 'parameter_type': ParameterTypes.INT,
                 'value': 600,
                 'mutable_type': False,
