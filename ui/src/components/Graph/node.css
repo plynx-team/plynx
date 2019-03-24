@@ -158,6 +158,12 @@ svg {
   stroke: #337ab7;
 }
 
+.select-rect {
+  fill: rgba(0, 128, 255, 0.1);
+  stroke-width: 1;
+  stroke: rgb(255,255,255);
+}
+
 .trash-icon .trash-icon-trashcan {
   opacity: 0.8;
 }

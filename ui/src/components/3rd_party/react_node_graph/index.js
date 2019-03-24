@@ -14,6 +14,14 @@ import { KEY_MAP, NODE_RUNNING_STATUS } from '../../../constants.js';
 
 const STEP = 224;
 
+const HEADER_HEIGHT = 23;
+const DESCRIPTION_HEIGHT = 20;
+const FOOTER_HEIGHT = 10;
+const BORDERS_HEIGHT = 2;
+const ITEM_HEIGHT = 20;
+const SPECIAL_PARAMETER_HEIGHT = 20;
+const COMMON_HEIGHT = HEADER_HEIGHT + DESCRIPTION_HEIGHT + FOOTER_HEIGHT + BORDERS_HEIGHT;
+
 const boxTarget = {
   drop(props, monitor, component) {
     var graphProps = props;
@@ -67,6 +75,7 @@ class ReactBlockGraph extends React.Component {
       graphId: this.props.graphId
     }
 
+    this.onMouseDown = this.onMouseDown.bind(this);
     this.onMouseMove = this.onMouseMove.bind(this);
     this.onMouseUp = this.onMouseUp.bind(this);
     this.commandPressed = false;
@@ -80,11 +89,13 @@ class ReactBlockGraph extends React.Component {
   }
 
   componentDidMount() {
+    document.addEventListener('mousedown', this.onMouseDown);
     document.addEventListener('mousemove', this.onMouseMove);
     document.addEventListener('mouseup', this.onMouseUp);
   }
 
   componentWillUnmount() {
+    document.removeEventListener('mousedown', this.onMouseDown);
     document.removeEventListener('mousemove', this.onMouseMove);
     document.removeEventListener('mouseup', this.onMouseUp);
   }
@@ -105,9 +116,50 @@ class ReactBlockGraph extends React.Component {
     this.height = Math.floor(height / STEP) * STEP + 2;
   }
 
+  onMouseDown(e) {
+    if (this.preventDrawingBox) {
+      return;
+    }
+    const {svgComponent: {refs: {svg}}} = this.refs;
+
+    //Get svg element position to substract offset top and left
+    const svgRect = svg.getBoundingClientRect();
+
+    this.setState({
+        firstMousePos: {
+          x: e.pageX - svgRect.left,
+          y: e.pageY - svgRect.top
+        }
+      });
+  }
+
   onMouseUp(e) {
     this.setState({dragging:false, });
     this.recalcSize();
+
+    if (this.state.firstMousePos) {
+      let blocks = this.state.data.blocks;
+      var minX = Math.min(this.state.firstMousePos.x, this.state.mousePos.x);
+      var maxX = Math.max(this.state.firstMousePos.x, this.state.mousePos.x);
+      var minY = Math.min(this.state.firstMousePos.y, this.state.mousePos.y);
+      var maxY = Math.max(this.state.firstMousePos.y, this.state.mousePos.y);
+      var nidsToSelect = [];
+      for(var ii = 0; ii < blocks.length; ++ii) {
+        var blockExtraHeight = ITEM_HEIGHT * Math.max(blocks[ii].fields.in.length, blocks[ii].fields.out.length);
+        if (minX < blocks[ii].x + 180 && blocks[ii].x < maxX &&
+            minY < blocks[ii].y + COMMON_HEIGHT + blockExtraHeight && blocks[ii].y < maxY) {
+              nidsToSelect.push(blocks[ii].nid);
+            }
+      }
+
+      if (nidsToSelect.length === 0 && !this.commandPressed) {
+        this.deselectAll(true);
+      } else {
+        this.selectBlocks(nidsToSelect);
+      }
+    }
+
+    this.setState({firstMousePos: undefined})
   }
 
   onMouseMove(e) {
@@ -127,6 +179,7 @@ class ReactBlockGraph extends React.Component {
   }
 
   handleBlockStart(nid, pos) {
+    this.preventDrawingBox = true;
     if (this.props.onBlockStartMove) {
       this.props.onBlockStartMove(nid, pos);
     }
@@ -139,6 +192,7 @@ class ReactBlockGraph extends React.Component {
   }
 
   handleBlockStop(nid, pos) {
+    this.preventDrawingBox = false;
     let d = this.state.data;
     const selectedNIDs = new Set(this.selectedNIDs);
     for (var ii = 0; ii < d.blocks.length; ++ii) {
@@ -246,27 +300,9 @@ class ReactBlockGraph extends React.Component {
 
   handleBlockSelect(nid) {
     var selectedNIDsIndex = this.selectedNIDs.indexOf(nid);
-    if (this.commandPressed) {
-      if (selectedNIDsIndex >= 0) {
-        this.props.onBlockDeselect(this.selectedNIDs[selectedNIDsIndex]);
-        this.selectedNIDs.splice(selectedNIDsIndex, 1);
-      } else {
-        this.selectedNIDs.push(nid);
-      }
-    } else {  // !this.commandPressed
-      if (selectedNIDsIndex >= 0) {
-        return;
-      }
-      for (var ii = 0; ii < this.selectedNIDs.length; ++ii) {
-        this.props.onBlockDeselect(this.selectedNIDs[ii]);
-      }
-      this.selectedNIDs = [nid];
+    if (selectedNIDsIndex < 0) {
+      this.selectBlocks([nid])
     }
-
-    this.setState({
-      selectedNIDs: this.selectedNIDs
-    });
-    this.props.onBlocksSelect(this.selectedNIDs);
   }
 
   deselectAll(changeState) {
@@ -287,17 +323,31 @@ class ReactBlockGraph extends React.Component {
   }
 
   selectBlocks(nids) {
-    this.commandPressed = true;
-    nids.map(nid => this.handleBlockSelect(nid));
-    this.commandPressed = false;
-  }
-
-  handleBackgroundClick() {
-    console.log("handleBackgroundClick", this.commandPressed);
     if (this.commandPressed) {
-      return;
+      for (var ii = 0; ii < nids.length; ++ii) {
+        var selectedNIDsIndex = this.selectedNIDs.indexOf(nids[ii]);
+        if (selectedNIDsIndex >= 0) {
+          this.props.onBlockDeselect(this.selectedNIDs[selectedNIDsIndex]);
+          this.selectedNIDs.splice(selectedNIDsIndex, 1);
+        } else {
+          this.selectedNIDs.push(nids[ii]);
+        }
+      }
+    } else {  // !this.commandPressed
+      let a = new Set(nids);
+      let b = new Set(this.selectedNIDs);
+
+      var toDeselect = new Set([...a].filter(x => !b.has(x)));
+      toDeselect.forEach((_, nid) => this.props.onBlockDeselect(nid));
+
+      this.selectedNIDs = nids;
     }
-    this.deselectAll(true);
+
+
+    this.setState({
+      selectedNIDs: this.selectedNIDs
+    });
+    this.props.onBlocksSelect(this.selectedNIDs);
   }
 
   computePinIndexfromLabel(pins, pinLabel) {
@@ -448,9 +498,7 @@ class ReactBlockGraph extends React.Component {
 
           {/* render our connectors */}
 
-          <SVGComponent height={this.height} width={this.width} ref="svgComponent"
-            onClick={() => {this.handleBackgroundClick()}}>
-
+          <SVGComponent height={this.height} width={this.width} ref="svgComponent">
             {
               connectors.filter(
                 connector => {
@@ -484,6 +532,17 @@ class ReactBlockGraph extends React.Component {
 
             {/* this is our new connector that only appears on dragging */}
             {newConnector}
+
+            {
+              this.state.firstMousePos &&
+              <rect
+                className="select-rect"
+                width={Math.abs(this.state.firstMousePos.x - this.state.mousePos.x)}
+                height={Math.abs(this.state.firstMousePos.y - this.state.mousePos.y)}
+                x={Math.min(this.state.firstMousePos.x, this.state.mousePos.x)}
+                y={Math.min(this.state.firstMousePos.y, this.state.mousePos.y)}
+              />
+            }
 
           </SVGComponent>
         </HotKeys>
