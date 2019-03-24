@@ -1,6 +1,6 @@
 import os
 from google.cloud import storage
-from urlparse import urlparse
+from urllib.parse import urlparse
 from plynx.utils.remote.base import ContentsHandlerBase, RemoteBase
 
 

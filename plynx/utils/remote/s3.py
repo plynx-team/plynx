@@ -1,6 +1,6 @@
 import os
 import boto3
-from urlparse import urlparse
+from urllib.parse import urlparse
 from plynx.utils.remote.base import ContentsHandlerBase, RemoteBase
 
 
