@@ -159,7 +159,7 @@ svg {
 }
 
 .select-rect {
-  fill: rgba(0, 128, 255, 0.1);
+  fill: rgba(153, 153, 255, 0.1);
   stroke-width: 1;
   stroke: rgb(255,255,255);
 }

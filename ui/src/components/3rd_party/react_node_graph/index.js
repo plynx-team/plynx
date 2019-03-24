@@ -134,10 +134,7 @@ class ReactBlockGraph extends React.Component {
   }
 
   onMouseUp(e) {
-    this.setState({dragging:false, });
-    this.recalcSize();
-
-    if (this.state.firstMousePos) {
+    if (this.state.firstMousePos && !this.state.dragging) {
       let blocks = this.state.data.blocks;
       var minX = Math.min(this.state.firstMousePos.x, this.state.mousePos.x);
       var maxX = Math.max(this.state.firstMousePos.x, this.state.mousePos.x);
@@ -159,7 +156,11 @@ class ReactBlockGraph extends React.Component {
       }
     }
 
-    this.setState({firstMousePos: undefined})
+    this.setState({
+      firstMousePos: undefined,
+      dragging:false,
+    })
+    this.recalcSize();
   }
 
   onMouseMove(e) {
@@ -534,7 +535,7 @@ class ReactBlockGraph extends React.Component {
             {newConnector}
 
             {
-              this.state.firstMousePos &&
+              (this.state.firstMousePos && !dragging) &&
               <rect
                 className="select-rect"
                 width={Math.abs(this.state.firstMousePos.x - this.state.mousePos.x)}
