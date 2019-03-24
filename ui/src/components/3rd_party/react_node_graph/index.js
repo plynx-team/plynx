@@ -75,7 +75,6 @@ class ReactBlockGraph extends React.Component {
       graphId: this.props.graphId
     }
 
-    this.onMouseDown = this.onMouseDown.bind(this);
     this.onMouseMove = this.onMouseMove.bind(this);
     this.onMouseUp = this.onMouseUp.bind(this);
     this.commandPressed = false;
@@ -89,13 +88,11 @@ class ReactBlockGraph extends React.Component {
   }
 
   componentDidMount() {
-    document.addEventListener('mousedown', this.onMouseDown);
     document.addEventListener('mousemove', this.onMouseMove);
     document.addEventListener('mouseup', this.onMouseUp);
   }
 
   componentWillUnmount() {
-    document.removeEventListener('mousedown', this.onMouseDown);
     document.removeEventListener('mousemove', this.onMouseMove);
     document.removeEventListener('mouseup', this.onMouseUp);
   }
@@ -451,7 +448,8 @@ class ReactBlockGraph extends React.Component {
     const selectedNIDsSet = new Set(selectedNIDs);
 
     return connectDropTarget(
-      <div className={'GraphRoot' + (this.state.editable ? ' editable' : ' readonly')} >
+      <div className={'GraphRoot' + (this.state.editable ? ' editable' : ' readonly')}
+        onMouseDown={(e) => this.onMouseDown(e)}>
         <HotKeys handlers={keyHandlers} keyMap={KEY_MAP}>
           {blocks.map((block) => {
             var selectedBlock = selectedNIDs.indexOf(block.nid) > -1;
