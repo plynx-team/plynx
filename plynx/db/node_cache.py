@@ -39,6 +39,17 @@ class NodeCache(DBObject):
             default=list,
             is_list=True,
             ),
+        # `protected` is used to prevent removing saved cache
+        'protected': DBObjectField(
+            type=bool,
+            default=False,
+            is_list=False,
+            ),
+        'removed': DBObjectField(
+            type=bool,
+            default=False,
+            is_list=False,
+            ),
     }
 
     DB_COLLECTION = Collections.NODE_CACHE

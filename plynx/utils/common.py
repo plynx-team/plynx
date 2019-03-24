@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import re
 from datetime import datetime
@@ -37,3 +38,35 @@ def parse_search_string(search_string):
     search_parameters = dict([match.split(':') for match in found_matches])
 
     return search_parameters, ' '.join(re.sub(SEARCH_RGX, '', search_string).split())
+
+
+def query_yes_no(question, default='yes'):
+    """Ask a yes/no question via input() and return their answer.
+
+    Args:
+        question    (str):  String that is presented to the user.
+        default     (str):  'yes' or 'no' default value
+
+    The 'answer' return value is True for 'yes' or False for 'no'.
+    """
+    valid = {'yes': True, 'y': True, 'ye': True,
+             'no': False, 'n': False}
+    if default is None:
+        prompt = ' [y/n] '
+    elif default == 'yes':
+        prompt = ' [Y/n] '
+    elif default == 'no':
+        prompt = ' [y/N] '
+    else:
+        raise ValueError('invalid default answer: `%s`' % default)
+
+    while True:
+        sys.stdout.write(question + prompt)
+        choice = input().lower()
+        if default is not None and choice == '':
+            return valid[default]
+        elif choice in valid:
+            return valid[choice]
+        else:
+            sys.stdout.write("Please respond with 'yes' or 'no' "
+                             "(or 'y' or 'n').\n")
