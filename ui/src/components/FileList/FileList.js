@@ -18,6 +18,8 @@ export default class FileList extends Component {
         file_type={file.outputs[0].file_type}
         fileObj={file}
         onClick={(fileObj) => this.props.onClick(fileObj)}
+        user={file._user[0]}
+        starred={file.starred}
         />);
 
     return (
@@ -27,6 +29,7 @@ export default class FileList extends Component {
           { listTextElement('header-item Type', 'Type') }
           { listTextElement('header-item Status', 'Status') }
           { listTextElement('header-item Id', 'Node Id') }
+          { listTextElement('header-item Author', 'Author') }
           { listTextElement('header-item Created', 'Created') }
         </div>
         {listItems}

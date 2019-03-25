@@ -18,6 +18,7 @@ export default class GraphList extends Component {
             insertion_date={graph.insertion_date}
             graph_running_status={graph.graph_running_status}
             update_date={graph.update_date}
+            user={graph._user[0]}
             />);
 
     return (
@@ -26,6 +27,7 @@ export default class GraphList extends Component {
           { listTextElement('header-item', 'Header') }
           { listTextElement('header-item Status', 'Status') }
           { listTextElement('header-item Id', 'Graph ID') }
+          { listTextElement('header-item Author', 'Author') }
           { listTextElement('header-item Created', 'Created') }
           { listTextElement('header-item Updated', 'Updated') }
         </div>

@@ -213,9 +213,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
     }
 
     var nid = queryString.parse(this.props.location.search).nid;
-    if (nid) {
-      this.block_lookup[nid].highlight = true;
-    }
 
     this.setState({
       "blocks": this.blocks,
@@ -226,6 +223,10 @@ ENDPOINT = '` + API_ENDPOINT + `'
       "title": this.graph.title,
       "description": this.graph.description,
       "graphRunningStatus": this.graph.graph_running_status,
+    }, () => {
+      if (nid) {
+        this.mainGraph.decoratedComponentInstance.selectBlocks([nid]);
+      }
     });
 
     var st = this.graph.graph_running_status.toUpperCase();
@@ -517,10 +518,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
     var node = this.node_lookup[nid];
     node.x = pos.left;
     node.y = pos.top;
-  }
-
-  onBlockStartMove(nid) {
-    console.log('start move : ' + nid)
   }
 
   handleBlocksSelect(nids) {
@@ -1027,7 +1024,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
             graphId={this.state.graphId}
             editable={this.state.editable}
             onBlockMove={(nid, pos)=>this.onBlockMove(nid, pos)}
-            onBlockStartMove={(nid)=>this.onBlockStartMove(nid)}
             onNewConnector={(n1,o,n2,i)=>this.onNewConnector(n1,o,n2,i)}
             onRemoveConnector={(connector)=>this.onRemoveConnector(connector)}
             onOutputClick={(nid, outputIndex)=>this.onOutputClick(nid, outputIndex)}

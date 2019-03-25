@@ -5,6 +5,7 @@ from flask_cors import CORS
 from functools import wraps
 from plynx.db import User
 from plynx.utils.config import get_config
+from plynx.utils.common import JSONEncoder
 
 app = Flask(__name__)
 
@@ -77,6 +78,13 @@ def _init_default_user():
         logging.info('Created default user `{}`'.format(DEFAULT_USERNAME))
     else:
         logging.info('Default user `{}` already exists'.format(DEFAULT_USERNAME))
+
+
+def make_fail_response(message):
+    return JSONEncoder().encode({
+        'status': 'failed',
+        'message': message
+    })
 
 
 def run_backend():

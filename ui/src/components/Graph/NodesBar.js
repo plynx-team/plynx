@@ -18,7 +18,8 @@ export default class NodesBar extends Component {
       pageCount: 0,
       selectedTab: 'operations',
       baseNodeNames: OPERATIONS,
-      offset: 0
+      offset: 0,
+      search: "sort:starred ",
     };
     this.perPage = 20;
 

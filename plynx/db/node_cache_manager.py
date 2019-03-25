@@ -26,7 +26,8 @@ class NodeCacheManager(object):
         """
         key = NodeCache.generate_key(node, user_id)
         db_node_cache = get_db_connector().node_cache.find({
-            'key': key
+            'key': key,
+            'removed': {'$ne': True}
         }).sort('insertion_date', -1).limit(1)
         caches = list(db_node_cache)
         if len(caches):
@@ -56,3 +57,48 @@ class NodeCacheManager(object):
             logging.error('Could not save cache: `{}`'.format(e))
             return False
         return True
+
+    @staticmethod
+    def _make_query(start_datetime=None, end_datetime=None, non_protected_only=False):
+        """Make sample query.
+
+        Args:
+            start_datetime  (datetime, None):   Start datetime or None if selecting from beginning
+            end_datetime    (datetime, None):   End datetime or None if selecting until now
+
+        Return:
+            Iterator on the list of dict-like objects
+        """
+        and_query = []
+
+        insertion_query = {}
+        if start_datetime:
+            insertion_query['$gte'] = start_datetime
+        if end_datetime:
+            insertion_query['$lt'] = end_datetime
+        if insertion_query:
+            and_query.append({'insertion_date': insertion_query})
+
+        if non_protected_only:
+            and_query.append({'protected': {'$ne': True}})
+
+        return {'$and': and_query} if and_query else {}
+
+    @staticmethod
+    def get_list(start_datetime=None, end_datetime=None, non_protected_only=False):
+        """List of NodeCache objects.
+
+        Args:
+            start_datetime  (datetime, None):   Start datetime or None if selecting from beginning
+            end_datetime    (datetime, None):   End datetime or None if selecting until now
+
+        Return:
+            Iterator on the list of dict-like objects
+        """
+        return get_db_connector().node_cache.find(NodeCacheManager._make_query(start_datetime, end_datetime, non_protected_only))
+
+    @staticmethod
+    def clean_up():
+        """Remove NodeCache objects with flag `removed` set
+        """
+        return get_db_connector().node_cache.remove({'removed': True})

@@ -5,8 +5,6 @@
 
 svg {
   background: url('gridtile.png');
-  width: 4000px;
-  height: 2000px;
   display: inline;
 }
 
@@ -23,8 +21,7 @@ svg {
 }
 
 .node.selected {
-  border: 1px solid #666;
-  box-shadow: 0 0 8px 3px #555;
+  box-shadow: 0 0 8px 3px #99F;
 }
 
 .node-seperator {
@@ -39,7 +36,7 @@ svg {
 .node-header {
   cursor: all-scroll;
 
-  background: rgba(248,80,50,1);
+  background: #000;
 
   padding-left: 10px;
   text-transform: uppercase;
@@ -60,6 +57,10 @@ svg {
 
   display: grid;
   grid-template-columns: 1fr 13px;
+}
+
+.node.selected .node-header {
+  background: #335;
 }
 
 .node-title {
@@ -128,7 +129,11 @@ svg {
 }
 
 .node.error-highlight {
-  border-color: #bb0000;
+  box-shadow: 0 0 8px 3px #ff0000;
+}
+
+.node.error-highlight .node-header {
+  background: #733;
 }
 
 .connector {
@@ -151,6 +156,12 @@ svg {
 
 .connector.selected {
   stroke: #337ab7;
+}
+
+.select-rect {
+  fill: rgba(153, 153, 255, 0.1);
+  stroke-width: 1;
+  stroke: rgb(255,255,255);
 }
 
 .trash-icon .trash-icon-trashcan {

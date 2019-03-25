@@ -22,6 +22,7 @@
     "react-beautiful-dnd": "^4.0.1",
     "react-cookie": "^2.1.2",
     "react-cookies": "^0.1.0",
+    "react-csv-to-table": "0.0.1",
     "react-dev-utils": "^7.0.3",
     "react-device-detect": "^1.6.1",
     "react-dnd": "^2.5.4",

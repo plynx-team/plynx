@@ -3,7 +3,7 @@ import argparse
 from collections import namedtuple
 from plynx import __version__
 from plynx.utils.config import get_config, set_parameter
-from plynx.service import run_master, run_worker, run_local
+from plynx.service import run_master, run_worker, run_local, run_users, run_cache
 from plynx.web import run_backend
 from plynx.utils.logs import set_logging_level
 
@@ -17,14 +17,14 @@ Arg.__new__.__defaults__ = (None, None, None, None, None, None)
 _config = get_config()
 
 
-def master(args):
+def backend(args):
     set_logging_level(args.pop('verbose'))
-    run_master(**args)
+    run_backend(**args)
 
 
-def worker(args):
+def cache(args):
     set_logging_level(args.pop('verbose'))
-    run_worker(**args)
+    run_cache(**args)
 
 
 def local(args):
@@ -32,13 +32,22 @@ def local(args):
     run_local(**args)
 
 
-def backend(args):
+def master(args):
     set_logging_level(args.pop('verbose'))
-    run_backend(**args)
+    run_master(**args)
+
+
+def users(args):
+    run_users(**args)
 
 
 def version(args):
     print(__version__)
+
+
+def worker(args):
+    set_logging_level(args.pop('verbose'))
+    run_worker(**args)
 
 
 class CLIFactory(object):
@@ -50,6 +59,10 @@ class CLIFactory(object):
             default=0,
             action='count',
             ),
+        'mode': Arg(
+            ('--mode',),
+            help='Mode',
+            type=str),
 
         # Master
         'master_host': Arg(
@@ -165,6 +178,36 @@ class CLIFactory(object):
             type=str,
             levels=['web', 'endpoint'],
             ),
+
+        # Users
+        'username': Arg(
+            ('--username',),
+            help='Username of the user, required to create/delete a user',
+            type=str),
+        'password': Arg(
+            ('--password',),
+            help='Password of the user, required to create a user '
+                 'without --use_random_password',
+            type=str),
+
+        # Cache
+        'start_datetime': Arg(
+            ("--start-datetime", ),
+            "End limit time based operation",
+            default=None,
+            type=str,
+            ),
+        'end_datetime': Arg(
+            ("--end-datetime", ),
+            "End limit time based operation",
+            default=None,
+            type=str,
+            ),
+        'yes': Arg(
+            ("-y", "--yes"),
+            "Do not prompt to confirm reset. Use with care!",
+            "store_true",
+            default=False),
     }
 
     SUBPARSERS = (
@@ -194,7 +237,15 @@ class CLIFactory(object):
             'func': version,
             'help': "Show the version",
             'args': tuple(),
-        }
+        }, {
+            'func': users,
+            'help': "Users cli utils",
+            'args': ('mode', 'username', 'password'),
+        }, {
+            'func': cache,
+            'help': "Cache cli utils",
+            'args': ('verbose', 'mode', 'start_datetime', 'end_datetime', 'yes'),
+        },
     )
 
     @classmethod

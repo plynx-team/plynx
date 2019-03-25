@@ -26,4 +26,5 @@ web:
   debug: true
 
 demo:
+  enabled: true
   graph_ids: []

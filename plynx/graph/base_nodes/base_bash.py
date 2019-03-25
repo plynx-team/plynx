@@ -121,7 +121,7 @@ class BaseBash(BaseNode):
         node.description = ''
         node.base_node_name = cls.get_base_name()
         node.node_status = NodeStatus.CREATED
-        node.public = False
+        node.starred = False
         node.parameters = [
             Parameter.from_dict({
                 'name': 'cmd',
@@ -144,7 +144,7 @@ class BaseBash(BaseNode):
                 'removable': False,
             }),
             Parameter.from_dict({
-                'name': 'ttl',
+                'name': '_timeout',
                 'parameter_type': ParameterTypes.INT,
                 'value': 600,
                 'mutable_type': False,
@@ -282,9 +282,12 @@ class BaseBash(BaseNode):
                 value = parameter.value.values[index]
             elif parameter.parameter_type in [ParameterTypes.LIST_STR, ParameterTypes.LIST_INT]:
                 if pythonize:
-                    value = parameter.value
+                    if parameter.parameter_type == ParameterTypes.LIST_INT:
+                        value = map(int, parameter.value)
+                    else:
+                        value = parameter.value
                 else:
-                    value = ' '.join(map(str, parameter.value))  # !!!!!!!!!
+                    value = ' '.join(map(str, parameter.value))  # !! in bash, it will always be space separated string
             elif parameter.parameter_type == ParameterTypes.CODE:
                 value = parameter.value.value
             elif parameter.parameter_type == ParameterTypes.INT and pythonize:

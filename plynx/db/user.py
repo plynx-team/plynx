@@ -28,6 +28,11 @@ class User(DBObject):
             default='',
             is_list=False,
             ),
+        'active': DBObjectField(
+            type=bool,
+            default=True,
+            is_list=False,
+            ),
     }
 
     DB_COLLECTION = Collections.USERS
@@ -98,6 +103,10 @@ class User(DBObject):
         return User(user_dict)
 
     @staticmethod
+    def find_users():
+        return getattr(get_db_connector(), User.DB_COLLECTION).find({})
+
+    @staticmethod
     def verify_auth_token(token):
         """Verify token.
 
@@ -125,4 +134,6 @@ class User(DBObject):
             print("Unexpected exception: {}".format(e))
             return None
         user = User.find_user_by_name(data['username'])
+        if not user.active:
+            return None
         return user

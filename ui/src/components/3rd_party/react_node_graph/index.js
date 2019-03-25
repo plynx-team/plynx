@@ -4,12 +4,22 @@ import Block from './lib/Block';
 import Spline from './lib/Spline';
 import SVGComponent from './lib/SVGComponent';
 
+import { ObjectID } from 'bson';
 import PropTypes from 'prop-types'
 import { DropTarget } from 'react-dnd'
 import ItemTypes from '../../../DragAndDropsItemTypes'
 
 import {computeOutOffsetByIndex, computeInOffsetByIndex} from './lib/util';
 import { KEY_MAP, NODE_RUNNING_STATUS } from '../../../constants.js';
+
+const STEP = 224;
+
+const HEADER_HEIGHT = 23;
+const DESCRIPTION_HEIGHT = 20;
+const FOOTER_HEIGHT = 10;
+const BORDERS_HEIGHT = 2;
+const ITEM_HEIGHT = 20;
+const COMMON_HEIGHT = HEADER_HEIGHT + DESCRIPTION_HEIGHT + FOOTER_HEIGHT + BORDERS_HEIGHT;
 
 const boxTarget = {
   drop(props, monitor, component) {
@@ -67,6 +77,7 @@ class ReactBlockGraph extends React.Component {
     this.onMouseMove = this.onMouseMove.bind(this);
     this.onMouseUp = this.onMouseUp.bind(this);
     this.commandPressed = false;
+    this.recalcSize();
   }
 
   static propTypes = {
@@ -89,17 +100,72 @@ class ReactBlockGraph extends React.Component {
     this.setState({data: nextProps.data});
   }
 
+  recalcSize() {
+    let blocks = this.state.data.blocks;
+    var width = STEP * 10;
+    var height = STEP * 8;
+    for(var ii = 0; ii < blocks.length; ++ii) {
+      width = Math.max(width, blocks[ii].x + 500);
+      height = Math.max(height, blocks[ii].y + 500);
+    }
+    this.width = Math.floor(width / STEP) * STEP + 2;
+    this.height = Math.floor(height / STEP) * STEP + 2;
+  }
+
+  onMouseDown(e) {
+    if (this.preventDrawingBox) {
+      return;
+    }
+    const {svgComponent: {refs: {svg}}} = this.refs;
+
+    //Get svg element position to substract offset top and left
+    const svgRect = svg.getBoundingClientRect();
+
+    this.setState({
+        firstMousePos: {
+          x: e.pageX - svgRect.left,
+          y: e.pageY - svgRect.top
+        }
+      });
+  }
+
   onMouseUp(e) {
-    this.setState({dragging:false, });
+    if (this.state.firstMousePos && !this.state.dragging) {
+      let blocks = this.state.data.blocks;
+      var minX = Math.min(this.state.firstMousePos.x, this.state.mousePos.x);
+      var maxX = Math.max(this.state.firstMousePos.x, this.state.mousePos.x);
+      var minY = Math.min(this.state.firstMousePos.y, this.state.mousePos.y);
+      var maxY = Math.max(this.state.firstMousePos.y, this.state.mousePos.y);
+      var nidsToSelect = [];
+      for(var ii = 0; ii < blocks.length; ++ii) {
+        var blockExtraHeight = ITEM_HEIGHT * Math.max(blocks[ii].fields.in.length, blocks[ii].fields.out.length);
+        if (minX < blocks[ii].x + 180 && blocks[ii].x < maxX &&
+            minY < blocks[ii].y + COMMON_HEIGHT + blockExtraHeight && blocks[ii].y < maxY) {
+              nidsToSelect.push(blocks[ii].nid);
+            }
+      }
+
+      if (nidsToSelect.length === 0 && !this.commandPressed) {
+        this.deselectAll(true);
+      } else {
+        this.selectBlocks(nidsToSelect);
+      }
+    }
+
+    this.setState({
+      firstMousePos: undefined,
+      dragging:false,
+    })
+    this.recalcSize();
   }
 
   onMouseMove(e) {
     e.stopPropagation();
 
-      const {svgComponent: {refs: {svg}}} = this.refs;
+    const {svgComponent: {refs: {svg}}} = this.refs;
 
-      //Get svg element position to substract offset top and left
-      const svgRect = svg.getBoundingClientRect();
+    //Get svg element position to substract offset top and left
+    const svgRect = svg.getBoundingClientRect();
 
     this.setState({
         mousePos: {
@@ -109,19 +175,60 @@ class ReactBlockGraph extends React.Component {
       });
   }
 
-  handleBlockStart(nid) {
-    this.props.onBlockStartMove(nid);
+  handleBlockStart(nid, pos) {
+    this.preventDrawingBox = true;
+    if (this.props.onBlockStartMove) {
+      this.props.onBlockStartMove(nid, pos);
+    }
+    this.initialPos = pos;
+    if (this.selectedNIDs.indexOf(nid) < 0) {
+      this.moveOnlyCurrentBlock = true;
+    } else {
+      this.moveOnlyCurrentBlock = false;
+    }
   }
 
   handleBlockStop(nid, pos) {
-    this.props.onBlockMove(nid, pos);
+    this.preventDrawingBox = false;
+    let d = this.state.data;
+    const selectedNIDs = new Set(this.selectedNIDs);
+    for (var ii = 0; ii < d.blocks.length; ++ii) {
+      if (selectedNIDs.has(d.blocks[ii].nid) || (this.moveOnlyCurrentBlock && d.blocks[ii].nid === nid)) {
+        var blockPos = {
+          left: d.blocks[ii].x,
+          top: d.blocks[ii].y,
+        }
+        this.props.onBlockMove(d.blocks[ii].nid, blockPos);
+      }
+    }
   }
 
-  handleBlockMove(index, pos) {
+  handleBlockMove(index, nid, pos) {
     let d = this.state.data;
 
+    // For some reason, we need to treat dragged object differently from selected
     d.blocks[index].x = pos.left;
     d.blocks[index].y = pos.top;
+
+    if (!this.moveOnlyCurrentBlock) {
+      var dx = pos.left - this.initialPos.left;
+      var dy = pos.top - this.initialPos.top;
+      var ts = new ObjectID().toString();
+      var idx;
+      for (var ii = 0; ii < d.blocks.length; ++ii) {
+        if (ii === index) {
+          continue;
+        }
+        idx = this.selectedNIDs.indexOf(d.blocks[ii].nid);
+        if (idx < 0) {
+          continue;
+        }
+        d.blocks[ii].x += dx;
+        d.blocks[ii].y += dy;
+        d.blocks[ii]._ts = ts;
+      }
+    }
+    this.initialPos = pos;
 
     this.setState({data : d});
   }
@@ -190,27 +297,9 @@ class ReactBlockGraph extends React.Component {
 
   handleBlockSelect(nid) {
     var selectedNIDsIndex = this.selectedNIDs.indexOf(nid);
-    if (this.commandPressed) {
-      if (selectedNIDsIndex >= 0) {
-        this.props.onBlockDeselect(this.selectedNIDs[selectedNIDsIndex]);
-        this.selectedNIDs.splice(selectedNIDsIndex, 1);
-      } else {
-        this.selectedNIDs.push(nid);
-      }
-    } else {  // !this.commandPressed
-      if (selectedNIDsIndex >= 0) {
-        return;
-      }
-      for (var ii = 0; ii < this.selectedNIDs.length; ++ii) {
-          this.props.onBlockDeselect(this.selectedNIDs[ii]);
-      }
-      this.selectedNIDs = [nid];
+    if (selectedNIDsIndex < 0) {
+      this.selectBlocks([nid])
     }
-
-    this.setState({
-      selectedNIDs: this.selectedNIDs
-    });
-    this.props.onBlocksSelect(this.selectedNIDs);
   }
 
   deselectAll(changeState) {
@@ -231,17 +320,31 @@ class ReactBlockGraph extends React.Component {
   }
 
   selectBlocks(nids) {
-    this.commandPressed = true;
-    nids.map(nid => this.handleBlockSelect(nid));
-    this.commandPressed = false;
-  }
-
-  handleBackgroundClick() {
-    console.log("handleBackgroundClick", this.commandPressed);
     if (this.commandPressed) {
-      return;
+      for (var ii = 0; ii < nids.length; ++ii) {
+        var selectedNIDsIndex = this.selectedNIDs.indexOf(nids[ii]);
+        if (selectedNIDsIndex >= 0) {
+          this.props.onBlockDeselect(this.selectedNIDs[selectedNIDsIndex]);
+          this.selectedNIDs.splice(selectedNIDsIndex, 1);
+        } else {
+          this.selectedNIDs.push(nids[ii]);
+        }
+      }
+    } else {  // !this.commandPressed
+      let a = new Set(nids);
+      let b = new Set(this.selectedNIDs);
+
+      var toDeselect = new Set([...a].filter(x => !b.has(x)));
+      toDeselect.forEach((_, nid) => this.props.onBlockDeselect(nid));
+
+      this.selectedNIDs = nids;
     }
-    this.deselectAll(true);
+
+
+    this.setState({
+      selectedNIDs: this.selectedNIDs
+    });
+    this.props.onBlocksSelect(this.selectedNIDs);
   }
 
   computePinIndexfromLabel(pins, pinLabel) {
@@ -344,14 +447,14 @@ class ReactBlockGraph extends React.Component {
     const selectedNIDsSet = new Set(selectedNIDs);
 
     return connectDropTarget(
-      <div className={'GraphRoot' + (this.state.editable ? ' editable' : ' readonly')} >
+      <div className={'GraphRoot' + (this.state.editable ? ' editable' : ' readonly')}
+        onMouseDown={(e) => this.onMouseDown(e)}>
         <HotKeys handlers={keyHandlers} keyMap={KEY_MAP}>
           {blocks.map((block) => {
             var selectedBlock = selectedNIDs.indexOf(block.nid) > -1;
             return <Block
                       index={i++}
                       nid={block.nid}
-                      color="#000000"
                       title={block.title}
                       description={block.description}
                       inputs={block.fields.in}
@@ -373,9 +476,9 @@ class ReactBlockGraph extends React.Component {
 
                       specialParameterNames={block.specialParameterNames}
 
-                      onBlockStart={(nid)=>this.handleBlockStart(nid)}
+                      onBlockStart={(nid, pos)=>this.handleBlockStart(nid, pos)}
                       onBlockStop={(nid, pos)=>this.handleBlockStop(nid, pos)}
-                      onBlockMove={(index,pos)=>this.handleBlockMove(index,pos)}
+                      onBlockMove={(index, nid, pos)=>this.handleBlockMove(index, nid, pos)}
 
                       onStartConnector={(nid, outputIndex)=>this.handleStartConnector(nid, outputIndex)}
                       onCompleteConnector={(nid, inputIndex)=>this.handleCompleteConnector(nid, inputIndex)}
@@ -393,9 +496,7 @@ class ReactBlockGraph extends React.Component {
 
           {/* render our connectors */}
 
-          <SVGComponent height="100%" width="100%" ref="svgComponent"
-            onClick={() => {this.handleBackgroundClick()}}>
-
+          <SVGComponent height={this.height} width={this.width} ref="svgComponent">
             {
               connectors.filter(
                 connector => {
@@ -429,6 +530,17 @@ class ReactBlockGraph extends React.Component {
 
             {/* this is our new connector that only appears on dragging */}
             {newConnector}
+
+            {
+              (this.state.firstMousePos && !dragging) &&
+              <rect
+                className="select-rect"
+                width={Math.abs(this.state.firstMousePos.x - this.state.mousePos.x)}
+                height={Math.abs(this.state.firstMousePos.y - this.state.mousePos.y)}
+                x={Math.min(this.state.firstMousePos.x, this.state.mousePos.x)}
+                y={Math.min(this.state.firstMousePos.y, this.state.mousePos.y)}
+              />
+            }
 
           </SVGComponent>
         </HotKeys>

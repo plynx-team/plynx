@@ -1,5 +1,5 @@
 from plynx.db import Graph, NodeCollectionManager, Node
-from plynx.utils.common import to_object_id
+from plynx.utils.common import to_object_id, parse_search_string
 from plynx.utils.db_connector import get_db_connector
 from plynx.constants import NodeStatus
 
@@ -93,27 +93,10 @@ class GraphCollectionManager(object):
         return graphs
 
     @staticmethod
-    def _get_basic_query(author, search, status):
-        and_query = []
-        and_query.append({
-            '$or': [
-                {'author': author},
-                {'public': True}
-            ]})
-        if search:
-            and_query.append({'$text': {'$search': search}})
-        if status:
-            and_query.append({'graph_running_status': status})
-
-        return and_query
-
-    # TODO remove `author` / make default
-    @staticmethod
-    def get_db_graphs(author, search=None, per_page=20, offset=0, status=None, recent=False):
+    def get_db_graphs(search=None, per_page=20, offset=0, status=None, recent=False):
         """Get subset of the Graphs.
 
         Args:
-            author      (ObjectId):     Author of the Graphs
             search      (str):          Search pattern
             per_page    (int):          Number of Graphs per page
             offset      (int):          Offset
@@ -121,37 +104,59 @@ class GraphCollectionManager(object):
         Return:
             (list of dicts)     List of Graphs in dict format
         """
-        and_query = GraphCollectionManager._get_basic_query(
-            author=author,
-            search=search,
-            status=status,
-        )
-        sort_key = 'update_date' if recent else 'insertion_date'
+        if status and isinstance(status, basestring):
+            status = [status]
 
-        db_graphs = get_db_connector().graphs.find({
-            '$and': and_query
-        }).sort(sort_key, -1).skip(offset).limit(per_page)
-        return list(db_graphs)
+        aggregate_list = []
+        search_parameters, search_string = parse_search_string(search)
 
-    @staticmethod
-    def get_db_graphs_count(author, search=None, status=None):
-        """Get number of the Graphs that satisfy given conditions.
+        # Match
+        and_query = {}
+        if status:
+            and_query['graph_running_status'] = {'$in': status}
+        if search_string:
+            and_query['$text'] = {'$search': search_string}
+        if len(and_query):
+            aggregate_list.append({"$match": and_query})
 
-        Args:
-            author      (ObjectId):     Author of the Graphs
-            search      (str):          Search pattern
-
-        Return:
-            (int)   Number of Graphs found.
-        """
-        and_query = GraphCollectionManager._get_basic_query(
-            author=author,
-            search=search,
-            status=status,
-        )
-        return get_db_connector().graphs.count({
-            '$and': and_query
+        # Join with users
+        aggregate_list.append({
+            '$lookup': {
+                'from': 'users',
+                'localField': 'author',
+                'foreignField': '_id',
+                'as': '_user'
+             }
         })
+        # rm password hash
+        aggregate_list.append({
+          "$project": {
+            "_user.password_hash": 0,
+          }
+        })
+
+        # Match username
+        and_query = {}
+        if 'author' in search_parameters:
+            and_query['_user.username'] = search_parameters['author']
+        if len(and_query):
+            aggregate_list.append({"$match": and_query})
+
+        # sort
+        sort_key = 'update_date' if recent else 'insertion_date'
+        aggregate_list.append({
+            "$sort": {sort_key: -1}
+            }
+        )
+        # counts and pagination
+        aggregate_list.append({
+            '$facet': {
+                "metadata": [{"$count": "total"}],
+                "list": [{"$skip": offset}, {"$limit": per_page}],
+            }
+        })
+
+        return next(get_db_connector().graphs.aggregate(aggregate_list), None)
 
     @staticmethod
     def get_db_graph(graph_id):

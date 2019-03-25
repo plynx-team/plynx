@@ -48,7 +48,7 @@ class Worker:
         self._port = port
         self._job_killed = False
         self._started_at = None
-        self._ttl = None
+        self._node_timeout = None
         self._set_run_status(RunStatus.IDLE)
 
     def serve_forever(self, number_of_attempts=NUMBER_OF_ATTEMPTS):
@@ -66,7 +66,7 @@ class Worker:
             try:
                 self._upload_logs()
                 self._heartbeat_iteration()
-                self._check_ttl()
+                self._check_node_timeout()
                 if attempt > 0:
                     logging.info("Connected")
                 attempt = 0
@@ -103,11 +103,11 @@ class Worker:
         if self._run_status == RunStatus.RUNNING:
             self._job.upload_logs()
 
-    def _check_ttl(self):
-        if self._run_status == RunStatus.RUNNING and self._started_at and self._ttl:
+    def _check_node_timeout(self):
+        if self._run_status == RunStatus.RUNNING and self._started_at and self._node_timeout:
             dt = datetime.datetime.now()
             diff = (dt - self._started_at).total_seconds() / 60
-            if diff > self._ttl:
+            if diff > self._node_timeout:
                 self._kill()
                 with open(self._job.logs['worker'], 'a') as f:
                     f.write('#' * 30 + '\n')
@@ -151,11 +151,11 @@ class Worker:
                             self._graph_id = master_message.graph_id
                             self._set_run_status(RunStatus.RUNNING)
 
-                            ttl_parameter = self._job.node.get_parameter_by_name('ttl', throw=False)
-                            if ttl_parameter:
-                                self._ttl = int(ttl_parameter.value)
+                            timeout_parameter = self._job.node.get_parameter_by_name('_timeout', throw=False)
+                            if timeout_parameter:
+                                self._node_timeout = int(timeout_parameter.value)
                             else:
-                                self._ttl = None
+                                self._node_timeout = None
 
                             try:
                                 self._job.init_workdir()
