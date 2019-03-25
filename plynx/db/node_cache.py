@@ -3,6 +3,9 @@ from builtins import str
 from plynx.constants import Collections
 from plynx.db import DBObject, DBObjectField, Output
 from plynx.utils.common import ObjectId
+from plynx.utils.config import get_demo_config
+
+demo_config = get_demo_config()
 
 
 class NodeCache(DBObject):
@@ -54,7 +57,7 @@ class NodeCache(DBObject):
 
     DB_COLLECTION = Collections.NODE_CACHE
 
-    IGNORED_PARAMETERS = {'cmd'}
+    IGNORED_PARAMETERS = {'cmd', '_timeout'}
 
     @staticmethod
     def instantiate(node, graph_id, user_id):
@@ -89,6 +92,8 @@ class NodeCache(DBObject):
         Return:
             (str)   Hash value
         """
+        if not demo_config.enabled:
+            user_id = ''    # TODO after demo
         inputs = node.inputs
         parameters = node.parameters
         parent_node = node.parent_node
