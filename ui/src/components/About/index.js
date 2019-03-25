@@ -124,8 +124,7 @@ export default class About extends Component {
             About
           </h1>
 
-          <p>PLynx is a framework that makes it easy to prototype, build, and deploy complex data pipelines.</p>
-          <p>Developed for data scientists and engineers, PLynx provides an easy and flexible way of building data pipelines faster than ever.</p>
+          <p>PLynx is a domain agnostic platform for managing reproducible experiments and data-oriented workflows.</p>
 
           <h2>Core principles</h2>
           <ul>
@@ -135,7 +134,7 @@ export default class About extends Component {
           </ul>
 
           <h2>Architecture</h2>
-          <img src='/architecture.png' alt="architecture"/>
+          <img src='/architecture.png' alt="architecture" width="100%"/>
 
           <h3>UI</h3>
           <p>The PLynx UI make it easy to create, monitor, and troubleshoot your data pipelines. All of the components and Graphs can be defined in the UI.</p>
