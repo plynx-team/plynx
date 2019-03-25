@@ -1,13 +1,13 @@
 # PLynx
 
-[![Website shields.io](https://img.shields.io/circleci/project/github/khaxis/plynx.svg)](http://shields.io/)
-[![Website shields.io](https://img.shields.io/github/license/khaxis/plynx.svg)](http://shields.io/)
-[![Website shields.io](https://img.shields.io/pypi/pyversions/plynx.svg)](http://shields.io/)
+[![Website shields.io](https://img.shields.io/circleci/project/github/khaxis/plynx.svg)](https://circleci.com/gh/khaxis/plynx)
+[![Website shields.io](https://img.shields.io/github/license/khaxis/plynx.svg)](https://github.com/khaxis/plynx)
+[![Website shields.io](https://img.shields.io/pypi/pyversions/plynx.svg)](https://github.com/khaxis/plynx)
 
 
-Main page and demo: [plynx.com](https://plynx.com).
+Main website and demo: [plynx.com](https://plynx.com).
 
-PLynx is a domain agnostic platform for managing reproducible experiments and data-oriented development.
+PLynx is a domain agnostic platform for managing reproducible experiments and data-oriented workflows.
 
 ## Features
 
