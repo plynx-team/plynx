@@ -1,3 +1,6 @@
+from future.standard_library import install_aliases
+install_aliases()   # noqa
+
 import os
 from google.cloud import storage
 from urlparse import urlparse
