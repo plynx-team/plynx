@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
 import AlertContainer from 'react-alert-es6';
+import cookie from 'react-cookies'
 import { PLynxApi } from '../../API.js';
 import List from './List.js'
 import ReactPaginate from 'react-paginate';
@@ -16,11 +17,12 @@ export default class ListPage extends Component {
   constructor(props) {
     super(props);
     document.title = "Node List - PLynx";
+    let username = cookie.load('username');
     this.state = {
       nodes: [],
       loading: true,
       pageCount: 0,
-      search: "",
+      search: username ? 'author:' + username + ' ' : '',
     };
     this.perPage = 20;
 
@@ -145,6 +147,7 @@ export default class ListPage extends Component {
         <div className="search">
           <SearchBar
               onSearchUpdate={(search) => this.handleSearchUpdate(search)}
+              search={this.state.search}
           />
         </div>
         <List nodes={this.state.nodes}

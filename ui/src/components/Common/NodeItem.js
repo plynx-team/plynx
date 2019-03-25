@@ -15,7 +15,12 @@ export default class NodeItem extends Component {
           </div>
         </div>
         <div className='NodeDescription'>
-          &ldquo;{node.description}&rdquo;
+          <div className="description-text">
+            &ldquo;{node.description}&rdquo;
+          </div>
+          <div className={node.starred ? 'star-visible' : 'star-hidden'}>
+            <img src="/icons/star.svg" alt="star" />
+          </div>
         </div>
       </div>
     );

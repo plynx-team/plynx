@@ -17,7 +17,7 @@ class Block extends React.Component {
   }
 
   handleDragStart(event, ui) {
-    this.props.onBlockStart(this.props.nid, ui);
+    this.props.onBlockStart(this.props.nid, ui.position);
   }
 
   handleDragStop(event, ui) {
@@ -25,7 +25,7 @@ class Block extends React.Component {
   }
 
   handleDrag(event, ui) {
-    this.props.onBlockMove(this.props.index, ui.position);
+    this.props.onBlockMove(this.props.index, this.props.nid, ui.position);
   }
 
   shouldComponentUpdate(nextProps, nextState) {
@@ -80,8 +80,8 @@ class Block extends React.Component {
           onDrag={(event, ui)=>this.handleDrag(event, ui)}
           //grid={[15, 15]}
           >
-        <section className={blockClass} style={{zIndex:10000}} onClick={(e) => {this.handleClick(e)}}>
-            <header className="node-header" style={{backgroundColor:this.props.color}} onClick={(e) => {this.handleClick(e)}}>
+        <section className={blockClass} style={{zIndex:10000}} >
+            <header className="node-header">
               <span className="node-title">{this.props.title}</span>
               {
                 !this.state.readonly &&

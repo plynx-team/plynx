@@ -9,7 +9,8 @@ export default class NodeBarHeader extends Component {
     super(props);
     this.tabName = props.selectedTab;
     this.baseNodeNames = (this.tabName === "operations" ? OPERATIONS : "file");
-    this.search = "";
+    this.search = props.search;
+    this.initialSearch = props.search;
   }
 
   onTabClick(e, tabName, baseNodeNames) {
@@ -17,8 +18,7 @@ export default class NodeBarHeader extends Component {
     e.preventDefault();
     this.tabName = tabName;
     this.baseNodeNames = baseNodeNames;
-    this.search = "";
-    this.searchBar.clear();
+    this.searchBar.update(this.initialSearch);
     this.updateFilter();
   }
 
@@ -52,6 +52,7 @@ export default class NodeBarHeader extends Component {
           <SearchBar
               onSearchUpdate={(search) => this.handleSearchUpdate(search)}
               ref={(child) => { this.searchBar = child; }}
+              search={this.search}
           />
         </div>
       </div>

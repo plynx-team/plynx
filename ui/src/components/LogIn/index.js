@@ -1,6 +1,8 @@
 // src/components/NotFound/index.js
 import React, { Component } from 'react';
+import AlertContainer from 'react-alert-es6';
 import { PLynxApi } from '../../API.js';
+import { ALERT_OPTIONS } from '../../constants.js';
 import Button from 'react-toolbox/lib/button/Button'
 import cookie from 'react-cookies'
 
@@ -31,6 +33,14 @@ export default class LogIn extends Component {
     });
   }
 
+  showAlert(message, type) {
+    this.msg.show(message, {
+      time: 5000,
+      type: 'error',
+      icon: <img src={"/alerts/" + type +".svg"} width="32" height="32" alt={type} />
+    });
+  }
+
   loginUser({ username, password }) {
     PLynxApi.endpoints.token.getCustom({
         method: 'get',
@@ -44,12 +54,10 @@ export default class LogIn extends Component {
       cookie.save('access_token', response.data.access_token, { path: '/' });
       cookie.save('refresh_token', response.data.refresh_token, { path: '/' });
       cookie.save('username', username, { path: '/' });
-      //dispatch({ type: AUTH_USER });
-      //window.location.href = CLIENT_ROOT_URL + '/dashboard';
       window.location = '/graphs';
     })
     .catch((error) => {
-      //errorHandler(dispatch, error.response, AUTH_ERROR)
+      this.showAlert('Failed authenticate user', 'failed');
     });
   }
 
@@ -66,6 +74,7 @@ export default class LogIn extends Component {
   render() {
     return (
       <div className='Login'>
+        <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
         <div className='LoginBlock'>
           <h1>
             Login

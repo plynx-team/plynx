@@ -28,7 +28,7 @@ class GetResource(BaseNode):
         node.description = ''
         node.base_node_name = cls.get_base_name()
         node.node_status = NodeStatus.CREATED
-        node.public = False
+        node.starred = False
         node.parameters = [
             Parameter(
                 name='resource_id',

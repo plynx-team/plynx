@@ -2,6 +2,7 @@
 import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
 import AlertContainer from 'react-alert-es6';
+import cookie from 'react-cookies'
 import { PLynxApi } from '../../API.js';
 import GraphList from './GraphList.js'
 import ReactPaginate from 'react-paginate';
@@ -17,11 +18,12 @@ export default class GraphListPage extends Component {
   constructor(props) {
     super(props);
     document.title = "Graph List - PLynx";
+    let username = cookie.load('username');
     this.state = {
       graphs: [],
       loading: true,
       pageCount: 0,
-      search: "",
+      search: username ? 'author:' + username + ' ' : '',
     };
     this.perPage = 20;
 
@@ -145,6 +147,7 @@ export default class GraphListPage extends Component {
         <div className="search">
           <SearchBar
               onSearchUpdate={(search) => this.handleSearchUpdate(search)}
+              search={this.state.search}
           />
         </div>
         <GraphList graphs={this.state.graphs}

@@ -16,6 +16,12 @@ class ContentsHandlerFile(ContentsHandlerBase):
         with open(self.path, 'wb') as f:
             shutil.copyfileobj(file_obj, f)
 
+    def remove(self):
+        os.remove(self.path)
+
+    def exists(self):
+        return os.path.exists(self.path)
+
 
 class RemoteFile(RemoteBase):
     def __init__(self, storage_config):

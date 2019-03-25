@@ -17,6 +17,8 @@ export default class List extends Component {
         update_date={node.update_date}
         node_running_status={node.node_running_status}
         node_status={node.node_status}
+        user={node._user[0]}
+        starred={node.starred}
         />);
 
     return (
@@ -25,6 +27,7 @@ export default class List extends Component {
           { listTextElement('header-item', 'Header') }
           { listTextElement('header-item Status', 'Status') }
           { listTextElement('header-item Id', 'Node Id') }
+          { listTextElement('header-item Author', 'Author') }
           { listTextElement('header-item Created', 'Created') }
           { listTextElement('header-item Updated', 'Updated') }
         </div>

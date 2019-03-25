@@ -4,7 +4,6 @@ import zipfile
 from plynx.constants import FileTypes
 from plynx.utils.remote import get_driver
 
-
 driver = get_driver()
 
 
@@ -30,3 +29,8 @@ def upload_file_stream(fp, file_path=None, seek=True):
     content = driver.get_contents_handler(file_path)
     content.set_contents_from_file(fp)
     return file_path
+
+
+def remove(file_path):
+    content = driver.get_contents_handler(file_path)
+    content.remove()

@@ -88,7 +88,7 @@ class Node(DBObject):
             default=None,
             is_list=False,
             ),
-        'public': DBObjectField(
+        'starred': DBObjectField(
             type=bool,
             default=False,
             is_list=False,

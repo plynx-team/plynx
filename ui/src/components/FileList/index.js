@@ -2,6 +2,7 @@
 import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
 import AlertContainer from 'react-alert-es6';
+import cookie from 'react-cookies'
 import { PLynxApi } from '../../API.js';
 import FileList from './FileList.js'
 import ReactPaginate from 'react-paginate';
@@ -21,11 +22,12 @@ export default class FileListPage extends Component {
   constructor(props) {
     super(props);
     document.title = "Files List - PLynx";
+    let username = cookie.load('username');
     this.state = {
       nodes: [],
       loading: true,
       pageCount: 0,
-      search: "",
+      search: username ? 'author:' + username + ' ' : '',
       fileObj: null,
       uploadFile: false,
       previewData: null,
@@ -265,6 +267,7 @@ export default class FileListPage extends Component {
         <div className="search">
           <SearchBar
               onSearchUpdate={(search) => this.handleSearchUpdate(search)}
+              search={this.state.search}
           />
         </div>
         {this.state.fileObj &&

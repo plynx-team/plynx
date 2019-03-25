@@ -6,6 +6,7 @@ install_requires = [
     'pymongo>=3.5.1',
     'pyyaml>=3.11',
     'passlib>=1.7.1',
+    'python-dateutil>=2.8.0',
     'itsdangerous>=0.24',
     'Flask>=0.12.2',
     'Flask-Cors>=3.0.3',

@@ -8,6 +8,12 @@ class ContentsHandlerBase(object):
     def set_contents_from_file(self, file_obj):
         raise NotImplementedError()
 
+    def remove(self):
+        raise NotImplementedError()
+
+    def exists(self):
+        raise NotImplementedError()
+
 
 class RemoteBase(object):
     def __init__(self, ContentsHandler, storage_config):

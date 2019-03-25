@@ -8,7 +8,7 @@ class BashJinja2(BaseBash):
 
     def run(self, preview=False):
         inputs, cloud_inputs = self._prepare_inputs(preview)
-        parameters = self._prepare_parameters()
+        parameters = self._prepare_parameters(pythonize=True)
         outputs, cloud_outputs = self._prepare_outputs(preview)
         logs = self._prepare_logs()
         cmd = self._extract_cmd_text()

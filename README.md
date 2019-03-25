@@ -1,34 +1,37 @@
 # PLynx
 
-Main page and demo: [PLynx.com](https://plynx.com).
+[![Website shields.io](https://img.shields.io/circleci/project/github/khaxis/plynx.svg)](https://circleci.com/gh/khaxis/plynx)
+[![Website shields.io](https://img.shields.io/github/license/khaxis/plynx.svg)](https://github.com/khaxis/plynx)
+[![Website shields.io](https://img.shields.io/pypi/pyversions/plynx.svg)](https://github.com/khaxis/plynx)
 
-PLynx is a framework that makes it easy to prototype, build, and deploy complex ML pipelines.
 
-Developed for data scientists and data engineers, PLynx provides an easy and flexible way of building data pipelines faster than ever. PLynx is a high level abstraction over data workflows.
+Main website and demo: [plynx.com](https://plynx.com).
+
+PLynx is a domain agnostic platform for managing reproducible experiments and data-oriented workflows.
 
 ## Features
 
 ### Distributed computation
 
-All of the computation is distributed across multiple workers.
+All of the computation is distributed across multiple workers. You can conduct multiple experiments simultaneously. Intermediate results will be stored in the cloud and reused. No need to start your experiment from scratch.
 
 ![Distributed computation](ui/public/architecture.png?raw=true "Distributed computation")
 
 ### Graph Editor
 
-Interactive User Interface. Create new pipelines based on existing ones and share your workflows with other people. Each of the pipelines is stored and you can always reproduce the results.
+Interactive User Interface. You can clone successful experiment and reuse it or create one from scratch. PLynx manages history of the experiments and they can be reproduced.
 
 ![interactive graph editor](docs/img/interactive_graph_editor.png?raw=true "Interactive graph editor")
 
-### Online operations editor
+### Operations editor
 
-Operations can be customized independently from the platform. You have high flexibility for each of the experiments.
+Operations can be customized independently from the platform. Users can define their own Operations or reuse existing ones.
 
 ![online editor](docs/img/online_code_editor.png?raw=true "Online Code editor")
 
 ### Monitor progress
 
-Track the progress of the workflow. Each of intermediate operations produce results that you can inspect.
+Track the progress of the experiment. Each of intermediate operations produce results that you can inspect.
 
 ![monitor progress](docs/img/monitor_progress.png?raw=true "Monitor Progress")
 

@@ -3,7 +3,7 @@ install_aliases()   # noqa
 
 import os
 from google.cloud import storage
-from urlparse import urlparse
+from urllib.parse import urlparse
 from plynx.utils.remote.base import ContentsHandlerBase, RemoteBase
 
 
@@ -17,6 +17,12 @@ class ContentsHandlerGS(ContentsHandlerBase):
 
     def set_contents_from_file(self, file_obj):
         self.blob.upload_from_file(file_obj)
+
+    def remove(self):
+        self.blob.delete()
+
+    def exists(self):
+        return self.blob.exists()
 
 
 class RemoteGS(RemoteBase):
