@@ -8,7 +8,7 @@ from collections import namedtuple
 
 SearchParameter = namedtuple('SearchParameter', ['key', 'value'])
 
-SEARCH_RGX = re.compile(r'[^-\s]+:[^-\s]+')
+SEARCH_RGX = re.compile(r'[^\s]+:[^\s]+')
 
 
 def to_object_id(_id):
