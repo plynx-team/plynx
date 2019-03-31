@@ -1,9 +1,9 @@
 // src/components/NotFound/index.js
 import React, { Component } from 'react';
-import { PLynxApi } from '../../API.js';
-import LoadingScreen from '../LoadingScreen.js'
-import { SPECIAL_USERS } from '../../constants.js';
-import cookie from 'react-cookies'
+import { PLynxApi } from '../../API';
+import LoadingScreen from '../LoadingScreen';
+import { SPECIAL_USERS } from '../../constants';
+import cookie from 'react-cookies';
 
 import './style.css';
 
@@ -28,9 +28,9 @@ export default class Welcome extends Component {
   async loginUser(specialUser) {
     // Loading
 
-    var self = this;
-    var loading = true;
-    var sleepPeriod = 1000;
+    const self = this;
+    let loading = true;
+    let sleepPeriod = 1000;
     const sleepMaxPeriod = 10000;
     const sleepStep = 1000;
 
@@ -38,13 +38,13 @@ export default class Welcome extends Component {
       loading: true,
     });
 
-    var handleResponse = null;
-    var promise = null;
+    let handleResponse = null;
+    let promise = null;
 
     if (specialUser === SPECIAL_USERS.DEMO) {
       promise = PLynxApi.endpoints.demo.getCustom({
-          method: 'post'
-        });
+        method: 'post'
+      });
       handleResponse = response => {
         cookie.save('access_token', response.data.access_token, { path: '/' });
         cookie.save('refresh_token', response.data.refresh_token, { path: '/' });
@@ -55,30 +55,32 @@ export default class Welcome extends Component {
       };
     } else if (specialUser === SPECIAL_USERS.DEFAULT) {
       promise = PLynxApi.endpoints.token.getCustom({
-          method: 'get',
-          auth:
-                {
-                  username: SPECIAL_USERS.DEFAULT,
-                  password: ''
-                }
-        });
+        method: 'get',
+        auth:
+        {
+          username: SPECIAL_USERS.DEFAULT,
+          password: ''
+        }
+      });
       handleResponse = response => {
         cookie.save('access_token', response.data.access_token, { path: '/' });
         cookie.save('refresh_token', response.data.refresh_token, { path: '/' });
         cookie.save('username', SPECIAL_USERS.DEFAULT, { path: '/' });
-        //dispatch({ type: AUTH_USER });
-        //window.location.href = CLIENT_ROOT_URL + '/dashboard';
+        // dispatch({ type: AUTH_USER });
+        // window.location.href = CLIENT_ROOT_URL + '/dashboard';
         window.location = '/graphs';
       };
     }
 
-    var errorHandler = (error) => {
+    const errorHandler = () => {
       if (specialUser === SPECIAL_USERS.DEFAULT) {
         loading = false;
       }
-      //errorHandler(dispatch, error.response, AUTH_ERROR)
+      // errorHandler(dispatch, error.response, AUTH_ERROR)
     };
 
+    /* eslint-disable no-await-in-loop */
+    /* eslint-disable no-unmodified-loop-condition */
     while (loading) {
       await promise
       .then(handleResponse)
@@ -88,6 +90,8 @@ export default class Welcome extends Component {
         sleepPeriod = Math.min(sleepPeriod + sleepStep, sleepMaxPeriod);
       }
     }
+    /* eslint-enable no-unmodified-loop-condition */
+    /* eslint-enable no-await-in-loop */
 
     // Stop loading
     self.setState({

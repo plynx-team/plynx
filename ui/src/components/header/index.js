@@ -1,12 +1,12 @@
 import React, { Component } from 'react';
-import { Link } from 'react-router-dom'
-import Navigation from './navigation.js'
-import UserButton from './UserButton.js'
+import PropTypes from 'prop-types';
+import { Link } from 'react-router-dom';
+import Navigation from './navigation';
+import UserButton from './UserButton';
 
-import './style.css'
+import './style.css';
 
-class Header extends Component {
-
+export default class Header extends Component {
   constructor(props) {
     super(props);
     this.state = { width: 0, height: 0, showMenu: false };
@@ -36,13 +36,13 @@ class Header extends Component {
   }
 
   render() {
-    var showMenuButton = this.state.width < 1100;
-    var showMenu = !showMenuButton || this.state.showMenu;
+    const showMenuButton = this.state.width < 1100;
+    const showMenu = !showMenuButton || this.state.showMenu;
 
     return (
       <div className="Header" onMouseUp={() => this.onMouseUp()}>
         <Link to='/' className="logo"><img src='/logo.png' className='icon' alt='PLynx'/></Link>
-        <div className={'menu-sl' + (showMenu ? "-show": "-hide")} id='menu-sl'>
+        <div className={'menu-sl' + (showMenu ? "-show" : "-hide")} id='menu-sl'>
           <Navigation showMenu={showMenu}/>
         </div>
         {
@@ -57,4 +57,6 @@ class Header extends Component {
   }
 }
 
-export default Header;
+Header.propTypes = {
+  onAPIDialogClick: PropTypes.func,
+};

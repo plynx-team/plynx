@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import { listTextElement } from '../Common/listElements';
-import { FILE_TYPES } from '../../constants.js'
+import { FILE_TYPES, NODE_STATUS } from '../../constants';
 import './FileItem.css';
 
 export default class FileItem extends Component {
@@ -11,12 +12,14 @@ export default class FileItem extends Component {
   }
 
   render() {
-    var typeTuple = FILE_TYPES.filter(
-      (ft) => {return ft.type === this.props.file_type}
+    const typeTuple = FILE_TYPES.filter(
+      (ft) => {
+        return ft.type === this.props.file_type;
+      }
     )[0];
 
     return (
-      <a className='list-item file-list-item' href={null} onClick={(e)=>this.onClick(e)}>
+      <a className='list-item file-list-item' href={null} onClick={(e) => this.onClick(e)}>
 
         <div className='ItemHeader'>
           <div className='TitleDescription'>
@@ -46,3 +49,18 @@ export default class FileItem extends Component {
     );
   }
 }
+
+FileItem.propTypes = {
+  _id: PropTypes.string,
+  title: PropTypes.string,
+  description: PropTypes.string,
+  starred: PropTypes.bool,
+  node_status: PropTypes.oneOf(Object.values(NODE_STATUS)),
+  user: PropTypes.shape({
+    username: PropTypes.string,
+  }),
+  insertion_date: PropTypes.string,
+  file_type: PropTypes.string,
+  fileObj: PropTypes.object,
+  onClick: PropTypes.func,
+};

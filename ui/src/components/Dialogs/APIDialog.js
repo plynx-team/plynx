@@ -1,16 +1,20 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
-import Dialog from './Dialog'
-import cookie from 'react-cookies'
+import PropTypes from 'prop-types';
+import Dialog from './Dialog';
+import cookie from 'react-cookies';
 import renderValueElement from '../Common/renderValueElement';
-import { API_ENDPOINT } from '../../configConsts'
-import './APIDialog.css'
+import { API_ENDPOINT } from '../../configConsts';
+import './APIDialog.css';
 
 
 export default class APIDialog extends Component {
+  static propTypes = {
+    onClose: PropTypes.func.isRequired,
+  }
+
   constructor(props) {
     super(props);
-    var token = cookie.load('refresh_token');
+    let token = cookie.load('refresh_token');
     // TODO remove after demo
     if (token === 'Not assigned') {
       token = cookie.load('access_token');
@@ -18,16 +22,16 @@ export default class APIDialog extends Component {
 
     this.state = {
       token: token,
-    }
+    };
   }
 
   render() {
-    let token = this.state.token;
-    var code =
+    const token = this.state.token;
+    const code =
 `#!/usr/bin/env python
 from plynx.api import Operation, Graph, Client
 
-TOKEN = '` + token +`'
+TOKEN = '` + token + `'
 ENDPOINT = '` + API_ENDPOINT + `'
 
 Echo = Operation(
@@ -51,11 +55,13 @@ graph = Graph(
 )
 
 graph.approve().wait()
-`
+`;
 
     return (
       <Dialog className='api-dialog'
-              onClose={() => {this.props.onClose()}}
+              onClose={() => {
+                this.props.onClose();
+              }}
               width={900}
               height={700}
               title={'python API'}
@@ -70,6 +76,7 @@ graph.approve().wait()
               className='token'
               value={token}
               rows={2}
+              readOnly
               />
           </div>
           <div className='token-box'>
@@ -84,7 +91,7 @@ graph.approve().wait()
               },
               handleChange: null,
               readOnly: true,
-              height: 550,
+              height: '550',
             })}
           </div>
 

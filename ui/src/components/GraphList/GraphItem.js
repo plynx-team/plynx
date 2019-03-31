@@ -1,5 +1,5 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import { listTextElement } from '../Common/listElements';
 import './GraphItem.css';
 
@@ -25,3 +25,16 @@ export default class GraphItem extends Component {
     );
   }
 }
+
+GraphItem.propTypes = {
+  graphs: PropTypes.array,
+  _id: PropTypes.string,
+  title: PropTypes.string,
+  description: PropTypes.string,
+  graph_running_status: PropTypes.string,
+  user: PropTypes.shape({
+    username: PropTypes.string,
+  }),
+  insertion_date: PropTypes.string,
+  update_date: PropTypes.string,
+};

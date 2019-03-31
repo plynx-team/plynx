@@ -1,6 +1,6 @@
-// src/components/About/index.js
+/* eslint max-len: 0 */
 import React, { Component } from 'react';
-import Highlight from 'react-syntax-highlight'
+import Highlight from 'react-syntax-highlight';
 
 import './style.css';
 import './python.css';

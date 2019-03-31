@@ -1,10 +1,21 @@
-// src/components/NotFound/index.js
 import React, { Component } from 'react';
-import Rnd from 'react-rnd'
+import PropTypes from 'prop-types';
+import Rnd from 'react-rnd';
 
 import './Dialog.css';
 
-export default class Dialog extends Component{
+export default class Dialog extends Component {
+  static propTypes = {
+    children: PropTypes.oneOfType([
+      PropTypes.array.isRequired,
+      PropTypes.object.isRequired,
+    ]),
+    enableResizing: PropTypes.bool.isRequired,
+    height: PropTypes.number.isRequired,
+    onClose: PropTypes.func.isRequired,
+    title: PropTypes.string.isRequired,
+    width: PropTypes.number.isRequired,
+  }
 
   constructor(props) {
     super(props);
@@ -12,7 +23,7 @@ export default class Dialog extends Component{
     this.state = {
       width: this.props.width,
       height: this.props.height
-    }
+    };
 
     this.x = -100;
     this.y = -100;
@@ -29,7 +40,7 @@ export default class Dialog extends Component{
   }
 
   handleBackgroundMouseUp(e) {
-    if (Math.pow(this.x - e.screenX, 2) + Math.pow(this.y - e.screenY, 2) < 25) {
+    if (((this.x - e.screenX) ** 2) + ((this.y - e.screenY) ** 2) < 25) {
       this.handleClose(e);
     }
     this.x = -1;
@@ -50,7 +61,7 @@ export default class Dialog extends Component{
           className='dialog-rnd'
           default={{
             x: (window.innerWidth - this.props.width) / 2,
-            y: (window.innerHeight - this.props.height)/ 2,
+            y: (window.innerHeight - this.props.height) / 2,
             width: this.props.width,
             height: this.props.height,
           }}
@@ -81,14 +92,20 @@ export default class Dialog extends Component{
                 &#215;
               </a>
               <div className='title noselect'
-                   onClick={(e) => {this.noop(e)}}
+                   onClick={(e) => {
+                     this.noop(e);
+                   }}
               >
                 {this.props.title}
               </div>
             </div>
             <div className='content'
-                 onClick={(e) => {this.noop(e)}}
-                 onMouseDown={(e) => {this.noop(e)}}
+                 onClick={(e) => {
+                   this.noop(e);
+                 }}
+                 onMouseDown={(e) => {
+                   this.noop(e);
+                 }}
             >
               {this.props.children}
             </div>

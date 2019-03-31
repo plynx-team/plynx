@@ -1,19 +1,20 @@
 import React, { Component } from 'react';
-import { separator } from './common'
-import cookie from 'react-cookies'
+import PropTypes from 'prop-types';
+import { separator } from './common';
+import cookie from 'react-cookies';
 
-import './style.css'
+import './style.css';
 
 
-class UserButton extends Component {
+export default class UserButton extends Component {
   constructor(props) {
     super(props);
-    var refreshTokenExists = cookie.load('refresh_token') ? true : false;
-    var username = cookie.load('username');
+    const refreshTokenExists = !!cookie.load('refresh_token');
+    const username = cookie.load('username');
     this.state = {
       username: username,
       refreshTokenExists: refreshTokenExists,
-    }
+    };
   }
 
   handleLogOut() {
@@ -64,4 +65,6 @@ class UserButton extends Component {
   }
 }
 
-export default UserButton;
+UserButton.propTypes = {
+  onAPIDialogClick: PropTypes.func,
+};

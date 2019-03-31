@@ -1,8 +1,7 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
 import { PLynxApi } from '../../API';
-import { SimpleLoader } from '../LoadingScreen'
-import GraphList from '../GraphList/GraphList'
+import { SimpleLoader } from '../LoadingScreen';
+import GraphList from '../GraphList/GraphList';
 import '../Common/List.css';
 import './Graphs.css';
 
@@ -28,9 +27,9 @@ export default class Graphs extends Component {
   async loadState() {
     // Loading
 
-    var self = this;
-    var loading = true;
-    var sleepPeriod = 1000;
+    const self = this;
+    let loading = true;
+    let sleepPeriod = 1000;
     const sleepMaxPeriod = 10000;
     const sleepStep = 1000;
 
@@ -40,8 +39,8 @@ export default class Graphs extends Component {
       });
     }
 
-    var handleResponse = function (response) {
-      let data = response.data;
+    const handleResponse = (response) => {
+      const data = response.data;
       console.log(data.graphs);
       self.setState(
         {
@@ -50,10 +49,10 @@ export default class Graphs extends Component {
       loading = false;
     };
 
-    var handleError = function (error) {
+    const handleError = (error) => {
       if (error.response && error.response.status === 401) {
         PLynxApi.getAccessToken()
-        .then(function (isSuccessfull) {
+        .then((isSuccessfull) => {
           if (!isSuccessfull) {
             console.error("Could not refresh token");
             self.props.history.push("/login/");
@@ -64,8 +63,10 @@ export default class Graphs extends Component {
       }
     };
 
+    /* eslint-disable no-await-in-loop */
+    /* eslint-disable no-unmodified-loop-condition */
     while (loading) {
-      await PLynxApi.endpoints.graphs.getAll( {
+      await PLynxApi.endpoints.graphs.getAll({
         query: {
           offset: 0,
           per_page: 10,
@@ -80,6 +81,8 @@ export default class Graphs extends Component {
         sleepPeriod = Math.min(sleepPeriod + sleepStep, sleepMaxPeriod);
       }
     }
+    /* eslint-enable no-unmodified-loop-condition */
+    /* eslint-enable no-await-in-loop */
 
     // Stop loading
     self.setState({

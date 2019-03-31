@@ -1,8 +1,21 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
-import { FILE_TYPES } from '../../constants.js'
+import PropTypes from 'prop-types';
+import { FILE_TYPES } from '../../constants';
 
 export default class InOutItem extends Component {
+  static propTypes = {
+    varName: PropTypes.string,
+    index: PropTypes.number,
+    readOnly: PropTypes.bool,
+    maxCount: PropTypes.number,
+    minCount: PropTypes.number,
+    fileType: PropTypes.string,
+    fileTypes: PropTypes.array,
+    name: PropTypes.string,
+    onChanged: PropTypes.func,
+    onRemove: PropTypes.func,
+  };
+
   constructor(props) {
     super(props);
     this.state = {
@@ -22,8 +35,8 @@ export default class InOutItem extends Component {
     if (this.state.readOnly) {
       return;
     }
-    var name = event.target.name;
-    var value = event.target.value;
+    const name = event.target.name;
+    let value = event.target.value;
     if (name === 'file_types') {
       value = [value];
     }
@@ -44,7 +57,7 @@ export default class InOutItem extends Component {
         {
           !this.state.readOnly &&
           <div
-            className={'Remove' + (this.state.remove_hover ? ' hover': '')}
+            className={'Remove' + (this.state.remove_hover ? ' hover' : '')}
             onMouseOver={() => this.setState({remove_hover: true})}
             onMouseLeave={() => this.setState({remove_hover: false})}
             onClick={() => this.handleRemoveItem()}
@@ -79,8 +92,7 @@ export default class InOutItem extends Component {
                 readOnly={this.state.readOnly}
               >
               {
-                FILE_TYPES.map((description) =>
-                  <option
+                FILE_TYPES.map((description) => <option
                     value={description.type}
                     key={description.type}
                     >
@@ -100,8 +112,7 @@ export default class InOutItem extends Component {
                 readOnly={this.state.readOnly}
               >
               {
-                FILE_TYPES.map((description) =>
-                  <option
+                FILE_TYPES.map((description) => <option
                     value={description.type}
                     key={description.type}
                     >

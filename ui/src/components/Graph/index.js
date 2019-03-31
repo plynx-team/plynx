@@ -1,22 +1,24 @@
+/* eslint max-lines: 0 */
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import queryString from 'query-string';
 import ReactNodeGraph from '../3rd_party/react_node_graph';
 import AlertContainer from 'react-alert-es6';
-import { PLynxApi } from '../../API.js';
-import { typesValid } from '../../graphValidation.js';
-import { DragDropContextProvider } from 'react-dnd'
+import { PLynxApi } from '../../API';
+import { typesValid } from '../../graphValidation';
+import { DragDropContextProvider } from 'react-dnd';
 import TouchBackend from 'react-dnd-touch-backend';
-import HTML5Backend from 'react-dnd-html5-backend'
-import cookie from 'react-cookies'
+import HTML5Backend from 'react-dnd-html5-backend';
+import cookie from 'react-cookies';
 import { isMobile } from "react-device-detect";
-import NodesBar from './NodesBar.js'
-import PreviewDialog from '../Dialogs/PreviewDialog.js'
-import PropertiesBar from './PropertiesBar.js'
-import Controls from './Controls.js'
-import LoadingScreen from '../LoadingScreen.js'
-import DemoScreen from '../DemoScreen.js'
-import FileDialog from '../Dialogs/FileDialog.js'
-import CodeDialog from '../Dialogs/CodeDialog.js'
+import NodesBar from './NodesBar';
+import PreviewDialog from '../Dialogs/PreviewDialog';
+import PropertiesBar from './PropertiesBar';
+import Controls from './Controls';
+import LoadingScreen from '../LoadingScreen';
+import DemoScreen from '../DemoScreen';
+import FileDialog from '../Dialogs/FileDialog';
+import CodeDialog from '../Dialogs/CodeDialog';
 import { ObjectID } from 'bson';
 import {HotKeys} from 'react-hotkeys';
 import {
@@ -29,26 +31,35 @@ import {
   SPECIAL_TYPE_NAMES,
   OPERATIONS,
   KEY_MAP,
-} from '../../constants.js';
-import { API_ENDPOINT } from '../../configConsts'
-import { storeToClipboard, loadFromClipboard } from '../../utils.js';
+} from '../../constants';
+import { API_ENDPOINT } from '../../configConsts';
+import { storeToClipboard, loadFromClipboard } from '../../utils';
 
-import "./gridtile.png"
-import "./node.css"
-import "./style.css"
+import "./gridtile.png";
+import "./node.css";
+import "./style.css";
 
 function parameterIsSpecial(parameter) {
-  return SPECIAL_TYPE_NAMES.indexOf(parameter.parameter_type) > -1 && parameter.widget != null;
+  return SPECIAL_TYPE_NAMES.indexOf(parameter.parameter_type) > -1 && parameter.widget !== null;
 }
 
 export class Graph extends Component {
+  static propTypes = {
+    history: PropTypes.object.isRequired,
+    location: PropTypes.object.isRequired,
+    match: PropTypes.shape({
+      params: PropTypes.shape({
+        graph_id: PropTypes.string,
+      }),
+    }),
+  }
 
   constructor(props) {
     super(props);
     this.graph = {};
-    this.node_lookup = {}
-    this.block_lookup = {}
-    this.connections = []
+    this.node_lookup = {};
+    this.block_lookup = {};
+    this.connections = [];
     document.title = "Graph";
 
     this.state = {
@@ -64,7 +75,7 @@ export class Graph extends Component {
       generatedCode: "",
     };
 
-    var token = cookie.load('refresh_token');
+    let token = cookie.load('refresh_token');
     // TODO remove after demo
     if (token === 'Not assigned') {
       token = cookie.load('access_token');
@@ -74,11 +85,11 @@ export class Graph extends Component {
 `#!/usr/bin/env python
 from plynx.api import Operation, File, Graph, Client
 
-TOKEN = '` + token +`'
+TOKEN = '` + token + `'
 ENDPOINT = '` + API_ENDPOINT + `'
 
 
-`
+`;
   }
 
   sleep(ms) {
@@ -88,23 +99,23 @@ ENDPOINT = '` + API_ENDPOINT + `'
   async componentDidMount() {
     // Loading
 
-    var self = this;
-    var loading = true;
-    var graph_id = this.props.match.params.graph_id.replace(/\$+$/, '');
-    var sleepPeriod = 1000;
+    const self = this;
+    let loading = true;
+    const graph_id = this.props.match.params.graph_id.replace(/\$+$/, '');
+    let sleepPeriod = 1000;
     const sleepMaxPeriod = 10000;
     const sleepStep = 1000;
 
-    var loadGraph = function (response) {
+    const loadGraph = (response) => {
       self.loadGraphFromJson(response.data.data);
       console.log(graph_id);
       if (graph_id === 'new') {
-        self.props.history.replace("/graphs/" + self.graph._id)
+        self.props.history.replace("/graphs/" + self.graph._id);
       }
       loading = false;
     };
 
-    var handleError = function (error) {
+    const handleError = (error) => {
       console.error(error);
       console.error('-----------');
       if (error.response.status === 404) {
@@ -114,7 +125,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
       }
       if (error.response.status === 401) {
         PLynxApi.getAccessToken()
-        .then(function (isSuccessfull) {
+        .then((isSuccessfull) => {
           if (!isSuccessfull) {
             console.error("Could not refresh token");
             self.showAlert('Failed to authenticate', 'failed');
@@ -123,8 +134,10 @@ ENDPOINT = '` + API_ENDPOINT + `'
           }
         });
       }
-    }
+    };
 
+    /* eslint-disable no-await-in-loop */
+    /* eslint-disable no-unmodified-loop-condition */
     while (loading) {
       await PLynxApi.endpoints.graphs.getOne({ id: graph_id})
       .then(loadGraph)
@@ -134,6 +147,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
         sleepPeriod = Math.min(sleepPeriod + sleepStep, sleepMaxPeriod);
       }
     }
+    /* eslint-enable no-unmodified-loop-condition */
+    /* eslint-enable no-await-in-loop */
 
     // Stop loading
     self.setState({
@@ -147,72 +162,73 @@ ENDPOINT = '` + API_ENDPOINT + `'
     console.log(this.graph);
     this.connections = [];
     this.blocks = [];
-    var ts = new ObjectID().toString();
+    const ts = new ObjectID().toString();
 
-    for (var i = 0; i < this.graph.nodes.length; ++i) {
-        var node = this.graph.nodes[i];
-        var inputs = [];
-        var outputs = [];
-        var specialParameterNames = [];
+    for (let i = 0; i < this.graph.nodes.length; ++i) {
+      const node = this.graph.nodes[i];
+      const inputs = [];
+      const outputs = [];
+      const specialParameterNames = [];
+      let j = 0;
 
-        if (node.inputs) {
-          for (var j = 0; j < node.inputs.length; ++j) {
-            inputs.push({
-              name: node.inputs[j].name,
-              file_types: node.inputs[j].file_types
-            });
-            for (var k = 0; k < node.inputs[j].values.length; ++k) {
-              this.connections.push({
-                "from_block": node.inputs[j].values[k].node_id,
-                "from": node.inputs[j].values[k].output_id,
-                "to_block": node._id,
-                "to": node.inputs[j].name}
+      if (node.inputs) {
+        for (j = 0; j < node.inputs.length; ++j) {
+          inputs.push({
+            name: node.inputs[j].name,
+            file_types: node.inputs[j].file_types
+          });
+          for (let k = 0; k < node.inputs[j].values.length; ++k) {
+            this.connections.push({
+              "from_block": node.inputs[j].values[k].node_id,
+              "from": node.inputs[j].values[k].output_id,
+              "to_block": node._id,
+              "to": node.inputs[j].name}
               );
-            }
           }
         }
-        for (j = 0; j < node.outputs.length; ++j) {
-          outputs.push({
-            name: node.outputs[j].name,
-            file_type: node.outputs[j].file_type
-          });
-        }
+      }
+      for (j = 0; j < node.outputs.length; ++j) {
+        outputs.push({
+          name: node.outputs[j].name,
+          file_type: node.outputs[j].file_type
+        });
+      }
 
-        for (j = 0; j < node.parameters.length; ++j) {
-          if (parameterIsSpecial(node.parameters[j])) {
-            specialParameterNames.push(node.parameters[j].name);
-          }
+      for (j = 0; j < node.parameters.length; ++j) {
+        if (parameterIsSpecial(node.parameters[j])) {
+          specialParameterNames.push(node.parameters[j].name);
         }
+      }
 
-        if(!node.hasOwnProperty("x")) {
-          node.x = Math.floor(Math.random() * 800) + 1;
-        }
-        if(!node.hasOwnProperty("y")) {
-          node.y = Math.floor(Math.random() * 400) + 1;
-        }
+      if (!node.hasOwnProperty("x")) {
+        node.x = Math.floor(Math.random() * 800) + 1;
+      }
+      if (!node.hasOwnProperty("y")) {
+        node.y = Math.floor(Math.random() * 400) + 1;
+      }
 
-        this.blocks.push({
-            "nid": node._id,
-            "title": node.title,
-            "description": node.description,
-            "cacheUrl": node.cache_url,
-            "x": node.x,
-            "y": node.y,
-            "fields":
-            {
-              "in":inputs,
-              "out":outputs
-            },
-            "nodeRunningStatus": node.node_running_status,
-            "nodeStatus": node.node_status,
-            "specialParameterNames": specialParameterNames,
-            "_ts": ts,
-          });
-          this.node_lookup[node._id] = node;
-          this.block_lookup[node._id] = this.blocks[this.blocks.length - 1];
+      this.blocks.push({
+        "nid": node._id,
+        "title": node.title,
+        "description": node.description,
+        "cacheUrl": node.cache_url,
+        "x": node.x,
+        "y": node.y,
+        "fields":
+        {
+          "in": inputs,
+          "out": outputs
+        },
+        "nodeRunningStatus": node.node_running_status,
+        "nodeStatus": node.node_status,
+        "specialParameterNames": specialParameterNames,
+        "_ts": ts,
+      });
+      this.node_lookup[node._id] = node;
+      this.block_lookup[node._id] = this.blocks[this.blocks.length - 1];
     }
 
-    var nid = queryString.parse(this.props.location.search).nid;
+    const nid = queryString.parse(this.props.location.search).nid;
 
     this.setState({
       "blocks": this.blocks,
@@ -229,7 +245,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
       }
     });
 
-    var st = this.graph.graph_running_status.toUpperCase();
+    const st = this.graph.graph_running_status.toUpperCase();
     if (st === 'READY' || st === GRAPH_RUNNING_STATUS.RUNNING || st === GRAPH_RUNNING_STATUS.FAILED_WAITING) {
       this.timeout = setTimeout(() => this.checkGraphStatus(), 1000);
     }
@@ -237,15 +253,17 @@ ENDPOINT = '` + API_ENDPOINT + `'
 
   updateGraphFromJson(newGraph) {
     console.log("update");
+    let i = 0;
+    let block = null;
 
-    var blocks_lookup_index = {};
-    for (var i = 0; i < this.blocks.length; ++i) {
-      var block = this.blocks[i];
+    const blocks_lookup_index = {};
+    for (i = 0; i < this.blocks.length; ++i) {
+      block = this.blocks[i];
       blocks_lookup_index[block.nid] = i;
     }
 
     for (i = 0; i < newGraph.nodes.length; ++i) {
-      var node = this.graph.nodes[i];
+      const node = this.graph.nodes[i];
       block = this.blocks[blocks_lookup_index[node._id]];
       block.nodeRunningStatus = node.node_running_status;
       block.nodeStatus = node.node_status;
@@ -260,7 +278,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
       "graphRunningStatus": newGraph.graph_running_status,
     });
 
-    var st = this.graph.graph_running_status.toUpperCase();
+    const st = this.graph.graph_running_status.toUpperCase();
     if (st === 'READY' || st === GRAPH_RUNNING_STATUS.RUNNING || st === GRAPH_RUNNING_STATUS.FAILED_WAITING) {
       this.timeout = setTimeout(() => this.checkGraphStatus(), 1000);
     }
@@ -275,17 +293,17 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   checkGraphStatus() {
-    var self = this;
-    var graph_id =  self.graph._id;
+    const self = this;
+    const graph_id = self.graph._id;
     PLynxApi.endpoints.graphs.getOne({ id: graph_id})
-    .then(function (response) {
+    .then((response) => {
       self.updateGraphFromJson(response.data.data);
     })
-    .catch(function (error) {
+    .catch((error) => {
       console.log(error);
       if (error.response.status === 401) {
         PLynxApi.getAccessToken()
-        .then(function (isSuccessfull) {
+        .then((isSuccessfull) => {
           if (isSuccessfull) {
             self.timeout = setTimeout(() => self.checkGraphStatus(), 1000);
           } else {
@@ -298,17 +316,17 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   onNewConnector(from_nid, from_pin, to_nid, to_pin) {
-    var from_node = this.node_lookup[from_nid];
-    var node_output = from_node.outputs.find(
-      function(node_output) {
-        return node_output.name === from_pin
+    const from_node = this.node_lookup[from_nid];
+    const node_output = from_node.outputs.find(
+      (node_output_) => {
+        return node_output_.name === from_pin;
       }
     );
 
-    var to_node = this.node_lookup[to_nid];
-    var node_input = to_node.inputs.find(
-      function(node_input) {
-        return node_input.name === to_pin
+    const to_node = this.node_lookup[to_nid];
+    const node_input = to_node.inputs.find(
+      (node_input_) => {
+        return node_input_.name === to_pin;
       }
     );
 
@@ -320,8 +338,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
     }
 
     if (node_input.max_count > 0 && node_input.values.length >= node_input.max_count) {
-       this.showAlert("No more slots for new connections left", 'warning');
-       return;
+      this.showAlert("No more slots for new connections left", 'warning');
+      return;
     }
 
     if (!typesValid(node_output, node_input)) {
@@ -336,11 +354,11 @@ ENDPOINT = '` + API_ENDPOINT + `'
     }
 
     this.connections.push({
-      from_block : from_nid,
-      from : from_pin,
-      to_block : to_nid,
-      to : to_pin
-    })
+      from_block: from_nid,
+      from: from_pin,
+      to_block: to_nid,
+      to: to_pin
+    });
 
     node_input.values.push({
       "node_id": from_nid,
@@ -356,25 +374,25 @@ ENDPOINT = '` + API_ENDPOINT + `'
 
     console.log(this.graph);
 
-    this.setState({connections: this.connections})
+    this.setState({connections: this.connections});
   }
 
   onRemoveConnector(connector) {
-    var connections = this.connections;
+    let connections = this.connections;
     connections = connections.filter((connection) => {
-      return connection !== connector
+      return connection !== connector;
     });
 
-    var to_node = this.node_lookup[connector.to_block];
-    var input = to_node.inputs.filter((input) => {
-      return input.name === connector.to;
+    const to_node = this.node_lookup[connector.to_block];
+    const input = to_node.inputs.filter((input_) => {
+      return input_.name === connector.to;
     })[0];
     input.values = input.values.filter((value) => {
       return !(value.output_id === connector.from && value.node_id === connector.from_block);
-    })
+    });
 
     this.connections = connections;
-    this.setState({connections: connections})
+    this.setState({connections: connections});
   }
 
   onRemoveBlock(nid) {
@@ -390,8 +408,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   onCopyBlock(copyList) {
-    var nodes = copyList.nids.map(nid => this.node_lookup[nid]);
-    var copyObject = {
+    const nodes = copyList.nids.map(nid => this.node_lookup[nid]);
+    const copyObject = {
       nodes: nodes,
       connectors: copyList.connectors,
     };
@@ -401,17 +419,17 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   onPasteBlock() {
-    var copyBody = loadFromClipboard();
-    var nidOldToNew = {};
+    const copyBody = loadFromClipboard();
+    const nidOldToNew = {};
     if (!copyBody) {
       return;
     }
-    var ii;
-    var pastedBlockIds = [];
+    let ii;
+    const pastedBlockIds = [];
     this.mainGraph.decoratedComponentInstance.deselectAll(false);
     for (ii = 0; ii < copyBody.nodes.length; ++ii) {
-      var blockJson = copyBody.nodes[ii];
-      var block_id = this.handleDrop(
+      const blockJson = copyBody.nodes[ii];
+      const block_id = this.handleDrop(
         {
           nodeContent: blockJson,
           mousePos: {
@@ -424,19 +442,19 @@ ENDPOINT = '` + API_ENDPOINT + `'
       pastedBlockIds.push(block_id);
     }
     for (ii = 0; ii < copyBody.connectors.length; ++ii) {
-      let connector = copyBody.connectors[ii];
-      var { to_block, from_block } = connector;
+      const connector = copyBody.connectors[ii];
+      let { to_block, from_block } = connector;
       if (nidOldToNew.hasOwnProperty(to_block)) {
         to_block = nidOldToNew[to_block];
       }
       if (nidOldToNew.hasOwnProperty(from_block)) {
         from_block = nidOldToNew[from_block];
       }
-      var from_node = this.node_lookup[from_block]
-      var to_node = this.node_lookup[to_block]
+      const from_node = this.node_lookup[from_block];
+      const to_node = this.node_lookup[to_block];
       if (from_node && to_node) {
-        var index = -1;
-        for (var jj = 0; jj < to_node.inputs.length; ++jj) {
+        let index = -1;
+        for (let jj = 0; jj < to_node.inputs.length; ++jj) {
           if (to_node.inputs[jj].name === connector.to) {
             index = jj;
             break;
@@ -474,28 +492,28 @@ ENDPOINT = '` + API_ENDPOINT + `'
       console.error("Cannot find node with id " + nid);
       return;
     }
-    let node = this.node_lookup[nid];
-    let output = node.outputs[outputIndex];
+    const node = this.node_lookup[nid];
+    const output = node.outputs[outputIndex];
     if (output.resource_id) {
       this.handlePreview({
         title: output.name,
         file_type: output.file_type,
         resource_id: output.resource_id,
         download_name: output.name,
-    });
+      });
     } else {
       console.log("Resource is not ready yet");
     }
   }
 
-  onSpecialParameterClick (nid, specialParameterIndex) {
+  onSpecialParameterClick(nid, specialParameterIndex) {
     if (!this.node_lookup.hasOwnProperty(nid)) {
       console.error("Cannot find node with id " + nid);
       return;
     }
-    var node = this.node_lookup[nid];
-    var idx = 0;
-    for (var i = 0; i < node.parameters.length; ++i) {
+    const node = this.node_lookup[nid];
+    let idx = 0;
+    for (let i = 0; i < node.parameters.length; ++i) {
       if (parameterIsSpecial(node.parameters[i])) {
         if (idx === specialParameterIndex) {
           this.setState({
@@ -515,7 +533,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
       console.error("Cannot find node with id " + nid);
       return;
     }
-    var node = this.node_lookup[nid];
+    const node = this.node_lookup[nid];
     node.x = pos.left;
     node.y = pos.top;
   }
@@ -524,8 +542,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
     console.log('blocks selected : ' + nids);
 
     if (nids.length === 1) {
-      let nid = nids[0];
-      var node = this.node_lookup[nid];
+      const nid = nids[0];
+      const node = this.node_lookup[nid];
       if (node) {
         this.propertiesBar.setNodeData(
           this.graph._id,
@@ -622,16 +640,16 @@ ENDPOINT = '` + API_ENDPOINT + `'
   handleClone() {
     this.graph.graph_running_status = GRAPH_RUNNING_STATUS.CREATED;
     this.graph._id = new ObjectID().toString();
-    var j = 0;
-    for(var i = 0; i < this.graph.nodes.length; ++i) {
-      var node = this.graph.nodes[i];
+    let j = 0;
+    for (let i = 0; i < this.graph.nodes.length; ++i) {
+      const node = this.graph.nodes[i];
       if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
         node.node_running_status = NODE_RUNNING_STATUS.CREATED;
       }
       if (node.inputs) {
         for (j = 0; j < node.inputs.length; ++j) {
-          var input_values = node.inputs[j].values
-          for (var k = 0; k < input_values.length; ++k) {
+          const input_values = node.inputs[j].values;
+          for (let k = 0; k < input_values.length; ++k) {
             input_values[k].resource_id = null;
           }
         }
@@ -663,23 +681,22 @@ ENDPOINT = '` + API_ENDPOINT + `'
 
   handleParameterChanged(nodeId, name, value) {
     if (nodeId) {
-      var node = this.node_lookup[nodeId];
-      var node_parameter = node.parameters.find(
-        function(node_input) {
-          return node_input.name === name
+      const node = this.node_lookup[nodeId];
+      const node_parameter = node.parameters.find(
+        (node_input) => {
+          return node_input.name === name;
         }
       );
       if (node_parameter) {
         node_parameter.value = value;
       } else if (name === '_DESCRIPTION') {
-        var block = this.block_lookup[nodeId];
+        const block = this.block_lookup[nodeId];
         node.description = value;
         block.description = value;
 
         this.setState({
           blocks: this.blocks
         });
-
       } else {
         throw new Error("Parameter not found");
       }
@@ -706,19 +723,19 @@ ENDPOINT = '` + API_ENDPOINT + `'
       nodeId: undefined,
       parameterName: undefined,
       parameterValue: undefined,
-    })
+    });
   }
 
   handleCloseGeneratedCodeDialog() {
     this.setState({
       generatedCode: undefined,
-    })
+    });
   }
 
   handleShowFile(nid) {
     this.setState({
       fileObj: this.node_lookup[nid]
-    })
+    });
   }
 
   handleCloseFileDialog() {
@@ -740,14 +757,14 @@ ENDPOINT = '` + API_ENDPOINT + `'
     },
   }
 
-  handleDrop(blockObj, replaceParentNode) {
-    blockObj = JSON.parse(JSON.stringify(blockObj)); // copy
-    var node = blockObj.nodeContent;
-    var inputs = [];
-    var outputs = [];
-    var specialParameterNames = [];
+  handleDrop(blockObjArg, replaceParentNode) {
+    const blockObj = JSON.parse(JSON.stringify(blockObjArg)); // copy
+    const node = blockObj.nodeContent;
+    const inputs = [];
+    const outputs = [];
+    const specialParameterNames = [];
 
-    var i = 0;
+    let i = 0;
 
     if (replaceParentNode) {
       node.parent_node = node._id;
@@ -794,8 +811,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
         "y": node.y,
         "fields":
         {
-          "in":inputs,
-          "out":outputs
+          "in": inputs,
+          "out": outputs
         },
         "nodeRunningStatus": node.node_running_status,
         "nodeStatus": node.node_status,
@@ -817,8 +834,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   postGraph(graph, reloadOnSuccess, action) {
-    /*action might be in {'save', 'validate', 'approve', 'deprecate'}*/
-    var self = this;
+    /* action might be in {'save', 'validate', 'approve', 'deprecate'}*/
+    const self = this;
     self.setState({loading: true});
     PLynxApi.endpoints.graphs
     .create({
@@ -827,8 +844,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
         actions: [action]
       }
     })
-    .then(function (response) {
-      var data = response.data;
+    .then((response) => {
+      const data = response.data;
       console.log(data);
       self.setState({loading: false});
       if (data.status === RESPONCE_STATUS.SUCCESS) {
@@ -843,19 +860,18 @@ ENDPOINT = '` + API_ENDPOINT + `'
           self.loadGraphFromJson(data.graph);
         } else if (action === ACTION.UPGRADE_NODES) {
           self.loadGraphFromJson(data.graph);
-          var message = "";
+          let message = "";
           if (data.upgraded_nodes_count > 0) {
             message = "Upgraded " + data.upgraded_nodes_count +
               (data.upgraded_nodes_count > 1 ? " Nodes" : " Node");
-          }
-          else {
+          } else {
             message = "No Nodes upgraded";
           }
           self.showAlert(message, 'success');
         } else if (action === ACTION.GENERATE_CODE) {
-            self.setState({
-              generatedCode: data.code
-            })
+          self.setState({
+            generatedCode: data.code
+          });
         } else {
           self.showAlert("Success", 'success');
         }
@@ -865,7 +881,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
       } else if (data.status === RESPONCE_STATUS.VALIDATION_FAILED) {
         console.warn(data.message);
         // TODO smarter traverse
-        self.showValidationError(data.validation_error)
+        self.showValidationError(data.validation_error);
 
         self.showAlert(data.message, 'failed');
       } else {
@@ -873,11 +889,11 @@ ENDPOINT = '` + API_ENDPOINT + `'
         self.showAlert(data.message, 'failed');
       }
     })
-    .catch(function (error) {
+    .catch((error) => {
       console.log(error);
       if (error.response.status === 401) {
         PLynxApi.getAccessToken()
-        .then(function (isSuccessfull) {
+        .then((isSuccessfull) => {
           if (!isSuccessfull) {
             console.error("Could not refresh token");
             self.showAlert('Failed to authenticate', 'failed');
@@ -893,11 +909,11 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   showValidationError(validationError) {
-    var children = validationError.children;
-    for (var i = 0; i < children.length; ++i) {
-      var child = children[i];
-      var nodeId = null;
-      var node = null;
+    const children = validationError.children;
+    for (let i = 0; i < children.length; ++i) {
+      const child = children[i];
+      let nodeId = null;
+      let node = null;
       switch (child.validation_code) {
         case VALIDATION_CODES.IN_DEPENDENTS:
           this.showValidationError(child);
@@ -928,7 +944,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
           this.showAlert("Missing parameter `" + child.object_id + "`", 'warning');
           break;
         default:
-
       }
     }
   }
@@ -937,12 +952,12 @@ ENDPOINT = '` + API_ENDPOINT + `'
     this.msg.show(message, {
       time: 5000,
       type: 'error',
-      icon: <img src={"/alerts/" + type +".svg"} width="32" height="32" alt="alert"/>
+      icon: <img src={"/alerts/" + type + ".svg"} width="32" height="32" alt="alert"/>
     });
   }
 
   render() {
-    var demoPreview = cookie.load('demoPreview') ? true : false;
+    const demoPreview = !!cookie.load('demoPreview');
 
     return (
       <DragDropContextProvider backend={isMobile ? TouchBackend : HTML5Backend}>
@@ -951,7 +966,10 @@ ENDPOINT = '` + API_ENDPOINT + `'
         >
           <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
           { demoPreview &&
-            <DemoScreen onApprove={() => this.handleApprove()} onClose={() => {cookie.remove('demoPreview', { path: '/' }); this.forceUpdate()}} />
+            <DemoScreen onApprove={() => this.handleApprove()} onClose={() => {
+              cookie.remove('demoPreview', { path: '/' });
+              this.forceUpdate();
+            }} />
           }
           {this.state.loading &&
             <LoadingScreen
@@ -966,7 +984,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
               onClose={() => this.handleCloseFileDialog()}
               onDeprecate={(fileObj) => this.handleDeprecate(fileObj)}
               fileObj={this.state.fileObj}
-              hideDeprecate={true}
+              hideDeprecate  // TODO let the author to deprecate file
               onPreview={(previewData) => this.handlePreview(previewData)}
               />
           }
@@ -1011,7 +1029,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
                 value: this.generatedCodeHeader + this.state.generatedCode,
               }}
               onClose={() => this.handleCloseGeneratedCodeDialog()}
-              readOnly={true}
+              readOnly={!this.state.editable}
             />
           }
 
@@ -1019,20 +1037,26 @@ ENDPOINT = '` + API_ENDPOINT + `'
           {this.state.editable && <NodesBar/> }
 
           <ReactNodeGraph className="MainGraph"
-            ref={(child) => { this.mainGraph = child; }}
+            ref={(child) => {
+              this.mainGraph = child;
+            }}
             data={this.state}
             graphId={this.state.graphId}
             editable={this.state.editable}
-            onBlockMove={(nid, pos)=>this.onBlockMove(nid, pos)}
-            onNewConnector={(n1,o,n2,i)=>this.onNewConnector(n1,o,n2,i)}
-            onRemoveConnector={(connector)=>this.onRemoveConnector(connector)}
-            onOutputClick={(nid, outputIndex)=>this.onOutputClick(nid, outputIndex)}
-            onSpecialParameterClick={(nid, specialParameterIndex)=>this.onSpecialParameterClick(nid, specialParameterIndex)}
-            onRemoveBlock={(nid)=>this.onRemoveBlock(nid)}
-            onCopyBlock={(copyList)=>this.onCopyBlock(copyList)}
-            onPasteBlock={()=>this.onPasteBlock()}
-            onBlocksSelect={(nids) => {this.handleBlocksSelect(nids)}}
-            onBlockDeselect={(nid) => {this.handleBlockDeselect(nid)}}
+            onBlockMove={(nid, pos) => this.onBlockMove(nid, pos)}
+            onNewConnector={(n1, o, n2, i) => this.onNewConnector(n1, o, n2, i)}
+            onRemoveConnector={(connector) => this.onRemoveConnector(connector)}
+            onOutputClick={(nid, outputIndex) => this.onOutputClick(nid, outputIndex)}
+            onSpecialParameterClick={(nid, specialParameterIndex) => this.onSpecialParameterClick(nid, specialParameterIndex)}
+            onRemoveBlock={(nid) => this.onRemoveBlock(nid)}
+            onCopyBlock={(copyList) => this.onCopyBlock(copyList)}
+            onPasteBlock={() => this.onPasteBlock()}
+            onBlocksSelect={(nids) => {
+              this.handleBlocksSelect(nids);
+            }}
+            onBlockDeselect={(nid) => {
+              this.handleBlockDeselect(nid);
+            }}
             onDrop={(nodeObj) => this.handleDrop(nodeObj, true)}
             onAllBlocksDeselect={() => this.handleAllBlocksDeselect()}
             onSavePressed={() => this.handleSave()}
@@ -1040,7 +1064,9 @@ ENDPOINT = '` + API_ENDPOINT + `'
           />
 
           <PropertiesBar className="PropertiesBar"
-                        ref={(child) => { this.propertiesBar = child; }}
+                        ref={(child) => {
+                          this.propertiesBar = child;
+                        }}
                         onParameterChanged={(nodeId, name, value) => this.handleParameterChanged(nodeId, name, value)}
                         editable={this.state.editable}
                         onPreview={(previewData) => this.handlePreview(previewData)}
@@ -1053,7 +1079,5 @@ ENDPOINT = '` + API_ENDPOINT + `'
         </HotKeys>
       </DragDropContextProvider>
     );
-
-
   }
 }

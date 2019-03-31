@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
-import Item from './Item.js'
+import PropTypes from 'prop-types';
+import Item from './Item';
 import { listTextElement } from '../Common/listElements';
 
 import './style.css';
@@ -36,3 +37,7 @@ export default class List extends Component {
     );
   }
 }
+
+List.propTypes = {
+  nodes: PropTypes.array,
+};

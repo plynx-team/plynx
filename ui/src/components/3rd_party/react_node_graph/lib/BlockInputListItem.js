@@ -1,6 +1,17 @@
 import React from 'react';
+import PropTypes from 'prop-types';
+
 
 export default class BlockInputListItem extends React.Component {
+  static propTypes = {
+    index: PropTypes.number.isRequired,
+    item: PropTypes.shape({
+      name: PropTypes.string.isRequired,
+      file_types: PropTypes.array.isRequired,
+    }).isRequired,
+    onMouseUp: PropTypes.func.isRequired,
+  }
+
   onMouseUp(e) {
     e.stopPropagation();
     e.preventDefault();
@@ -10,11 +21,11 @@ export default class BlockInputListItem extends React.Component {
 
   noop(e) {
     e.stopPropagation();
-      e.preventDefault();
+    e.preventDefault();
   }
 
   render() {
-    let {name} = this.props.item;
+    const {name} = this.props.item;
 
     return (
       <li
@@ -22,7 +33,7 @@ export default class BlockInputListItem extends React.Component {
         >
         <a
           onClick={
-            (e)=>this.noop(e)} onMouseUp={(e)=>this.onMouseUp(e)
+            (e) => this.noop(e)} onMouseUp={(e) => this.onMouseUp(e)
           }
           href={null}
           >

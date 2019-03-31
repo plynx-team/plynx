@@ -2,16 +2,16 @@
 import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
 import AlertContainer from 'react-alert-es6';
-import cookie from 'react-cookies'
-import { PLynxApi } from '../../API.js';
-import FileList from './FileList.js'
+import cookie from 'react-cookies';
+import { PLynxApi } from '../../API';
+import FileList from './FileList';
 import ReactPaginate from 'react-paginate';
-import LoadingScreen from '../LoadingScreen.js'
-import FileDialog from '../Dialogs/FileDialog.js'
-import FileUploadDialog from '../Dialogs/FileUploadDialog.js'
-import PreviewDialog from '../Dialogs/PreviewDialog.js'
-import { ACTION, ALERT_OPTIONS, RESPONCE_STATUS, KEY_MAP } from '../../constants.js';
-import SearchBar from '../Common/SearchBar.js';
+import LoadingScreen from '../LoadingScreen';
+import FileDialog from '../Dialogs/FileDialog';
+import FileUploadDialog from '../Dialogs/FileUploadDialog';
+import PreviewDialog from '../Dialogs/PreviewDialog';
+import { ACTION, ALERT_OPTIONS, RESPONCE_STATUS, KEY_MAP } from '../../constants';
+import SearchBar from '../Common/SearchBar';
 import {HotKeys} from 'react-hotkeys';
 import './style.css';
 import '../Common/ListPage.css';
@@ -22,7 +22,7 @@ export default class FileListPage extends Component {
   constructor(props) {
     super(props);
     document.title = "Files List - PLynx";
-    let username = cookie.load('username');
+    const username = cookie.load('username');
     this.state = {
       nodes: [],
       loading: true,
@@ -47,7 +47,7 @@ export default class FileListPage extends Component {
     this.msg.show(message, {
       time: 5000,
       type: 'error',
-      icon: <img src={"/alerts/" + type +".svg"} width="32" height="32" alt={type}/>
+      icon: <img src={"/alerts/" + type + ".svg"} width="32" height="32" alt={type}/>
     });
   }
 
@@ -62,9 +62,9 @@ export default class FileListPage extends Component {
   async loadFiles() {
     // Loading
 
-    var self = this;
-    var loading = true;
-    var sleepPeriod = 1000;
+    const self = this;
+    let loading = true;
+    let sleepPeriod = 1000;
     const sleepMaxPeriod = 10000;
     const sleepStep = 1000;
 
@@ -74,8 +74,8 @@ export default class FileListPage extends Component {
       });
     }
 
-    var handleResponse = function (response) {
-      let data = response.data;
+    const handleResponse = (response) => {
+      const data = response.data;
       console.log(data.nodes);
       self.setState(
         {
@@ -86,10 +86,10 @@ export default class FileListPage extends Component {
       ReactDOM.findDOMNode(self.fileList).scrollTop = 0;
     };
 
-    var handleError = function (error) {
+    const handleError = (error) => {
       if (error.response.status === 401) {
         PLynxApi.getAccessToken()
-        .then(function (isSuccessfull) {
+        .then((isSuccessfull) => {
           if (!isSuccessfull) {
             console.error("Could not refresh token");
             self.props.history.push("/login/");
@@ -100,8 +100,10 @@ export default class FileListPage extends Component {
       }
     };
 
+    /* eslint-disable no-await-in-loop */
+    /* eslint-disable no-unmodified-loop-condition */
     while (loading) {
-      await PLynxApi.endpoints.nodes.getAll( {
+      await PLynxApi.endpoints.nodes.getAll({
         query: {
           offset: self.state.offset,
           per_page: self.perPage,
@@ -116,6 +118,8 @@ export default class FileListPage extends Component {
         sleepPeriod = Math.min(sleepPeriod + sleepStep, sleepMaxPeriod);
       }
     }
+    /* eslint-enable no-unmodified-loop-condition */
+    /* eslint-enable no-await-in-loop */
 
     // Stop loading
     self.setState({
@@ -128,8 +132,8 @@ export default class FileListPage extends Component {
   }
 
   handlePageClick = (data) => {
-    let selected = data.selected;
-    let offset = Math.ceil(selected * this.perPage);
+    const selected = data.selected;
+    const offset = Math.ceil(selected * this.perPage);
     console.log(selected, offset);
 
     this.setState({offset: offset}, () => {
@@ -138,14 +142,14 @@ export default class FileListPage extends Component {
   };
 
   handlePageClick = (data) => {
-    let selected = data.selected;
-    let offset = Math.ceil(selected * this.perPage);
+    const selected = data.selected;
+    const offset = Math.ceil(selected * this.perPage);
     console.log(selected, offset);
 
     this.setState({offset: offset}, () => {
       this.loadFiles();
     });
-    ReactDOM.findDOMNode(this.fileList).scrollTop = 0
+    ReactDOM.findDOMNode(this.fileList).scrollTop = 0;
   };
 
   handleFileClick(fileObj) {
@@ -163,8 +167,8 @@ export default class FileListPage extends Component {
   }
 
   postFile(file, action, retryCount) {
-    /*action might be in {'save', 'validate', 'approve', 'deprecate'}*/
-    var self = this;
+    /* action might be in {'save', 'validate', 'approve', 'deprecate'}*/
+    const self = this;
     self.setState({loading: true});
     PLynxApi.endpoints.nodes
     .create({
@@ -173,8 +177,8 @@ export default class FileListPage extends Component {
         action: action
       }
     })
-    .then(function (response) {
-      var data = response.data;
+    .then((response) => {
+      const data = response.data;
       console.log(data);
       self.setState({loading: false});
       if (data.status === RESPONCE_STATUS.SUCCESS) {
@@ -183,9 +187,9 @@ export default class FileListPage extends Component {
       } else if (data.status === RESPONCE_STATUS.VALIDATION_FAILED) {
         console.warn(data.message);
         // TODO smarter traverse
-        var validationErrors = data.validation_error.children;
-        for (var i = 0; i < validationErrors.length; ++i) {
-          var validationError = validationErrors[i];
+        const validationErrors = data.validation_error.children;
+        for (let i = 0; i < validationErrors.length; ++i) {
+          const validationError = validationErrors[i];
           self.showAlert(validationError.validation_code + ': ' + validationError.object_id, 'warning');
         }
 
@@ -195,18 +199,16 @@ export default class FileListPage extends Component {
         self.showAlert(data.message, 'failed');
       }
     })
-    .catch(function (error) {
+    .catch((error) => {
       if (error.response.status === 401) {
         PLynxApi.getAccessToken()
-        .then(function (isSuccessfull) {
+        .then((isSuccessfull) => {
           if (!isSuccessfull) {
             console.error("Could not refresh token");
             self.showAlert('Failed to authenticate', 'failed');
-          } else {
-            if (retryCount > 0) {
-              self.postFile(file, action, retryCount - 1);
-              return;
-            }
+          } else if (retryCount > 0) {
+            self.postFile(file, action, retryCount - 1);
+            return;
           }
         });
       } else {
@@ -227,7 +229,7 @@ export default class FileListPage extends Component {
     this.setState({
       fileObj: null,
       uploadFile: true
-    })
+    });
   }
 
   handleSearchUpdate(search) {
@@ -296,7 +298,9 @@ export default class FileListPage extends Component {
           />
         }
         <FileList files={this.state.nodes}
-                  ref={(child) => { this.fileList = child; }}
+                  ref={(child) => {
+                    this.fileList = child;
+                  }}
                   onClick={(fileObj) => this.handleFileClick(fileObj)}
         />
         <ReactPaginate previousLabel={"Previous"}

@@ -31,9 +31,9 @@ export const PARAMETER_TYPES = [
     type: 'code',
     alias: 'Code',
   },
-]
+];
 
-export const SPECIAL_TYPE_NAMES = ['code']
+export const SPECIAL_TYPE_NAMES = ['code'];
 
 export const FILE_TYPES = [
   {
@@ -72,7 +72,7 @@ export const FILE_TYPES = [
     type: 'cloud-storage',
     alias: 'Cloud Storage',
   },
-]
+];
 
 export const ACTION = Object.freeze({
   SAVE: 'SAVE',
@@ -85,20 +85,20 @@ export const ACTION = Object.freeze({
   PREVIEW_CMD: 'PREVIEW_CMD',
   CANCEL: 'CANCEL',
   GENERATE_CODE: 'GENERATE_CODE',
-})
+});
 
 export const RESPONCE_STATUS = Object.freeze({
   SUCCESS: 'SUCCESS',
   VALIDATION_FAILED: 'VALIDATION_FAILED',
   FAILED: 'FAILED'
-})
+});
 
 export const NODE_STATUS = Object.freeze({
   CREATED: 'CREATED',
   READY: 'READY',
   DEPRECATED: 'DEPRECATED',
   MANDATORY_DEPRECATED: 'MANDATORY_DEPRECATED'
-})
+});
 
 export const NODE_RUNNING_STATUS = Object.freeze({
   STATIC: 'STATIC',
@@ -109,7 +109,7 @@ export const NODE_RUNNING_STATUS = Object.freeze({
   RESTORED: 'RESTORED',
   FAILED: 'FAILED',
   CANCELED: 'CANCELED',
-})
+});
 
 export const GRAPH_RUNNING_STATUS = Object.freeze({
   CREATED: 'CREATED',
@@ -119,13 +119,13 @@ export const GRAPH_RUNNING_STATUS = Object.freeze({
   FAILED: 'FAILED',
   CANCELED: 'CANCELED',
   FAILED_WAITING: 'FAILED_WAITING',
-})
+});
 
 export const FILE_STATUS = Object.freeze({
   READY: 'READY',
   DEPRECATED: 'DEPRECATED',
   MANDATORY_DEPRECATED: 'MANDATORY_DEPRECATED'
-})
+});
 
 export const VALIDATION_TARGET_TYPE = Object.freeze({
   NODE: 'NODE',
@@ -133,7 +133,7 @@ export const VALIDATION_TARGET_TYPE = Object.freeze({
   INPUT: 'INPUT',
   PARAMETER: 'PARAMETER',
   PROPERTY: 'PROPERTY',
-})
+});
 
 export const VALIDATION_CODES = Object.freeze({
   IN_DEPENDENTS: 'IN_DEPENDENTS',
@@ -143,7 +143,7 @@ export const VALIDATION_CODES = Object.freeze({
   MINIMUM_COUNT_MUST_BE_GREATER_THAN_MAXIMUM: 'MINIMUM_COUNT_MUST_BE_GREATER_THAN_MAXIMUM',
   MAXIMUM_COUNT_MUST_NOT_BE_ZERO: 'MAXIMUM_COUNT_MUST_NOT_BE_ZERO',
   DEPRECATED_NODE: 'DEPRECATED_NODE'
-})
+});
 
 export const ALERT_OPTIONS = {
   offset: 14,
@@ -175,7 +175,7 @@ export const KEY_MAP = {
 export const SPECIAL_USERS = Object.freeze({
   DEMO: 'demo',
   DEFAULT: 'default',
-})
+});
 
 export const CODE_LANGUAGES = [
   'python',

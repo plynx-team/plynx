@@ -1,6 +1,14 @@
 import React from 'react';
+import PropTypes from 'prop-types';
+
 
 export default class BlockInputListItem extends React.Component {
+  static propTypes = {
+    index: PropTypes.number.isRequired,
+    item: PropTypes.string.isRequired,
+    onMouseUp: PropTypes.func.isRequired,
+  }
+
   onMouseUp(e) {
     e.stopPropagation();
     e.preventDefault();
@@ -10,18 +18,18 @@ export default class BlockInputListItem extends React.Component {
 
   noop(e) {
     e.stopPropagation();
-      e.preventDefault();
+    e.preventDefault();
   }
 
   render() {
-    let name = this.props.item;
+    const name = this.props.item;
 
     return (
       <div className="parameterItem">
         <a
           className="button"
           onClick={
-            (e)=>this.noop(e)} onMouseUp={(e)=>this.onMouseUp(e)
+            (e) => this.noop(e)} onMouseUp={(e) => this.onMouseUp(e)
           }
           href={null}
           >

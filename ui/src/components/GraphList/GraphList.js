@@ -1,13 +1,12 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
-import GraphItem from './GraphItem.js'
+import PropTypes from 'prop-types';
+import GraphItem from './GraphItem';
 import { listTextElement } from '../Common/listElements';
 import '../Common/List.css';
 import './style.css';
 
 
 export default class GraphList extends Component {
-
   render() {
     const listItems = this.props.graphs.map(
           (graph) => <GraphItem
@@ -36,3 +35,7 @@ export default class GraphList extends Component {
     );
   }
 }
+
+GraphList.propTypes = {
+  graphs: PropTypes.array,
+};

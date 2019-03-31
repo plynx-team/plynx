@@ -1,18 +1,29 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
-import { PLynxApi } from '../../API.js';
-import { SimpleLoader } from '../LoadingScreen.js'
-import NodeItem from '../Common/NodeItem.js'
+import PropTypes from 'prop-types';
+import { PLynxApi } from '../../API';
+import { SimpleLoader } from '../LoadingScreen';
+import NodeItem from '../Common/NodeItem';
 import '../Common/List.css';
 import './MasterState.css';
 
 class ListItem extends Component {
+  static propTypes = {
+    worker_state: PropTypes.shape({
+      graph_id: PropTypes.string,
+      host: PropTypes.string.isRequired,
+      worker_id: PropTypes.string.isRequired,
+      node: PropTypes.shape({
+        _id: PropTypes.string.isRequired,
+      }),
+    }).isRequired,
+  }
+
   render() {
-    var isBusy = Boolean(this.props.worker_state.node);
+    const isBusy = Boolean(this.props.worker_state.node);
     return (
       <a className='list-item master-list-item' href={
         isBusy ?
-        '/graphs/' + this.props.worker_state.graph_id + '?nid=' + this.props.worker_state.node._id:
+        '/graphs/' + this.props.worker_state.graph_id + '?nid=' + this.props.worker_state.node._id :
         '#'}>
         <div className='host'>{this.props.worker_state.host}</div>
         <div className='worker-id'>{this.props.worker_state.worker_id}</div>
@@ -37,7 +48,7 @@ class ListItem extends Component {
       </a>
     );
   }
-};
+}
 
 export default class MasterState extends Component {
   constructor(props) {
@@ -64,9 +75,9 @@ export default class MasterState extends Component {
   async loadState() {
     // Loading
 
-    var self = this;
-    var loading = true;
-    var sleepPeriod = 1000;
+    const self = this;
+    let loading = true;
+    let sleepPeriod = 1000;
     const sleepMaxPeriod = 10000;
     const sleepStep = 1000;
 
@@ -76,14 +87,14 @@ export default class MasterState extends Component {
       });
     }
 
-    var handleResponse = function (response) {
-      var data = response.data;
+    const handleResponse = (response) => {
+      const data = response.data;
       console.log(data);
 
       // Do not change state if master_state is null (not found)
       if (data.master_state) {
         // Format date
-        var date = new Date(data.master_state.update_date + 'Z');  // Make date it UTC
+        const date = new Date(data.master_state.update_date + 'Z');  // Make date it UTC
         data.master_state.update_date = date.toString();
 
         self.setState(
@@ -94,10 +105,10 @@ export default class MasterState extends Component {
       loading = false;
     };
 
-    var handleError = function (error) {
+    const handleError = (error) => {
       if (error.response && error.response.status === 401) {
         PLynxApi.getAccessToken()
-        .then(function (isSuccessfull) {
+        .then((isSuccessfull) => {
           if (!isSuccessfull) {
             console.error("Could not refresh token");
             self.props.history.push("/login/");
@@ -108,8 +119,10 @@ export default class MasterState extends Component {
       }
     };
 
+    /* eslint-disable no-await-in-loop */
+    /* eslint-disable no-unmodified-loop-condition */
     while (loading) {
-      await PLynxApi.endpoints.master_state.getAll( {
+      await PLynxApi.endpoints.master_state.getAll({
         query: {
         }
       })
@@ -120,6 +133,8 @@ export default class MasterState extends Component {
         sleepPeriod = Math.min(sleepPeriod + sleepStep, sleepMaxPeriod);
       }
     }
+    /* eslint-enable no-unmodified-loop-condition */
+    /* eslint-enable no-await-in-loop */
 
     // Stop loading
     self.setState({

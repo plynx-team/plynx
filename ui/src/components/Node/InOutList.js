@@ -1,7 +1,8 @@
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-import InOutItem from './InOutItem.js'
-import './InOut.css'
+import InOutItem from './InOutItem';
+import './InOut.css';
 
 // a little function to help us with reordering the result
 const reorder = (list, startIndex, endIndex) => {
@@ -15,9 +16,12 @@ const reorder = (list, startIndex, endIndex) => {
 export default class InOutList extends Component {
   constructor(props) {
     super(props);
-    var self = this;
+    const self = this;
     this.counter = 0;
-    props.items.forEach(function(obj) { obj._key = self.counter.toString(); ++self.counter; });
+    props.items.forEach((obj) => {
+      obj._key = self.counter.toString();   // eslint-disable-line no-param-reassign
+      ++self.counter;
+    });
     this.state = {
       items: props.items,
       readOnly: this.props.readOnly
@@ -44,14 +48,14 @@ export default class InOutList extends Component {
   }
 
   handleChanged(index, name, value) {
-    var items = this.state.items;
+    const items = this.state.items;
     items[index][name] = value;
     this.setState({items: items});
     this.props.onChanged(items);
   }
 
   handleAddItem() {
-    var items = this.state.items;
+    const items = this.state.items;
 
     if (this.props.varName === 'inputs') {
       items.push({
@@ -77,7 +81,7 @@ export default class InOutList extends Component {
   }
 
   handleRemoveItem(index) {
-    var items = this.state.items;
+    const items = this.state.items;
     items.splice(index, 1);
     this.setState({items: items});
     this.props.onChanged(items);
@@ -96,7 +100,7 @@ export default class InOutList extends Component {
               >
               {this.state.items.map((item, index) => (
                 <Draggable key={item._key} draggableId={item._key} index={index} isDragDisabled={this.state.readOnly}>
-                  {(provided, snapshot) => (
+                  {(provided, snapshot) => (      // eslint-disable-line no-shadow
                     <div>
                       <div className={'InOutDiv' + (snapshot.isDragging ? ' InOutDivDragging' : '')}
                         ref={provided.innerRef}
@@ -110,8 +114,8 @@ export default class InOutList extends Component {
                             fileTypes={item.file_types}
                             index={index}
                             varName={this.props.varName}
-                            onChanged={(index, name, value) => this.handleChanged(index, name, value)}
-                            onRemove={(index) => this.handleRemoveItem(index)}
+                            onChanged={(index, name, value) => this.handleChanged(index, name, value)}  // eslint-disable-line no-shadow
+                            onRemove={(index) => this.handleRemoveItem(index)}                          // eslint-disable-line no-shadow
                             readOnly={this.state.readOnly}
                             minCount={item.min_count}
                             maxCount={item.max_count}
@@ -124,8 +128,8 @@ export default class InOutList extends Component {
                             fileType={item.file_type}
                             index={index}
                             varName={this.props.varName}
-                            onChanged={(index, name, value) => this.handleChanged(index, name, value)}
-                            onRemove={(index) => this.handleRemoveItem(index)}
+                            onChanged={(index, name, value) => this.handleChanged(index, name, value)}  // eslint-disable-line no-shadow
+                            onRemove={(index) => this.handleRemoveItem(index)}                          // eslint-disable-line no-shadow
                             readOnly={this.state.readOnly}
                           />
                         }
@@ -143,7 +147,7 @@ export default class InOutList extends Component {
         {
           !this.state.readOnly &&
           <div
-            className={'Add' + (this.state.add_hover? ' hover': '')}
+            className={'Add' + (this.state.add_hover ? ' hover' : '')}
             onMouseOver={() => this.setState({add_hover: true})}
             onMouseLeave={() => this.setState({add_hover: false})}
             onClick={() => this.handleAddItem()}
@@ -155,3 +159,10 @@ export default class InOutList extends Component {
     );
   }
 }
+
+InOutList.propTypes = {
+  varName: PropTypes.string,
+  items: PropTypes.array,
+  readOnly: PropTypes.bool,
+  onChanged: PropTypes.func,
+};

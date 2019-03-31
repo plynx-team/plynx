@@ -1,7 +1,7 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import AceEditor from 'react-ace';
-import {CODE_LANGUAGES, CODE_THEMES} from '../../constants'
+import {CODE_LANGUAGES, CODE_THEMES} from '../../constants';
 import 'brace/ext/language_tools';
 import 'brace/ext/searchbox';
 
@@ -10,17 +10,29 @@ import './CodeItem.css';
 // Init react-ace
 
 CODE_LANGUAGES.forEach(lang => {
-  require(`brace/mode/${lang}`);
-  require(`brace/snippets/${lang}`);
+  require(`brace/mode/${lang}`);        // eslint-disable-line global-require
+  require(`brace/snippets/${lang}`);    // eslint-disable-line global-require
 });
 
 CODE_THEMES.forEach(theme => {
-  require(`brace/theme/${theme}`);
+  require(`brace/theme/${theme}`);      // eslint-disable-line global-require
 });
 
 // Finish react-ace
 
 export default class EnumItem extends Component {
+  static propTypes = {
+    name: PropTypes.string.isRequired,
+    readOnly: PropTypes.bool.isRequired,
+    height: PropTypes.string.isRequired,
+    showEnumOptions: PropTypes.bool.isRequired,
+    value: PropTypes.shape({
+      mode: PropTypes.string.isRequired,
+      value: PropTypes.string.isRequired,
+    }).isRequired,
+    onChange: PropTypes.func.isRequired,
+  }
+
   constructor(props) {
     super(props);
     this.state = {
@@ -34,14 +46,14 @@ export default class EnumItem extends Component {
 
   handleCommunacation() {
     this.props.onChange({
-        target: {
-          name: this.props.name,
-          value: {
-            mode: this.state.mode,
-            value: this.state.value,
-          },
-          type: 'code'
-        }
+      target: {
+        name: this.props.name,
+        value: {
+          mode: this.state.mode,
+          value: this.state.value,
+        },
+        type: 'code'
+      }
     });
   }
 
@@ -69,19 +81,22 @@ export default class EnumItem extends Component {
   render() {
     return (
       <div className='CodeItem'
-           onMouseDown={(e) => {e.stopPropagation()}}
+           onMouseDown={(e) => {
+             e.stopPropagation();
+           }}
       >
         <div className='code-mode'>
           <select className='code-mode-select'
               type='text'
               name='index'
               value={CODE_LANGUAGES.indexOf(this.state.mode)}
-              onChange={(e) => {this.handleChangeMode(e)}}
+              onChange={(e) => {
+                this.handleChangeMode(e);
+              }}
               readOnly={this.state.readOnly}
             >
               {
-                CODE_LANGUAGES.map((value, index) =>
-                  <option
+                CODE_LANGUAGES.map((value, index) => <option
                     value={index}
                     key={index}
                     >
@@ -98,9 +113,9 @@ export default class EnumItem extends Component {
           value={this.state.value}
           theme="chaos"
           fontSize={14}
-          showPrintMargin={true}
-          showGutter={true}
-          highlightActiveLine={true}
+          showPrintMargin
+          showGutter
+          highlightActiveLine
           readOnly={this.state.readOnly}
           width="auto"
           height={this.props.height}

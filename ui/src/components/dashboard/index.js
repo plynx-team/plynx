@@ -1,7 +1,7 @@
 // src/components/NotFound/index.js
 import React, { Component } from 'react';
-import Graphs from './Graphs'
-import MasterState from './MasterState'
+import Graphs from './Graphs';
+import MasterState from './MasterState';
 
 import './style.css';
 

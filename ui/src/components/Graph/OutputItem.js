@@ -1,7 +1,7 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
-import { PLynxApi } from '../../API.js';
-import { API_ENDPOINT } from '../../configConsts.js';
+import PropTypes from 'prop-types';
+import { PLynxApi } from '../../API';
+import { API_ENDPOINT } from '../../configConsts';
 import './OutputItem.css';
 
 const FileDownload = require('react-file-download');
@@ -17,23 +17,23 @@ export default class OutputItem extends Component {
     };
   }
 
-  download(e) {
-    var resourceId = this.props.resourceId;
+  download() {
+    const resourceId = this.props.resourceId;
     PLynxApi.endpoints.resource.getCustom({
-        method: 'get',
-        url: API_ENDPOINT + '/resource/' + resourceId,
-        responseType: 'blob'
-      })
-      .then(function (response) {
+      method: 'get',
+      url: API_ENDPOINT + '/resource/' + resourceId,
+      responseType: 'blob'
+    })
+      .then((response) => {
         console.log(response);
         FileDownload(response.data, resourceId);
       })
-      .catch(function (error) {
+      .catch((error) => {
         console.error(error);
       });
   }
 
-  handleClick(e) {
+  handleClick() {
     if (this.props.onPreview) {
       this.props.onPreview({
         title: this.props.resourceName,
@@ -45,20 +45,31 @@ export default class OutputItem extends Component {
   }
 
   render() {
-    //{{pathname: '/graphs/' + this.state.graphId, query: {node: this.state.nodeId, output_preview: this.state.resourceName}}}
+    // {{pathname: '/graphs/' + this.state.graphId, query: {node: this.state.nodeId, output_preview: this.state.resourceName}}}
     return (
       <div className='OutputItem'>
         <div className='OutputNameCell'>
 
           <div className="OutputItemPreview"
-            onClick={(e) => this.handleClick(e)}>
+            onClick={() => this.handleClick()}>
             <img src="/icons/document.svg" alt="preview" /> {this.state.resourceName}
           </div>
         </div>
-        <div className='OutputValueCell' onClick={(e) => {this.download(e)}}>
+        <div className='OutputValueCell' onClick={() => {
+          this.download();
+        }}>
           <img src="/icons/download.svg" alt="download" /> {this.state.resourceId}
         </div>
       </div>
     );
   }
 }
+
+OutputItem.propTypes = {
+  fileType: PropTypes.string,
+  graphId: PropTypes.string,
+  nodeId: PropTypes.string,
+  resourceId: PropTypes.string,
+  resourceName: PropTypes.string,
+  onPreview: PropTypes.func,
+};

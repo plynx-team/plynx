@@ -1,16 +1,31 @@
-// src/components/NotFound/index.js
 import React, { Component } from 'react';
-import Dialog from './Dialog.js'
-import { PLynxApi } from '../../API.js';
-import { FILE_STATUS, FILE_TYPES } from '../../constants.js'
-import { API_ENDPOINT } from '../../configConsts.js';
+import PropTypes from 'prop-types';
+import Dialog from './Dialog';
+import { PLynxApi } from '../../API';
+import { FILE_STATUS, FILE_TYPES, NODE_STATUS } from '../../constants';
+import { API_ENDPOINT } from '../../configConsts';
 
 const FileDownload = require('react-file-download');
 
 
 export default class FileDialog extends Component {
+  static propTypes = {
+    fileObj: PropTypes.shape({
+      _id: PropTypes.string.isRequired,
+      title: PropTypes.string.isRequired,
+      description: PropTypes.string.isRequired,
+      insertion_date: PropTypes.string,
+      node_status: PropTypes.oneOf(Object.values(NODE_STATUS)).isRequired,
+      parent_node: PropTypes.string,
+      outputs: PropTypes.array.isRequired,
+    }),
+    hideDeprecate: PropTypes.bool.isRequired,
+    onClose: PropTypes.func.isRequired,
+    onDeprecate: PropTypes.func.isRequired,
+    onPreview: PropTypes.func.isRequired,
+  }
 
-  handlePreviewClick (e) {
+  handlePreviewClick(e) {
     e.preventDefault();
     if (this.props.onPreview) {
       this.props.onPreview({
@@ -23,29 +38,33 @@ export default class FileDialog extends Component {
   }
 
   download() {
-    var resourceId = this.props.fileObj.outputs[0].resource_id;
-    var filename = this.props.fileObj.title;
+    const resourceId = this.props.fileObj.outputs[0].resource_id;
+    const filename = this.props.fileObj.title;
     PLynxApi.endpoints.resource.getCustom({
-        method: 'get',
-        url: API_ENDPOINT + '/resource/' + resourceId,
-        responseType: 'blob'
-      })
-      .then(function (response) {
+      method: 'get',
+      url: API_ENDPOINT + '/resource/' + resourceId,
+      responseType: 'blob'
+    })
+      .then((response) => {
         FileDownload(response.data, filename);
       })
-      .catch(function (error) {
+      .catch((error) => {
         console.error(error);
       });
   }
 
   render() {
-    var typeTuple = FILE_TYPES.filter(
-      (ft) => {return ft.type === this.props.fileObj.outputs[0].file_type}
+    const typeTuple = FILE_TYPES.filter(
+      (ft) => {
+        return ft.type === this.props.fileObj.outputs[0].file_type;
+      }
     )[0];
 
     return (
       <Dialog className='FileDialog'
-              onClose={() => {this.props.onClose()}}
+              onClose={() => {
+                this.props.onClose();
+              }}
               width={600}
               height={200}
               title={'File'}
@@ -83,25 +102,34 @@ export default class FileDialog extends Component {
               <div className={'Status ' + this.props.fileObj.node_status}>{this.props.fileObj.node_status}</div>
             </div>
 
-            <div className='Item'>
-              <div className={'Name'}>Created:</div>
-              <div className='Created'>{this.props.fileObj.insertion_date}</div>
-            </div>
+            {this.props.fileObj.insertion_date &&
+              <div className='Item'>
+                <div className={'Name'}>Created:</div>
+                <div className='Created'>{this.props.fileObj.insertion_date}</div>
+              </div>
+            }
           </div>
           <div className='Controls'>
             <a href={null}
-               onClick={(e) => this.handlePreviewClick(e) }
+               onClick={(e) => this.handlePreviewClick(e)}
                className="control-button">
                <img src="/icons/preview.svg" alt="preview" /> Preview
             </a>
             <a href={null}
-               onClick={(e) => {e.preventDefault(); this.download()}}
+               onClick={(e) => {
+                 e.preventDefault();
+                 this.download();
+               }}
                className="control-button">
                <img src="/icons/download2.svg" alt="download" /> Download
             </a>
             { this.props.fileObj.node_status === FILE_STATUS.READY && !this.props.hideDeprecate &&
               <a href={null}
-                 onClick={(e) => {e.preventDefault(); this.props.onDeprecate(this.props.fileObj); this.props.onClose();}}
+                 onClick={(e) => {
+                   e.preventDefault();
+                   this.props.onDeprecate(this.props.fileObj);
+                   this.props.onClose();
+                 }}
                  className="control-button">
                  <img src="/icons/x.svg" alt="deprecate" /> Deprecate
               </a>

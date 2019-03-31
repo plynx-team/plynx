@@ -1,14 +1,18 @@
-// src/components/NotFound/index.js
 import React, { Component } from 'react';
-import Dialog from './Dialog.js'
-import { PLynxApi } from '../../API.js';
-import LoadingScreen from '../LoadingScreen.js'
-import { NODE_STATUS, FILE_TYPES, RESPONCE_STATUS, NODE_RUNNING_STATUS } from '../../constants.js'
+import PropTypes from 'prop-types';
+import Dialog from './Dialog';
+import { PLynxApi } from '../../API';
+import LoadingScreen from '../LoadingScreen';
+import { NODE_STATUS, FILE_TYPES, RESPONCE_STATUS, NODE_RUNNING_STATUS } from '../../constants';
 
 
 const DEFAULT_TITLE = 'File';
 
 export default class FileUploadDialog extends Component {
+  static propTypes = {
+    onClose: PropTypes.func.isRequired,
+  }
+
   constructor(props) {
     super(props);
     this.state = {
@@ -23,7 +27,7 @@ export default class FileUploadDialog extends Component {
   }
 
   handleChange(event) {
-    var name = event.target.name;
+    const name = event.target.name;
     console.log(name, event.target.value);
 
     this.setState({
@@ -37,47 +41,47 @@ export default class FileUploadDialog extends Component {
         file_path: this.file,
         file_name: this.file ? this.file.name : null,
         title: this.file && this.state.title === DEFAULT_TITLE ? this.file.name : this.state.title
-      })
+      });
     }
   }
 
   handleChooseFile() {
-    this.uploadDialog.click()
+    this.uploadDialog.click();
   }
 
   upload(retryCount) {
-    var self = this;
-    let formData = new FormData();
+    const self = this;
+    const formData = new FormData();
     formData.append('data', this.file);
 
     const config = {
       headers: { 'content-type': 'multipart/form-data' },
-      onUploadProgress: function(progressEvent) {
-        var percentCompleted = Math.round( (progressEvent.loaded * 100) / progressEvent.total );
+      onUploadProgress(progressEvent) {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
         self.setState({
           uploadProgress: percentCompleted
-        })
+        });
       }
-    }
+    };
 
     self.setState({loading: true});
     PLynxApi.endpoints.resource.upload(formData, config)
-    .then(function (response) {
-      var data = response.data;
+    .then((response) => {
+      const data = response.data;
       console.log(data);
 
       if (data.status === RESPONCE_STATUS.SUCCESS) {
-        var resourceId = data.resource_id;
+        const resourceId = data.resource_id;
         self.props.onPostFile({
           title: self.state.title,
           description: self.state.description,
           base_node_name: 'file',
-          node_running_status:NODE_RUNNING_STATUS.STATIC,
+          node_running_status: NODE_RUNNING_STATUS.STATIC,
           node_status: NODE_STATUS.READY,
           inputs: [],
           parameters: [],
           logs: [],
-          outputs:[
+          outputs: [
             {
               file_type: self.state.file_type,
               name: "out",
@@ -88,33 +92,32 @@ export default class FileUploadDialog extends Component {
         self.props.onClose();
         self.setState({loading: false});
       }
-
-    }).catch(function (error) {
+    }).catch((error) => {
       console.error('error', error);
 
       if (error.response.status === 401) {
         PLynxApi.getAccessToken()
-        .then(function (isSuccessfull) {
+        .then((isSuccessfull) => {
           if (!isSuccessfull) {
             console.error("Could not refresh token");
-          } else {
-            if (retryCount > 0) {
-              self.upload(retryCount - 1);
-              return;
-            }
+          } else if (retryCount > 0) {
+            self.upload(retryCount - 1);
+            return;
           }
         });
       } else {
         self.showAlert('Failed to upload file', 'failed');
       }
       self.setState({loading: false});
-    })
+    });
   }
 
   render() {
     return (
       <Dialog className=''
-              onClose={() => {this.props.onClose()}}
+              onClose={() => {
+                this.props.onClose();
+              }}
               width={600}
               height={230}
               title={'Upload file'}
@@ -173,8 +176,7 @@ export default class FileUploadDialog extends Component {
                 onChange={(e) => this.handleChange(e)}
               >
               {
-                FILE_TYPES.map((description) =>
-                  <option
+                FILE_TYPES.map((description) => <option
                     value={description.type}
                     key={description.type}
                     >
@@ -188,8 +190,11 @@ export default class FileUploadDialog extends Component {
             <div className='Item'>
               <div className={'Name'}>File:</div>
               <a href={null}
-                 onClick={(e) => {e.preventDefault(); this.handleChooseFile()}}
-                 className={"control-button" + (this.state.file_name ? ' selected': '')}>
+                 onClick={(e) => {
+                   e.preventDefault();
+                   this.handleChooseFile();
+                 }}
+                 className={"control-button" + (this.state.file_name ? ' selected' : '')}>
                  <img src="/icons/file-plus.svg" alt="new file"/> {this.state.file_name || 'Choose file'}
                  <div className='progress-bar'>
                  </div>
@@ -206,7 +211,12 @@ export default class FileUploadDialog extends Component {
 
           <div className='Controls noselect'>
             <a href={null}
-               onClick={(e) => {e.preventDefault(); if (this.state.file_name) {this.upload(1)} }}
+               onClick={(e) => {
+                 e.preventDefault();
+                 if (this.state.file_name) {
+                   this.upload(1);
+                 }
+               }}
                className="control-button">
                <img src="/icons/upload.svg" alt="uplaod"/> Upload
             </a>

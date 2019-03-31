@@ -1,5 +1,5 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import './LoadingScreen.css';
 
 export default class LoadingScreen extends Component {
@@ -25,3 +25,12 @@ export class SimpleLoader extends Component {
     );
   }
 }
+
+
+LoadingScreen.propTypes = {
+  style: PropTypes.object,
+};
+
+SimpleLoader.propTypes = {
+  style: PropTypes.object,
+};
