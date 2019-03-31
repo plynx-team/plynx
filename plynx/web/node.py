@@ -18,6 +18,7 @@ node_collection = NodeCollection()
 @app.route('/plynx/api/v0/nodes/<node_link>', methods=['GET'])
 @requires_auth
 def get_nodes(node_link=None):
+    user_id = to_object_id(g.user._id)
     # if node_link is a base node
     if node_link in node_collection.name_to_class:
         return JSONEncoder().encode({
@@ -25,7 +26,6 @@ def get_nodes(node_link=None):
             'status': 'success'})
     # if node_link is defined (Node id)
     elif node_link:
-        user_id = to_object_id(g.user._id)
         try:
             node_id = to_object_id(node_link)
         except Exception:
@@ -40,7 +40,7 @@ def get_nodes(node_link=None):
     else:
         query = json.loads(request.args.get('query', "{}"))
         nodes_query = {k: v for k, v in query.items() if k in PAGINATION_QUERY_KEYS}
-        res = node_collection_manager.get_db_nodes(**nodes_query)
+        res = node_collection_manager.get_db_nodes(user_id=user_id, **nodes_query)
 
         return JSONEncoder().encode({
             'nodes': res['list'],
