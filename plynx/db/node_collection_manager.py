@@ -77,7 +77,7 @@ class NodeCollectionManager(object):
         )
         aggregate_list.append({
             "$addFields": {
-                '_readonly': { '$ne': [ "$author", to_object_id(user_id) ] },
+                '_readonly': {'$ne': ["$author", to_object_id(user_id)]},
             }
         })
         # counts and pagination
