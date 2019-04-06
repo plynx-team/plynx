@@ -534,8 +534,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
       return;
     }
     const node = this.node_lookup[nid];
-    node.x = pos.left;
-    node.y = pos.top;
+    node.x = pos.x;
+    node.y = pos.y;
   }
 
   handleBlocksSelect(nids) {
@@ -794,8 +794,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
     node.x = blockObj.mousePos.x - 340;
     node.y = blockObj.mousePos.y - 80;
 
-
-    console.log(node);
     if (OPERATIONS.indexOf(node.base_node_name) > -1) {
       node.node_running_status = NODE_RUNNING_STATUS.CREATED;
       node.cache_url = null;
