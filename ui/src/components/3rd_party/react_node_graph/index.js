@@ -21,6 +21,15 @@ const BORDERS_HEIGHT = 2;
 const ITEM_HEIGHT = 20;
 const COMMON_HEIGHT = HEADER_HEIGHT + DESCRIPTION_HEIGHT + FOOTER_HEIGHT + BORDERS_HEIGHT;
 
+
+const getScrollOffset = () => {
+  const el = document.getElementsByClassName('GraphRoot')[0];
+  return {
+    x: el.scrollLeft,
+    y: el.scrollTop,
+  }
+}
+
 const boxTarget = {
   drop(props, monitor, component) {     // eslint-disable-line no-unused-vars
     const graphProps = props;
@@ -29,12 +38,12 @@ const boxTarget = {
 
     if (graphProps.onDrop) {
       // Hack: use GraphRoot scroll position
-      const el = document.getElementsByClassName('GraphRoot')[0];
+      const offset = getScrollOffset();
       graphProps.onDrop({
         nodeContent: blockObj.nodeContent,
         mousePos: {
-          x: mousePos.x + el.scrollLeft,
-          y: mousePos.y + el.scrollTop
+          x: mousePos.x + offset.x,
+          y: mousePos.y + offset.y,
         },
       });
     }
@@ -442,12 +451,12 @@ class ReactBlockGraph extends React.Component {
             nids: this.selectedNIDs,
             connectors: filteredConnectors,
           };
-          this.props.onCopyBlock(copyList);
+          this.props.onCopyBlock(copyList, getScrollOffset());
         }
       },
       pastePressed: () => {
         if (this.state.editable && this.props.onPasteBlock) {
-          this.props.onPasteBlock();
+          this.props.onPasteBlock(getScrollOffset());
         }
       },
       commandDown: () => {

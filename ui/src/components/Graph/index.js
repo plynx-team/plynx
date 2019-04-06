@@ -407,18 +407,19 @@ ENDPOINT = '` + API_ENDPOINT + `'
     this.setState({blocks: this.blocks});
   }
 
-  onCopyBlock(copyList) {
+  onCopyBlock(copyList, offset) {
     const nodes = copyList.nids.map(nid => this.node_lookup[nid]);
     const copyObject = {
       nodes: nodes,
       connectors: copyList.connectors,
+      offset: offset,
     };
     console.log(copyList.nids, copyObject);
 
     storeToClipboard(copyObject);
   }
 
-  onPasteBlock() {
+  onPasteBlock(offset) {
     const copyBody = loadFromClipboard();
     const nidOldToNew = {};
     if (!copyBody) {
@@ -433,8 +434,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
         {
           nodeContent: blockJson,
           mousePos: {
-            x: blockJson.x + 380,
-            y: blockJson.y + 120,
+            x: blockJson.x + 380 + offset.x - copyBody.offset.x,
+            y: blockJson.y + 120 + offset.y - copyBody.offset.y,
           },
         },
         false);
@@ -791,8 +792,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
         specialParameterNames.push(node.parameters[i].name);
       }
     }
-    node.x = blockObj.mousePos.x - 340;
-    node.y = blockObj.mousePos.y - 80;
+    node.x = Math.max(blockObj.mousePos.x - 340, 0);
+    node.y = Math.max(blockObj.mousePos.y - 80, 0);
 
     if (OPERATIONS.indexOf(node.base_node_name) > -1) {
       node.node_running_status = NODE_RUNNING_STATUS.CREATED;
@@ -1047,8 +1048,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
             onOutputClick={(nid, outputIndex) => this.onOutputClick(nid, outputIndex)}
             onSpecialParameterClick={(nid, specialParameterIndex) => this.onSpecialParameterClick(nid, specialParameterIndex)}
             onRemoveBlock={(nid) => this.onRemoveBlock(nid)}
-            onCopyBlock={(copyList) => this.onCopyBlock(copyList)}
-            onPasteBlock={() => this.onPasteBlock()}
+            onCopyBlock={(copyList, offset) => this.onCopyBlock(copyList, offset)}
+            onPasteBlock={(offset) => this.onPasteBlock(offset)}
             onBlocksSelect={(nids) => {
               this.handleBlocksSelect(nids);
             }}
