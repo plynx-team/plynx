@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import absolute_import
 import json
+import traceback
 from plynx.db import Node, NodeCollectionManager
 from flask import request, g
 from plynx.graph.base_nodes import NodeCollection
@@ -120,5 +121,5 @@ def post_node():
                 'message': 'Node(_id=`{}`) successfully updated'.format(str(node._id))
             })
     except Exception as e:
-        app.logger.error(e)
+        app.logger.error(traceback.format_exc())
         return make_fail_response('Internal error: "{}"'.format(str(e)))

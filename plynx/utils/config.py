@@ -2,6 +2,7 @@ import logging
 import yaml
 import os
 from collections import namedtuple
+from pydoc import locate
 
 PLYNX_CONFIG_PATH = os.getenv('PLYNX_CONFIG_PATH', 'config.yaml')
 _config = None
@@ -14,6 +15,7 @@ AuthConfig = namedtuple('AuthConfig', 'secret_key')
 WebConfig = namedtuple('WebConfig', 'host port endpoint debug')
 DemoConfig = namedtuple('DemoConfig', 'enabled, graph_ids')
 CloudServiceConfig = namedtuple('CloudServiceConfig', 'prefix')
+PluginsConfig = namedtuple('PluginsConfig', 'resources')
 
 Config = namedtuple(
     'Config',
@@ -100,6 +102,16 @@ def get_demo_config():
 def get_cloud_service_config():
     return CloudServiceConfig(
         prefix=_config.get('cloud_service', {}).get('prefix', 'gs://sample'),
+    )
+
+
+def get_plugins():
+    resources = [
+        locate(class_path)
+        for class_path in _config.get('plugins', {}).get('resources', [])
+    ]
+    return PluginsConfig(
+        resources=resources,
     )
 
 

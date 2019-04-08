@@ -1,24 +1,51 @@
 from subprocess import Popen
 import os
-import stat
 import shutil
 import signal
 import uuid
 import logging
 import pwd
-import json
-import zipfile
 import threading
-from plynx.constants import JobReturnStatus, NodeStatus, FileTypes, ParameterTypes
+from collections import defaultdict
+from plynx.constants import JobReturnStatus, NodeStatus, FileTypes, ParameterTypes, NodeResources
 from plynx.db import Node, Output, Parameter
-from plynx.utils.common import zipdir
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
 from plynx.utils.config import get_worker_config, get_cloud_service_config
 from plynx.graph.base_nodes import BaseNode
+from plynx.plugins.managers import resource_manager
 
 WORKER_CONFIG = get_worker_config()
 CLOUD_SERVICE_CONFIG = get_cloud_service_config()
 TMP_DIR = '/tmp'
+
+
+class ResourceMerger(object):
+    def __init__(self):
+        self._dict = defaultdict(lambda: defaultdict(list))
+
+    def append(self, resource_dict, resource_name, is_list):
+        for key, value in resource_dict.items():
+            if is_list:
+                self._dict[key][resource_name].append(value)
+            else:
+                self._dict[key][resource_name] = value
+
+    def get_dict(self):
+        """
+        Out:    {
+            'inputs': {
+                'input_name_0': [],
+                'input_name_1': ['/tmp/1', '/tmp/2'],
+                'input_name_2': '/tmp/3',
+            },
+            'cloud_inputs': {
+                'input_name_0': [],
+                'input_name_1': ['gs://1', 'gs://2'],
+                'input_name_2': 'gs://3',
+            },
+        }
+        """
+        return self._dict
 
 
 class BaseBash(BaseNode):
@@ -171,95 +198,41 @@ class BaseBash(BaseNode):
         ]
         return node
 
-    def _prepare_inputs(self, preview=False, pythonize=False):
-        res_inputs, res_cloud_inputs = {}, {}
+    def _prepare_inputs(self, preview=False):
+        resource_merger = ResourceMerger()
         for input in self.node.inputs:
-            filenames, cloud_filenames = [], []
+            is_list = not (input.min_count == 1 and input.max_count == 1)
             if preview:
                 for i, value in enumerate(range(input.min_count)):
-                    if FileTypes.CLOUD_STORAGE in input.file_types:
-                        cloud_filename = os.path.join(
-                            '{prefix}/{workdir}/i_{index}_{name}'.format(
-                                prefix=CLOUD_SERVICE_CONFIG.prefix,
-                                workdir=self.base_workdir,
-                                index=i,
-                                name=input.name,
-                            )
-                        )
-                        cloud_filenames.append(cloud_filename)
                     filename = os.path.join(self.workdir, 'i_{}_{}'.format(i, input.name))
-                    filenames.append(filename)
+                    resource_merger.append(
+                        resource_manager[input.file_types[0]].prepare_input(filename, preview),
+                        input.name,
+                        is_list,
+                    )
             else:
                 for i, value in enumerate(input.values):
                     filename = os.path.join(self.workdir, 'i_{}_{}'.format(i, input.name))
                     with open(filename, 'wb') as f:
                         f.write(get_file_stream(value.resource_id).read())
-                    if FileTypes.EXECUTABLE in input.file_types:
-                        # `chmod +x` to the executable file
-                        st = os.stat(filename)
-                        os.chmod(filename, st.st_mode | stat.S_IEXEC)
-                    elif FileTypes.DIRECTORY in input.file_types:
-                        # extract zip file
-                        zip_filename = '{}.zip'.format(filename)
-                        os.rename(filename, zip_filename)
-                        os.mkdir(filename)
-                        with zipfile.ZipFile(zip_filename) as zf:
-                            zf.extractall(filename)
-                    elif FileTypes.CLOUD_STORAGE in input.file_types:
-                        with open(filename) as f:
-                            cloud_filename = json.load(f)['path']
-                        cloud_filenames.append(cloud_filename)
-                    filenames.append(filename)
-            if pythonize:
-                if input.min_count == 1 and input.max_count == 1:
-                    res_inputs[input.name] = filenames[0]
-                    if FileTypes.CLOUD_STORAGE in input.file_types:
-                        res_cloud_inputs[input.name] = cloud_filenames[0]
-                else:
-                    res_inputs[input.name] = filenames
-                    if FileTypes.CLOUD_STORAGE in input.file_types:
-                        res_cloud_inputs[input.name] = cloud_filenames
-            else:
-                # TODO is ' ' standard separator?
-                res_inputs[input.name] = ' '.join(filenames)
-                if FileTypes.CLOUD_STORAGE in input.file_types:
-                    res_cloud_inputs[input.name] = ' '.join(cloud_filenames)
-        return res_inputs, res_cloud_inputs
+                    resource_merger.append(
+                        resource_manager[input.file_types[0]].prepare_input(filename, preview),
+                        input.name,
+                        is_list
+                    )
+
+        return resource_merger.get_dict()
 
     def _prepare_outputs(self, preview=False):
-        res_outputs, res_cloud_outputs = {}, {}
+        resource_merger = ResourceMerger()
         for output in self.node.outputs:
-            if preview:
-                if output.file_type == FileTypes.CLOUD_STORAGE:
-                    res_cloud_outputs[output.name] = os.path.join(
-                        '{prefix}/{workdir}/o_{name}'.format(
-                            prefix=CLOUD_SERVICE_CONFIG.prefix,
-                            workdir=self.base_workdir,
-                            name=output.name,
-                        )
-                    )
-                filename = os.path.join(self.workdir, 'o_{}'.format(output.name))
-            else:
-                filename = os.path.join(self.workdir, 'o_{}'.format(output.name))
-                if output.file_type == FileTypes.DIRECTORY:
-                    os.mkdir(filename)
-                elif FileTypes.CLOUD_STORAGE == output.file_type:
-                    cloud_filename = os.path.join(
-                        '{prefix}/{workdir}/o_{name}'.format(
-                            prefix=CLOUD_SERVICE_CONFIG.prefix,
-                            workdir=self.base_workdir,
-                            name=output.name,
-                        )
-                    )
-                    with open(filename, 'w') as f:
-                        json.dump({"path": cloud_filename}, f)
-                    res_cloud_outputs[output.name] = cloud_filename
-                else:
-                    # the rest of types: create empty files
-                    with open(filename, 'a'):
-                        pass
-            res_outputs[output.name] = filename
-        return res_outputs, res_cloud_outputs
+            filename = os.path.join(self.workdir, 'o_{}'.format(output.name))
+            resource_merger.append(
+                resource_manager[output.file_type].prepare_output(filename, preview),
+                output.name,
+                is_list=False
+            )
+        return resource_merger.get_dict()
 
     def _prepare_logs(self):
         with BaseBash.logs_lock:
@@ -273,7 +246,7 @@ class BaseBash(BaseNode):
     def _get_script_fname(self, extension='.sh'):
         return os.path.join(self.workdir, "exec{}".format(extension))
 
-    def _prepare_parameters(self, pythonize=False):
+    def _prepare_parameters(self):
         res = {}
         for parameter in self.node.parameters:
             value = None
@@ -281,16 +254,13 @@ class BaseBash(BaseNode):
                 index = max(0, min(len(parameter.value.values) - 1, parameter.value.index))
                 value = parameter.value.values[index]
             elif parameter.parameter_type in [ParameterTypes.LIST_STR, ParameterTypes.LIST_INT]:
-                if pythonize:
-                    if parameter.parameter_type == ParameterTypes.LIST_INT:
-                        value = map(int, parameter.value)
-                    else:
-                        value = parameter.value
+                if parameter.parameter_type == ParameterTypes.LIST_INT:
+                    value = list(map(int, parameter.value))
                 else:
-                    value = ' '.join(map(str, parameter.value))  # !! in bash, it will always be space separated string
+                    value = parameter.value
             elif parameter.parameter_type == ParameterTypes.CODE:
                 value = parameter.value.value
-            elif parameter.parameter_type == ParameterTypes.INT and pythonize:
+            elif parameter.parameter_type == ParameterTypes.INT:
                 value = int(parameter.value)
             else:
                 value = parameter.value
@@ -302,11 +272,7 @@ class BaseBash(BaseNode):
             if os.path.exists(filename):
                 matching_outputs = list(filter(lambda o: o.name == key, self.node.outputs))
                 assert len(matching_outputs) == 1, "Found more that 1 output with the same name `{}`".format(key)
-                if matching_outputs[0].file_type == FileTypes.DIRECTORY:
-                    zip_filename = '{}.zip'.format(filename)
-                    with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zf:
-                        zipdir(filename, zf)
-                    filename = zip_filename
+                filename = resource_manager[matching_outputs[0].file_type].postprocess_output(filename)
                 with open(filename, 'rb') as f:
                     self.node.get_output_by_name(key).resource_id = upload_file_stream(f)
             else:

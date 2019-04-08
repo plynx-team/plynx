@@ -38,6 +38,7 @@
     "react-dom": "^15.6.2",
     "react-drag-and-drop": "^2.4.0",
     "react-draggable": "^3.2.1",
+    "react-feather": "^1.1.6",
     "react-file-download": "^0.3.5",
     "react-hotkeys": "^1.1.4",
     "react-node-graph": "^1.1.1",
