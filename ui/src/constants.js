@@ -153,8 +153,8 @@ export const ALERT_OPTIONS = {
   transition: 'fade'
 };
 
-export const OPERATIONS = ['command', 'get_resource', 'bash_jinja2', 'python'];
-export const PROGRAMMABLE_OPERATIONS = ['bash_jinja2', 'command', 'python'];
+export const OPERATIONS = ['get_resource', 'bash_jinja2', 'python'];
+export const PROGRAMMABLE_OPERATIONS = ['bash_jinja2', 'python'];
 
 export const KEY_MAP = {
   copyPressed: ['command+c', 'ctrl+c'],

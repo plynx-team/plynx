@@ -7,12 +7,13 @@ import logging
 import pwd
 import threading
 from collections import defaultdict
-from plynx.constants import JobReturnStatus, NodeStatus, FileTypes, ParameterTypes, NodeResources
+from plynx.constants import JobReturnStatus, NodeStatus, ParameterTypes, NodeResources
 from plynx.db import Node, Output, Parameter
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
 from plynx.utils.config import get_worker_config, get_cloud_service_config
 from plynx.graph.base_nodes import BaseNode
 from plynx.plugins.managers import resource_manager
+from plynx.plugins.resources import File as FileCls
 
 WORKER_CONFIG = get_worker_config()
 CLOUD_SERVICE_CONFIG = get_cloud_service_config()
@@ -182,17 +183,17 @@ class BaseBash(BaseNode):
         node.logs = [
             Output.from_dict({
                 'name': 'stderr',
-                'file_type': FileTypes.FILE,
+                'file_type': FileCls.NAME,
                 'resource_id': None,
             }),
             Output({
                 'name': 'stdout',
-                'file_type': FileTypes.FILE,
+                'file_type': FileCls.NAME,
                 'resource_id': None,
             }),
             Output({
                 'name': 'worker',
-                'file_type': FileTypes.FILE,
+                'file_type': FileCls.NAME,
                 'resource_id': None,
             }),
         ]
