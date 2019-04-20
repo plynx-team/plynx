@@ -13,6 +13,15 @@ class BaseResource(object):
         assert type(self).COLOR is not None, 'COLOR must be specified'
         pass
 
+    @classmethod
+    def to_dict(cls):
+        return {
+            'name': cls.NAME,
+            'alias': cls.ALIAS,
+            'icon': cls.ICON,
+            'color': cls.COLOR,
+        }
+
     @staticmethod
     def prepare_input(filename, preview=False):
         return {NodeResources.INPUT: filename}

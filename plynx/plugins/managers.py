@@ -9,6 +9,10 @@ class _ResourceManager(object):
             resource.NAME: resource
             for resource in self.resources
         }
+        self.resources_dict = {
+            resource.NAME: resource.to_dict()
+            for resource in self.resources
+        }
         logging.info('Resources used: {}'.format(str(self.name_to_resource)))
         assert len(self.resources) == len(self.name_to_resource), 'Duplicated resources found'
 

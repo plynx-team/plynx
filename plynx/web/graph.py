@@ -5,6 +5,7 @@ from plynx.db import GraphCollectionManager, Graph
 from plynx.db import GraphCancellationManager
 from flask import request, g
 from plynx.web import app, requires_auth, make_fail_response
+from plynx.plugins.managers import resource_manager
 from plynx.utils.common import JSONEncoder
 from plynx.constants import GraphRunningStatus, GraphPostAction, GraphPostStatus
 from plynx.utils.config import get_web_config
@@ -29,7 +30,9 @@ def get_graph(graph_id=None):
         if graph:
             return JSONEncoder().encode({
                 'data': graph,
-                'status': 'success'})
+                'status': 'success',
+                'resources_dict': resource_manager.resources_dict,
+                })
         else:
             return 'Graph was not found', 404
     else:
