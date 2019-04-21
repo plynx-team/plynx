@@ -17,6 +17,18 @@ DemoConfig = namedtuple('DemoConfig', 'enabled, graph_ids')
 CloudServiceConfig = namedtuple('CloudServiceConfig', 'prefix')
 PluginsConfig = namedtuple('PluginsConfig', 'resources')
 
+DEFAULT_PLUGIN_RESOURCES = [
+    'plynx.plugins.resources.File',
+    'plynx.plugins.resources.PDF',
+    'plynx.plugins.resources.Image',
+    'plynx.plugins.resources.CSV',
+    'plynx.plugins.resources.TSV',
+    'plynx.plugins.resources.Json',
+    'plynx.plugins.resources.Executable',
+    'plynx.plugins.resources.Directory',
+    'plynx.plugins.cloud_resources.CloudStorage',
+]
+
 Config = namedtuple(
     'Config',
     [
@@ -108,7 +120,7 @@ def get_cloud_service_config():
 def get_plugins():
     resources = [
         locate(class_path)
-        for class_path in _config.get('plugins', {}).get('resources', [])
+        for class_path in _config.get('plugins', {}).get('resources', DEFAULT_PLUGIN_RESOURCES)
     ]
     return PluginsConfig(
         resources=resources,
