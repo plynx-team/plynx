@@ -27,8 +27,8 @@ const getScrollOffset = () => {
   return {
     x: el.scrollLeft,
     y: el.scrollTop,
-  }
-}
+  };
+};
 
 const boxTarget = {
   drop(props, monitor, component) {     // eslint-disable-line no-unused-vars

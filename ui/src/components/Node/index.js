@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import AlertContainer from 'react-alert-es6';
+import AlertContainer from '../3rd_party/react-alert';
 import { PLynxApi } from '../../API';
 import NodeProperties from './NodeProperties';
 import ControlButtons from './ControlButtons';

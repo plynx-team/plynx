@@ -3,7 +3,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import queryString from 'query-string';
 import ReactNodeGraph from '../3rd_party/react_node_graph';
-import AlertContainer from 'react-alert-es6';
+import AlertContainer from '../3rd_party/react-alert';
 import { PLynxApi } from '../../API';
 import { typesValid } from '../../graphValidation';
 import { DragDropContextProvider } from 'react-dnd';

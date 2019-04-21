@@ -1,6 +1,5 @@
-// src/components/NotFound/index.js
 import React, { Component } from 'react';
-import AlertContainer from 'react-alert-es6';
+import AlertContainer from '../3rd_party/react-alert';
 import { PLynxApi } from '../../API';
 import { ALERT_OPTIONS } from '../../constants';
 import Button from 'react-toolbox/lib/button/Button';
