@@ -7,7 +7,7 @@ import logging
 import pwd
 import threading
 from collections import defaultdict
-from plynx.constants import JobReturnStatus, NodeStatus, ParameterTypes, NodeResources
+from plynx.constants import JobReturnStatus, NodeStatus, ParameterTypes
 from plynx.db import Node, Output, Parameter
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
 from plynx.utils.config import get_worker_config, get_cloud_service_config

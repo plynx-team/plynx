@@ -1,5 +1,6 @@
 from plynx.constants import NodeResources
 
+
 class BaseResource(object):
     NAME = None
     ALIAS = None
