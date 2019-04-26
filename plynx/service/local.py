@@ -49,7 +49,7 @@ def _run_containers(client, containers):
                 )
             )
         else:
-            container = client.containers.run(detach=True, **vars(descriptor))
+            container = client.containers.run(detach=True, **descriptor._asdict())
             logging.info('Created new container: `{}` {}'.format(
                 descriptor.image,
                 container,
