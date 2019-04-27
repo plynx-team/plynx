@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import Icon from '../../../Common/Icon';
 
 
 export default class BlockInputListItem extends React.Component {
@@ -10,6 +11,7 @@ export default class BlockInputListItem extends React.Component {
       file_types: PropTypes.array.isRequired,
     }).isRequired,
     onMouseUp: PropTypes.func.isRequired,
+    resources_dict: PropTypes.object.isRequired,
   }
 
   onMouseUp(e) {
@@ -26,6 +28,7 @@ export default class BlockInputListItem extends React.Component {
 
   render() {
     const {name} = this.props.item;
+    const type_descriptor = this.props.resources_dict[this.props.item.file_types[0]];
 
     return (
       <li
@@ -37,12 +40,9 @@ export default class BlockInputListItem extends React.Component {
           }
           href={null}
           >
-          <img
-            src={"/icons/file_types/" + this.props.item.file_types[0] + ".svg"}
-            width="10"
-            height="10"
-            alt={this.props.item.file_types[0]}
-            />
+          <Icon
+            type_descriptor={type_descriptor}
+          />
           {name}
         </a>
       </li>

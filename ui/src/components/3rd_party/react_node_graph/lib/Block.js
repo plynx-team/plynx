@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import BlockInputList from './BlockInputList';
 import BlockOuputList from './BlockOutputList';
 import ParameterList from './ParameterList';
+import {ResourceConsumer} from '../../../../contexts';
 import { NODE_STATUS, NODE_RUNNING_STATUS } from '../../../../constants';
 
 const Draggable = require('react-draggable');
@@ -141,18 +142,26 @@ class Block extends React.Component {
               }
             </header>
             <div className="node-description">&ldquo;{this.props.description}&rdquo;</div>
-            <div className="node-content" onClick={(e) => {
-              this.handleClick(e);
-            }}>
-              <BlockInputList
-                            items={this.props.inputs}
-                            onCompleteConnector={(index) => this.onCompleteConnector(index)} />
-              <BlockOuputList
-                            items={this.props.outputs}
-                            onStartConnector={(index) => this.onStartConnector(index)}
-                            onClick={(index) => this.onOutputClick(index)} />
+            <ResourceConsumer>
+            {
+              resources_dict => <div className="node-content" onClick={(e) => {
+                this.handleClick(e);
+              }}>
+                <BlockInputList
+                              items={this.props.inputs}
+                              onCompleteConnector={(index) => this.onCompleteConnector(index)}
+                              resources_dict={resources_dict}
+                              />
+                <BlockOuputList
+                              items={this.props.outputs}
+                              onStartConnector={(index) => this.onStartConnector(index)}
+                              onClick={(index) => this.onOutputClick(index)}
+                              resources_dict={resources_dict}
+                              />
 
-            </div>
+              </div>
+            }
+            </ResourceConsumer>
             <ParameterList
                           items={this.props.specialParameterNames}
                           onClick={(index) => this.onSpecialParameterClick(index)} />

@@ -530,7 +530,7 @@ class ReactBlockGraph extends React.Component {
 
           {/* render our connectors */}
 
-          <SVGComponent height={this.height} width={this.width} ref="svgComponent">
+          <SVGComponent height={this.height} width={this.width} ref="svgComponent" className="svg-graph">
             {
               connectors.filter(
                 connector => {

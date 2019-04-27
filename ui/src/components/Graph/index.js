@@ -19,7 +19,8 @@ import LoadingScreen from '../LoadingScreen';
 import DemoScreen from '../DemoScreen';
 import FileDialog from '../Dialogs/FileDialog';
 import CodeDialog from '../Dialogs/CodeDialog';
-import { ObjectID } from 'bson';
+import {ResourceProvider} from '../../contexts';
+import {ObjectID} from 'bson';
 import {HotKeys} from 'react-hotkeys';
 import {
   ACTION,
@@ -107,6 +108,9 @@ ENDPOINT = '` + API_ENDPOINT + `'
     const sleepStep = 1000;
 
     const loadGraph = (response) => {
+      self.setState({
+        resources_dict: response.data.resources_dict,
+      });
       self.loadGraphFromJson(response.data.data);
       console.log(graph_id);
       if (graph_id === 'new') {
@@ -1034,33 +1038,34 @@ ENDPOINT = '` + API_ENDPOINT + `'
 
           {/* Visible and flex layout blocks */}
           {this.state.editable && <NodesBar/> }
-
-          <ReactNodeGraph className="MainGraph"
-            ref={(child) => {
-              this.mainGraph = child;
-            }}
-            data={this.state}
-            graphId={this.state.graphId}
-            editable={this.state.editable}
-            onBlockMove={(nid, pos) => this.onBlockMove(nid, pos)}
-            onNewConnector={(n1, o, n2, i) => this.onNewConnector(n1, o, n2, i)}
-            onRemoveConnector={(connector) => this.onRemoveConnector(connector)}
-            onOutputClick={(nid, outputIndex) => this.onOutputClick(nid, outputIndex)}
-            onSpecialParameterClick={(nid, specialParameterIndex) => this.onSpecialParameterClick(nid, specialParameterIndex)}
-            onRemoveBlock={(nid) => this.onRemoveBlock(nid)}
-            onCopyBlock={(copyList, offset) => this.onCopyBlock(copyList, offset)}
-            onPasteBlock={(offset) => this.onPasteBlock(offset)}
-            onBlocksSelect={(nids) => {
-              this.handleBlocksSelect(nids);
-            }}
-            onBlockDeselect={(nid) => {
-              this.handleBlockDeselect(nid);
-            }}
-            onDrop={(nodeObj) => this.handleDrop(nodeObj, true)}
-            onAllBlocksDeselect={() => this.handleAllBlocksDeselect()}
-            onSavePressed={() => this.handleSave()}
-            key={'graph' + this.state.graphId + this.state.loading}
-          />
+          <ResourceProvider value={this.state.resources_dict}>
+            <ReactNodeGraph className="MainGraph"
+              ref={(child) => {
+                this.mainGraph = child;
+              }}
+              data={this.state}
+              graphId={this.state.graphId}
+              editable={this.state.editable}
+              onBlockMove={(nid, pos) => this.onBlockMove(nid, pos)}
+              onNewConnector={(n1, o, n2, i) => this.onNewConnector(n1, o, n2, i)}
+              onRemoveConnector={(connector) => this.onRemoveConnector(connector)}
+              onOutputClick={(nid, outputIndex) => this.onOutputClick(nid, outputIndex)}
+              onSpecialParameterClick={(nid, specialParameterIndex) => this.onSpecialParameterClick(nid, specialParameterIndex)}
+              onRemoveBlock={(nid) => this.onRemoveBlock(nid)}
+              onCopyBlock={(copyList, offset) => this.onCopyBlock(copyList, offset)}
+              onPasteBlock={(offset) => this.onPasteBlock(offset)}
+              onBlocksSelect={(nids) => {
+                this.handleBlocksSelect(nids);
+              }}
+              onBlockDeselect={(nid) => {
+                this.handleBlockDeselect(nid);
+              }}
+              onDrop={(nodeObj) => this.handleDrop(nodeObj, true)}
+              onAllBlocksDeselect={() => this.handleAllBlocksDeselect()}
+              onSavePressed={() => this.handleSave()}
+              key={'graph' + this.state.graphId + this.state.loading}
+            />
+          </ResourceProvider>
 
           <PropertiesBar className="PropertiesBar"
                         ref={(child) => {

@@ -7,6 +7,7 @@ export default class BlockInputList extends React.Component {
   static propTypes = {
     items: PropTypes.array.isRequired,
     onCompleteConnector: PropTypes.func.isRequired,
+    resources_dict: PropTypes.object.isRequired,
   }
 
   onMouseUp(i) {
@@ -21,7 +22,13 @@ export default class BlockInputList extends React.Component {
         <ul className="nodeInputList">
           {this.props.items.map((item) => {
             return (
-              <BlockInputListItem onMouseUp={(i) => this.onMouseUp(i)} key={i} index={i++} item={item} />   // eslint-disable-line no-shadow
+              <BlockInputListItem
+                onMouseUp={(idx) => this.onMouseUp(idx)}
+                key={i}
+                index={i++}
+                item={item}
+                resources_dict={this.props.resources_dict}
+              />
             );
           })}
         </ul>

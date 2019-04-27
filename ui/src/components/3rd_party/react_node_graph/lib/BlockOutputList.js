@@ -8,6 +8,7 @@ export default class BlockOutputList extends React.Component {
     items: PropTypes.array.isRequired,
     onStartConnector: PropTypes.func.isRequired,
     onClick: PropTypes.func.isRequired,
+    resources_dict: PropTypes.object.isRequired,
   }
 
   onMouseDown(i) {
@@ -26,11 +27,14 @@ export default class BlockOutputList extends React.Component {
           <ul className="nodeOutputList">
           {this.props.items.map((item) => {
             return (
-              <BlockOutputListItem onMouseDown={(i) => this.onMouseDown(i)}     // eslint-disable-line no-shadow
-                                  onClick={(i) => this.onClick(i)}              // eslint-disable-line no-shadow
-                                  key={i}                                       // eslint-disable-line no-shadow
-                                  index={i++}                                   // eslint-disable-line no-shadow
-                                  item={item} />
+              <BlockOutputListItem
+                onMouseDown={(idx) => this.onMouseDown(idx)}
+                onClick={(idx) => this.onClick(idx)}
+                key={i}
+                index={i++}
+                item={item}
+                resources_dict={this.props.resources_dict}
+              />
             );
           })}
         </ul>

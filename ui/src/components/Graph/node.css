@@ -3,7 +3,7 @@
   height: 100%;
 }
 
-svg {
+.svg-graph {
   background: url('gridtile.png');
   display: inline;
 }
@@ -278,7 +278,7 @@ svg {
   background-color: rgba(33, 150, 243, 0.3);
 }
 
-.nodeOutputList li img {
+.nodeOutputList li img, .nodeOutputList li svg {
   vertical-align:middle;
   margin-left: 2px;
 }
@@ -327,7 +327,7 @@ svg {
   background-color: rgba(255, 255, 255, 0.2);
 }
 
-.nodeInputList li img {
+.nodeInputList li img, .nodeInputList li svg {
   vertical-align:middle;
   margin-right: 2px;
 }
