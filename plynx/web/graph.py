@@ -24,7 +24,9 @@ def get_graph(graph_id=None):
     if graph_id == 'new':
         return JSONEncoder().encode({
             'data': Graph().to_dict(),
-            'status': 'success'})
+            'status': 'success',
+            'resources_dict': resource_manager.resources_dict,
+            })
     elif graph_id:
         graph = graph_collection_manager.get_db_graph(graph_id)
         if graph:

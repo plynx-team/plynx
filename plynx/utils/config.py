@@ -12,9 +12,9 @@ WorkerConfig = namedtuple('WorkerConfig', 'user')
 MongoConfig = namedtuple('MongoConfig', 'user password host port')
 StorageConfig = namedtuple('StorageConfig', 'scheme prefix credential_path')
 AuthConfig = namedtuple('AuthConfig', 'secret_key')
-WebConfig = namedtuple('WebConfig', 'host port endpoint debug')
+WebConfig = namedtuple('WebConfig', 'host port endpoint api_endpoint debug')
 DemoConfig = namedtuple('DemoConfig', 'enabled, graph_ids')
-CloudServiceConfig = namedtuple('CloudServiceConfig', 'prefix')
+CloudServiceConfig = namedtuple('CloudServiceConfig', 'prefix url_prefix url_postfix')
 PluginsConfig = namedtuple('PluginsConfig', 'resources')
 
 DEFAULT_PLUGIN_RESOURCES = [
@@ -100,6 +100,7 @@ def get_web_config():
         host=_config.get('web', {}).get('host', '0.0.0.0'),
         port=int(_config.get('web', {}).get('port', 5000)),
         endpoint=_config.get('web', {}).get('endpoint', 'http://127.0.0.1:3000'),
+        api_endpoint=_config.get('web', {}).get('api_endpoint', 'http://127.0.0.1:5000/plynx/api/v0'),
         debug=bool(_config.get('web', {}).get('debug', False)),
     )
 
@@ -114,6 +115,8 @@ def get_demo_config():
 def get_cloud_service_config():
     return CloudServiceConfig(
         prefix=_config.get('cloud_service', {}).get('prefix', 'gs://sample'),
+        url_prefix=_config.get('cloud_service', {}).get('url_prefix', ''),
+        url_postfix=_config.get('cloud_service', {}).get('url_postfix', ''),
     )
 
 

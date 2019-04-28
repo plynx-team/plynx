@@ -49,3 +49,11 @@ class CloudStorage(BaseResource):
                 NodeResources.OUTPUT: filename,
                 NodeResources.CLOUD_OUTPUT: cloud_filename,
             }
+
+    @classmethod
+    def preview(cls, preview_object):
+        path = json.load(preview_object.fp)['path']
+        return '<a href={}>{}</a>'.format(
+            ''.join([CLOUD_SERVICE_CONFIG.url_prefix, path.split('//')[1], CLOUD_SERVICE_CONFIG.url_postfix]),
+            path
+        )
