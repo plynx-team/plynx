@@ -1,3 +1,16 @@
-.preview-table .preview-table-col {
+.preview-table {
+  border-spacing: 0px;
+}
+
+.preview-table-col {
   padding: 0px 10px 0px 10px;
+  border-right: 1px solid #bbb;
+}
+
+.preview-table-row-even {
+  background-color: #ccc;
+}
+
+.preview-table-row-odd {
+  background-color: #ddd;
 }
