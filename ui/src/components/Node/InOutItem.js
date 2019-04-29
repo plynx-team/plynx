@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { FILE_TYPES } from '../../constants';
+import {ResourceConsumer} from '../../contexts';
 
 export default class InOutItem extends Component {
   static propTypes = {
@@ -82,48 +82,51 @@ export default class InOutItem extends Component {
           <div className='InOutCellTitle'>
             Type:
           </div>
-          <div className='InOutCellValue'>
-            {
-              this.props.varName === 'inputs' &&
-              <select className='InOutValue'
-                name='file_types'
-                value={this.state.file_types[0]}
-                onChange={this.handleChange}
-                readOnly={this.state.readOnly}
-              >
+          <ResourceConsumer>
+          { resources_dict => <div className='InOutCellValue'>
               {
-                FILE_TYPES.map((description) => <option
-                    value={description.type}
-                    key={description.type}
-                    >
-                    {description.alias}
-                    </option>
-                )
+                this.props.varName === 'inputs' &&
+                <select className='InOutValue'
+                  name='file_types'
+                  value={this.state.file_types[0]}
+                  onChange={this.handleChange}
+                  readOnly={this.state.readOnly}
+                >
+                {
+                  Object.values(resources_dict).map((description) => <option
+                      value={description.name}
+                      key={description.name}
+                      >
+                      {description.alias}
+                      </option>
+                  )
+                }
+                </select>
               }
-              </select>
-            }
-            {
-              this.props.varName === 'outputs' &&
-              <select className='InOutValue'
-                type='text'
-                name='file_type'
-                value={this.state.file_type}
-                onChange={this.handleChange}
-                readOnly={this.state.readOnly}
-              >
               {
-                FILE_TYPES.map((description) => <option
-                    value={description.type}
-                    key={description.type}
-                    >
-                    {description.alias}
-                    </option>
-                )
+                this.props.varName === 'outputs' &&
+                <select className='InOutValue'
+                  type='text'
+                  name='file_type'
+                  value={this.state.file_type}
+                  onChange={this.handleChange}
+                  readOnly={this.state.readOnly}
+                >
+                {
+                  Object.values(resources_dict).map((description) => <option
+                      value={description.name}
+                      key={description.name}
+                      >
+                      {description.alias}
+                      </option>
+                  )
+                }
+                </select>
               }
-              </select>
-            }
 
-          </div>
+            </div>
+          }
+          </ResourceConsumer>
         </div>
 
         {! (this.state.min_count === undefined) &&

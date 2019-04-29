@@ -2,7 +2,9 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import Dialog from './Dialog';
 import { PLynxApi } from '../../API';
-import { FILE_STATUS, FILE_TYPES, NODE_STATUS } from '../../constants';
+import {ResourceConsumer} from '../../contexts';
+import Icon from '../Common/Icon';
+import { FILE_STATUS, NODE_STATUS } from '../../constants';
 import { API_ENDPOINT } from '../../configConsts';
 
 const FileDownload = require('react-file-download');
@@ -54,12 +56,6 @@ export default class FileDialog extends Component {
   }
 
   render() {
-    const typeTuple = FILE_TYPES.filter(
-      (ft) => {
-        return ft.type === this.props.fileObj.outputs[0].file_type;
-      }
-    )[0];
-
     return (
       <Dialog className='FileDialog'
               onClose={() => {
@@ -82,12 +78,19 @@ export default class FileDialog extends Component {
               </div>
             </div>
 
-            <div className={'Type'}>
-              <div className='Widget'>
-                <img src={"/icons/file_types/" + typeTuple.type + ".svg"} alt={typeTuple.type} width="20" height="20" />
-                {typeTuple.alias}
+            <ResourceConsumer>
+            { resources_dict => <div className={'Type'}>
+                <div className='Widget'>
+                  <Icon
+                    type_descriptor={resources_dict[this.props.fileObj.outputs[0].file_type]}
+                    width={"20"}
+                    height={"20"}
+                  />
+                  {resources_dict[this.props.fileObj.outputs[0].file_type].alias}
+                </div>
               </div>
-            </div>
+            }
+            </ResourceConsumer>
 
           </div>
 

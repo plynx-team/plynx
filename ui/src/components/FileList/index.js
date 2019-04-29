@@ -11,6 +11,7 @@ import FileUploadDialog from '../Dialogs/FileUploadDialog';
 import PreviewDialog from '../Dialogs/PreviewDialog';
 import { ACTION, ALERT_OPTIONS, RESPONCE_STATUS, KEY_MAP } from '../../constants';
 import SearchBar from '../Common/SearchBar';
+import {ResourceProvider} from '../../contexts';
 import {HotKeys} from 'react-hotkeys';
 import './style.css';
 import '../Common/ListPage.css';
@@ -79,6 +80,7 @@ export default class FileListPage extends Component {
       self.setState(
         {
           nodes: data.nodes,
+          resources_dict: response.data.resources_dict,
           pageCount: Math.ceil(data.total_count / self.perPage)
         });
       loading = false;
@@ -253,66 +255,69 @@ export default class FileListPage extends Component {
       <HotKeys className='ListPage'
                handlers={this.keyHandlers} keyMap={KEY_MAP}
       >
-        {this.state.loading &&
-          <LoadingScreen />
-        }
-        <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
-        <div className="menu">
-          <a className="menu-button"
-             href={null}
-             onClick={(e) => this.handleNewFileClick(e)}
-             >
-            {"Create new File"}
-          </a>
-        </div>
-        <div className="search">
-          <SearchBar
-              onSearchUpdate={(search) => this.handleSearchUpdate(search)}
-              search={this.state.search}
-          />
-        </div>
-        {this.state.fileObj &&
-          <FileDialog
-            onClose={() => this.handleCloseDialog()}
-            onDeprecate={(fileObj) => this.handleDeprecate(fileObj)}
-            fileObj={this.state.fileObj}
-            hideDeprecate={this.state.fileObj._readonly}
-            onPreview={(previewData) => this.handlePreview(previewData)}
+        <ResourceProvider value={this.state.resources_dict}>
+          {this.state.loading &&
+            <LoadingScreen />
+          }
+          <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
+          <div className="menu">
+            <a className="menu-button"
+               href={null}
+               onClick={(e) => this.handleNewFileClick(e)}
+               >
+              {"Create new File"}
+            </a>
+          </div>
+          <div className="search">
+            <SearchBar
+                onSearchUpdate={(search) => this.handleSearchUpdate(search)}
+                search={this.state.search}
             />
-        }
-        {
-          this.state.previewData &&
-          <PreviewDialog className="PreviewDialog"
-            title={this.state.previewData.title}
-            file_type={this.state.previewData.file_type}
-            resource_id={this.state.previewData.resource_id}
-            download_name={this.state.previewData.download_name}
-            onClose={() => this.handleClosePreview()}
+          </div>
+          {this.state.fileObj &&
+            <FileDialog
+              onClose={() => this.handleCloseDialog()}
+              onDeprecate={(fileObj) => this.handleDeprecate(fileObj)}
+              fileObj={this.state.fileObj}
+              hideDeprecate={this.state.fileObj._readonly}
+              onPreview={(previewData) => this.handlePreview(previewData)}
+              />
+          }
+          {
+            this.state.previewData &&
+            <PreviewDialog className="PreviewDialog"
+              title={this.state.previewData.title}
+              file_type={this.state.previewData.file_type}
+              resource_id={this.state.previewData.resource_id}
+              download_name={this.state.previewData.download_name}
+              onClose={() => this.handleClosePreview()}
+            />
+          }
+          {this.state.uploadFile &&
+            <FileUploadDialog
+              onClose={() => this.handleCloseDialog()}
+              onPostFile={(file) => this.postFile(file, ACTION.SAVE, 1)}
+            />
+          }
+
+          <FileList files={this.state.nodes}
+                    ref={(child) => {
+                      this.fileList = child;
+                    }}
+                    onClick={(fileObj) => this.handleFileClick(fileObj)}
           />
-        }
-        {this.state.uploadFile &&
-          <FileUploadDialog
-            onClose={() => this.handleCloseDialog()}
-            onPostFile={(file) => this.postFile(file, ACTION.SAVE, 1)}
-          />
-        }
-        <FileList files={this.state.nodes}
-                  ref={(child) => {
-                    this.fileList = child;
-                  }}
-                  onClick={(fileObj) => this.handleFileClick(fileObj)}
-        />
-        <ReactPaginate previousLabel={"Previous"}
-                       nextLabel={"Next"}
-                       breakLabel={<a>...</a>}
-                       breakClassName={"break-me"}
-                       pageCount={this.state.pageCount}
-                       marginPagesDisplayed={2}
-                       pageRangeDisplayed={5}
-                       onPageChange={this.handlePageClick}
-                       containerClassName={"pagination"}
-                       subContainerClassName={"pages pagination"}
-                       activeClassName={"active"} />
+          <ReactPaginate previousLabel={"Previous"}
+                         nextLabel={"Next"}
+                         breakLabel={<a>...</a>}
+                         breakClassName={"break-me"}
+                         pageCount={this.state.pageCount}
+                         marginPagesDisplayed={2}
+                         pageRangeDisplayed={5}
+                         onPageChange={this.handlePageClick}
+                         containerClassName={"pagination"}
+                         subContainerClassName={"pages pagination"}
+                         activeClassName={"active"} />
+        </ResourceProvider>
       </HotKeys>
     );
   }

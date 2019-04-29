@@ -3,7 +3,9 @@ import PropTypes from 'prop-types';
 import Dialog from './Dialog';
 import { PLynxApi } from '../../API';
 import LoadingScreen from '../LoadingScreen';
-import { NODE_STATUS, FILE_TYPES, RESPONCE_STATUS, NODE_RUNNING_STATUS } from '../../constants';
+import {ResourceConsumer} from '../../contexts';
+import Icon from '../Common/Icon';
+import { NODE_STATUS, RESPONCE_STATUS, NODE_RUNNING_STATUS } from '../../constants';
 
 
 const DEFAULT_TITLE = 'File';
@@ -128,7 +130,8 @@ export default class FileUploadDialog extends Component {
           <LoadingScreen />
         </div>
       }
-        <div className='FileUploadDialogBody selectable'>
+      <ResourceConsumer>
+      { resources_dict => <div className='FileUploadDialogBody selectable'>
           <div className='MainBlock'>
 
             <div className='TitleDescription'>
@@ -142,8 +145,12 @@ export default class FileUploadDialog extends Component {
 
             <div className={'Type'}>
               <div className='Widget'>
-                <img src={"/icons/file_types/" + this.state.file_type + ".svg"} width="20" height="20" alt={this.state.file_type}/>
-                {FILE_TYPES.filter((x) => x.type === this.state.file_type)[0].alias}
+                <Icon
+                  type_descriptor={resources_dict[this.state.file_type]}
+                  width={"20"}
+                  height={"20"}
+                />
+                {resources_dict[this.state.file_type].alias}
               </div>
             </div>
           </div>
@@ -176,9 +183,9 @@ export default class FileUploadDialog extends Component {
                 onChange={(e) => this.handleChange(e)}
               >
               {
-                FILE_TYPES.map((description) => <option
-                    value={description.type}
-                    key={description.type}
+                Object.values(resources_dict).map((description) => <option
+                    value={description.name}
+                    key={description.name}
                     >
                     {description.alias}
                     </option>
@@ -222,6 +229,8 @@ export default class FileUploadDialog extends Component {
             </a>
           </div>
         </div>
+        }
+        </ResourceConsumer>
       </Dialog>
     );
   }

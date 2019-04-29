@@ -16,7 +16,7 @@
 }
 
 
-.file-list-item .Type .Widget img {
+.file-list-item .Type .Widget img, .file-list-item .Type .Widget svg {
   vertical-align:middle;
 }
 

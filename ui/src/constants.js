@@ -35,45 +35,6 @@ export const PARAMETER_TYPES = [
 
 export const SPECIAL_TYPE_NAMES = ['code'];
 
-export const FILE_TYPES = [
-  {
-    type: 'file',
-    alias: 'File',
-  },
-  {
-    type: 'pdf',
-    alias: 'pdf',
-  },
-  {
-    type: 'image',
-    alias: 'Image',
-  },
-  {
-    type: 'executable',
-    alias: 'Executable',
-  },
-  {
-    type: 'csv',
-    alias: 'csv',
-  },
-  {
-    type: 'tsv',
-    alias: 'tsv',
-  },
-  {
-    type: 'json',
-    alias: 'json',
-  },
-  {
-    type: 'directory',
-    alias: 'Directory',
-  },
-  {
-    type: 'cloud-storage',
-    alias: 'Cloud Storage',
-  },
-];
-
 export const ACTION = Object.freeze({
   SAVE: 'SAVE',
   APPROVE: 'APPROVE',

@@ -5,6 +5,7 @@ import traceback
 from plynx.db import Node, NodeCollectionManager
 from flask import request, g
 from plynx.graph.base_nodes import NodeCollection
+from plynx.plugins.managers import resource_manager
 from plynx.web import app, requires_auth, make_fail_response
 from plynx.utils.common import to_object_id, JSONEncoder
 from plynx.constants import NodeStatus, NodePostAction, NodePostStatus
@@ -24,6 +25,7 @@ def get_nodes(node_link=None):
     if node_link in node_collection.name_to_class:
         return JSONEncoder().encode({
             'data': node_collection.name_to_class[node_link].get_default().to_dict(),
+            'resources_dict': resource_manager.resources_dict,
             'status': 'success'})
     # if node_link is defined (Node id)
     elif node_link:
@@ -35,6 +37,7 @@ def get_nodes(node_link=None):
         if node:
             return JSONEncoder().encode({
                 'data': node,
+                'resources_dict': resource_manager.resources_dict,
                 'status': 'success'})
         else:
             return 'Node `{}` was not found'.format(node_link), 404
@@ -46,6 +49,7 @@ def get_nodes(node_link=None):
         return JSONEncoder().encode({
             'nodes': res['list'],
             'total_count': res['metadata'][0]['total'] if res['metadata'] else 0,
+            'resources_dict': resource_manager.resources_dict,
             'status': 'success'})
 
 

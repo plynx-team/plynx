@@ -967,78 +967,79 @@ ENDPOINT = '` + API_ENDPOINT + `'
         <HotKeys className="GraphNode"
                  handlers={this.keyHandlers} keyMap={KEY_MAP}
         >
-          <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
-          { demoPreview &&
-            <DemoScreen onApprove={() => this.handleApprove()} onClose={() => {
-              cookie.remove('demoPreview', { path: '/' });
-              this.forceUpdate();
-            }} />
-          }
-          {this.state.loading &&
-            <LoadingScreen
-            ></LoadingScreen>
-          }
-          <div className={'BackgroundLabels ' + (this.state.editable ? 'editable' : 'readonly')}>
-            <div className="Title">{this.state.title}</div>
-            <div className="Description">&ldquo;{this.state.description}&rdquo;</div>
-          </div>
-          {this.state.fileObj &&
-            <FileDialog
-              onClose={() => this.handleCloseFileDialog()}
-              onDeprecate={(fileObj) => this.handleDeprecate(fileObj)}
-              fileObj={this.state.fileObj}
-              hideDeprecate  // TODO let the author to deprecate file
-              onPreview={(previewData) => this.handlePreview(previewData)}
-              />
-          }
-          <Controls className="ControlButtons"
-                    readonly={!this.state.editable}
-                    graphRunningStatus={this.state.graphRunningStatus}
-                    onSave={() => this.handleSave()}
-                    onValidate={() => this.handleValidate()}
-                    onApprove={() => this.handleApprove()}
-                    onRearrange={() => this.handleRearrange()}
-                    onGenerateCode={() => this.handleGenerateCode()}
-                    onUpgradeNodes={() => this.handleUpgradeNodes()}
-                    onClone={() => this.handleClone()}
-                    onCancel={() => this.handleCancel()}
-          />
-          {
-            (this.state.previewData) &&
-            <PreviewDialog className="PreviewDialog"
-              title={this.state.previewData.title}
-              file_type={this.state.previewData.file_type}
-              resource_id={this.state.previewData.resource_id}
-              download_name={this.state.previewData.download_name}
-              onClose={() => this.handleClosePreview()}
-            />
-          }
-          {
-            (this.state.nodeId && this.state.parameterName) &&
-            <CodeDialog
-              title={this.state.parameterName}
-              value={this.state.parameterValue}
-              onClose={() => this.handleCloseCodeDialog()}
-              readOnly={!this.state.editable}
-              onParameterChanged={(value) => this.handleParameterChanged(this.state.nodeId, this.state.parameterName, value)}
-            />
-          }
-          {
-            this.state.generatedCode &&
-            <CodeDialog
-              title={"API Code"}
-              value={{
-                mode: "python",
-                value: this.generatedCodeHeader + this.state.generatedCode,
-              }}
-              onClose={() => this.handleCloseGeneratedCodeDialog()}
-              readOnly={!this.state.editable}
-            />
-          }
-
-          {/* Visible and flex layout blocks */}
-          {this.state.editable && <NodesBar/> }
           <ResourceProvider value={this.state.resources_dict}>
+            <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
+            { demoPreview &&
+              <DemoScreen onApprove={() => this.handleApprove()} onClose={() => {
+                cookie.remove('demoPreview', { path: '/' });
+                this.forceUpdate();
+              }} />
+            }
+            {this.state.loading &&
+              <LoadingScreen
+              ></LoadingScreen>
+            }
+            <div className={'BackgroundLabels ' + (this.state.editable ? 'editable' : 'readonly')}>
+              <div className="Title">{this.state.title}</div>
+              <div className="Description">&ldquo;{this.state.description}&rdquo;</div>
+            </div>
+            {this.state.fileObj &&
+              <FileDialog
+                onClose={() => this.handleCloseFileDialog()}
+                onDeprecate={(fileObj) => this.handleDeprecate(fileObj)}
+                fileObj={this.state.fileObj}
+                hideDeprecate  // TODO let the author to deprecate file
+                onPreview={(previewData) => this.handlePreview(previewData)}
+                />
+            }
+            <Controls className="ControlButtons"
+                      readonly={!this.state.editable}
+                      graphRunningStatus={this.state.graphRunningStatus}
+                      onSave={() => this.handleSave()}
+                      onValidate={() => this.handleValidate()}
+                      onApprove={() => this.handleApprove()}
+                      onRearrange={() => this.handleRearrange()}
+                      onGenerateCode={() => this.handleGenerateCode()}
+                      onUpgradeNodes={() => this.handleUpgradeNodes()}
+                      onClone={() => this.handleClone()}
+                      onCancel={() => this.handleCancel()}
+            />
+            {
+              (this.state.previewData) &&
+              <PreviewDialog className="PreviewDialog"
+                title={this.state.previewData.title}
+                file_type={this.state.previewData.file_type}
+                resource_id={this.state.previewData.resource_id}
+                download_name={this.state.previewData.download_name}
+                onClose={() => this.handleClosePreview()}
+              />
+            }
+            {
+              (this.state.nodeId && this.state.parameterName) &&
+              <CodeDialog
+                title={this.state.parameterName}
+                value={this.state.parameterValue}
+                onClose={() => this.handleCloseCodeDialog()}
+                readOnly={!this.state.editable}
+                onParameterChanged={(value) => this.handleParameterChanged(this.state.nodeId, this.state.parameterName, value)}
+              />
+            }
+            {
+              this.state.generatedCode &&
+              <CodeDialog
+                title={"API Code"}
+                value={{
+                  mode: "python",
+                  value: this.generatedCodeHeader + this.state.generatedCode,
+                }}
+                onClose={() => this.handleCloseGeneratedCodeDialog()}
+                readOnly={!this.state.editable}
+              />
+            }
+
+            {/* Visible and flex layout blocks */}
+            {this.state.editable && <NodesBar/> }
+
             <ReactNodeGraph className="MainGraph"
               ref={(child) => {
                 this.mainGraph = child;
@@ -1065,21 +1066,21 @@ ENDPOINT = '` + API_ENDPOINT + `'
               onSavePressed={() => this.handleSave()}
               key={'graph' + this.state.graphId + this.state.loading}
             />
-          </ResourceProvider>
 
-          <PropertiesBar className="PropertiesBar"
-                        ref={(child) => {
-                          this.propertiesBar = child;
-                        }}
-                        onParameterChanged={(nodeId, name, value) => this.handleParameterChanged(nodeId, name, value)}
-                        editable={this.state.editable}
-                        onPreview={(previewData) => this.handlePreview(previewData)}
-                        graphId={this.graph._id}
-                        graphTitle={this.state.title}
-                        graphDescription={this.state.description}
-                        key={"prop" + this.state.graphId + this.state.loading}
-                        onFileShow={(nid) => this.handleShowFile(nid)}
-          />
+            <PropertiesBar className="PropertiesBar"
+                          ref={(child) => {
+                            this.propertiesBar = child;
+                          }}
+                          onParameterChanged={(nodeId, name, value) => this.handleParameterChanged(nodeId, name, value)}
+                          editable={this.state.editable}
+                          onPreview={(previewData) => this.handlePreview(previewData)}
+                          graphId={this.graph._id}
+                          graphTitle={this.state.title}
+                          graphDescription={this.state.description}
+                          key={"prop" + this.state.graphId + this.state.loading}
+                          onFileShow={(nid) => this.handleShowFile(nid)}
+            />
+          </ResourceProvider>
         </HotKeys>
       </DragDropContextProvider>
     );

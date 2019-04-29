@@ -9,6 +9,7 @@ import ParameterList from './ParameterList';
 import DeprecateDialog from '../Dialogs/DeprecateDialog';
 import TextViewDialog from '../Dialogs/TextViewDialog';
 import LoadingScreen from '../LoadingScreen';
+import {ResourceProvider} from '../../contexts';
 import { ObjectID } from 'bson';
 import {HotKeys} from 'react-hotkeys';
 import { ACTION, RESPONCE_STATUS, ALERT_OPTIONS, NODE_RUNNING_STATUS, KEY_MAP } from '../../constants';
@@ -50,6 +51,9 @@ export default class Node extends Component {
     const sleepStep = 1000;
 
     const processResponse = (response) => {
+      self.setState({
+        resources_dict: response.data.resources_dict,
+      });
       const node = response.data.data;
       self.loadNodeFromJson(node);
       if (node_id === 'new') {
@@ -264,111 +268,113 @@ export default class Node extends Component {
       <HotKeys className='EditNodeMain'
                handlers={this.keyHandlers} keyMap={KEY_MAP}
       >
-        <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
-        {this.state.loading &&
-          <LoadingScreen
-          ></LoadingScreen>
-        }
-        {
-          this.state.deprecateQuestionDialog &&
-          <DeprecateDialog
-            onClose={() => this.handleCloseDeprecateDialog()}
-            prev_node_id={node._id}
-            onDeprecate={(node_, action) => this.handleDeprecate(node_, action)}
-            title={"Would you like to deprecate this Operation?"}
+        <ResourceProvider value={this.state.resources_dict}>
+          <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
+          {this.state.loading &&
+            <LoadingScreen
+            ></LoadingScreen>
+          }
+          {
+            this.state.deprecateQuestionDialog &&
+            <DeprecateDialog
+              onClose={() => this.handleCloseDeprecateDialog()}
+              prev_node_id={node._id}
+              onDeprecate={(node_, action) => this.handleDeprecate(node_, action)}
+              title={"Would you like to deprecate this Operation?"}
+              />
+          }
+          {
+            this.state.deprecateParentDialog &&
+            <DeprecateDialog
+              onClose={() => this.handleCloseDeprecateDialog()}
+              prev_node_id={node.parent_node}
+              new_node_id={node._id}
+              onDeprecate={(node_, action) => this.handleDeprecate(node_, action)}
+              title={"Would you like to deprecate parent Operation?"}
+              />
+          }
+          {
+            this.state.preview_text &&
+            <TextViewDialog className="TextViewDialog"
+              title='Preview'
+              text={this.state.preview_text}
+              onClose={() => this.handleClosePreview()}
             />
-        }
-        {
-          this.state.deprecateParentDialog &&
-          <DeprecateDialog
-            onClose={() => this.handleCloseDeprecateDialog()}
-            prev_node_id={node.parent_node}
-            new_node_id={node._id}
-            onDeprecate={(node_, action) => this.handleDeprecate(node_, action)}
-            title={"Would you like to deprecate parent Operation?"}
+          }
+          <div className='EditNodeHeader'>
+            <NodeProperties
+              title={node.title}
+              description={node.description}
+              base_node_name={node.base_node_name}
+              parentNode={node.parent_node}
+              successorNode={node.successor_node}
+              nodeStatus={node.node_status}
+              created={node.insertion_date}
+              updated={node.update_date}
+              onParameterChanged={(name, value) => this.handleParameterChanged(name, value)}
+              readOnly={this.state.readOnly}
+              key={key}
             />
-        }
-        {
-          this.state.preview_text &&
-          <TextViewDialog className="TextViewDialog"
-            title='Preview'
-            text={this.state.preview_text}
-            onClose={() => this.handleClosePreview()}
-          />
-        }
-        <div className='EditNodeHeader'>
-          <NodeProperties
-            title={node.title}
-            description={node.description}
-            base_node_name={node.base_node_name}
-            parentNode={node.parent_node}
-            successorNode={node.successor_node}
-            nodeStatus={node.node_status}
-            created={node.insertion_date}
-            updated={node.update_date}
-            onParameterChanged={(name, value) => this.handleParameterChanged(name, value)}
-            readOnly={this.state.readOnly}
-            key={key}
-          />
-          <ControlButtons
-            onSave={() => this.handleSave()}
-            onSaveApprove={() => this.handleSaveApprove()}
-            onClone={() => this.handleClone()}
-            onDeprecate={() => this.handleDeprecateClick()}
-            onPreview={() => this.handlePreview()}
-            readOnly={this.state.readOnly}
-            nodeStatus={node.node_status}
-            hideDeprecate={node._readonly}
-            key={"controls_" + key}
-          />
-        </div>
-        <div className='EditNodeComponents'>
-
-          <div className='EditNodeColumn EditNodeInputs'>
-            <div className='EditNodePropTitle'>
-              Inputs
-            </div>
-            <div className='EditNodeList'>
-              <InOutList
-                varName='inputs'
-                items={node.inputs}
-                key={key}
-                onChanged={(value) => this.handleParameterChanged('inputs', value)}
-                readOnly={this.state.readOnly}
-              />
-            </div>
+            <ControlButtons
+              onSave={() => this.handleSave()}
+              onSaveApprove={() => this.handleSaveApprove()}
+              onClone={() => this.handleClone()}
+              onDeprecate={() => this.handleDeprecateClick()}
+              onPreview={() => this.handlePreview()}
+              readOnly={this.state.readOnly}
+              nodeStatus={node.node_status}
+              hideDeprecate={node._readonly}
+              key={"controls_" + key}
+            />
           </div>
+          <div className='EditNodeComponents'>
 
-          <div className='EditNodeColumn EditNodeParameters'>
-            <div className='EditNodePropTitle'>
-              Parameters
+            <div className='EditNodeColumn EditNodeInputs'>
+              <div className='EditNodePropTitle'>
+                Inputs
+              </div>
+              <div className='EditNodeList'>
+                <InOutList
+                  varName='inputs'
+                  items={node.inputs}
+                  key={key}
+                  onChanged={(value) => this.handleParameterChanged('inputs', value)}
+                  readOnly={this.state.readOnly}
+                />
+              </div>
             </div>
-            <div className='EditNodeList'>
-              <ParameterList
-                items={node.parameters}
-                key={key}
-                onChanged={(value) => this.handleParameterChanged('parameters', value)}
-                readOnly={this.state.readOnly}
-              />
+
+            <div className='EditNodeColumn EditNodeParameters'>
+              <div className='EditNodePropTitle'>
+                Parameters
+              </div>
+              <div className='EditNodeList'>
+                <ParameterList
+                  items={node.parameters}
+                  key={key}
+                  onChanged={(value) => this.handleParameterChanged('parameters', value)}
+                  readOnly={this.state.readOnly}
+                />
+              </div>
             </div>
+
+            <div className='EditNodeColumn EditNodeOutputs'>
+              <div className='EditNodePropTitle'>
+                Outputs
+              </div>
+              <div className='EditNodeList'>
+                <InOutList
+                  varName='outputs'
+                  items={node.outputs}
+                  key={key}
+                  onChanged={(value) => this.handleParameterChanged('outputs', value)}
+                  readOnly={this.state.readOnly}
+                />
+              </div>
+            </div>
+
           </div>
-
-          <div className='EditNodeColumn EditNodeOutputs'>
-            <div className='EditNodePropTitle'>
-              Outputs
-            </div>
-            <div className='EditNodeList'>
-              <InOutList
-                varName='outputs'
-                items={node.outputs}
-                key={key}
-                onChanged={(value) => this.handleParameterChanged('outputs', value)}
-                readOnly={this.state.readOnly}
-              />
-            </div>
-          </div>
-
-        </div>
+        </ResourceProvider>
       </HotKeys>
     );
   }

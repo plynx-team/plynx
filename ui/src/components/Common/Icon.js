@@ -51,6 +51,7 @@ export default function icon(props) {
     family={icon_family}
     name={icon_name}
     stroke={type_descriptor.color}
+    {...props}
   />;
 }
 
