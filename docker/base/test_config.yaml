@@ -17,7 +17,7 @@ storage:
   prefix: /data/resources/
 
 auth:
-  secret_key: SECRET_KEY
+  secret_key:
 
 web:
   host: '0.0.0.0'

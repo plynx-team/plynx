@@ -15,7 +15,13 @@ ADD ./ui/src                /app/src
 ADD ./LICENSE /app
 
 # Build
-RUN npm install -s
+RUN npm install
+
+# Build code for production
+RUN npm ci --only=production
+
+# Bundle app source
+COPY . .
 
 # Make port ports available to the world outside this container
 EXPOSE 3000

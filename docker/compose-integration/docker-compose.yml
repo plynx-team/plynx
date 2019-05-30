@@ -49,5 +49,15 @@ services:
             - backend
             - mongodb
 
+    frontend:
+        image: khaxis/plynx:ui
+        container_name: "frontend"
+        ports:
+            - "3000:3000"
+        depends_on:
+            - backend
+        links:
+            - backend
+
 volumes:
     disk-storage:
