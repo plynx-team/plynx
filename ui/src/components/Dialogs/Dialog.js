@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import Rnd from 'react-rnd';
+import { Rnd } from 'react-rnd';
 
 import './Dialog.css';
 

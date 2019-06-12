@@ -1,5 +1,5 @@
 # Use an Plynx Base runtime as a parent image
-FROM node:8-slim
+FROM node:12.4.0-alpine
 
 # Set the working directory to /app
 WORKDIR /app
@@ -18,7 +18,7 @@ ADD ./LICENSE /app
 RUN npm install
 
 # Build code for production
-RUN npm ci --only=production
+# RUN npm ci --only=production
 
 # Bundle app source
 COPY . .
