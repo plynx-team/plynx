@@ -242,7 +242,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
       "graphRunningStatus": this.graph.graph_running_status,
     }, () => {
       if (nid) {
-        this.mainGraph.decoratedComponentInstance.selectBlocks([nid]);
+        this.mainGraph.getDecoratedComponentInstance().selectBlocks([nid]);
       }
     });
 
@@ -428,7 +428,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
     }
     let ii;
     const pastedBlockIds = [];
-    this.mainGraph.decoratedComponentInstance.deselectAll(false);
+    this.mainGraph.getDecoratedComponentInstance().deselectAll(false);
     for (ii = 0; ii < copyBody.nodes.length; ++ii) {
       const blockJson = copyBody.nodes[ii];
       const block_id = this.handleDrop(
@@ -482,7 +482,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
         });
       }
     }
-    this.mainGraph.decoratedComponentInstance.selectBlocks(pastedBlockIds);
+    this.mainGraph.getDecoratedComponentInstance().selectBlocks(pastedBlockIds);
     this.setState({
       nodes: this.nodes,
       connections: this.connections,
