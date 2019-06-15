@@ -120,12 +120,12 @@ class Block extends React.Component {
               <span className="node-title">{this.props.title}</span>
               {
                 !this.state.readonly &&
-                <a href={null}
+                <div
                   className={'remove'}
                   onClick={(e) => this.handleRemove(e)}
                 >
                   &#215;
-                </a>
+                </div>
               }
               {
                 this.state.cacheUrl &&

@@ -181,7 +181,7 @@ export default class PropertiesBar extends Component {
         }
         {
           (this.state.nodeId && this.state.base_node_name === 'file') &&
-          <a href={null} onClick={
+          <div onClick={
             (e) => {
               e.stopPropagation();
               e.preventDefault();
@@ -191,7 +191,7 @@ export default class PropertiesBar extends Component {
             <div className="PropertiesHeader">
               {(this.state.bigTitle ? this.state.bigTitle + ' ' : ' ')}<img src="/icons/external-link.svg" width="12" height="12" alt="^" />
             </div>
-          </a>
+          </div>
         }
 
         <div className='PropertiesBoxRoot'>

@@ -85,12 +85,11 @@ export default class Dialog extends Component {
               onClick={(e) => this.noop(e)}
               onMouseUp={(e) => this.noop(e)}
             >
-              <a className="close-button"
-                 href={null}
+              <div className="close-button"
                  onClick={(e) => this.handleClose(e)}
               >
                 &#215;
-              </a>
+              </div>
               <div className='title noselect'
                    onClick={(e) => {
                      this.noop(e);

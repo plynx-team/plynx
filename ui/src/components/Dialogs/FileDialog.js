@@ -113,21 +113,21 @@ export default class FileDialog extends Component {
             }
           </div>
           <div className='Controls'>
-            <a href={null}
+            <div
                onClick={(e) => this.handlePreviewClick(e)}
                className="control-button">
                <img src="/icons/preview.svg" alt="preview" /> Preview
-            </a>
-            <a href={null}
+            </div>
+            <div
                onClick={(e) => {
                  e.preventDefault();
                  this.download();
                }}
                className="control-button">
                <img src="/icons/download2.svg" alt="download" /> Download
-            </a>
+            </div>
             { this.props.fileObj.node_status === FILE_STATUS.READY && !this.props.hideDeprecate &&
-              <a href={null}
+              <div
                  onClick={(e) => {
                    e.preventDefault();
                    this.props.onDeprecate(this.props.fileObj);
@@ -135,7 +135,7 @@ export default class FileDialog extends Component {
                  }}
                  className="control-button">
                  <img src="/icons/x.svg" alt="deprecate" /> Deprecate
-              </a>
+              </div>
             }
           </div>
         </div>

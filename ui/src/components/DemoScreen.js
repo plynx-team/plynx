@@ -15,14 +15,14 @@ export default class DemoScreen extends Component {
            style={this.props.style}
            onClick={() => this.props.onClose()}>
         <div className="message">
-          Please hit the <a href={null}
+          Please hit the <div
              onClick={(e) => {
                e.preventDefault();
                this.props.onApprove();
              }}
              className="control-button">
              <img src="/icons/play.svg" alt=""/> Run
-          </a> button to run the demo pipeline
+          </div> button to run the demo pipeline
         </div>
       </div>
     );

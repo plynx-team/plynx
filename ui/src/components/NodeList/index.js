@@ -160,7 +160,7 @@ export default class ListPage extends Component {
                    }}/>
         <ReactPaginate previousLabel={"Previous"}
                        nextLabel={"Next"}
-                       breakLabel={<a>...</a>}
+                       breakLabel={<div>...</div>}
                        breakClassName={"break-me"}
                        pageCount={this.state.pageCount}
                        marginPagesDisplayed={2}

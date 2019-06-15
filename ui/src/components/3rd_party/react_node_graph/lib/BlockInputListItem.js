@@ -34,17 +34,16 @@ export default class BlockInputListItem extends React.Component {
       <li
         className={this.props.item.file_types[0]}
         >
-        <a
+        <div
           onClick={
             (e) => this.noop(e)} onMouseUp={(e) => this.onMouseUp(e)
           }
-          href={null}
           >
           <Icon
             type_descriptor={type_descriptor}
           />
           {name}
-        </a>
+        </div>
       </li>
     );
   }

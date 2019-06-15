@@ -34,12 +34,12 @@ export default class BlockOutputListItem extends React.Component {
       <li onMouseDown={(e) => this.onMouseDown(e)}
           onClick={(e) => this.onClick(e)}
           className={this.props.item.file_type}>
-        <a href={null} onClick={(e) => this.onClick(e)}>
+        <div onClick={(e) => this.onClick(e)}>
           {this.props.item.name}
           <Icon
             type_descriptor={type_descriptor}
           />
-        </a>
+        </div>
       </li>
     );
   }

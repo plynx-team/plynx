@@ -210,30 +210,30 @@ export default class DeprecateDialog extends Component {
           </div>
 
           <div className='Controls'>
-            <a href={null}
+            <div
                onClick={(e) => {
                  e.preventDefault();
                  this.handleDeprecate('optionally');
                }}
                className="control-button">
                <img src="/icons/alert-circle.svg" alt="deprecate" /> Deprecate (optionally)
-            </a>
-            <a href={null}
+            </div>
+            <div
                onClick={(e) => {
                  e.preventDefault();
                  this.handleDeprecate('mandatory');
                }}
                className="control-button">
                <img src="/icons/alert-octagon.svg" alt="deprecate" /> Deprecate (mandatory)
-            </a>
-            <a href={null}
+            </div>
+            <div
                onClick={(e) => {
                  e.preventDefault();
                  this.handleCancel();
                }}
                className="control-button">
                <img src="/icons/x.svg" alt="cancel" /> Cancel
-            </a>
+            </div>
           </div>
         </div>
       </Dialog>

@@ -40,18 +40,16 @@ export default class NodeBarHeader extends Component {
     return (
       <div className="NodeBarHeader">
         <div className="menu">
-          <a className={"menu-button" + (this.props.selectedTab === "files" ? " selected" : "")}
-             href={null}
+          <div className={"menu-button" + (this.props.selectedTab === "files" ? " selected" : "")}
              onClick={(e) => this.onTabClick(e, "files", "file")}
             >
             {"Files"}
-          </a>
-          <a className={"menu-button" + (this.props.selectedTab === "operations" ? " selected" : "")}
-             href={null}
+          </div>
+          <div className={"menu-button" + (this.props.selectedTab === "operations" ? " selected" : "")}
              onClick={(e) => this.onTabClick(e, "operations", OPERATIONS)}
             >
             {"Operations"}
-          </a>
+          </div>
         </div>
         <div className="search">
           <SearchBar

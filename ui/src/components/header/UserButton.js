@@ -36,9 +36,9 @@ export default class UserButton extends Component {
         {this.state.refreshTokenExists &&
           <div className="api-button">
             {separator()}
-            <a className="button" href={null} onClick={() => this.props.onAPIDialogClick()}>
+            <div className="button" onClick={() => this.props.onAPIDialogClick()}>
               API
-            </a>
+            </div>
           </div>
         }
         {this.state.refreshTokenExists &&

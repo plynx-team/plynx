@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 
 export default function makeControlButton(props) {
   return (
-    <a href={null}
+    <div
        onClick={(e) => {
          e.preventDefault();
          props.func();
@@ -12,7 +12,7 @@ export default function makeControlButton(props) {
        className={"control-button " + (props.className || '')}>
        <img src={"/icons/" + props.img} alt={props.text}/>
        <div className='control-button-text'>{props.text}</div>
-    </a>
+    </div>
   );
 }
 

@@ -261,12 +261,11 @@ export default class FileListPage extends Component {
           }
           <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
           <div className="menu">
-            <a className="menu-button"
-               href={null}
+            <div className="menu-button"
                onClick={(e) => this.handleNewFileClick(e)}
                >
               {"Create new File"}
-            </a>
+            </div>
           </div>
           <div className="search">
             <SearchBar
@@ -308,7 +307,7 @@ export default class FileListPage extends Component {
           />
           <ReactPaginate previousLabel={"Previous"}
                          nextLabel={"Next"}
-                         breakLabel={<a>...</a>}
+                         breakLabel={<div>...</div>}
                          breakClassName={"break-me"}
                          pageCount={this.state.pageCount}
                          marginPagesDisplayed={2}

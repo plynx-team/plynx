@@ -146,7 +146,7 @@ export default class NodesBar extends Component {
                         }}/>
           <ReactPaginate previousLabel={"<"}
                          nextLabel={">"}
-                         breakLabel={<a>...</a>}
+                         breakLabel={<div>...</div>}
                          breakClassName={"break-me"}
                          pageCount={this.state.pageCount}
                          marginPagesDisplayed={2}

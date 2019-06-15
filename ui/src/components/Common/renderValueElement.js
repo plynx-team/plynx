@@ -168,23 +168,21 @@ export class ValueList extends Component {
           })
           }
           {!this.state.readOnly &&
-            <a
+            <div
               className={'remove'}
-              href={null}
               onClick={() => this.handleRemoveItem(index)}
-            > - </a>
+            > - </div>
           }
           </div>
         ))}
 
         {!this.state.readOnly &&
-          <a
+          <div
             className={'add'}
-            href={null}
             onClick={() => this.handleAddItem()}
           >
               +
-          </a>}
+          </div>}
       </div>
     );
   }

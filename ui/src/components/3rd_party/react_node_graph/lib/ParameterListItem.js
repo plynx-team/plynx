@@ -26,15 +26,14 @@ export default class BlockInputListItem extends React.Component {
 
     return (
       <div className="parameterItem">
-        <a
+        <div
           className="button"
           onClick={
             (e) => this.noop(e)} onMouseUp={(e) => this.onMouseUp(e)
           }
-          href={null}
           >
           {name}
-        </a>
+        </div>
       </div>
     );
   }

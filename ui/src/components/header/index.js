@@ -47,9 +47,9 @@ export default class Header extends Component {
         </div>
         {
           showMenuButton &&
-          <a className="menu-button-sl" href={null} onMouseUp={(e) => this.onMenuClick(e)}>
+          <div className="menu-button-sl" onMouseUp={(e) => this.onMenuClick(e)}>
             <img src="/icons/menu.svg" alt="menu" />
-          </a>
+          </div>
         }
         <UserButton onAPIDialogClick={() => this.props.onAPIDialogClick()}/>
       </div>

@@ -210,7 +210,7 @@
   border-bottom: 1px solid rgba(128, 128, 128, 0.2);
 }
 
-.nodeOutputList li a {
+.nodeOutputList li div {
   font-size:10px;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -268,13 +268,13 @@
 }
 
 
-.editable .nodeOutputList li a {
+.editable .nodeOutputList li div {
   background-color: rgba(33, 150, 243, 0.04);
   border-top-right-radius: 5px;
   border-bottom-right-radius: 5px;
 }
 
-.editable .nodeOutputList li a:hover {
+.editable .nodeOutputList li div:hover {
   background-color: rgba(33, 150, 243, 0.3);
 }
 
@@ -283,18 +283,18 @@
   margin-left: 2px;
 }
 
-.nodeOutputList li a i {
+.nodeOutputList li div i {
   padding-left: 6px;
 }
 
-.nodeOutputList li:hover a i {
+.nodeOutputList li:hover div i {
   font-size: 15px;
   margin-top: 3px;
   margin-right: -2px;
   padding-left: 3px;
 }
 
-.nodeOutputList li:hover a {
+.nodeOutputList li:hover div {
   font-weight: bold;
 }
 
@@ -303,7 +303,7 @@
   border-bottom: 1px solid rgba(128, 128, 128, 0.2);
 }
 
-.nodeInputList li a {
+.nodeInputList li div {
   cursor: default;
   font-size:10px;
   white-space: nowrap;
@@ -317,13 +317,13 @@
   color: #eee;
 }
 
-.editable .nodeInputList li a {
+.editable .nodeInputList li div {
   background-color: rgba(255, 255, 255, 0.03);
   border-top-left-radius: 5px;
   border-bottom-left-radius: 5px;
 }
 
-.editable .nodeInputList li a:hover {
+.editable .nodeInputList li div:hover {
   background-color: rgba(255, 255, 255, 0.2);
 }
 
@@ -332,11 +332,11 @@
   margin-right: 2px;
 }
 
-.nodeInputList li a i {
+.nodeInputList li div i {
   padding-right: 6px;
 }
 
-.dragging .nodeInputList li a i.hover {
+.dragging .nodeInputList li div i.hover {
   vertical-align: middle;
   font-size: 15px;
   color: #ffffff;
@@ -345,7 +345,7 @@
   padding-right: 3px;
 }
 
-.dragging .nodeInputList li a i.hover + span {
+.dragging .nodeInputList li div i.hover + span {
   vertical-align: middle;
   font-weight: bold;
   color: #ffffff;

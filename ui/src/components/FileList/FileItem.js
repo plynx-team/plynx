@@ -30,7 +30,7 @@ export default class FileItem extends Component {
 
   render() {
     return (
-      <a className='list-item file-list-item' href={null} onClick={(e) => this.onClick(e)}>
+      <div className='list-item file-list-item' onClick={(e) => this.onClick(e)}>
 
         <div className='ItemHeader'>
           <div className='TitleDescription'>
@@ -64,7 +64,7 @@ export default class FileItem extends Component {
         { listTextElement('Id', this.props._id) }
         { listTextElement('Author', this.props.user.username) }
         { listTextElement('Created', this.props.insertion_date) }
-      </a>
+      </div>
     );
   }
 }

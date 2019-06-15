@@ -196,7 +196,7 @@ export default class FileUploadDialog extends Component {
 
             <div className='Item'>
               <div className={'Name'}>File:</div>
-              <a href={null}
+              <div
                  onClick={(e) => {
                    e.preventDefault();
                    this.handleChooseFile();
@@ -205,7 +205,7 @@ export default class FileUploadDialog extends Component {
                  <img src="/icons/file-plus.svg" alt="new file"/> {this.state.file_name || 'Choose file'}
                  <div className='progress-bar'>
                  </div>
-              </a>
+              </div>
             </div>
           </div>
 
@@ -217,7 +217,7 @@ export default class FileUploadDialog extends Component {
           />
 
           <div className='Controls noselect'>
-            <a href={null}
+            <div
                onClick={(e) => {
                  e.preventDefault();
                  if (this.state.file_name) {
@@ -226,7 +226,7 @@ export default class FileUploadDialog extends Component {
                }}
                className="control-button">
                <img src="/icons/upload.svg" alt="uplaod"/> Upload
-            </a>
+            </div>
           </div>
         </div>
         }
