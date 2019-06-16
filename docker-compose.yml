@@ -53,7 +53,7 @@ services:
         image: khaxis/plynx:ui
         container_name: "frontend"
         ports:
-            - "3000:3000"
+            - "3001:80"
         depends_on:
             - backend
         links:
