@@ -6,7 +6,7 @@ build_backend:
 	PLYNX_IMAGES="base backend master worker test" sh ./scripts/build_images.sh
 
 build_frontend:
-	PLYNX_IMAGES="ui" sh ./scripts/build_images.sh
+	PLYNX_IMAGES="ui ui_dev" sh ./scripts/build_images.sh
 
 build: build_backend build_frontend;
 

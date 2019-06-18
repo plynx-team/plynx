@@ -50,80 +50,43 @@ User Interface is based on `React` framework.
 
 PLynx is using `MongoDB` as a primary metadata storage. In order to meet diverse data storage requirements, PLynx is using `boto` library as an abstractions. It supports multiple data storages such as `AWS S3`, `Google Cloud Storage` and traditional filesystems.
 
-In order to reduce complexity on local workstations we recommend to install `docker` framework.
+In order to reduce complexity we recommend to install `docker` framework.
 
-[Get started with Docker](https://www.docker.com/get-started)
 
 ## Get started
 
-### Install using pip
-
-```
-pip install plynx
-```
-
-### Install from source code
-
-You can install backend, service and command line utils building them from the source code.
-
-First clone the repo:
-```
-git clone https://github.com/khaxis/plynx.git   # Clone the repo
-```
-
-Then build it using `setup.py` script:
-
-```
-cd plynx
-python setup.py install     # install main PLynx package
-```
-
 ### Usage
 
-Run the local cluster. Please note `docker` is required. ([Get started with Docker](https://www.docker.com/get-started))
+Make sure you install docker. [Get started with Docker](https://www.docker.com/get-started)
 
+**tl;dr**
 ```
-plynx local
-```
+git clone https://github.com/khaxis/plynx.git   # Clone the repo
 
-If `docker` is not available, you can still set up UI and database.
+cd plynx
 
-First, you will need to build the UI:
-```
-# from plynx
-
-cd ui
-npm install -s
+make up                                         # to start production services
 ```
 
-Then in order to start the UI type the following command:
-```
-npm start
-```
+Then go to [http://localhost:3001](http://localhost:3001)
 
-Another dependency is needed: metadata storage. PLynx currently uses `MongoDB` infrastructure for it.
+By default it will start the following services:
 
-[Get started with MongoDB](https://docs.mongodb.com/manual/installation/#mongodb-community-edition)
-
-When your UI and `MongoDB` servers are running, you can call the cluster with master, workers and backend. Make sure you skip the services that are already running.
-```
-plynx local --ignore-containers
-```
-
-Note that `plynx local` starts up the following services:
  * MongoDB instance
  * PLynx User Interface
  * Backend
  * Master
- * Several workers (3 by default)
+ * Several workers (5 by default)
 
-You can always call them separately:
+Run `make down` to stop the services.
 
-```
-plynx backend
-plynx master
-plynx worker
-```
+### Other `make` commands:
+
+- `make build` - build all docker images.
+- `make run_tests` - build docker images and run the tests.
+- `make up` - run the services locally.
+- `make down` - shut down services.
+- `make dev` - run developer version of PLynx.
 
 ## PLynx API
 
@@ -303,3 +266,4 @@ demo:
 ## External links
 - [PLynx.com](https://plynx.com) demo and main page.
 - [github](https://github.com/khaxis/plynx) page.
+- [Medium article](https://medium.com/@khaxis/organizing-data-driven-experiments-with-plynx-a3cc3301b981)
