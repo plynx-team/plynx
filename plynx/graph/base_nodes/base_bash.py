@@ -87,6 +87,7 @@ class BaseBash(BaseNode):
             with open(script_location, 'r') as sf, open(self.logs['worker'], 'a') as wf:
                 wf.write(self._make_debug_text("Running script:"))
                 wf.write(sf.read())
+                wf.write('\n')
                 wf.write(self._make_debug_text("End script"))
 
             with open(self.logs['stdout'], 'wb') as stdout_file, open(self.logs['stderr'], 'wb') as stderr_file:

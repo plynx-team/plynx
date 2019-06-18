@@ -26,7 +26,7 @@ services:
             - PLYNX_MODE=master
 
     workers:
-        image: khaxis/plynx:worker
+        image: khaxis/plynx:base_dev
         depends_on:
             - master
         links:

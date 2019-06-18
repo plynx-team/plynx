@@ -19,7 +19,6 @@ class BashJinja2(BaseBash):
         outputs = self._prepare_outputs(preview)
         logs = self._prepare_logs()
         if preview:
-
             help = HELP_TEMPLATE.format(list(inputs.keys()) + list(outputs.keys()) + [NodeResources.PARAM])
         else:
             help = ''
