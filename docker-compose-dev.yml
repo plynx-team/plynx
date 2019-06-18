@@ -1,0 +1,65 @@
+version: "3.3"
+services:
+    mongodb:
+        image: mongo:3.6-jessie
+        container_name: "mongodb"
+        environment:
+            - MONGO_DATA_DIR=/data/db
+            - MONGO_LOG_DIR=/dev/null
+        volumes:
+            - ./data/db:/data/db
+        ports:
+            - 27017:27017
+        command: mongod --smallfiles --logpath=/dev/null # --quiet
+    master:
+        image: khaxis/plynx:base_dev
+        container_name: "master"
+        ports:
+            - 17011:17011
+        depends_on:
+            - mongodb
+        links:
+            - mongodb
+        volumes:
+            - ./plynx:/app/plynx
+        environment:
+            - PLYNX_MODE=master
+
+    workers:
+        image: khaxis/plynx:worker
+        depends_on:
+            - master
+        links:
+            - master
+            - mongodb
+        volumes:
+            - ./data:/data
+            - ./plynx:/app/plynx
+        environment:
+            - PLYNX_MODE=worker
+    backend:
+        image: khaxis/plynx:base_dev
+        container_name: "backend"
+        ports:
+            - "5000:5000"
+        depends_on:
+            - mongodb
+        links:
+            - mongodb
+        volumes:
+            - ./data:/data
+            - ./plynx:/app/plynx
+        environment:
+            - PLYNX_MODE=backend
+
+    frontend:
+        image: khaxis/plynx:ui_dev
+        container_name: "frontend"
+        ports:
+            - "3001:3000"
+        depends_on:
+            - backend
+        links:
+            - backend
+        volumes:
+            - ./ui:/app
