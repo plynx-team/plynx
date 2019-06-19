@@ -14,7 +14,6 @@ install_requires = [
     'gevent==1.3.7',
     'requests>=2.18.4',
     'future>=0.17.1',
-    'docker>=3.5.1',    # Needed for local cluster
 ]
 
 # Extra dependencies for storage
