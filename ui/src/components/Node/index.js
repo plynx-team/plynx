@@ -68,18 +68,19 @@ export default class Node extends Component {
         self.props.history.replace("/not_found");
         window.location.reload(false);
         loading = false;
-      }
-      if (error.response.status === 401) {
-        PLynxApi.getAccessToken()
-        .then((isSuccessfull) => {
-          if (!isSuccessfull) {
-            console.error("Could not refresh token");
-            self.showAlert('Failed to authenticate', 'failed');
-          } else {
-            self.showAlert('Updated access token', 'success');
-          }
-        });
-      }
+        } else if (error.response.status === 401) {
+            PLynxApi.getAccessToken()
+            .then((isSuccessfull) => {
+              if (!isSuccessfull) {
+                console.error("Could not refresh token");
+                self.showAlert('Failed to authenticate', 'failed');
+              } else {
+                self.showAlert('Updated access token', 'success');
+              }
+            });
+        } else {
+            self.showAlert(error.response.message, 'failed');
+        }
     };
 
     /* eslint-disable no-await-in-loop */
@@ -239,7 +240,11 @@ export default class Node extends Component {
           }
         });
       } else {
-        self.showAlert('Failed to save the node', 'failed');
+          try {
+            self.showAlert(error.response.data.message, 'failed');
+          } catch {
+            self.showAlert('Unknown error', 'failed');
+          }
       }
       self.setState({loading: false});
     });

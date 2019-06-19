@@ -902,7 +902,11 @@ ENDPOINT = '` + API_ENDPOINT + `'
           }
         });
       } else {
-        self.showAlert('Failed to save the graph', 'failed');
+          try {
+            self.showAlert(error.response.data.message, 'failed');
+          } catch {
+            self.showAlert('Unknown error', 'failed');
+          }
       }
       self.setState({loading: false});
     });

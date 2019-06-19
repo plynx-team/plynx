@@ -63,6 +63,9 @@ def post_node():
         node = Node.from_dict(body['node'])
         node.author = g.user._id
         node.starred = False
+        db_node = node_collection_manager.get_db_node(node._id, g.user._id)
+        if db_node and db_node['_readonly']:
+            return make_fail_response('Permission denied'), 403
 
         action = body['action']
         if action == NodePostAction.SAVE:

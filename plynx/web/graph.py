@@ -15,6 +15,12 @@ graph_collection_manager = GraphCollectionManager()
 graph_cancellation_manager = GraphCancellationManager()
 WEB_CONFIG = get_web_config()
 PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'recent', 'search', 'status'}
+PERMITTED_READONLY_POST_ACTIONS = {
+    GraphPostAction.VALIDATE,
+    GraphPostAction.AUTO_LAYOUT,
+    GraphPostAction.GENERATE_CODE,
+    GraphPostAction.UPGRADE_NODES,
+}
 
 
 @app.route('/plynx/api/v0/graphs', methods=['GET'])
@@ -59,6 +65,9 @@ def post_graph():
         graph.author = g.user._id
         actions = body['actions']
         extra_response = {}
+        db_graph = graph_collection_manager.get_db_graph(graph._id, g.user._id)
+        if db_graph and db_graph['_readonly'] and set(actions) - PERMITTED_READONLY_POST_ACTIONS:
+            return make_fail_response('Permission denied'), 403
 
         for action in actions:
             if action == GraphPostAction.SAVE:

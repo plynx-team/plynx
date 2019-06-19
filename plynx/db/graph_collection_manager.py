@@ -159,15 +159,19 @@ class GraphCollectionManager(object):
         return next(get_db_connector().graphs.aggregate(aggregate_list), None)
 
     @staticmethod
-    def get_db_graph(graph_id):
+    def get_db_graph(graph_id, user_id=None):
         """Get dict representation of the Graph.
 
         Args:
             graph_id    (ObjectId, str):    Graph ID
+            user_id     (str, ObjectId, None):  User ID
 
         Return:
             (dict)  dict representation of the Graph
         """
-        return GraphCollectionManager._update_node_statuses(
+        res = GraphCollectionManager._update_node_statuses(
             get_db_connector().graphs.find_one({'_id': to_object_id(graph_id)})
         )
+        if res:
+            res['_readonly'] = (to_object_id(user_id) != to_object_id(res['author']))
+        return res
