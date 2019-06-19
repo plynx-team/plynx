@@ -22,7 +22,7 @@ auth:
 web:
   host: '0.0.0.0'
   port: 5000
-  endpoint: http://localhost:3000
+  endpoint: http://localhost:3001
   debug: true
 
 demo:
