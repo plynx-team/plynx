@@ -8,6 +8,7 @@ export default class NotFound extends Component {
     super(props);
     document.title = "404 - PLynx";
   }
+
   render() {
     return (
       <div className='NotFound'>

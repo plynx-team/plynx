@@ -36,7 +36,7 @@
         "name": "cmd",
         "value": {
           "mode": "sh",
-          "value": "cat {{ input[\"input\"] }} | grep \"{{ param['template'] }}\" > {{ output[\"output\"] }}"
+          "value": "cat {{ input['input'] | join(' ') }} | grep \"{{ param['template'] }}\" > {{ output['output'] }}"
         },
         "mutable_type": false,
         "parameter_type": "code",

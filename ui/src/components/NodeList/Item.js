@@ -1,5 +1,7 @@
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import { listTextElement } from '../Common/listElements';
+import { NODE_STATUS } from '../../constants';
 import './Item.css';
 
 export default class Item extends Component {
@@ -29,3 +31,16 @@ export default class Item extends Component {
     );
   }
 }
+
+Item.propTypes = {
+  _id: PropTypes.string,
+  title: PropTypes.string,
+  description: PropTypes.string,
+  starred: PropTypes.bool,
+  node_status: PropTypes.oneOf(Object.values(NODE_STATUS)),
+  user: PropTypes.shape({
+    username: PropTypes.string,
+  }),
+  insertion_date: PropTypes.string,
+  update_date: PropTypes.string,
+};

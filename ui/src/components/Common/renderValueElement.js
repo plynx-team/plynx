@@ -1,14 +1,14 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
-import EnumItem from './EnumItem.js';
-import CodeItem from './CodeItem.js';
+import PropTypes from 'prop-types';
+import EnumItem from './EnumItem';  // eslint-disable-line import/no-cycle
+import CodeItem from './CodeItem';
 import './ValueList.css';
 
 export default function renderValueElement(args) {
-  var { parameterType, value, handleChange, readOnly } = args;
-  var className = args.className ? args.className : "";
-  var showEnumOptions = args.showEnumOptions;
-  var height = args.height;
+  const { parameterType, value, handleChange, readOnly } = args;
+  const className = args.className ? args.className : "";
+  const showEnumOptions = args.showEnumOptions;
+  const height = args.height;
 
   switch (parameterType) {
     case 'str':
@@ -20,7 +20,7 @@ export default function renderValueElement(args) {
               value={value}
               readOnly={readOnly}
               key={parameterType}
-              />
+              />;
     case 'int':
       return <input
               className={className}
@@ -30,7 +30,7 @@ export default function renderValueElement(args) {
               value={value}
               readOnly={readOnly}
               key={parameterType}
-              />
+              />;
     case 'bool':
       return <div className={className}>
               <input
@@ -44,7 +44,7 @@ export default function renderValueElement(args) {
               <label className="BoolLabel">
                 {value ? 'True' : 'False'}
               </label>
-            </div>
+            </div>;
     case 'text':
       return <textarea
               className={className}
@@ -63,7 +63,7 @@ export default function renderValueElement(args) {
               onChange={handleChange}
               readOnly={readOnly}
               key={parameterType}
-              showEnumOptions={showEnumOptions}
+              showEnumOptions={showEnumOptions || false}
               />;
     case 'list_str':
       return <ValueList
@@ -93,16 +93,23 @@ export default function renderValueElement(args) {
               onChange={handleChange}
               readOnly={readOnly}
               key={parameterType}
-              height={height ? height : "200px"}
-              showEnumOptions={showEnumOptions}
+              height={height || "200px"}
+              showEnumOptions={showEnumOptions || false}
               />;
     default:
       return <div>NULL</div>;
-
   }
 }
 
 export class ValueList extends Component {
+  static propTypes = {
+    name: PropTypes.string.isRequired,
+    parameterType: PropTypes.string.isRequired,
+    readOnly: PropTypes.bool.isRequired,
+    items: PropTypes.array.isRequired,
+    onChange: PropTypes.func,
+  }
+
   constructor(props) {
     super(props);
     this.state = {
@@ -117,65 +124,65 @@ export class ValueList extends Component {
     this.setState({items: items});
     if (this.props.onChange) {
       this.props.onChange({
-          target: {
-            name: this.props.name,
-            value: items,
-            type: 'list'
-          }
+        target: {
+          name: this.props.name,
+          value: items,
+          type: 'list'
+        }
       });
     }
   }
 
   handleChange(index, event) {
-    var items = this.state.items;
+    const items = this.state.items;
     items[index] = event.target.value;
     this.setItems(items);
   }
 
   handleAddItem() {
-    var items = this.state.items;
+    const items = this.state.items;
     items.push("");
     this.setItems(items);
   }
 
   handleRemoveItem(index) {
-    var items = this.state.items;
+    const items = this.state.items;
     items.splice(index, 1);
     this.setItems(items);
   }
 
   render() {
-    var self = this;
+    const self = this;
     return (
       <div className='ValueList'>
         {this.state.items.map((item, index) => (
           <div className="row" key={index}>
           { renderValueElement({
-              parameterType: this.props.parameterType,
-              value: item,
-              handleChange: (event) => {self.handleChange(index, event)},
-              readOnly: this.state.readOnly,
-              className: 'ParameterValueCell'
-            })
+            parameterType: this.props.parameterType,
+            value: item,
+            handleChange: (event) => {
+              self.handleChange(index, event);
+            },
+            readOnly: this.state.readOnly,
+            className: 'ParameterValueCell'
+          })
           }
           {!this.state.readOnly &&
-            <a
+            <div
               className={'remove'}
-              href={null}
               onClick={() => this.handleRemoveItem(index)}
-            > - </a>
+            > - </div>
           }
           </div>
         ))}
 
         {!this.state.readOnly &&
-          <a
+          <div
             className={'add'}
-            href={null}
             onClick={() => this.handleAddItem()}
           >
               +
-          </a>}
+          </div>}
       </div>
     );
   }

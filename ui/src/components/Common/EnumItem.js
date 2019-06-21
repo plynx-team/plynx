@@ -1,8 +1,22 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
-import { ValueList } from './renderValueElement.js';
+import PropTypes from 'prop-types';
+import { ValueList } from './renderValueElement';  // eslint-disable-line import/no-cycle
 
 export default class EnumItem extends Component {
+  static propTypes = {
+    name: PropTypes.string.isRequired,
+    readOnly: PropTypes.bool.isRequired,
+    showEnumOptions: PropTypes.bool.isRequired,
+    value: PropTypes.shape({
+      values: PropTypes.array.isRequired,
+      index: PropTypes.oneOfType([
+        PropTypes.number,
+        PropTypes.string,
+      ]),
+    }).isRequired,
+    onChange: PropTypes.func.isRequired,
+  }
+
   constructor(props) {
     super(props);
     this.state = {
@@ -18,8 +32,8 @@ export default class EnumItem extends Component {
     if (this.state.readOnly) {
       return;
     }
-    var index = this.state.index;
-    var values = this.state.values;
+    let index = this.state.index;
+    let values = this.state.values;
 
     if (event.target.name === 'values') {
       values = event.target.value;
@@ -31,14 +45,14 @@ export default class EnumItem extends Component {
 
     if (this.props.onChange) {
       this.props.onChange({
-          target: {
-            name: this.props.name,
-            value: {
-              index: index,
-              values: values
-            },
-            type: 'enum'
-          }
+        target: {
+          name: this.props.name,
+          value: {
+            index: index,
+            values: values
+          },
+          type: 'enum'
+        }
       });
     }
   }
@@ -54,8 +68,7 @@ export default class EnumItem extends Component {
             readOnly={this.state.readOnly}
           >
             {
-              this.state.values.map((value, index) =>
-                <option
+              this.state.values.map((value, index) => <option
                   value={index}
                   key={index}
                   >

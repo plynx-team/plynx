@@ -3,7 +3,7 @@ import argparse
 from collections import namedtuple
 from plynx import __version__
 from plynx.utils.config import get_config, set_parameter
-from plynx.service import run_master, run_worker, run_local, run_users, run_cache
+from plynx.service import run_master, run_worker, run_users, run_cache
 from plynx.web import run_backend
 from plynx.utils.logs import set_logging_level
 
@@ -25,11 +25,6 @@ def backend(args):
 def cache(args):
     set_logging_level(args.pop('verbose'))
     run_cache(**args)
-
-
-def local(args):
-    set_logging_level(args.get('verbose'))
-    run_local(**args)
 
 
 def master(args):
@@ -93,19 +88,6 @@ class CLIFactory(object):
             help='Any string identificator',
             default='',
             type=str,
-            ),
-
-        # Local
-        'num_workers': Arg(
-            ('-n', '--num-workers'),
-            help='Number of workers',
-            default=3,
-            type=int,
-            ),
-        'ignore_containers': Arg(
-            ('--ignore-containers',),
-            help='Do not instantiate docker containers',
-            action='store_true'
             ),
 
         # MongoConfig
@@ -224,13 +206,6 @@ class CLIFactory(object):
             'func': backend,
             'help': 'Run backend server',
             'args': ('verbose', 'secret_key', 'endpoint',
-                     'db_host', 'db_port', 'db_user', 'db_password',
-                     'storage_scheme', 'storage_prefix', 'credential_path'),
-        }, {
-            'func': local,
-            'help': 'Run local cluster. It consists of the database server, PLynx UI, backend, master and several workers',
-            'args': ('verbose', 'num_workers', 'ignore_containers',
-                     'internal_master_host', 'master_host', 'master_port', 'secret_key', 'endpoint',
                      'db_host', 'db_port', 'db_user', 'db_password',
                      'storage_scheme', 'storage_prefix', 'credential_path'),
         }, {

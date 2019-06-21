@@ -2,6 +2,7 @@ import logging
 import yaml
 import os
 from collections import namedtuple
+from pydoc import locate
 
 PLYNX_CONFIG_PATH = os.getenv('PLYNX_CONFIG_PATH', 'config.yaml')
 _config = None
@@ -11,9 +12,22 @@ WorkerConfig = namedtuple('WorkerConfig', 'user')
 MongoConfig = namedtuple('MongoConfig', 'user password host port')
 StorageConfig = namedtuple('StorageConfig', 'scheme prefix credential_path')
 AuthConfig = namedtuple('AuthConfig', 'secret_key')
-WebConfig = namedtuple('WebConfig', 'host port endpoint debug')
+WebConfig = namedtuple('WebConfig', 'host port endpoint api_endpoint debug')
 DemoConfig = namedtuple('DemoConfig', 'enabled, graph_ids')
-CloudServiceConfig = namedtuple('CloudServiceConfig', 'prefix')
+CloudServiceConfig = namedtuple('CloudServiceConfig', 'prefix url_prefix url_postfix')
+PluginsConfig = namedtuple('PluginsConfig', 'resources')
+
+DEFAULT_PLUGIN_RESOURCES = [
+    'plynx.plugins.resources.File',
+    'plynx.plugins.resources.PDF',
+    'plynx.plugins.resources.Image',
+    'plynx.plugins.resources.CSV',
+    'plynx.plugins.resources.TSV',
+    'plynx.plugins.resources.Json',
+    'plynx.plugins.resources.Executable',
+    'plynx.plugins.resources.Directory',
+    'plynx.plugins.cloud_resources.CloudStorage',
+]
 
 Config = namedtuple(
     'Config',
@@ -85,7 +99,8 @@ def get_web_config():
     return WebConfig(
         host=_config.get('web', {}).get('host', '0.0.0.0'),
         port=int(_config.get('web', {}).get('port', 5000)),
-        endpoint=_config.get('web', {}).get('endpoint', 'http://127.0.0.1:3000'),
+        endpoint=_config.get('web', {}).get('endpoint', 'http://127.0.0.1:3001'),
+        api_endpoint=_config.get('web', {}).get('api_endpoint', 'http://127.0.0.1:5000/plynx/api/v0'),
         debug=bool(_config.get('web', {}).get('debug', False)),
     )
 
@@ -100,6 +115,18 @@ def get_demo_config():
 def get_cloud_service_config():
     return CloudServiceConfig(
         prefix=_config.get('cloud_service', {}).get('prefix', 'gs://sample'),
+        url_prefix=_config.get('cloud_service', {}).get('url_prefix', ''),
+        url_postfix=_config.get('cloud_service', {}).get('url_postfix', ''),
+    )
+
+
+def get_plugins():
+    resources = [
+        locate(class_path)
+        for class_path in _config.get('plugins', {}).get('resources', DEFAULT_PLUGIN_RESOURCES)
+    ]
+    return PluginsConfig(
+        resources=resources,
     )
 
 

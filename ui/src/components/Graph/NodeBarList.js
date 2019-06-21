@@ -1,9 +1,13 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
-import NodeListItem from './NodeListItem.js'
+import PropTypes from 'prop-types';
+import NodeListItem from './NodeListItem';
 import './style.css';
 
 export default class NodeBarList extends Component {
+  static propTypes = {
+    items: PropTypes.array.isRequired,
+  }
+
   render() {
     const listItems = this.props.items.map(
       (node) => <NodeListItem

@@ -31,8 +31,9 @@
   border: 1px darkgrey solid;
 }
 
-.FileDialogBody .Type .Widget img, .FileUploadDialogBody .Type .Widget img {
-  vertical-align:middle;
+.FileDialogBody .Type .Widget img, .FileUploadDialogBody .Type .Widget img,
+.FileDialogBody .Type .Widget svg, .FileUploadDialogBody .Type .Widget svg {
+  vertical-align: middle;
 }
 
 .FileDialogBody .Status.READY {

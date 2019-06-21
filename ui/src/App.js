@@ -1,24 +1,22 @@
 import React, { Component } from 'react';
-import { Route, Switch } from 'react-router-dom'
-import { withRouter } from 'react-router-dom';
-import cookie from 'react-cookies'
-
+import { Route, Switch, withRouter } from 'react-router-dom';
+import cookie from 'react-cookies';
+import PropTypes from 'prop-types';
 import Header from './components/header';
 import About from './components/About';
 import LogIn from './components/LogIn';
 import Welcome from './components/Welcome';
 import Dashboard from './components/dashboard';
-import NodeRouter from './components/NodeRouter.js';
-import FileRouter from './components/FileRouter.js';
-import GraphRouter from './components/GraphRouter.js';
+import NodeRouter from './components/NodeRouter';
+import FileRouter from './components/FileRouter';
+import GraphRouter from './components/GraphRouter';
 import NotFound from './components/NotFound';
-import FeedbackButton from './components/FeedbackButton'
-import APIDialog from './components/Dialogs/APIDialog'
+import FeedbackButton from './components/FeedbackButton';
+import APIDialog from './components/Dialogs/APIDialog';
 
 import './App.css';
 
 class App extends Component {
-
   constructor(props) {
     super(props);
     this.reloadOnChangePath = true;
@@ -26,14 +24,14 @@ class App extends Component {
   }
 
   getPathTuple(path) {
-    var pathParts = path.split('/').concat(['', '']);
+    const pathParts = path.split('/').concat(['', '']);
     return pathParts;
   }
 
   componentDidUpdate(prevProps) {
     /* A trick: reload the page every time when the url does not end with '$'*/
-    var prevPathTuple = this.getPathTuple(prevProps.location.pathname);
-    var pathTuple = this.getPathTuple(this.props.location.pathname);
+    const prevPathTuple = this.getPathTuple(prevProps.location.pathname);
+    const pathTuple = this.getPathTuple(this.props.location.pathname);
     if (this.props.location !== prevProps.location) {
       if (this.props.location.pathname.endsWith("$")) {
         this.reloadOnChangePath = false;
@@ -84,5 +82,10 @@ class App extends Component {
     );
   }
 }
+
+App.propTypes = {
+  location: PropTypes.object,
+  history: PropTypes.object,
+};
 
 export default withRouter(App);

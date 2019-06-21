@@ -1,12 +1,16 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 
 import './NodeItem.css';
 
 
 export default class NodeItem extends Component {
+  static propTypes = {
+    node: PropTypes.object.isRequired,
+  }
+
   render() {
-    let node = this.props.node;
+    const node = this.props.node;
     return (
       <div className={'NodeItem' + (node.base_node_name === 'file' ? ' File' : '')}>
         <div className='NodeHeader'>

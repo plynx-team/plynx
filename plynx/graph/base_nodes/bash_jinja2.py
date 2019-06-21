@@ -1,5 +1,12 @@
 import jinja2
+from plynx.constants import NodeResources
 from plynx.graph.base_nodes import BaseBash
+
+HELP_TEMPLATE = '''# Use templates: {}
+# For example `{{{{ '{{{{' }}}} param['_timeout'] {{{{ '}}}}' }}}}` or `{{{{ '{{{{' }}}} input['abc'] {{{{ '}}}}' }}}}`
+
+
+'''
 
 
 class BashJinja2(BaseBash):
@@ -7,19 +14,25 @@ class BashJinja2(BaseBash):
         super(BashJinja2, self).__init__(node)
 
     def run(self, preview=False):
-        inputs, cloud_inputs = self._prepare_inputs(preview)
-        parameters = self._prepare_parameters(pythonize=True)
-        outputs, cloud_outputs = self._prepare_outputs(preview)
+        inputs = self._prepare_inputs(preview)
+        parameters = self._prepare_parameters()
+        outputs = self._prepare_outputs(preview)
         logs = self._prepare_logs()
-        cmd = self._extract_cmd_text()
+        if preview:
+            help = HELP_TEMPLATE.format(list(inputs.keys()) + list(outputs.keys()) + [NodeResources.PARAM])
+        else:
+            help = ''
+        cmd = '{help}{cmd}'.format(
+            help=help,
+            cmd=self._extract_cmd_text()
+        )
         cmd_template = jinja2.Template(cmd)
+        resources = inputs
+        resources.update(outputs)
         cmd_string = cmd_template.render(
-            input=inputs,
-            cloud_input=cloud_inputs,
             param=parameters,
-            output=outputs,
-            cloud_outputs=cloud_outputs,
             log=logs,
+            **resources
         )
         if preview:
             return cmd_string
@@ -32,7 +45,7 @@ class BashJinja2(BaseBash):
 
         res = self.exec_script(script_location)
 
-        self._postprocess_outputs(outputs)
+        self._postprocess_outputs(outputs[NodeResources.OUTPUT])
         self._postprocess_logs()
 
         return res

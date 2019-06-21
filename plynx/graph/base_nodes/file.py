@@ -1,6 +1,7 @@
 from plynx.graph.base_nodes import BaseNode
-from plynx.constants import JobReturnStatus, NodeStatus, NodeRunningStatus, FileTypes
+from plynx.constants import JobReturnStatus, NodeStatus, NodeRunningStatus
 from plynx.db import Node, Output
+from plynx.plugins.resources import File as FileCls
 
 
 class File(BaseNode):
@@ -33,7 +34,7 @@ class File(BaseNode):
         node.outputs = [
             Output(
                 name='out',
-                file_type=FileTypes.FILE,
+                file_type=FileCls.NAME,
                 resource_id=None
             )
         ]

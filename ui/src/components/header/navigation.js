@@ -1,25 +1,21 @@
 import React, { Component } from 'react';
-import { NavLink } from 'react-router-dom'
-import { separator } from './common'
-import cookie from 'react-cookies'
+import { NavLink } from 'react-router-dom';
+import { separator } from './common';
+import cookie from 'react-cookies';
 
-import './style.css'
+import './style.css';
 
 class Navigation extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      refreshTokenExists: cookie.load('refresh_token') ? true : false
-    }
-  }
-
-  onMouseUp(e) {
-    console.log("up");
+      refreshTokenExists: !!cookie.load('refresh_token')
+    };
   }
 
   render() {
     return (
-      <div className="Navigation" onMouseUp={this.onMouseUp}>
+      <div className="Navigation">
           <div className="NavigationItems">
             {separator()}
             {this.state.refreshTokenExists &&

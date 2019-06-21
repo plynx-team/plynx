@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-import ParameterItem from './ParameterItem.js'
+import ParameterItem from './ParameterItem';
 import './Parameter.css';
 
 // a little function to help us with reordering the result
@@ -15,9 +16,12 @@ const reorder = (list, startIndex, endIndex) => {
 export default class ParameterList extends Component {
   constructor(props) {
     super(props);
-    var self = this;
+    const self = this;
     this.counter = 0;
-    props.items.forEach(function(obj) { obj._key = self.counter.toString(); ++self.counter; });
+    props.items.forEach((obj) => {
+      obj._key = self.counter.toString();   // eslint-disable-line no-param-reassign
+      ++self.counter;
+    });
     this.state = {
       items: this.props.items,
       readOnly: this.props.readOnly
@@ -45,16 +49,16 @@ export default class ParameterList extends Component {
   }
 
   handleChanged(index, name, value) {
-    var items = this.state.items;
+    const items = this.state.items;
     items[index][name] = value;
     this.setState({items: items});
     this.props.onChanged(items);
   }
 
   handleAddItem() {
-    var items = this.state.items;
+    const items = this.state.items;
 
-    var name = 'parameter_' + this.counter;
+    const name = 'parameter_' + this.counter;
     items.push({
       name: name,
       parameter_type: 'str',
@@ -75,7 +79,7 @@ export default class ParameterList extends Component {
   }
 
   handleRemoveItem(index) {
-    var items = this.state.items;
+    const items = this.state.items;
     items.splice(index, 1);
     this.setState({items: items});
     this.props.onChanged(items);
@@ -94,7 +98,7 @@ export default class ParameterList extends Component {
               >
               {this.state.items.map((item, index) => (
                 <Draggable key={item._key} draggableId={item._key} index={index} isDragDisabled={this.state.readOnly}>
-                  {(provided, snapshot) => (
+                  {(provided, snapshot) => (      // eslint-disable-line no-shadow
                     <div>
                       <div className={'ParameterDiv' + (snapshot.isDragging ? ' ParameterDivDragging' : '')}
                         ref={provided.innerRef}
@@ -107,8 +111,8 @@ export default class ParameterList extends Component {
                           index={index}
                           value={item.value}
                           widget={item.widget}
-                          onChanged={(index, name, value) => this.handleChanged(index, name, value)}
-                          onRemove={(index) => this.handleRemoveItem(index)}
+                          onChanged={(index, name, value) => this.handleChanged(index, name, value)}    // eslint-disable-line no-shadow
+                          onRemove={(index) => this.handleRemoveItem(index)}                            // eslint-disable-line no-shadow
                           readOnly={this.state.readOnly}
                           mutable_type={item.mutable_type}
                           publicable={item.publicable}
@@ -128,7 +132,7 @@ export default class ParameterList extends Component {
         {
           !this.state.readOnly &&
           <div
-            className={'Add' + (this.state.add_hover? ' hover': '')}
+            className={'Add' + (this.state.add_hover ? ' hover' : '')}
             onMouseOver={() => this.setState({add_hover: true})}
             onMouseLeave={() => this.setState({add_hover: false})}
             onClick={() => this.handleAddItem()}
@@ -140,3 +144,9 @@ export default class ParameterList extends Component {
     );
   }
 }
+
+ParameterList.propTypes = {
+  items: PropTypes.array,
+  readOnly: PropTypes.bool,
+  onChanged: PropTypes.func,
+};

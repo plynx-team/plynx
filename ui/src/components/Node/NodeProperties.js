@@ -1,10 +1,10 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
-import { PROGRAMMABLE_OPERATIONS } from '../../constants.js';
-import ParameterItem from '../Common/ParameterItem.js'
-import makePropertiesBox from '../Common/makePropertiesBox.js'
-import './NodeProperties.css'
+import { PROGRAMMABLE_OPERATIONS, NODE_STATUS } from '../../constants';
+import ParameterItem from '../Common/ParameterItem';
+import makePropertiesBox from '../Common/makePropertiesBox';
+import './NodeProperties.css';
 
 
 function makeKeyValueRow(name, value, key) {
@@ -38,25 +38,26 @@ export default class NodeProperties extends Component {
     if (this.state.readOnly) {
       return;
     }
+    let newValue = value;
     if (name === 'base_node_name') {
-      value = value.values[value.index];
+      newValue = value.values[value.index];
     }
-    this.setState({[name]: value});
-    this.props.onParameterChanged(name, value);
+    this.setState({[name]: newValue});
+    this.props.onParameterChanged(name, newValue);
   }
 
   render() {
     // Find index of base_node_name
-    var base_node_index = PROGRAMMABLE_OPERATIONS.indexOf(this.state.base_node_name);
-    var base_nodes = null;
+    let base_node_index = PROGRAMMABLE_OPERATIONS.indexOf(this.state.base_node_name);
+    let base_nodes = null;
     if (base_node_index < 0) {
       base_node_index = 0;
       base_nodes = [this.state.base_node_name];
     } else {
-      base_nodes = PROGRAMMABLE_OPERATIONS
+      base_nodes = PROGRAMMABLE_OPERATIONS;
     }
 
-    var customPropertiesItems = [
+    const customPropertiesItems = [
       {
         name: 'title',
         widget: { alias: 'Title' },
@@ -89,24 +90,24 @@ export default class NodeProperties extends Component {
         parameterType={parameter.parameter_type}
         key={parameter.name}
         readOnly={parameter.read_only}
-        onParameterChanged={(name, value)=>this.handleParameterChanged(name, value)}
+        onParameterChanged={(name, value) => this.handleParameterChanged(name, value)}
         />
       );
 
-    var internalPropertiesItems = [
-        makeKeyValueRow('Node Status', <i>{this.state.nodeStatus}</i>, 'node_status'),
-        makeKeyValueRow(
+    const internalPropertiesItems = [
+      makeKeyValueRow('Node Status', <i>{this.state.nodeStatus}</i>, 'node_status'),
+      makeKeyValueRow(
           'Parent Node',
           this.state.parentNode ? <Link to={'/nodes/' + this.state.parentNode}>{this.state.parentNode}</Link> : <i>null</i>,
           'parent_node'
         ),
-        makeKeyValueRow(
+      makeKeyValueRow(
           'Successor',
-          this.props.successorNode ? <Link to={'/nodes/' + this.props.successorNode}>{this.props.successorNode}</Link>: <i>null</i>,
+          this.props.successorNode ? <Link to={'/nodes/' + this.props.successorNode}>{this.props.successorNode}</Link> : <i>null</i>,
           'successor'
         ),
-        makeKeyValueRow('Created', <i>{this.props.created}</i>, 'created'),
-        makeKeyValueRow('Updated', <i>{this.props.updated}</i>, 'updated'),
+      makeKeyValueRow('Created', <i>{this.props.created}</i>, 'created'),
+      makeKeyValueRow('Updated', <i>{this.props.updated}</i>, 'updated'),
     ];
 
     return (
@@ -122,3 +123,16 @@ export default class NodeProperties extends Component {
     );
   }
 }
+
+NodeProperties.propTypes = {
+  title: PropTypes.string,
+  description: PropTypes.string,
+  base_node_name: PropTypes.string,
+  parentNode: PropTypes.string,
+  successorNode: PropTypes.string,
+  nodeStatus: PropTypes.oneOf(Object.values(NODE_STATUS)),
+  created: PropTypes.string,
+  updated: PropTypes.string,
+  readOnly: PropTypes.bool,
+  onParameterChanged: PropTypes.func,
+};

@@ -3,7 +3,7 @@
   height: 100%;
 }
 
-svg {
+.svg-graph {
   background: url('gridtile.png');
   display: inline;
 }
@@ -210,7 +210,7 @@ svg {
   border-bottom: 1px solid rgba(128, 128, 128, 0.2);
 }
 
-.nodeOutputList li a {
+.nodeOutputList li div {
   font-size:10px;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -268,33 +268,33 @@ svg {
 }
 
 
-.editable .nodeOutputList li a {
+.editable .nodeOutputList li div {
   background-color: rgba(33, 150, 243, 0.04);
   border-top-right-radius: 5px;
   border-bottom-right-radius: 5px;
 }
 
-.editable .nodeOutputList li a:hover {
+.editable .nodeOutputList li div:hover {
   background-color: rgba(33, 150, 243, 0.3);
 }
 
-.nodeOutputList li img {
+.nodeOutputList li img, .nodeOutputList li svg {
   vertical-align:middle;
   margin-left: 2px;
 }
 
-.nodeOutputList li a i {
+.nodeOutputList li div i {
   padding-left: 6px;
 }
 
-.nodeOutputList li:hover a i {
+.nodeOutputList li:hover div i {
   font-size: 15px;
   margin-top: 3px;
   margin-right: -2px;
   padding-left: 3px;
 }
 
-.nodeOutputList li:hover a {
+.nodeOutputList li:hover div {
   font-weight: bold;
 }
 
@@ -303,7 +303,7 @@ svg {
   border-bottom: 1px solid rgba(128, 128, 128, 0.2);
 }
 
-.nodeInputList li a {
+.nodeInputList li div {
   cursor: default;
   font-size:10px;
   white-space: nowrap;
@@ -317,26 +317,26 @@ svg {
   color: #eee;
 }
 
-.editable .nodeInputList li a {
+.editable .nodeInputList li div {
   background-color: rgba(255, 255, 255, 0.03);
   border-top-left-radius: 5px;
   border-bottom-left-radius: 5px;
 }
 
-.editable .nodeInputList li a:hover {
+.editable .nodeInputList li div:hover {
   background-color: rgba(255, 255, 255, 0.2);
 }
 
-.nodeInputList li img {
+.nodeInputList li img, .nodeInputList li svg {
   vertical-align:middle;
   margin-right: 2px;
 }
 
-.nodeInputList li a i {
+.nodeInputList li div i {
   padding-right: 6px;
 }
 
-.dragging .nodeInputList li a i.hover {
+.dragging .nodeInputList li div i.hover {
   vertical-align: middle;
   font-size: 15px;
   color: #ffffff;
@@ -345,7 +345,7 @@ svg {
   padding-right: 3px;
 }
 
-.dragging .nodeInputList li a i.hover + span {
+.dragging .nodeInputList li div i.hover + span {
   vertical-align: middle;
   font-weight: bold;
   color: #ffffff;

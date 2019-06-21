@@ -1,4 +1,5 @@
 from past.builtins import basestring
+from plynx.constants import NodeResources
 from plynx.graph.base_nodes import BaseBash
 
 
@@ -7,22 +8,27 @@ class PythonNode(BaseBash):
         super(PythonNode, self).__init__(node)
 
     def run(self, preview=False):
-        inputs, cloud_inputs = self._prepare_inputs(preview, pythonize=True)
-        parameters = self._prepare_parameters(pythonize=True)
-        outputs, cloud_outputs = self._prepare_outputs(preview)
+        inputs = self._prepare_inputs(preview)
+        parameters = self._prepare_parameters()
+        outputs = self._prepare_outputs(preview)
         logs = self._prepare_logs()
         cmd = self._extract_cmd_text()
-        cmd_array = [
-            self._get_arguments_string('input', inputs),
-            self._get_arguments_string('cloud_input', cloud_inputs),
-            self._get_arguments_string('output', outputs),
-            self._get_arguments_string('cloud_output', cloud_outputs),
-            self._get_arguments_string('param', parameters),
-            self._get_arguments_string('log', logs),
+        cmd_array = []
+        cmd_array.extend([
+            self._get_arguments_string(key, value)
+            for key, value in inputs.items()
+        ])
+        cmd_array.extend([
+            self._get_arguments_string(key, value)
+            for key, value in outputs.items()
+        ])
+        cmd_array.extend([
+            self._get_arguments_string(NodeResources.PARAM, parameters),
+            self._get_arguments_string(NodeResources.LOG, logs),
             "\n",
             "# User code starts there:",
             cmd,
-        ]
+        ])
         cmd_string = '\n'.join(cmd_array)
 
         if preview:
@@ -36,7 +42,7 @@ class PythonNode(BaseBash):
 
         res = self.exec_script(script_location, command='python')
 
-        self._postprocess_outputs(outputs)
+        self._postprocess_outputs(outputs[NodeResources.OUTPUT])
         self._postprocess_logs()
 
         return res

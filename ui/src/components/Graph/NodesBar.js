@@ -1,12 +1,12 @@
 // src/components/About/index.js
 import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
-import { PLynxApi } from '../../API.js';
-import NodeBarHeader from './NodeBarHeader.js';
-import NodeBarList from './NodeBarList.js';
+import { PLynxApi } from '../../API';
+import NodeBarHeader from './NodeBarHeader';
+import NodeBarList from './NodeBarList';
 import ReactPaginate from 'react-paginate';
-import LoadingScreen from '../LoadingScreen.js'
-import { OPERATIONS } from '../../constants.js';
+import LoadingScreen from '../LoadingScreen';
+import { OPERATIONS } from '../../constants';
 import './style.css';
 
 export default class NodesBar extends Component {
@@ -37,9 +37,9 @@ export default class NodesBar extends Component {
   async loadNodes() {
     // Loading
 
-    var self = this;
-    var loading = true;
-    var sleepPeriod = 1000;
+    const self = this;
+    let loading = true;
+    let sleepPeriod = 1000;
     const sleepMaxPeriod = 10000;
     const sleepStep = 1000;
 
@@ -49,8 +49,8 @@ export default class NodesBar extends Component {
       });
     }
 
-    var handleResponse = function (response) {
-      let data = response.data;
+    const handleResponse = (response) => {
+      const data = response.data;
       console.log(data);
       self.setState(
         {
@@ -60,11 +60,11 @@ export default class NodesBar extends Component {
       loading = false;
     };
 
-    var handleError = function (error) {
+    const handleError = (error) => {
       console.error(error);
       if (error.response.status === 401) {
         PLynxApi.getAccessToken()
-        .then(function (isSuccessfull) {
+        .then((isSuccessfull) => {
           if (!isSuccessfull) {
             console.error("Could not refresh token");
             self.props.history.push("/login/");
@@ -75,8 +75,10 @@ export default class NodesBar extends Component {
       }
     };
 
+    /* eslint-disable no-await-in-loop */
+    /* eslint-disable no-unmodified-loop-condition */
     while (loading) {
-      await PLynxApi.endpoints.nodes.getAll( {
+      await PLynxApi.endpoints.nodes.getAll({
         query: {
           offset: self.state.offset,
           per_page: self.perPage,
@@ -92,6 +94,8 @@ export default class NodesBar extends Component {
         sleepPeriod = Math.min(sleepPeriod + sleepStep, sleepMaxPeriod);
       }
     }
+    /* eslint-enable no-unmodified-loop-condition */
+    /* eslint-enable no-await-in-loop */
 
     // Stop loading
     self.setState({
@@ -104,13 +108,13 @@ export default class NodesBar extends Component {
   }
 
   handlePageClick = (data) => {
-    let selected = data.selected;
-    let offset = Math.ceil(selected * this.perPage);
+    const selected = data.selected;
+    const offset = Math.ceil(selected * this.perPage);
 
     this.setState({offset: offset}, () => {
       this.loadNodes();
     });
-    ReactDOM.findDOMNode(this.nodeList).scrollTop = 0
+    ReactDOM.findDOMNode(this.nodeList).scrollTop = 0;
   };
 
   handleUpdateFilter(tabName, baseNodeNames, search) {
@@ -137,10 +141,12 @@ export default class NodesBar extends Component {
             search={this.state.search}
             />
           <NodeBarList items={this.state.items}
-                        ref={(child) => { this.nodeList = child; }}/>
+                        ref={(child) => {
+                          this.nodeList = child;
+                        }}/>
           <ReactPaginate previousLabel={"<"}
                          nextLabel={">"}
-                         breakLabel={<a>...</a>}
+                         breakLabel={<div>...</div>}
                          breakClassName={"break-me"}
                          pageCount={this.state.pageCount}
                          marginPagesDisplayed={2}

@@ -1,8 +1,8 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
-import OutputItem from './OutputItem.js'
-import ParameterItem from '../Common/ParameterItem.js'
-import makePropertiesBox from '../Common/makePropertiesBox.js'
+import PropTypes from 'prop-types';
+import OutputItem from './OutputItem';
+import ParameterItem from '../Common/ParameterItem';
+import makePropertiesBox from '../Common/makePropertiesBox';
 import { Link } from 'react-router-dom';
 import './style.css';
 
@@ -42,6 +42,9 @@ export default class PropertiesBar extends Component {
     }
   }
 
+  // TODO replace it with more general functions
+  /* eslint-disable max-params */
+  /* eslint-disable no-param-reassign */
   setNodeData(graphId, nodeId, base_node_name, bigTitle, bigDescription, parameters, outputs, logs, parent_node) {
     parameters = parameters.slice(0);
     parameters.unshift({
@@ -51,7 +54,7 @@ export default class PropertiesBar extends Component {
       },
       value: bigDescription,
       parameter_type: 'str',
-    })
+    });
     this.setState(
       {
         graphId: graphId,
@@ -65,6 +68,8 @@ export default class PropertiesBar extends Component {
       }
     );
   }
+  /* eslint-enable no-param-reassign */
+  /* eslint-enable max-params */
 
   setGraphData(graphId, bigTitle, parameters) {
     this.setState(
@@ -98,11 +103,13 @@ export default class PropertiesBar extends Component {
   }
 
   render() {
-    var self = this;
-    var parametersList = []
+    const self = this;
+    let parametersList = [];
     if (this.state.parameters) {
       parametersList = this.state.parameters.filter(
-        (parameter) => {return parameter.widget != null}
+        (parameter) => {
+          return parameter.widget !== null;
+        }
       )
       .map(
         (parameter) => <ParameterItem
@@ -112,13 +119,15 @@ export default class PropertiesBar extends Component {
           parameterType={parameter.parameter_type}
           key={this.state.nodeId + "$" + parameter.name}
           readOnly={!this.state.editable}
-          onParameterChanged={(name, value)=>this.handleParameterChanged(name, value)}
+          onParameterChanged={(name, value) => this.handleParameterChanged(name, value)}
           />);
     }
-    var outputsList = this.state.outputs.filter(
-      (output) => {return output.resource_id != null}
+    const outputsList = this.state.outputs.filter(
+      (output) => {
+        return output.resource_id !== null;
+      }
     ).map(
-      function (output) {
+      (output) => {
         return <OutputItem
           graphId={self.state.graphId}
           resourceName={output.name}
@@ -128,13 +137,15 @@ export default class PropertiesBar extends Component {
           fileType={output.file_type}
           onPreview={(previewData) => self.handlePreview(previewData)}
           />;
-        }
+      }
       );
 
-    var logsList = [];
+    let logsList = [];
     if (this.state.logs) {
-      logsList= this.state.logs.filter(
-        (log) => {return log.resource_id}
+      logsList = this.state.logs.filter(
+        (log) => {
+          return log.resource_id;
+        }
         ).map(
         (log) => <OutputItem
           graphId={this.state.graphId}
@@ -149,8 +160,12 @@ export default class PropertiesBar extends Component {
 
     return (
       <div className="PropertiesBar"
-        onClick={(e) => {e.stopPropagation()}}
-        onMouseDown={(e) => {e.stopPropagation()}}
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
+        onMouseDown={(e) => {
+          e.stopPropagation();
+        }}
         >
         {
           !this.state.nodeId &&
@@ -166,7 +181,7 @@ export default class PropertiesBar extends Component {
         }
         {
           (this.state.nodeId && this.state.base_node_name === 'file') &&
-          <a href={null} onClick={
+          <div onClick={
             (e) => {
               e.stopPropagation();
               e.preventDefault();
@@ -176,7 +191,7 @@ export default class PropertiesBar extends Component {
             <div className="PropertiesHeader">
               {(this.state.bigTitle ? this.state.bigTitle + ' ' : ' ')}<img src="/icons/external-link.svg" width="12" height="12" alt="^" />
             </div>
-          </a>
+          </div>
         }
 
         <div className='PropertiesBoxRoot'>
@@ -189,3 +204,13 @@ export default class PropertiesBar extends Component {
     );
   }
 }
+
+PropertiesBar.propTypes = {
+  editable: PropTypes.bool,
+  graphDescription: PropTypes.string,
+  graphId: PropTypes.string,
+  graphTitle: PropTypes.string,
+  onFileShow: PropTypes.func,
+  onParameterChanged: PropTypes.func,
+  onPreview: PropTypes.func,
+};

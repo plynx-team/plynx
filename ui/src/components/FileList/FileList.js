@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
-import FileItem from './FileItem.js'
+import PropTypes from 'prop-types';
+import FileItem from './FileItem';
 import { listTextElement } from '../Common/listElements';
 import '../Common/List.css';
 import './style.css';
@@ -37,3 +38,8 @@ export default class FileList extends Component {
     );
   }
 }
+
+FileList.propTypes = {
+  files: PropTypes.array,
+  onClick: PropTypes.func,
+};

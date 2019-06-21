@@ -8,7 +8,7 @@ class NodeCollectionManager(object):
     """NodeCollectionManager contains all the operations to work with Nodes in the database."""
 
     @staticmethod
-    def get_db_nodes(status=None, base_node_names=None, search='', per_page=20, offset=0):
+    def get_db_nodes(status=None, base_node_names=None, search='', per_page=20, offset=0, user_id=None):
         """Get subset of the Nodes.
 
         Args:
@@ -75,6 +75,11 @@ class NodeCollectionManager(object):
             "$sort": sort_dict
             }
         )
+        aggregate_list.append({
+            "$addFields": {
+                '_readonly': {'$ne': ["$author", to_object_id(user_id)]},
+            }
+        })
         # counts and pagination
         aggregate_list.append({
             '$facet': {

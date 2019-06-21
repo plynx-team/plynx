@@ -1,22 +1,37 @@
-// src/components/NotFound/index.js
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
-import Dialog from './Dialog.js'
-import NodeItem from '../Common/NodeItem.js'
-import { PLynxApi } from '../../API.js';
-import { ACTION } from '../../constants.js';
+import Dialog from './Dialog';
+import NodeItem from '../Common/NodeItem';
+import { PLynxApi } from '../../API';
+import { ACTION } from '../../constants';
 
 import './DeprecateDialog.css';
 
 export default class DeprecateDialog extends Component {
+  static propTypes = {
+    title: PropTypes.string.isRequired,
+    new_node: PropTypes.shape({
+      _id: PropTypes.string.isRequired,
+    }),
+    prev_node: PropTypes.shape({
+      _id: PropTypes.string.isRequired,
+    }),
+    new_node_id: PropTypes.string,
+    prev_node_id: PropTypes.string,
+    onCancel: PropTypes.func,
+    onClose: PropTypes.func.isRequired,
+    onDeprecate: PropTypes.func.isRequired,
+    onNo: PropTypes.bool,
+  }
 
   constructor(props) {
     super(props);
 
-    var prev_node_loading = false;
-    var new_node_loading = false;
-    var prev_node_id = '';
-    var new_node_id = '';
+    let prev_node_loading = false;
+    let new_node_loading = false;
+    let prev_node_id = '';
+    let new_node_id = '';
 
     if (!this.props.prev_node && this.props.prev_node_id) {
       this.updateNode(this.props.prev_node_id, 'prev_node');
@@ -41,36 +56,34 @@ export default class DeprecateDialog extends Component {
       new_node: this.props.new_node,
       new_node_loading: new_node_loading,
       new_node_id: new_node_id
-    }
+    };
   }
 
   updateNode(node_id, destination, retryCount = 3) {
     console.log("update_node");
-    var self = this;
+    const self = this;
     PLynxApi.endpoints.nodes.getOne({ id: node_id})
-    .then(function (response) {
-      var node = response.data.data;
+    .then((response) => {
+      const node = response.data.data;
       self.setState({[destination]: node});
       self.setState({[destination + '_id']: node._id});
       self.setState({[destination + '_loading']: false});
     })
-    .catch(function (error) {
+    .catch((error) => {
       console.error(error);
       if (error.response.status === 404) {
-        self.setState({[destination + '_loading']: false})
+        self.setState({[destination + '_loading']: false});
       }
       if (error.response.status === 401) {
         PLynxApi.getAccessToken()
-        .then(function (isSuccessfull) {
+        .then((isSuccessfull) => {
           if (!isSuccessfull) {
             self.setState({[destination + '_loading']: false});
+          } else if (retryCount > 0) {
+            self.updateNode(node_id, destination, retryCount - 1);
+            self.setState({[destination + '_loading']: true});
           } else {
-            if (retryCount > 0) {
-              self.updateNode(node_id, destination, retryCount - 1);
-              self.setState({[destination + '_loading']: true});
-            } else {
-              self.setState({[destination + '_loading']: false});
-            }
+            self.setState({[destination + '_loading']: false});
           }
         });
       }
@@ -78,8 +91,8 @@ export default class DeprecateDialog extends Component {
   }
 
   handleDeprecate(mode) {
-    var node = this.state.prev_node;
-    var new_node = this.state.new_node;
+    const node = this.state.prev_node;
+    const new_node = this.state.new_node;
     if (new_node) {
       node.successor_node = new_node._id;
     }
@@ -105,19 +118,21 @@ export default class DeprecateDialog extends Component {
       this.updateNode(event.target.value, 'new_node');
       this.setState({
         new_node_loading: true
-      })
+      });
     } else {
       this.setState({
         new_node: null,
         new_node_loading: false
-      })
+      });
     }
   }
 
   render() {
     return (
       <Dialog className='DeprecateDialog'
-              onClose={() => {this.props.onClose()}}
+              onClose={() => {
+                this.props.onClose();
+              }}
               width={600}
               height={250}
               title={'Deprecation'}
@@ -195,21 +210,30 @@ export default class DeprecateDialog extends Component {
           </div>
 
           <div className='Controls'>
-            <a href={null}
-               onClick={(e) => {e.preventDefault(); this.handleDeprecate('optionally')}}
+            <div
+               onClick={(e) => {
+                 e.preventDefault();
+                 this.handleDeprecate('optionally');
+               }}
                className="control-button">
                <img src="/icons/alert-circle.svg" alt="deprecate" /> Deprecate (optionally)
-            </a>
-            <a href={null}
-               onClick={(e) => {e.preventDefault(); this.handleDeprecate('mandatory')}}
+            </div>
+            <div
+               onClick={(e) => {
+                 e.preventDefault();
+                 this.handleDeprecate('mandatory');
+               }}
                className="control-button">
                <img src="/icons/alert-octagon.svg" alt="deprecate" /> Deprecate (mandatory)
-            </a>
-            <a href={null}
-               onClick={(e) => {e.preventDefault(); this.handleCancel()}}
+            </div>
+            <div
+               onClick={(e) => {
+                 e.preventDefault();
+                 this.handleCancel();
+               }}
                className="control-button">
                <img src="/icons/x.svg" alt="cancel" /> Cancel
-            </a>
+            </div>
           </div>
         </div>
       </Dialog>

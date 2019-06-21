@@ -5,6 +5,6 @@ import './style.css';
 
 export default class FeedbackButton extends Component {
   render() {
-    return <a href="mailto:ivan@plynx.com" className='FeedbackButton'>Contact us</a>
+    return <a href="mailto:ivan@plynx.com" className='FeedbackButton'>Contact us</a>;
   }
 }

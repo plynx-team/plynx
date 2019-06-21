@@ -11,10 +11,9 @@ install_requires = [
     'Flask>=0.12.2',
     'Flask-Cors>=3.0.3',
     'Flask-HTTPAuth>=3.2.3',
-    'gevent>=1.3.7',
+    'gevent==1.3.7',
     'requests>=2.18.4',
     'future>=0.17.1',
-    'docker>=3.5.1',    # Needed for local cluster
 ]
 
 # Extra dependencies for storage

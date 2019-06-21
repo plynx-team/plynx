@@ -4,18 +4,16 @@ const X_SHIFT = 182;
 const Y_SHIFT = 58;
 const Y_STEP = 21;
 
-export function computeInOffsetByIndex(x,y,index) {
-  let outx = x + 0;
-  let outy = y + Y_SHIFT + (index * Y_STEP);
+export function computeInOffsetByIndex(x, y, index) {
+  const outx = x + 0;
+  const outy = y + Y_SHIFT + (index * Y_STEP);
 
-  return {x:outx, y:outy};
+  return {x: outx, y: outy};
 }
 
-export function computeOutOffsetByIndex(x,y,index) {
+export function computeOutOffsetByIndex(x, y, index) {
+  const outx = x + X_SHIFT;
+  const outy = y + Y_SHIFT + (index * Y_STEP);
 
-  let outx = x + X_SHIFT;
-  let outy = y + Y_SHIFT + (index * Y_STEP);
-
-  return {x:outx, y:outy};
-
+  return {x: outx, y: outy};
 }

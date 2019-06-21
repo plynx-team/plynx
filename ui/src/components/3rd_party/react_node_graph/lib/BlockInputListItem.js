@@ -1,6 +1,19 @@
 import React from 'react';
+import PropTypes from 'prop-types';
+import Icon from '../../../Common/Icon';
+
 
 export default class BlockInputListItem extends React.Component {
+  static propTypes = {
+    index: PropTypes.number.isRequired,
+    item: PropTypes.shape({
+      name: PropTypes.string.isRequired,
+      file_types: PropTypes.array.isRequired,
+    }).isRequired,
+    onMouseUp: PropTypes.func.isRequired,
+    resources_dict: PropTypes.object.isRequired,
+  }
+
   onMouseUp(e) {
     e.stopPropagation();
     e.preventDefault();
@@ -10,30 +23,27 @@ export default class BlockInputListItem extends React.Component {
 
   noop(e) {
     e.stopPropagation();
-      e.preventDefault();
+    e.preventDefault();
   }
 
   render() {
-    let {name} = this.props.item;
+    const {name} = this.props.item;
+    const type_descriptor = this.props.resources_dict[this.props.item.file_types[0]];
 
     return (
       <li
         className={this.props.item.file_types[0]}
         >
-        <a
+        <div
           onClick={
-            (e)=>this.noop(e)} onMouseUp={(e)=>this.onMouseUp(e)
+            (e) => this.noop(e)} onMouseUp={(e) => this.onMouseUp(e)
           }
-          href={null}
           >
-          <img
-            src={"/icons/file_types/" + this.props.item.file_types[0] + ".svg"}
-            width="10"
-            height="10"
-            alt={this.props.item.file_types[0]}
-            />
+          <Icon
+            type_descriptor={type_descriptor}
+          />
           {name}
-        </a>
+        </div>
       </li>
     );
   }

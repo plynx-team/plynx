@@ -1,24 +1,35 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
-import Dialog from './Dialog.js'
+import PropTypes from 'prop-types';
+import Dialog from './Dialog';
 import AceEditor from 'react-ace';
-import {CODE_LANGUAGES, CODE_THEMES} from '../../constants'
+import {CODE_LANGUAGES, CODE_THEMES} from '../../constants';
 import 'brace/ext/language_tools';
 
 // Init react-ace
 
 CODE_LANGUAGES.forEach(lang => {
-  require(`brace/mode/${lang}`);
-  require(`brace/snippets/${lang}`);
+  require(`brace/mode/${lang}`);        // eslint-disable-line global-require
+  require(`brace/snippets/${lang}`);    // eslint-disable-line global-require
 });
 
 CODE_THEMES.forEach(theme => {
-  require(`brace/theme/${theme}`);
+  require(`brace/theme/${theme}`);      // eslint-disable-line global-require
 });
 
 // Finish react-ace
 
 export default class CodeDialog extends Component {
+  static propTypes = {
+    title: PropTypes.string.isRequired,
+    readOnly: PropTypes.bool.isRequired,
+    value: PropTypes.shape({
+      mode: PropTypes.string.isRequired,
+      value: PropTypes.string.isRequired,
+    }).isRequired,
+    onClose: PropTypes.func.isRequired,
+    onParameterChanged: PropTypes.func.isRequired,
+  }
+
   constructor(props) {
     super(props);
     this.state = {
@@ -41,11 +52,13 @@ export default class CodeDialog extends Component {
   render() {
     return (
       <Dialog className='CodeDialog'
-              onClose={() => {this.handleClose()}}
+              onClose={() => {
+                this.handleClose();
+              }}
               width={900}
               height={500}
               title={this.state.title}
-              enableResizing={true}
+              enableResizing
       >
         <div className="CodeDialogContent">
           <AceEditor
@@ -55,9 +68,9 @@ export default class CodeDialog extends Component {
             value={this.props.value.value}
             theme="chaos"
             fontSize={14}
-            showPrintMargin={true}
-            showGutter={true}
-            highlightActiveLine={true}
+            showPrintMargin
+            showGutter
+            highlightActiveLine
             readOnly={this.props.readOnly}
             width="auto"
             height="468px"

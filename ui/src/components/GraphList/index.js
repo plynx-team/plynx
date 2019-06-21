@@ -1,14 +1,14 @@
 // src/components/About/index.js
 import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
-import AlertContainer from 'react-alert-es6';
-import cookie from 'react-cookies'
-import { PLynxApi } from '../../API.js';
-import GraphList from './GraphList.js'
+import AlertContainer from '../3rd_party/react-alert';
+import cookie from 'react-cookies';
+import { PLynxApi } from '../../API';
+import GraphList from './GraphList';
 import ReactPaginate from 'react-paginate';
-import LoadingScreen from '../LoadingScreen.js'
-import { ALERT_OPTIONS } from '../../constants.js';
-import SearchBar from '../Common/SearchBar.js';
+import LoadingScreen from '../LoadingScreen';
+import { ALERT_OPTIONS } from '../../constants';
+import SearchBar from '../Common/SearchBar';
 import './style.css';
 import '../Common/ListPage.css';
 import '../controls.css';
@@ -18,7 +18,7 @@ export default class GraphListPage extends Component {
   constructor(props) {
     super(props);
     document.title = "Graph List - PLynx";
-    let username = cookie.load('username');
+    const username = cookie.load('username');
     this.state = {
       graphs: [],
       loading: true,
@@ -34,7 +34,7 @@ export default class GraphListPage extends Component {
     this.msg.show(message, {
       time: 5000,
       type: 'error',
-      icon: <img src={"/alerts/" + type +".svg"} width="32" height="32" alt={type}/>
+      icon: <img src={"/alerts/" + type + ".svg"} width="32" height="32" alt={type}/>
     });
   }
 
@@ -49,9 +49,9 @@ export default class GraphListPage extends Component {
   async loadGraphs() {
     // Loading
 
-    var self = this;
-    var loading = true;
-    var sleepPeriod = 1000;
+    const self = this;
+    let loading = true;
+    let sleepPeriod = 1000;
     const sleepMaxPeriod = 10000;
     const sleepStep = 1000;
 
@@ -61,8 +61,8 @@ export default class GraphListPage extends Component {
       });
     }
 
-    var handleResponse = function (response) {
-      let data = response.data;
+    const handleResponse = (response) => {
+      const data = response.data;
       console.log(data.graphs);
       self.setState(
         {
@@ -73,10 +73,10 @@ export default class GraphListPage extends Component {
       ReactDOM.findDOMNode(self.graphList).scrollTop = 0;
     };
 
-    var handleError = function (error) {
+    const handleError = (error) => {
       if (error.response.status === 401) {
         PLynxApi.getAccessToken()
-        .then(function (isSuccessfull) {
+        .then((isSuccessfull) => {
           if (!isSuccessfull) {
             console.error("Could not refresh token");
             self.props.history.push("/login/");
@@ -87,8 +87,10 @@ export default class GraphListPage extends Component {
       }
     };
 
+    /* eslint-disable no-await-in-loop */
+    /* eslint-disable no-unmodified-loop-condition */
     while (loading) {
-      await PLynxApi.endpoints.graphs.getAll( {
+      await PLynxApi.endpoints.graphs.getAll({
         query: {
           offset: self.state.offset,
           per_page: self.perPage,
@@ -102,6 +104,8 @@ export default class GraphListPage extends Component {
         sleepPeriod = Math.min(sleepPeriod + sleepStep, sleepMaxPeriod);
       }
     }
+    /* eslint-enable no-unmodified-loop-condition */
+    /* eslint-enable no-await-in-loop */
 
     // Stop loading
     self.setState({
@@ -114,8 +118,8 @@ export default class GraphListPage extends Component {
   }
 
   handlePageClick = (data) => {
-    let selected = data.selected;
-    let offset = Math.ceil(selected * this.perPage);
+    const selected = data.selected;
+    const offset = Math.ceil(selected * this.perPage);
     console.log(selected, offset);
 
     this.setState({offset: offset}, () => {
@@ -151,10 +155,12 @@ export default class GraphListPage extends Component {
           />
         </div>
         <GraphList graphs={this.state.graphs}
-                   ref={(child) => { this.graphList = child; }}/>
+                   ref={(child) => {
+                     this.graphList = child;
+                   }}/>
         <ReactPaginate previousLabel={"Previous"}
                        nextLabel={"Next"}
-                       breakLabel={<a>...</a>}
+                       breakLabel={<div>...</div>}
                        breakClassName={"break-me"}
                        pageCount={this.state.pageCount}
                        marginPagesDisplayed={2}

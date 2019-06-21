@@ -1,10 +1,9 @@
-// src/components/NotFound/index.js
 import React, { Component } from 'react';
-import AlertContainer from 'react-alert-es6';
-import { PLynxApi } from '../../API.js';
-import { ALERT_OPTIONS } from '../../constants.js';
-import Button from 'react-toolbox/lib/button/Button'
-import cookie from 'react-cookies'
+import AlertContainer from '../3rd_party/react-alert';
+import { PLynxApi } from '../../API';
+import { ALERT_OPTIONS } from '../../constants';
+import Button from 'react-toolbox/lib/button/Button';
+import cookie from 'react-cookies';
 
 import './style.css';
 
@@ -15,7 +14,7 @@ export default class LogIn extends Component {
     this.state = {
       username: '',
       password: ''
-    }
+    };
 
     if (cookie.load('username')) {
       cookie.remove('access_token', { path: '/' });
@@ -37,19 +36,19 @@ export default class LogIn extends Component {
     this.msg.show(message, {
       time: 5000,
       type: 'error',
-      icon: <img src={"/alerts/" + type +".svg"} width="32" height="32" alt={type} />
+      icon: <img src={"/alerts/" + type + ".svg"} width="32" height="32" alt={type} />
     });
   }
 
   loginUser({ username, password }) {
     PLynxApi.endpoints.token.getCustom({
-        method: 'get',
-        auth:
-              {
-                username: username,
-                password: password
-              }
-      })
+      method: 'get',
+      auth:
+      {
+        username: username,
+        password: password
+      }
+    })
     .then(response => {
       cookie.save('access_token', response.data.access_token, { path: '/' });
       cookie.save('refresh_token', response.data.refresh_token, { path: '/' });
@@ -58,6 +57,7 @@ export default class LogIn extends Component {
     })
     .catch((error) => {
       this.showAlert('Failed authenticate user', 'failed');
+      console.error(error);
     });
   }
 
@@ -111,7 +111,7 @@ export default class LogIn extends Component {
             </div>
           </div>
           <div className="buttons">
-            <Button label="Login" className="loginButton"  onClick={() => this.handleLogin()}/>
+            <Button label="Login" className="loginButton" onClick={() => this.handleLogin()}/>
           </div>
         </div>
       </div>

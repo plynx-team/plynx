@@ -1,8 +1,21 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
-import { FILE_TYPES } from '../../constants.js'
+import PropTypes from 'prop-types';
+import {ResourceConsumer} from '../../contexts';
 
 export default class InOutItem extends Component {
+  static propTypes = {
+    varName: PropTypes.string,
+    index: PropTypes.number,
+    readOnly: PropTypes.bool,
+    maxCount: PropTypes.number,
+    minCount: PropTypes.number,
+    fileType: PropTypes.string,
+    fileTypes: PropTypes.array,
+    name: PropTypes.string,
+    onChanged: PropTypes.func,
+    onRemove: PropTypes.func,
+  };
+
   constructor(props) {
     super(props);
     this.state = {
@@ -22,8 +35,8 @@ export default class InOutItem extends Component {
     if (this.state.readOnly) {
       return;
     }
-    var name = event.target.name;
-    var value = event.target.value;
+    const name = event.target.name;
+    let value = event.target.value;
     if (name === 'file_types') {
       value = [value];
     }
@@ -44,7 +57,7 @@ export default class InOutItem extends Component {
         {
           !this.state.readOnly &&
           <div
-            className={'Remove' + (this.state.remove_hover ? ' hover': '')}
+            className={'Remove' + (this.state.remove_hover ? ' hover' : '')}
             onMouseOver={() => this.setState({remove_hover: true})}
             onMouseLeave={() => this.setState({remove_hover: false})}
             onClick={() => this.handleRemoveItem()}
@@ -69,50 +82,51 @@ export default class InOutItem extends Component {
           <div className='InOutCellTitle'>
             Type:
           </div>
-          <div className='InOutCellValue'>
-            {
-              this.props.varName === 'inputs' &&
-              <select className='InOutValue'
-                name='file_types'
-                value={this.state.file_types[0]}
-                onChange={this.handleChange}
-                readOnly={this.state.readOnly}
-              >
+          <ResourceConsumer>
+          { resources_dict => <div className='InOutCellValue'>
               {
-                FILE_TYPES.map((description) =>
-                  <option
-                    value={description.type}
-                    key={description.type}
-                    >
-                    {description.alias}
-                    </option>
-                )
+                this.props.varName === 'inputs' &&
+                <select className='InOutValue'
+                  name='file_types'
+                  value={this.state.file_types[0]}
+                  onChange={this.handleChange}
+                  readOnly={this.state.readOnly}
+                >
+                {
+                  Object.values(resources_dict).map((description) => <option
+                      value={description.name}
+                      key={description.name}
+                      >
+                      {description.alias}
+                      </option>
+                  )
+                }
+                </select>
               }
-              </select>
-            }
-            {
-              this.props.varName === 'outputs' &&
-              <select className='InOutValue'
-                type='text'
-                name='file_type'
-                value={this.state.file_type}
-                onChange={this.handleChange}
-                readOnly={this.state.readOnly}
-              >
               {
-                FILE_TYPES.map((description) =>
-                  <option
-                    value={description.type}
-                    key={description.type}
-                    >
-                    {description.alias}
-                    </option>
-                )
+                this.props.varName === 'outputs' &&
+                <select className='InOutValue'
+                  type='text'
+                  name='file_type'
+                  value={this.state.file_type}
+                  onChange={this.handleChange}
+                  readOnly={this.state.readOnly}
+                >
+                {
+                  Object.values(resources_dict).map((description) => <option
+                      value={description.name}
+                      key={description.name}
+                      >
+                      {description.alias}
+                      </option>
+                  )
+                }
+                </select>
               }
-              </select>
-            }
 
-          </div>
+            </div>
+          }
+          </ResourceConsumer>
         </div>
 
         {! (this.state.min_count === undefined) &&
