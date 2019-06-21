@@ -1,5 +1,5 @@
 #!/bin/bash
 
-function plynx-version() {
+function plynx_version() {
   python -c "import plynx.bin; plynx.bin.main()" version
 }

@@ -10,7 +10,7 @@ done
 
 if [ ${TAG_VERSION} ]; then
   source ./scripts/version.sh;
-  VERSION=$(plynx-version);
+  VERSION=$(plynx_version);
 
   for IMAGE in ${PLYNX_IMAGES}; do
     docker tag khaxis/plynx:${IMAGE} khaxis/plynx_${VERSION}:${IMAGE};
