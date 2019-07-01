@@ -121,7 +121,7 @@ class User(DBObject):
             data = s.loads(token)
             if data['type'] != 'access':
                 raise Exception('Not access token')
-        except (BadSignature, SignatureExpired) as e:
+        except (BadSignature, SignatureExpired):
             # access token is not valid or expired
             s = Serializer(get_auth_config().secret_key)
             try:

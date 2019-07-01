@@ -10,6 +10,8 @@ SearchParameter = namedtuple('SearchParameter', ['key', 'value'])
 
 SEARCH_RGX = re.compile(r'[^\s]+:[^\s]+')
 
+ObjectId = ObjectId
+
 
 def to_object_id(_id):
     if type(_id) != ObjectId:

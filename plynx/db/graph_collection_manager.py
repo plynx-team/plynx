@@ -1,3 +1,4 @@
+from builtins import str
 from plynx.db.graph import Graph
 from plynx.db.node import Node
 from plynx.db.node_collection_manager import NodeCollectionManager
@@ -106,7 +107,7 @@ class GraphCollectionManager(object):
         Return:
             (list of dicts)     List of Graphs in dict format
         """
-        if status and isinstance(status, basestring):
+        if status and isinstance(status, str):
             status = [status]
 
         aggregate_list = []

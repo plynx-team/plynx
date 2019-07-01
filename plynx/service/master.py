@@ -6,7 +6,7 @@ import queue
 import time
 from collections import namedtuple
 from plynx.service.tcp_utils import send_msg, recv_msg
-from plynx.service.messages import WorkerMessage, RunStatus, WorkerMessageType, MasterMessageType, MasterMessage
+from plynx.service.messages import RunStatus, WorkerMessageType, MasterMessageType, MasterMessage
 from plynx.constants import NodeRunningStatus, GraphRunningStatus
 from plynx.db.graph_collection_manager import GraphCollectionManager
 from plynx.db.graph_cancellation_manager import GraphCancellationManager
