@@ -3,7 +3,10 @@ import argparse
 from collections import namedtuple
 from plynx import __version__
 from plynx.utils.config import get_config, set_parameter
-from plynx.service import run_master, run_worker, run_users, run_cache
+from plynx.service.master import run_master
+from plynx.service.worker import run_worker
+from plynx.service.users import run_users
+from plynx.service.cache import run_cache
 from plynx.web import run_backend
 from plynx.utils.logs import set_logging_level
 

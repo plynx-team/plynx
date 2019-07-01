@@ -5,14 +5,8 @@ import logging
 import queue
 import time
 from collections import namedtuple
-from plynx.service import (
-    RunStatus,
-    WorkerMessageType,
-    MasterMessageType,
-    MasterMessage,
-    send_msg,
-    recv_msg,
-)
+from plynx.service.tcp_utils import send_msg, recv_msg
+from plynx.service.messages import WorkerMessage, RunStatus, WorkerMessageType, MasterMessageType, MasterMessage
 from plynx.constants import NodeRunningStatus, GraphRunningStatus
 from plynx.db import (
     GraphCollectionManager,

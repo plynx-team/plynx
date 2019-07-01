@@ -5,7 +5,8 @@ import uuid
 import threading
 import traceback
 import datetime
-from plynx.service import WorkerMessage, WorkerMessageType, RunStatus, MasterMessageType, send_msg, recv_msg
+from plynx.service.tcp_utils import send_msg, recv_msg
+from plynx.service.messages import WorkerMessage, RunStatus, WorkerMessageType, MasterMessageType
 from plynx.constants import JobReturnStatus
 from plynx.utils.config import get_master_config
 from plynx.utils.file_handler import upload_file_stream
