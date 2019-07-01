@@ -5,7 +5,6 @@ from plynx.graph.base_nodes import BaseBash
 HELP_TEMPLATE = '''# Use templates: {}
 # For example `{{{{ '{{{{' }}}} param['_timeout'] {{{{ '}}}}' }}}}` or `{{{{ '{{{{' }}}} input['abc'] {{{{ '}}}}' }}}}`
 
-
 '''
 
 

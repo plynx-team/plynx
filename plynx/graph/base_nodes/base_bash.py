@@ -12,13 +12,12 @@ from plynx.db.node import Node
 from plynx.db.parameter import Parameter
 from plynx.db.output import Output
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
-from plynx.utils.config import get_worker_config, get_cloud_service_config
+from plynx.utils.config import get_worker_config
 from plynx.graph.base_nodes import BaseNode
 from plynx.plugins.managers import resource_manager
 from plynx.plugins.resources import File as FileCls
 
 WORKER_CONFIG = get_worker_config()
-CLOUD_SERVICE_CONFIG = get_cloud_service_config()
 TMP_DIR = '/tmp'
 
 
@@ -35,18 +34,25 @@ class ResourceMerger(object):
 
     def get_dict(self):
         """
-        Out:    {
-            'inputs': {
-                'input_name_0': [],
-                'input_name_1': ['/tmp/1', '/tmp/2'],
-                'input_name_2': '/tmp/3',
-            },
-            'cloud_inputs': {
-                'input_name_0': [],
-                'input_name_1': ['gs://1', 'gs://2'],
-                'input_name_2': 'gs://3',
-            },
-        }
+        Return original dict.
+
+        .. highlight:: python
+        .. code-block:: python
+        .. {
+        ..     'inputs': {
+        ..         'input_name_0': [],
+        ..         'input_name_1': ['/tmp/1', '/tmp/2'],
+        ..         'input_name_2': '/tmp/3',
+        ..     },
+        ..     'cloud_inputs': {
+        ..         'input_name_0': [],
+        ..         'input_name_1': ['gs://1', 'gs://2'],
+        ..         'input_name_2': 'gs://3',
+        ..     }
+        .. }
+        ..
+
+        Out:    Dict
         """
         return self._dict
 

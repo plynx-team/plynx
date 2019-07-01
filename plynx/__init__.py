@@ -1,6 +1,6 @@
 """
 PLynx
-----
+-----
 Interactive, Scalable, Shareable and Reproducible Workflow Orchestration framework
 """
 

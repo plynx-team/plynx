@@ -13,17 +13,20 @@ from plynx.utils.file_handler import upload_file_stream
 
 
 class RunningPipelineException(Exception):
-    """Internal Exception which indicates incorrect state of the Worker."""
+    """
+    Internal Exception which indicates incorrect state of the Worker.
+    """
     pass
 
 
 class Worker:
-    """Worker main class.
+    """
+    Worker main class.
 
     Worker is a service that executes the commands defined by Operations.
 
     Args:
-        worker_id   (str):  An arbitary ID of the worker. It must be unique accross the cluster.
+        worker_id   (str):  An arbitary ID of the worker. It must be unique accross the cluster. \
                             If not given or empty, a unique ID will be generated.
         host        (str):  Host of the Master.
         port        (int):  Port of the Master.
@@ -53,9 +56,12 @@ class Worker:
         self._set_run_status(RunStatus.IDLE)
 
     def serve_forever(self, number_of_attempts=NUMBER_OF_ATTEMPTS):
-        """Run the worker.
+        """
+        Run the worker.
+
         Args:
             number_of_attempts  (int): Number of retries if the connection is not established.
+
         """
         self._run_thread = threading.Thread(target=self._run_worker, args=())
         self._run_thread.daemon = True   # Daemonize thread
@@ -226,15 +232,19 @@ class Worker:
         logging.info(self._run_status)
 
     def stop(self):
-        """Stop Worker."""
+        """
+        Stop Worker.
+        """
         self._stop_event.set()
 
 
 def run_worker(worker_id=None):
-    """Run master Daemon. It will run in the same thread.
+    """
+    Run master Daemon. It will run in the same thread.
 
     Args:
         worker_id   (str):  Worker ID. It will be generated if empty or not given
+
     """
     master_config = get_master_config()
     logging.info('Init Worker')
