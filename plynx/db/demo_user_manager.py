@@ -1,7 +1,7 @@
 import string
 import random
-from plynx.db import Graph
-from plynx.db import User
+from plynx.db.graph import Graph
+from plynx.db.user import User
 from plynx.utils.common import ObjectId
 from plynx.utils.config import get_demo_config
 

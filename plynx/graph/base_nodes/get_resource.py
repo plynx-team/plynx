@@ -1,6 +1,8 @@
 from plynx.graph.base_nodes import BaseNode
 from plynx.constants import JobReturnStatus, NodeStatus, ParameterTypes
-from plynx.db import Node, Output, Parameter
+from plynx.db.node import Node
+from plynx.db.parameter import Parameter
+from plynx.db.output import Output
 from plynx.plugins.resources import File as FileCls
 
 

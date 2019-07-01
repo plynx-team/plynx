@@ -2,8 +2,9 @@
 from __future__ import absolute_import
 import json
 import traceback
-from plynx.db import Node, NodeCollectionManager
 from flask import request, g
+from plynx.db.node import Node
+from plynx.db.node_collection_manager import NodeCollectionManager
 from plynx.graph.base_nodes import NodeCollection
 from plynx.plugins.managers import resource_manager
 from plynx.web import app, requires_auth, make_fail_response

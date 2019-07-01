@@ -4,7 +4,8 @@ import logging
 from datetime import datetime
 import dateutil.parser
 from collections import namedtuple
-from plynx.db import NodeCache, NodeCacheManager
+from plynx.db.node_cache import NodeCache
+from plynx.db.node_cache_manager import NodeCacheManager
 from plynx.utils.common import query_yes_no
 from plynx.utils import file_handler
 

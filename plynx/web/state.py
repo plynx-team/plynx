@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from plynx.db import get_master_state
+from plynx.db.service_state import get_master_state
 from plynx.utils.common import JSONEncoder
 from plynx.web import app, requires_auth, make_fail_response
 

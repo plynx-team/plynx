@@ -3,7 +3,9 @@ from collections import deque, defaultdict
 import re
 import uuid
 from plynx.constants import Collections
-from plynx.db import DBObject, DBObjectField, Node, ValidationError
+from plynx.db.db_object import DBObject, DBObjectField
+from plynx.db.node import Node
+from plynx.db.validation_error import ValidationError
 from plynx.utils.common import to_object_id, ObjectId
 from plynx.constants import GraphRunningStatus, ValidationTargetType, ValidationCode, ParameterTypes, NodeRunningStatus
 

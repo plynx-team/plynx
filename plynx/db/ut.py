@@ -1,4 +1,7 @@
-from plynx.db import Node, Input, Output, Parameter, ParameterWidget
+from plynx.db.node import Node
+from plynx.db.input import Input
+from plynx.db.parameter import Parameter, ParameterWidget
+from plynx.db.output import Output
 from plynx.constants import ParameterTypes
 from plynx.plugins.resources import FileCls
 import unittest

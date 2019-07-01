@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 import json
 import traceback
-from plynx.db import GraphCollectionManager, Graph
-from plynx.db import GraphCancellationManager
+from plynx.db.graph import Graph
+from plynx.db.graph_collection_manager import GraphCollectionManager
+from plynx.db.graph_cancellation_manager import GraphCancellationManager
 from flask import request, g
 from plynx.web import app, requires_auth, make_fail_response
 from plynx.plugins.managers import resource_manager

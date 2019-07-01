@@ -1,5 +1,5 @@
 from past.builtins import basestring
-from plynx.db import DBObjectField, DBObject
+from plynx.db.db_object import DBObject, DBObjectField
 from plynx.constants import ParameterTypes
 
 

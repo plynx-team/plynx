@@ -1,4 +1,4 @@
-from plynx.db import DBObject, DBObjectField
+from plynx.db.db_object import DBObject, DBObjectField
 from plynx.constants import Collections
 from plynx.utils.common import ObjectId
 from plynx.utils.db_connector import get_db_connector

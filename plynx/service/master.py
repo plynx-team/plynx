@@ -8,12 +8,9 @@ from collections import namedtuple
 from plynx.service.tcp_utils import send_msg, recv_msg
 from plynx.service.messages import WorkerMessage, RunStatus, WorkerMessageType, MasterMessageType, MasterMessage
 from plynx.constants import NodeRunningStatus, GraphRunningStatus
-from plynx.db import (
-    GraphCollectionManager,
-    GraphCancellationManager,
-    MasterState,
-    WorkerState,
-)
+from plynx.db.graph_collection_manager import GraphCollectionManager
+from plynx.db.graph_cancellation_manager import GraphCancellationManager
+from plynx.db.service_state import MasterState, WorkerState
 from plynx.graph.graph_scheduler import GraphScheduler
 from plynx.utils.config import get_master_config
 from plynx.graph.base_nodes import NodeCollection

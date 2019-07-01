@@ -1,7 +1,8 @@
 import hashlib
 from builtins import str
 from plynx.constants import Collections
-from plynx.db import DBObject, DBObjectField, Output
+from plynx.db.db_object import DBObject, DBObjectField
+from plynx.db.output import Output
 from plynx.utils.common import ObjectId
 from plynx.utils.config import get_demo_config
 

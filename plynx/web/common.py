@@ -3,7 +3,7 @@ import logging
 from flask import Flask, request, g, Response
 from flask_cors import CORS
 from functools import wraps
-from plynx.db import User
+from plynx.db.user import User
 from plynx.utils.config import get_config
 from plynx.utils.common import JSONEncoder
 
