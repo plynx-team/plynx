@@ -1,6 +1,6 @@
-from plynx.api import InvalidTypeArgumentError, NodeAttributeError
 import abc
 import six
+from plynx.api.exceptions import InvalidTypeArgumentError, NodeAttributeError
 
 
 class NodeProps(object):

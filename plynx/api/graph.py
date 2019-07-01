@@ -5,10 +5,10 @@ import collections
 import time
 import logging
 from plynx.constants import ParameterTypes
-from plynx.api import InvalidTypeArgumentError, BaseNode, \
-    InvalidUssageError, GraphFailed, _NodeRunningStatus, _GraphRunningStatus, \
-    _GraphPostAction
-from plynx.api import _get_obj, _save_graph
+from plynx.api.exceptions import InvalidTypeArgumentError, InvalidUssageError, GraphFailed
+from plynx.api.base_node import BaseNode
+from plynx.api.constants import _NodeRunningStatus, _GraphRunningStatus, _GraphPostAction
+from plynx.api.api import _get_obj, _save_graph
 
 
 def _update_parameter(dest, recp):

@@ -1,7 +1,6 @@
-#!/usr/bin/env python
 import json
 from flask import request, send_file
-from plynx.web import app, requires_auth, make_fail_response
+from plynx.web.common import app, requires_auth, make_fail_response
 from plynx.plugins.base import PreviewObject
 from plynx.plugins.managers import resource_manager
 from plynx.utils.common import JSONEncoder

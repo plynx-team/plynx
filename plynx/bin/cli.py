@@ -7,7 +7,7 @@ from plynx.service.master import run_master
 from plynx.service.worker import run_worker
 from plynx.service.users import run_users
 from plynx.service.cache import run_cache
-from plynx.web import run_backend
+from plynx.web.common import run_backend
 from plynx.utils.logs import set_logging_level
 
 

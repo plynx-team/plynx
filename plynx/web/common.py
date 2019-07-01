@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import logging
 from flask import Flask, request, g, Response
 from flask_cors import CORS

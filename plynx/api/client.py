@@ -1,5 +1,6 @@
-from plynx.api import _get_access_token, TooManyArgumentsError
 import os
+from plynx.api.exceptions import TooManyArgumentsError
+from plynx.api.api import _get_access_token
 
 
 class Client(object):
