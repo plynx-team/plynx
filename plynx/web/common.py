@@ -40,7 +40,10 @@ def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         auth = request.authorization
-        if not auth or not verify_password(auth.username, auth.password):
+        if not auth:
+            # if auth not provided, try default
+            auth = {'username': DEFAULT_USERNAME, 'password': DEFAULT_PASSWORD}
+        if not auth or not verify_password(auth['username'], auth['password']):
             return authenticate()
         return f(*args, **kwargs)
     return decorated

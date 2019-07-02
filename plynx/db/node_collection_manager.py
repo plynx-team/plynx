@@ -8,7 +8,7 @@ class NodeCollectionManager(object):
     """NodeCollectionManager contains all the operations to work with Nodes in the database."""
 
     @staticmethod
-    def get_db_nodes(status=None, base_node_names=None, search='', per_page=20, offset=0, user_id=None):
+    def get_db_nodes(status='', base_node_names=None, search='', per_page=20, offset=0, user_id=None):
         """Get subset of the Nodes.
 
         Args:

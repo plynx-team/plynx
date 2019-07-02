@@ -96,7 +96,7 @@ class GraphCollectionManager(object):
         return graphs
 
     @staticmethod
-    def get_db_graphs(search=None, per_page=20, offset=0, status=None, recent=False):
+    def get_db_graphs(search='', per_page=20, offset=0, status=None, recent=False):
         """Get subset of the Graphs.
 
         Args:
