@@ -70,8 +70,7 @@ export default class Graphs extends Component {
         query: {
           offset: 0,
           per_page: 10,
-          search: '',
-          recent: true,
+          search: 'order:update_date'
         }
       })
       .then(handleResponse)

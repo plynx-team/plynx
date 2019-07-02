@@ -1,4 +1,5 @@
 from builtins import str
+from distutils.util import strtobool
 from plynx.db.graph import Graph
 from plynx.db.node import Node
 from plynx.db.node_collection_manager import NodeCollectionManager
@@ -96,7 +97,7 @@ class GraphCollectionManager(object):
         return graphs
 
     @staticmethod
-    def get_db_graphs(search='', per_page=20, offset=0, status=None, recent=False):
+    def get_db_graphs(search='', per_page=20, offset=0, status=None):
         """Get subset of the Graphs.
 
         Args:
@@ -146,9 +147,13 @@ class GraphCollectionManager(object):
             aggregate_list.append({"$match": and_query})
 
         # sort
-        sort_key = 'update_date' if recent else 'insertion_date'
+        sort_key = search_parameters.get('order', 'insertion_date')
+        try:
+            sort_order = -1 if strtobool(search_parameters.get('desc', '1')) else 1
+        except ValueError:
+            sort_order = -1
         aggregate_list.append({
-            "$sort": {sort_key: -1}
+            "$sort": {sort_key: sort_order}
             }
         )
         # counts and pagination

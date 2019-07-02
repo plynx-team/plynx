@@ -14,7 +14,7 @@ from plynx.utils.config import get_web_config
 graph_collection_manager = GraphCollectionManager()
 graph_cancellation_manager = GraphCancellationManager()
 WEB_CONFIG = get_web_config()
-PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'recent', 'search', 'status'}
+PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'search', 'status'}
 PERMITTED_READONLY_POST_ACTIONS = {
     GraphPostAction.VALIDATE,
     GraphPostAction.AUTO_LAYOUT,
