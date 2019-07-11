@@ -1,6 +1,5 @@
 from __future__ import absolute_import
 import json
-import traceback
 from flask import request, g
 from plynx.db.node import Node
 from plynx.db.node_collection_manager import NodeCollectionManager
