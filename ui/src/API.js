@@ -30,7 +30,7 @@ class API {
 
     const resouceURL = `${this.url}/${name}`;
 
-    endpoints.getAll = ({ query } = {}) => axios.get(resouceURL, { params: { query }, auth: { username: cookie.load('access_token') } });
+    endpoints.getAll = (query) => axios.get(resouceURL, { params: query, auth: { username: cookie.load('access_token') } });
 
     endpoints.getOne = ({ id }) => axios.get(`${resouceURL}/${id}`, { auth: { username: cookie.load('access_token') } });
 
@@ -77,5 +77,7 @@ plynxApi.createEntity({ name: 'resource' });
 plynxApi.createEntity({ name: 'token' });
 plynxApi.createEntity({ name: 'demo' });
 plynxApi.createEntity({ name: 'master_state' });
+plynxApi.createEntity({ name: 'search_nodes' });
+plynxApi.createEntity({ name: 'search_graphs' });
 
 export const PLynxApi = plynxApi;

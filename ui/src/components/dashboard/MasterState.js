@@ -122,10 +122,7 @@ export default class MasterState extends Component {
     /* eslint-disable no-await-in-loop */
     /* eslint-disable no-unmodified-loop-condition */
     while (loading) {
-      await PLynxApi.endpoints.master_state.getAll({
-        query: {
-        }
-      })
+      await PLynxApi.endpoints.master_state.getAll({})
       .then(handleResponse)
       .catch(handleError);
       if (loading) {

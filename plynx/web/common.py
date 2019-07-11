@@ -1,4 +1,5 @@
 import logging
+import traceback
 from flask import Flask, request, g, Response
 from flask_cors import CORS
 from functools import wraps
@@ -87,6 +88,17 @@ def make_fail_response(message):
         'status': 'failed',
         'message': message
     })
+
+
+def handle_errors(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            app.logger.error(traceback.format_exc())
+            return make_fail_response('Internal error: "{}"'.format(repr(e))), 500
+    return decorated
 
 
 def run_backend():

@@ -160,7 +160,7 @@ class GraphCollectionManager(object):
         aggregate_list.append({
             '$facet': {
                 "metadata": [{"$count": "total"}],
-                "list": [{"$skip": offset}, {"$limit": per_page}],
+                "list": [{"$skip": int(offset)}, {"$limit": int(per_page)}],
             }
         })
 

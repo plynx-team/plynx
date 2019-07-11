@@ -83,19 +83,23 @@ export default class ListPage extends Component {
             self.showAlert('Updated access token', 'success');
           }
         });
+      } else {
+          try {
+            self.showAlert(error.response.data.message, 'failed');
+          } catch {
+            self.showAlert('Unknown error', 'failed');
+          }
       }
     }
 
     /* eslint-disable no-await-in-loop */
     /* eslint-disable no-unmodified-loop-condition */
     while (loading) {
-      await PLynxApi.endpoints.nodes.getAll({
-        query: {
-          offset: self.state.offset,
-          per_page: self.perPage,
-          base_node_names: OPERATIONS,
-          search: self.state.search,
-        }
+      await PLynxApi.endpoints.search_nodes.create({
+        offset: self.state.offset,
+        per_page: self.perPage,
+        base_node_names: OPERATIONS,
+        search: self.state.search,
       })
       .then(handleResponse)
       .catch(handleError);
