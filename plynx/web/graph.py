@@ -5,7 +5,7 @@ from plynx.db.graph_cancellation_manager import GraphCancellationManager
 from flask import request, g
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 from plynx.plugins.managers import resource_manager
-from plynx.utils.common import JSONEncoder
+from plynx.utils.common import JSONEncoder, update_dict_recursively
 from plynx.constants import GraphRunningStatus, GraphPostAction, GraphPostStatus
 from plynx.utils.config import get_web_config
 
@@ -135,9 +135,9 @@ def _perform_graph_actions(graph, actions):
 @requires_auth
 def post_graph():
     app.logger.debug(request.data)
-    body = json.loads(request.data)['body']
-    graph = Graph.from_dict(body['graph'])
-    actions = body['actions']
+    data = json.loads(request.data)
+    graph = Graph.from_dict(data['graph'])
+    actions = data['actions']
     return _perform_graph_actions(graph, actions)
 
 
@@ -150,3 +150,25 @@ def post_graph_action(graph_id, action):
         return make_fail_response('Graph was not found'), 404
 
     return _perform_graph_actions(Graph.from_dict(graph_dict), [action.upper()])
+
+
+@app.route('/plynx/api/v0/graphs/<graph_id>/update', methods=['PATCH'])
+@handle_errors
+@requires_auth
+def update_graph(graph_id):
+    app.logger.debug(request.data)
+    data = json.loads(request.data)
+    if not data:
+        return make_fail_response('Expected json data'), 400
+
+    graph_dict = graph_collection_manager.get_db_graph(graph_id, g.user._id)
+    if not graph_dict:
+        return make_fail_response('Graph was not found'), 404
+    if graph_dict['_readonly']:
+        return make_fail_response('Permission denied'), 403
+    update_dict_recursively(graph_dict, data)
+
+    graph = Graph.from_dict(graph_dict)
+    graph.save()
+
+    return 'OK'

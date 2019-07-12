@@ -65,16 +65,16 @@ def get_nodes(node_link=None):
 def post_node():
     app.logger.debug(request.data)
 
-    body = json.loads(request.data)['body']
+    data = json.loads(request.data)
 
-    node = Node.from_dict(body['node'])
+    node = Node.from_dict(data['node'])
     node.author = g.user._id
     node.starred = False
     db_node = node_collection_manager.get_db_node(node._id, g.user._id)
     if db_node and db_node['_readonly']:
         return make_fail_response('Permission denied'), 403
 
-    action = body['action']
+    action = data['action']
     if action == NodePostAction.SAVE:
         if node.node_status != NodeStatus.CREATED and node.base_node_name != 'file':
             return make_fail_response('Cannot save node with status `{}`'.format(node.node_status))

@@ -39,10 +39,8 @@ def _save_graph(graph, actions, client):
             headers={"Content-Type": "application/json"},
             auth=(client.get_token(), ''),
             data=json.dumps({
-                'body': {
-                    'graph': graph,
-                    'actions': actions
-                    }
+                'graph': graph,
+                'actions': actions,
                 })
             )
         if response.ok:

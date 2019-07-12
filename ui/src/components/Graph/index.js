@@ -839,10 +839,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
     self.setState({loading: true});
     PLynxApi.endpoints.graphs
     .create({
-      body: {
-        graph: graph,
-        actions: [action]
-      }
+      graph: graph,
+      actions: [action]
     })
     .then((response) => {
       const data = response.data;
