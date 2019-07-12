@@ -1033,7 +1033,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
               value: this.generatedCodeHeader + this.state.generatedCode,
             }}
             onClose={() => this.handleCloseGeneratedCodeDialog()}
-            readOnly={!this.state.editable}
+            readOnly={true}
           />
         }
 

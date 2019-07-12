@@ -27,7 +27,7 @@ export default class CodeDialog extends Component {
       value: PropTypes.string.isRequired,
     }).isRequired,
     onClose: PropTypes.func.isRequired,
-    onParameterChanged: PropTypes.func.isRequired,
+    onParameterChanged: PropTypes.func,
   }
 
   constructor(props) {

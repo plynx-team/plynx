@@ -76,6 +76,9 @@ def post_graph():
     if db_graph and db_graph['_readonly'] and set(actions) - PERMITTED_READONLY_POST_ACTIONS:
         return make_fail_response('Permission denied'), 403
 
+    response_status = GraphPostStatus.SUCCESS
+    response_message = 'Actions completed with Graph(_id=`{}`)'.format(str(graph._id))
+
     for action in actions:
         if action == GraphPostAction.SAVE:
             if graph.graph_running_status != GraphRunningStatus.CREATED:
@@ -95,24 +98,20 @@ def post_graph():
 
             validation_error = graph.get_validation_error()
             if validation_error:
-                return JSONEncoder().encode({
-                    'status': GraphPostStatus.VALIDATION_FAILED,
-                    'message': 'Graph validation failed',
-                    'validation_error': validation_error.to_dict()
-                })
-
-            graph.graph_running_status = GraphRunningStatus.READY
-            graph.save(force=True)
+                response_status = GraphPostStatus.VALIDATION_FAILED
+                response_message = 'Graph validation failed'
+                extra_response['validation_error'] = validation_error.to_dict()
+            else:
+                graph.graph_running_status = GraphRunningStatus.READY
+                graph.save(force=True)
 
         elif action == GraphPostAction.VALIDATE:
             validation_error = graph.get_validation_error()
 
             if validation_error:
-                return JSONEncoder().encode({
-                    'status': GraphPostStatus.VALIDATION_FAILED,
-                    'message': 'Graph validation failed',
-                    'validation_error': validation_error.to_dict()
-                })
+                response_status = GraphPostStatus.VALIDATION_FAILED
+                response_message = 'Graph validation failed'
+                extra_response['validation_error'] = validation_error.to_dict()
         elif action == GraphPostAction.CANCEL:
             if graph.graph_running_status not in [
                     GraphRunningStatus.RUNNING,
@@ -121,19 +120,14 @@ def post_graph():
                 return make_fail_response('Graph status `{}` expected. Found `{}`'.format(GraphRunningStatus.RUNNING, graph.graph_running_status))
             graph_cancellation_manager.cancel_graph(graph._id)
         elif action == GraphPostAction.GENERATE_CODE:
-            code = graph.generate_code()
-            return JSONEncoder().encode({
-                'status': GraphPostStatus.SUCCESS,
-                'message': 'Graph code generated',
-                'code': code,
-            })
+            extra_response['code'] = graph.generate_code()
         else:
             return make_fail_response('Unknown action `{}`'.format(action))
 
     return JSONEncoder().encode(dict(
         {
-            'status': GraphPostStatus.SUCCESS,
-            'message': 'Graph(_id=`{}`) successfully updated'.format(str(graph._id)),
+            'status': response_status,
+            'message': response_message,
             'graph': graph.to_dict(),
             'url': '{}/graphs/{}'.format(WEB_CONFIG.endpoint.rstrip('/'), str(graph._id))
         }, **extra_response))
