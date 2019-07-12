@@ -16,7 +16,7 @@ WEB_CONFIG = get_web_config()
 PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'search', 'status'}
 PERMITTED_READONLY_POST_ACTIONS = {
     GraphPostAction.VALIDATE,
-    GraphPostAction.AUTO_LAYOUT,
+    GraphPostAction.REARRANGE,
     GraphPostAction.GENERATE_CODE,
     GraphPostAction.UPGRADE_NODES,
     GraphPostAction.CLONE,
@@ -78,7 +78,7 @@ def _perform_graph_actions(graph, actions):
                 return make_fail_response('Cannot save graph with status `{}`'.format(graph.graph_running_status))
             graph.save(force=True)
 
-        elif action == GraphPostAction.AUTO_LAYOUT:
+        elif action == GraphPostAction.REARRANGE:
             graph.arrange_auto_layout()
 
         elif action == GraphPostAction.UPGRADE_NODES:

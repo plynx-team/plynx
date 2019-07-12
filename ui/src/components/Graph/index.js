@@ -628,7 +628,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   handleRearrange() {
-    this.postGraph(this.graph, false, ACTION.AUTO_LAYOUT);
+    this.postGraph(this.graph, false, ACTION.REARRANGE);
   }
 
   handleGenerateCode() {
@@ -854,7 +854,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
           self.showAlert("Saved", 'success');
         } else if (action === ACTION.VALIDATE) {
           self.showAlert("Valid", 'success');
-        } else if (action === ACTION.AUTO_LAYOUT) {
+        } else if (action === ACTION.REARRANGE) {
           self.loadGraphFromJson(data.graph);
         } else if (action === ACTION.UPGRADE_NODES) {
           self.loadGraphFromJson(data.graph);
