@@ -166,9 +166,17 @@ def update_graph(graph_id):
         return make_fail_response('Graph was not found'), 404
     if graph_dict['_readonly']:
         return make_fail_response('Permission denied'), 403
+
+    if graph_dict['graph_running_status'] != GraphRunningStatus.CREATED:
+        return make_fail_response('Cannot save graph with status `{}`'.format(graph.graph_running_status))
+
     update_dict_recursively(graph_dict, data)
 
     graph = Graph.from_dict(graph_dict)
     graph.save()
 
-    return 'OK'
+    return JSONEncoder().encode({
+            'status': 'success',
+            'message': 'Successfully updated',
+            'graph': graph.to_dict(),
+        })
