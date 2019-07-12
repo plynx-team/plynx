@@ -19,6 +19,7 @@ PERMITTED_READONLY_POST_ACTIONS = {
     GraphPostAction.AUTO_LAYOUT,
     GraphPostAction.GENERATE_CODE,
     GraphPostAction.UPGRADE_NODES,
+    GraphPostAction.CLONE,
 }
 
 
@@ -61,20 +62,12 @@ def get_graph(graph_id=None):
             return make_fail_response('Graph was not found'), 404
 
 
-@app.route('/plynx/api/v0/graphs', methods=['POST'])
-@handle_errors
-@requires_auth
-def post_graph():
-    app.logger.debug(request.data)
-    body = json.loads(request.data)['body']
-
-    graph = Graph.from_dict(body['graph'])
+def _perform_graph_actions(graph, actions):
     graph.author = g.user._id
-    actions = body['actions']
-    extra_response = {}
     db_graph = graph_collection_manager.get_db_graph(graph._id, g.user._id)
     if db_graph and db_graph['_readonly'] and set(actions) - PERMITTED_READONLY_POST_ACTIONS:
         return make_fail_response('Permission denied'), 403
+    extra_response = {}
 
     response_status = GraphPostStatus.SUCCESS
     response_message = 'Actions completed with Graph(_id=`{}`)'.format(str(graph._id))
@@ -121,6 +114,10 @@ def post_graph():
             graph_cancellation_manager.cancel_graph(graph._id)
         elif action == GraphPostAction.GENERATE_CODE:
             extra_response['code'] = graph.generate_code()
+        elif action == GraphPostAction.CLONE:
+            graph = graph.clone()
+            graph.save()
+            extra_response['new_graph_id'] = graph._id
         else:
             return make_fail_response('Unknown action `{}`'.format(action))
 
@@ -131,3 +128,25 @@ def post_graph():
             'graph': graph.to_dict(),
             'url': '{}/graphs/{}'.format(WEB_CONFIG.endpoint.rstrip('/'), str(graph._id))
         }, **extra_response))
+
+
+@app.route('/plynx/api/v0/graphs', methods=['POST'])
+@handle_errors
+@requires_auth
+def post_graph():
+    app.logger.debug(request.data)
+    body = json.loads(request.data)['body']
+    graph = Graph.from_dict(body['graph'])
+    actions = body['actions']
+    return _perform_graph_actions(graph, actions)
+
+
+@app.route('/plynx/api/v0/graphs/<graph_id>/<action>', methods=['POST'])
+@handle_errors
+@requires_auth
+def post_graph_action(graph_id, action):
+    graph_dict = graph_collection_manager.get_db_graph(graph_id)
+    if not graph_dict:
+        return make_fail_response('Graph was not found'), 404
+
+    return _perform_graph_actions(Graph.from_dict(graph_dict), [action.upper()])

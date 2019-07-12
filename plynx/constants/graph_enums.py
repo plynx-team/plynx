@@ -25,6 +25,7 @@ class GraphPostAction:
     UPGRADE_NODES = 'UPGRADE_NODES'
     CANCEL = 'CANCEL'
     GENERATE_CODE = 'GENERATE_CODE'
+    CLONE = 'CLONE'
 
 
 class GraphPostStatus:

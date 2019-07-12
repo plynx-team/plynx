@@ -352,6 +352,23 @@ class Graph(DBObject):
 
         return '\n'.join(code_blocks)
 
+    def clone(self):
+        graph = Graph.from_dict(self.to_dict())
+        graph._id = ObjectId()
+        graph.graph_running_status = GraphRunningStatus.CREATED
+
+        for node in graph.nodes:
+            if node.node_running_status != NodeRunningStatus.STATIC:
+                node.node_running_status = NodeRunningStatus.CREATED
+                for output in node.outputs:
+                    output.resource_id = None
+            for input in node.inputs:
+                for value in input.values:
+                    value.resource_id = None
+            for log in node.logs:
+                log.resource_id = None
+        return graph
+
     def __str__(self):
         return 'Graph(_id="{}", nodes={})'.format(self._id, [str(b) for b in self.nodes])
 
