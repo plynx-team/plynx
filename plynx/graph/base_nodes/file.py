@@ -33,10 +33,10 @@ class File(BaseNode):
         node.starred = False
         node.parameters = []
         node.outputs = [
-            Output(
-                name='out',
-                file_type=FileCls.NAME,
-                resource_id=None
-            )
+            Output.from_dict({
+                'name': 'out',
+                'file_type': FileCls.NAME,
+                'resource_id': None,
+            })
         ]
         return node

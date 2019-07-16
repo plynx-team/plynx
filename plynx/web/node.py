@@ -10,6 +10,10 @@ from plynx.utils.common import to_object_id, JSONEncoder
 from plynx.constants import NodeStatus, NodePostAction, NodePostStatus
 
 PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'base_node_names', 'search'}
+PERMITTED_READONLY_POST_ACTIONS = {
+    NodePostAction.VALIDATE,
+    NodePostAction.PREVIEW_CMD,
+}
 
 node_collection_manager = NodeCollectionManager()
 node_collection = NodeCollection()
@@ -71,7 +75,7 @@ def post_node():
     node.author = g.user._id
     node.starred = False
     db_node = node_collection_manager.get_db_node(node._id, g.user._id)
-    if db_node and db_node['_readonly']:
+    if db_node and db_node['_readonly'] and action not in PERMITTED_READONLY_POST_ACTIONS:
         return make_fail_response('Permission denied'), 403
 
     action = data['action']
