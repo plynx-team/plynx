@@ -199,6 +199,20 @@ def _find_nodes(graph, *node_ids):
     return res
 
 
+@app.route('/plynx/api/v0/graphs/<graph_id>/nodes/<action>', methods=['GET'])
+@handle_errors
+@requires_auth
+def get_graph_node_action(graph_id, action):
+    graph_dict = graph_collection_manager.get_db_graph(graph_id, g.user._id)
+    if not graph_dict:
+        return make_fail_response('Graph was not found'), 404
+
+    if action == GraphNodePostAction.LIST_NODES:
+        return make_success_response(nodes=graph_dict['nodes'])
+    else:
+        return make_fail_response('Unknown action `{}`. Try POST method.'.format(action)), 400
+
+
 @app.route('/plynx/api/v0/graphs/<graph_id>/nodes/<action>', methods=['POST'])
 @handle_errors
 @requires_auth
@@ -206,9 +220,6 @@ def post_graph_node_action(graph_id, action):
     graph_dict = graph_collection_manager.get_db_graph(graph_id, g.user._id)
     if not graph_dict:
         return make_fail_response('Graph was not found'), 404
-
-    if action == GraphNodePostAction.LIST_NODES:
-        return make_success_response(nodes=graph_dict['nodes'])
 
     if graph_dict['_readonly']:
         return make_fail_response('Permission denied'), 403
