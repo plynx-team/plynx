@@ -55,10 +55,8 @@ def upload_file(endpoint, access_token, data_path, filename):
     r = requests.post(
         '{}/nodes'.format(endpoint),
         json={
-            'body': {
-                'node': base_file,
-                'action': 'SAVE'
-            }
+            'node': base_file,
+            'action': 'SAVE'
         },
         auth=(access_token, ''),
     )
@@ -79,10 +77,8 @@ def create_operations(endpoint, access_token, nodes_filename):
         r = requests.post(
             '{}/nodes'.format(endpoint),
             json={
-                'body': {
-                    'node': node,
-                    'action': 'APPROVE'
-                }
+                'node': node,
+                'action': 'APPROVE'
             },
             auth=(access_token, ''),
         )

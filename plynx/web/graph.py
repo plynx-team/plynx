@@ -172,7 +172,7 @@ def update_graph(graph_id):
         return make_fail_response('Permission denied'), 403
 
     if graph_dict['graph_running_status'] != GraphRunningStatus.CREATED:
-        return make_fail_response('Cannot save graph with status `{}`'.format(graph.graph_running_status))
+        return make_fail_response('Cannot save graph with status `{}`'.format(graph_dict['graph_running_status']))
 
     update_dict_recursively(graph_dict, data)
 

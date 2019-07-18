@@ -75,10 +75,10 @@ def post_node():
     node.author = g.user._id
     node.starred = False
     db_node = node_collection_manager.get_db_node(node._id, g.user._id)
+    action = data['action']
     if db_node and db_node['_readonly'] and action not in PERMITTED_READONLY_POST_ACTIONS:
         return make_fail_response('Permission denied'), 403
 
-    action = data['action']
     if action == NodePostAction.SAVE:
         if node.node_status != NodeStatus.CREATED and node.base_node_name != 'file':
             return make_fail_response('Cannot save node with status `{}`'.format(node.node_status))
