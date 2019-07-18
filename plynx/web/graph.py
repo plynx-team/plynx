@@ -1,5 +1,6 @@
 import json
 from plynx.db.input import InputValue
+from plynx.db.parameter import Parameter
 from plynx.db.node import Node
 from plynx.db.node_collection_manager import NodeCollectionManager
 from plynx.db.graph import Graph
@@ -247,12 +248,37 @@ def post_graph_node_action(graph_id, action):
         graph.save()
         return make_success_response('Node removed')
     elif action == GraphNodePostAction.CHANGE_PARAMETER:
-        return make_fail_response('Not implemented'), 400
+        node_id = data.get('node_id', None)
+        parameter_name = data.get('parameter_name', None)
+        parameter_value = data.get('parameter_value', None)
+        if parameter_name is None:
+            return make_fail_response('No parameter name'), 400
+        if parameter_value is None:
+            return make_fail_response('No parameter value'), 400
+
+        node, = _find_nodes(graph, node_id)
+        if not node:
+            return make_fail_response('Node was not found'), 404
+
+        for parameter in node.parameters:
+            if parameter.name == parameter_name:
+                parameter_dict = parameter.to_dict()
+                parameter_dict['value'] = parameter_value
+
+                parameter.value = Parameter(obj_dict=parameter_dict).value
+        graph.save()
+        return make_success_response('Parameter updated')
     elif action in (GraphNodePostAction.CREATE_LINK, GraphNodePostAction.REMOVE_LINK):
-        from_node_id = data.get('from', {}).get('node_id', None)
-        from_resource = data.get('from', {}).get('resource', None)
-        to_node_id = data.get('to', {}).get('node_id', None)
-        to_resource = data.get('to', {}).get('resource', None)
+        for field in ['from', 'to']:
+            for sub_field in ['node_id', 'resource']:
+                if field not in data:
+                    return make_fail_response('`{}` is missing'.format(field)), 400
+                if sub_field not in data[field]:
+                    return make_fail_response('`{}.{}` is missing'.format(field, sub_field)), 400
+        from_node_id = data['from']['node_id']
+        from_resource = data['from']['resource']
+        to_node_id = data['to']['node_id']
+        to_resource = data['to']['resource']
 
         from_node, to_node = _find_nodes(graph, from_node_id, to_node_id)
         if not from_node or not to_node:
@@ -272,6 +298,9 @@ def post_graph_node_action(graph_id, action):
             return make_fail_response('Input or output not found'), 404
 
         if action == GraphNodePostAction.CREATE_LINK:
+            # TODO graph.validate() it
+            if from_output.file_type not in to_input.file_types and 'file' not in to_input.file_types:
+                return make_fail_response('Incompatible types'), 400
             # TODO graph.validate() it
             if to_input.max_count > 0 and len(to_input.values) >= to_input.max_count:
                 return make_fail_response('Number of inputs reached the limit'), 400
