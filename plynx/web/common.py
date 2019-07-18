@@ -90,6 +90,14 @@ def make_fail_response(message):
     })
 
 
+def make_success_response(message='Completed', **extra_response):
+    return JSONEncoder().encode(dict(
+        {
+            'status': 'success',
+            'message': message,
+        }, **extra_response))
+
+
 def handle_errors(f):
     @wraps(f)
     def decorated(*args, **kwargs):

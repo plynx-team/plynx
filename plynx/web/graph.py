@@ -1,15 +1,19 @@
 import json
+from plynx.db.input import InputValue
+from plynx.db.node import Node
+from plynx.db.node_collection_manager import NodeCollectionManager
 from plynx.db.graph import Graph
 from plynx.db.graph_collection_manager import GraphCollectionManager
 from plynx.db.graph_cancellation_manager import GraphCancellationManager
 from flask import request, g
-from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
+from plynx.web.common import app, requires_auth, make_fail_response, make_success_response, handle_errors
 from plynx.plugins.managers import resource_manager
-from plynx.utils.common import JSONEncoder, update_dict_recursively
-from plynx.constants import GraphRunningStatus, GraphPostAction, GraphPostStatus
+from plynx.utils.common import JSONEncoder, update_dict_recursively, ObjectId
+from plynx.constants import GraphRunningStatus, GraphPostAction, GraphPostStatus, GraphNodePostAction
 from plynx.utils.config import get_web_config
 
 
+node_collection_manager = NodeCollectionManager()
 graph_collection_manager = GraphCollectionManager()
 graph_cancellation_manager = GraphCancellationManager()
 WEB_CONFIG = get_web_config()
@@ -180,3 +184,105 @@ def update_graph(graph_id):
             'message': 'Successfully updated',
             'graph': graph.to_dict(),
         })
+
+
+def _find_nodes(graph, *node_ids):
+    res = [None] * len(node_ids)
+    node_ids_map = {ObjectId(node_id): ii for ii, node_id in enumerate(node_ids)}
+    if len(node_ids_map) != len(node_ids):
+        raise ValueError("Duplicated node ids found")
+    for node in graph.nodes:
+        node_id = ObjectId(node._id)
+        if node_id in node_ids_map:
+            res[node_ids_map[node_id]] = node
+    return res
+
+
+@app.route('/plynx/api/v0/graphs/<graph_id>/nodes/<action>', methods=['POST'])
+@handle_errors
+@requires_auth
+def post_graph_node_action(graph_id, action):
+    graph_dict = graph_collection_manager.get_db_graph(graph_id, g.user._id)
+    if not graph_dict:
+        return make_fail_response('Graph was not found'), 404
+
+    if action == GraphNodePostAction.LIST_NODES:
+        return make_success_response(nodes=graph_dict['nodes'])
+
+    if graph_dict['_readonly']:
+        return make_fail_response('Permission denied'), 403
+
+    if not request.data:
+        return make_fail_response('Empty body'), 400
+
+    data = json.loads(request.data)
+    graph = Graph.from_dict(graph_dict)
+
+    if action == GraphNodePostAction.INSERT_NODE:
+        node_id = data.get('node_id', None)
+        x, y = int(data.get('x', 0)), int(data.get('y', 0))
+
+        node_dict = node_collection_manager.get_db_node(node_id)
+        if not node_dict:
+            return make_fail_response('Node was not found'), 404
+        node = Node.from_dict(node_dict)
+        node.x, node.y = x, y
+        node.parent_node = node._id
+        node._id = ObjectId()
+        graph.nodes.append(node)
+        graph.save()
+
+        return make_success_response(node=node.to_dict())
+    elif action == GraphNodePostAction.REMOVE_NODE:
+        node_id = ObjectId(data.get('node_id', None))
+        node_index = -1
+        for index, node in enumerate(graph.nodes):
+            for input in node.inputs:
+                input.values = [value for value in input.values if ObjectId(value.node_id) != node_id]
+            if ObjectId(node._id) == node_id:
+                node_index = index
+        if node_index < 0:
+            return make_fail_response('Node was not found'), 404
+        del graph.nodes[node_index]
+        graph.save()
+        return make_success_response('Node removed')
+    elif action == GraphNodePostAction.CHANGE_PARAMETER:
+        return make_fail_response('Not implemented'), 400
+    elif action == GraphNodePostAction.CREATE_LINK:
+        from_node_id = data.get('from', {}).get('node_id', None)
+        from_resource = data.get('from', {}).get('resource', None)
+        to_node_id = data.get('to', {}).get('node_id', None)
+        to_resource = data.get('to', {}).get('resource', None)
+
+        from_node, to_node = _find_nodes(graph, from_node_id, to_node_id)
+        if not from_node or not to_node:
+            return make_fail_response('Node was not found'), 404
+
+        from_output = None
+        to_input = None
+        for output in from_node.outputs:
+            if output.name == from_resource:
+                from_output = output
+                break
+        for input in to_node.inputs:
+            if input.name == to_resource:
+                to_input = input
+                break
+        if not from_output or not to_input:
+            return make_fail_response('Input or output not found'), 404
+
+        if to_input.max_count > 0 and len(to_input.values) >= to_input.max_count:
+            return make_fail_response('Number of inputs reached the limit'), 400
+
+        new_input_value = InputValue()
+        new_input_value.node_id = from_node_id
+        new_input_value.output_id = from_resource
+        to_input.values.append(new_input_value)
+        graph.save()
+        return make_success_response('Node added')
+    elif action == GraphNodePostAction.REMOVE_LINK:
+        return make_fail_response('Not implemented'), 400
+    else:
+        return make_fail_response('Unknown action `{}`'.format(action)), 400
+
+    return 'ok'

@@ -32,3 +32,12 @@ class GraphPostStatus:
     SUCCESS = 'SUCCESS'
     FAILED = 'FAILED'
     VALIDATION_FAILED = 'VALIDATION_FAILED'
+
+
+class GraphNodePostAction:
+    INSERT_NODE = 'insert_node'
+    LIST_NODES = 'list_nodes'
+    REMOVE_NODE = 'remove_node'
+    CHANGE_PARAMETER = 'change_parameter'
+    CREATE_LINK = 'create_link'
+    REMOVE_LINK = 'remove_link'
