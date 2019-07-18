@@ -248,7 +248,7 @@ def post_graph_node_action(graph_id, action):
         return make_success_response('Node removed')
     elif action == GraphNodePostAction.CHANGE_PARAMETER:
         return make_fail_response('Not implemented'), 400
-    elif action == GraphNodePostAction.CREATE_LINK:
+    elif action in (GraphNodePostAction.CREATE_LINK, GraphNodePostAction.REMOVE_LINK):
         from_node_id = data.get('from', {}).get('node_id', None)
         from_resource = data.get('from', {}).get('resource', None)
         to_node_id = data.get('to', {}).get('node_id', None)
@@ -271,17 +271,32 @@ def post_graph_node_action(graph_id, action):
         if not from_output or not to_input:
             return make_fail_response('Input or output not found'), 404
 
-        if to_input.max_count > 0 and len(to_input.values) >= to_input.max_count:
-            return make_fail_response('Number of inputs reached the limit'), 400
+        if action == GraphNodePostAction.CREATE_LINK:
+            # TODO graph.validate() it
+            if to_input.max_count > 0 and len(to_input.values) >= to_input.max_count:
+                return make_fail_response('Number of inputs reached the limit'), 400
 
-        new_input_value = InputValue()
-        new_input_value.node_id = from_node_id
-        new_input_value.output_id = from_resource
-        to_input.values.append(new_input_value)
+            new_input_value = InputValue()
+            new_input_value.node_id = from_node_id
+            new_input_value.output_id = from_resource
+            # TODO graph.validate() it
+            for value in to_input.values:
+                if value.node_id == from_node_id and value.output_id == from_resource:
+                    return make_fail_response('Link already exists'), 400
+            to_input.values.append(new_input_value)
+        elif action == GraphNodePostAction.REMOVE_LINK:
+            rm_index = -1
+            # TODO graph.validate() it
+            for index, value in enumerate(to_input.values):
+                if value.node_id == from_node_id and value.output_id == from_resource:
+                    rm_index = index
+                    break
+            if rm_index < 0:
+                return make_fail_response('Link not found'), 404
+            del to_input.values[rm_index]
+
         graph.save()
-        return make_success_response('Node added')
-    elif action == GraphNodePostAction.REMOVE_LINK:
-        return make_fail_response('Not implemented'), 400
+        return make_success_response('Completed')
     else:
         return make_fail_response('Unknown action `{}`'.format(action)), 400
 
