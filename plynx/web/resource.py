@@ -13,9 +13,12 @@ RESOURCE_TYPES = set(resource_manager.resources_dict)
 
 
 @app.route('/plynx/api/v0/resource/<resource_id>', methods=['GET'])
+@handle_errors
 def get_resource(resource_id):
     preview = json.loads(request.args.get('preview', 'false'))
     file_type = request.args.get('file_type', None)
+    if preview and not file_type:
+        return make_fail_response('In preview mode `file_type` must be specified'), 400
     fp = get_file_stream(resource_id, preview=preview, file_type=file_type)
     if preview:
         preview_object = PreviewObject(
