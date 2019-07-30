@@ -171,10 +171,8 @@ export default class FileListPage extends Component {
     self.setState({loading: true});
     PLynxApi.endpoints.nodes
     .create({
-      body: {
-        node: file,
-        action: action
-      }
+      node: file,
+      action: action
     })
     .then((response) => {
       const data = response.data;
