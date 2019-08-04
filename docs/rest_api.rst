@@ -1,5 +1,5 @@
 
-.. _rest-api:
+.. _rest:
 
 ========
 REST API
@@ -17,7 +17,7 @@ For example, to list latest Graphs on backend server hosted at ``http://localhos
 ===========================
 
 
-.. _plynx-get-token:
+.. _plynx-rest-get-token:
 
 Authentication
 ======================
@@ -48,7 +48,7 @@ Response Structure
 +---------------+------------------------------+----------------------------------------------------------------------+
 
 
-.. _plynx-get-graphs:
+.. _plynx-rest-get-graphs:
 
 List multiple Graphs
 ====================
@@ -116,7 +116,7 @@ Example
 
 
 
-.. _plynx-get-graph:
+.. _plynx-rest-get-graph:
 
 Get single Graph
 ====================
@@ -133,7 +133,7 @@ Get a single Graph in :ref:`basics-graph` format.
 Parameter ``graph_id`` is required.
 
 When ``graph_id == "new"`` (i.e. ``curl 'http://localhost:5000/plynx/api/v0/graphs/new' -u default:``) PLynx backend will generate a default empty Graph.
-Please note this new Graph will not be saved in the database. Use POST request instead :ref:`plynx-post-graph:`
+Please note this new Graph will not be saved in the database. Use POST request instead :ref:`plynx-rest-post_graph:`
 
 
 
@@ -161,7 +161,7 @@ Example
 
 
 
-.. _plynx-post-graph:
+.. _plynx-rest-post_graph:
 
 Post Graph
 ====================
@@ -182,16 +182,16 @@ For example when the user is not the original author of the Graph. In this case 
 Data
 -----------------
 
-+----------------+------------------------+----------------------------------------------------------------------------+
-| Parameter name | Type                   | Description                                                                |
-+================+========================+============================================================================+
-| graph          | :ref:`basics-graph`    | Graph object.                                                              |
-+----------------+------------------------+----------------------------------------------------------------------------+
-| action         | ``LIST`` of ``STRING`` | List of actions. See :ref:`plynx-post-graph-actions` for more details.     |
-+----------------+------------------------+----------------------------------------------------------------------------+
++----------------+------------------------+-------------------------------------------------------------------------------+
+| Parameter name | Type                   | Description                                                                   |
++================+========================+===============================================================================+
+| graph          | :ref:`basics-graph`    | Graph object.                                                                 |
++----------------+------------------------+-------------------------------------------------------------------------------+
+| action         | ``LIST`` of ``STRING`` | List of actions. See :ref:`plynx-rest-post_graph_actions` for more details.   |
++----------------+------------------------+-------------------------------------------------------------------------------+
 
 
-.. _plynx-post-graph-actions:
+.. _plynx-rest-post_graph_actions:
 
 Actions
 -----------------
@@ -241,12 +241,12 @@ Response Structure
 
 
 
-.. _plynx-post-graph-single-actions:
+.. _plynx-rest-post_graph_single_action:
 
 Single action endpoints
 ========================================
 
-Similarly to :ref:`plynx-post-graph-actions`, you can perform actions with existing Graphs.
+Similarly to :ref:`plynx-rest-post_graph_actions`, you can perform actions with existing Graphs.
 These POST-requests do not require json data. Backend will use existing Graph instead.
 
 +--------------------------------------------------+-------------+---------+
@@ -305,7 +305,7 @@ Example
 
 
 
-.. _plynx-get-nodes:
+.. _plynx-rest-get_nodes:
 
 List multiple Nodes
 ====================
@@ -378,7 +378,7 @@ Example
 
 
 
-.. _plynx-get-node:
+.. _plynx-rest-get_node:
 
 Get single Node
 ====================
@@ -419,7 +419,7 @@ Example
 
 
 
-.. _plynx-post-node:
+.. _plynx-rest-post_node:
 
 Post Node
 ====================
@@ -444,11 +444,11 @@ Data
 +================+========================+============================================================================+
 | node           | :ref:`basics-node`     | Node object.                                                               |
 +----------------+------------------------+----------------------------------------------------------------------------+
-| action         | ``STRING``             | List of actions. See :ref:`plynx-post-node-actions` for more details.      |
+| action         | ``STRING``             | List of actions. See :ref:`plynx-rest-post_node_actions` for more details. |
 +----------------+------------------------+----------------------------------------------------------------------------+
 
 
-.. _plynx-post-node-actions:
+.. _plynx-rest-post_node_actions:
 
 Actions
 -----------------
@@ -491,7 +491,7 @@ Response Structure
 
 
 
-.. _plynx-upload-file:
+.. _plynx-rest-upload_file:
 
 Upload File
 ====================
@@ -537,7 +537,7 @@ Example
 
 
 
-.. _plynx-graph-node-operations:
+.. _plynx-rest-graph_node_operations:
 
 Modify existing Graphs
 ==========================
@@ -610,7 +610,7 @@ Example
 
 
 
-.. _plynx-get-resource:
+.. _plynx-rest-get_resource:
 
 Working with a single Resource
 =====================================
@@ -639,7 +639,7 @@ Additional arguments to the endpoint:
 
 
 
-.. _plynx-get-master_state:
+.. _plynx-rest-get_master_state:
 
 Get state of the Master
 =====================================
