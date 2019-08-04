@@ -10,6 +10,7 @@ Content
 
     overview
     start
-    rest_api
+    rest
+    internal
     license
     _api/index
