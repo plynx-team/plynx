@@ -5,7 +5,8 @@
 [![Website shields.io](https://img.shields.io/pypi/pyversions/plynx.svg)](https://github.com/khaxis/plynx)
 
 
-Main website and demo: [plynx.com](https://plynx.com).
+Website and demo: [plynx.com](https://plynx.com).
+Docs: [docs](https://plynx.readthedocs.io/en/latest/overview.html).
 
 PLynx is a domain agnostic platform for managing reproducible experiments and data-oriented workflows.
 
