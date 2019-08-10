@@ -3,7 +3,6 @@ import { Route, Switch, withRouter } from 'react-router-dom';
 import cookie from 'react-cookies';
 import PropTypes from 'prop-types';
 import Header from './components/header';
-import About from './components/About';
 import LogIn from './components/LogIn';
 import Welcome from './components/Welcome';
 import Dashboard from './components/dashboard';
@@ -73,7 +72,6 @@ class App extends Component {
             <Route path="/nodes" component={NodeRouter}/>
             <Route path="/files" component={FileRouter}/>
             <Route path="/graphs" component={GraphRouter}/>
-            <Route exact path="/about" component={About} />
             <Route exact path="/login" component={LogIn} />
             <Route path="*" component={NotFound} />
           </Switch>

@@ -30,7 +30,8 @@ class Navigation extends Component {
             {this.state.refreshTokenExists &&
               <NavLink to='/graphs' className="Item">Graphs</NavLink>
             }
-            <NavLink to='/about' className="Item">About</NavLink>
+            {separator()}
+            <a href='https://plynx.readthedocs.io/en/latest/overview.html' className="Item">Docs</a>
             {separator()}
             <a href='https://github.com/khaxis/plynx' className="Item">Github</a>
             {separator()}
