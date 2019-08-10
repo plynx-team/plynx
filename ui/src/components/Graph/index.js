@@ -628,7 +628,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   handleRearrange() {
-    this.postGraph(this.graph, false, ACTION.AUTO_LAYOUT);
+    this.postGraph(this.graph, false, ACTION.REARRANGE);
   }
 
   handleGenerateCode() {
@@ -839,10 +839,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
     self.setState({loading: true});
     PLynxApi.endpoints.graphs
     .create({
-      body: {
-        graph: graph,
-        actions: [action]
-      }
+      graph: graph,
+      actions: [action]
     })
     .then((response) => {
       const data = response.data;
@@ -856,7 +854,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
           self.showAlert("Saved", 'success');
         } else if (action === ACTION.VALIDATE) {
           self.showAlert("Valid", 'success');
-        } else if (action === ACTION.AUTO_LAYOUT) {
+        } else if (action === ACTION.REARRANGE) {
           self.loadGraphFromJson(data.graph);
         } else if (action === ACTION.UPGRADE_NODES) {
           self.loadGraphFromJson(data.graph);
@@ -1033,7 +1031,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
               value: this.generatedCodeHeader + this.state.generatedCode,
             }}
             onClose={() => this.handleCloseGeneratedCodeDialog()}
-            readOnly={!this.state.editable}
+            readOnly={true}
           />
         }
 

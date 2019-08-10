@@ -1,5 +1,5 @@
 import logging
-from plynx.db import NodeCache
+from plynx.db.node_cache import NodeCache
 from plynx.utils.db_connector import get_db_connector
 from plynx.constants import NodeRunningStatus
 

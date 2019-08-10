@@ -21,13 +21,23 @@ class GraphPostAction:
     SAVE = 'SAVE'
     APPROVE = 'APPROVE'
     VALIDATE = 'VALIDATE'
-    AUTO_LAYOUT = 'AUTO_LAYOUT'
+    REARRANGE = 'REARRANGE'
     UPGRADE_NODES = 'UPGRADE_NODES'
     CANCEL = 'CANCEL'
     GENERATE_CODE = 'GENERATE_CODE'
+    CLONE = 'CLONE'
 
 
 class GraphPostStatus:
     SUCCESS = 'SUCCESS'
     FAILED = 'FAILED'
     VALIDATION_FAILED = 'VALIDATION_FAILED'
+
+
+class GraphNodePostAction:
+    INSERT_NODE = 'insert_node'
+    LIST_NODES = 'list_nodes'
+    REMOVE_NODE = 'remove_node'
+    CHANGE_PARAMETER = 'change_parameter'
+    CREATE_LINK = 'create_link'
+    REMOVE_LINK = 'remove_link'

@@ -189,10 +189,8 @@ export default class Node extends Component {
     self.setState({loading: true});
     PLynxApi.endpoints.nodes
     .create({
-      body: {
-        node: node,
-        action: action
-      }
+      node: node,
+      action: action
     })
     .then((response) => {
       const data = response.data;

@@ -11,7 +11,7 @@ RUN apt-get install -y \
     iputils-ping \
     curl \
     bc \
-    mongodb-clients
+    mongo-tools
 
 # Copy config
 ADD ./docker/base/test_config.yaml /app/config.yaml

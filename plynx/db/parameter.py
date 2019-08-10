@@ -1,5 +1,5 @@
 from past.builtins import basestring
-from plynx.db import DBObjectField, DBObject
+from plynx.db.db_object import DBObject, DBObjectField
 from plynx.constants import ParameterTypes
 
 
@@ -160,8 +160,8 @@ class Parameter(DBObject):
             self.value = ParameterEnum.from_dict(self.value)
         elif self.parameter_type == ParameterTypes.CODE:
             self.value = ParameterCode.from_dict(self.value)
-        assert _value_is_valid(self.value, self.parameter_type), \
-            "Invalid parameter value type: {}: {}".format(self.name, self.value)
+        if not _value_is_valid(self.value, self.parameter_type):
+            raise ValueError("Invalid parameter value type: {}: {}".format(self.name, self.value))
 
     def __str__(self):
         return 'Parameter(name="{}")'.format(self.name)

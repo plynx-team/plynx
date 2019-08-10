@@ -2,13 +2,15 @@ import os
 import sys
 import json
 import re
+import collections
 from datetime import datetime
 from bson import ObjectId
-from collections import namedtuple
 
-SearchParameter = namedtuple('SearchParameter', ['key', 'value'])
+SearchParameter = collections.namedtuple('SearchParameter', ['key', 'value'])
 
 SEARCH_RGX = re.compile(r'[^\s]+:[^\s]+')
+
+ObjectId = ObjectId
 
 
 def to_object_id(_id):
@@ -70,3 +72,12 @@ def query_yes_no(question, default='yes'):
         else:
             sys.stdout.write("Please respond with 'yes' or 'no' "
                              "(or 'y' or 'n').\n")
+
+
+def update_dict_recursively(dest, u):
+    for k, v in u.items():
+        if isinstance(v, collections.Mapping):
+            dest[k] = update_dict_recursively(dest.get(k, {}), v)
+        else:
+            dest[k] = v
+    return dest

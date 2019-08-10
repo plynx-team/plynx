@@ -5,10 +5,10 @@ import collections
 import time
 import logging
 from plynx.constants import ParameterTypes
-from plynx.api import InvalidTypeArgumentError, BaseNode, \
-    InvalidUssageError, GraphFailed, _NodeRunningStatus, _GraphRunningStatus, \
-    _GraphPostAction
-from plynx.api import _get_obj, _save_graph
+from plynx.api.exceptions import InvalidTypeArgumentError, InvalidUssageError, GraphFailed
+from plynx.api.base_node import BaseNode
+from plynx.api.constants import _NodeRunningStatus, _GraphRunningStatus, _GraphPostAction
+from plynx.api.api import _get_obj, _save_graph
 
 
 def _update_parameter(dest, recp):
@@ -114,7 +114,7 @@ class Graph(object):
         d = self._dictify()
         if self._graph_dict:
             d['_id'] = self._graph_dict['_id']
-        self._graph_dict, url = _save_graph(graph=d, actions=[_GraphPostAction.AUTO_LAYOUT, _GraphPostAction.SAVE], client=self.client)
+        self._graph_dict, url = _save_graph(graph=d, actions=[_GraphPostAction.REARRANGE, _GraphPostAction.SAVE], client=self.client)
         logging.info('Graph successfully saved: {}'.format(url))
         return self
 
@@ -122,7 +122,7 @@ class Graph(object):
         d = self._dictify()
         if self._graph_dict:
             d['_id'] = self._graph_dict['_id']
-        self._graph_dict, url = _save_graph(graph=d, actions=[_GraphPostAction.AUTO_LAYOUT, _GraphPostAction.APPROVE], client=self.client)
+        self._graph_dict, url = _save_graph(graph=d, actions=[_GraphPostAction.REARRANGE, _GraphPostAction.APPROVE], client=self.client)
         logging.info('Graph successfully approved: {}'.format(url))
         return self
 

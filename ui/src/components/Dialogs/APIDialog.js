@@ -91,7 +91,7 @@ graph.approve().wait()
               },
               handleChange: null,
               readOnly: true,
-              height: '550',
+              height: '550px',
             })}
           </div>
 

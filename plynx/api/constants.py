@@ -19,7 +19,7 @@ class _GraphPostAction(object):
     SAVE = 'SAVE'
     APPROVE = 'APPROVE'
     VALIDATE = 'VALIDATE'
-    AUTO_LAYOUT = 'AUTO_LAYOUT'
+    REARRANGE = 'REARRANGE'
 
 
 class _GraphPostStatus(object):

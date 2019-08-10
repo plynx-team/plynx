@@ -104,13 +104,11 @@ export default class FileListPage extends Component {
     /* eslint-disable no-await-in-loop */
     /* eslint-disable no-unmodified-loop-condition */
     while (loading) {
-      await PLynxApi.endpoints.nodes.getAll({
-        query: {
-          offset: self.state.offset,
-          per_page: self.perPage,
-          base_node_names: ['file'],
-          search: self.state.search,
-        }
+      await PLynxApi.endpoints.search_nodes.create({
+        offset: self.state.offset,
+        per_page: self.perPage,
+        base_node_names: ['file'],
+        search: self.state.search,
       })
       .then(handleResponse)
       .catch(handleError);
@@ -173,10 +171,8 @@ export default class FileListPage extends Component {
     self.setState({loading: true});
     PLynxApi.endpoints.nodes
     .create({
-      body: {
-        node: file,
-        action: action
-      }
+      node: file,
+      action: action
     })
     .then((response) => {
       const data = response.data;

@@ -1,4 +1,8 @@
-from plynx.db import Graph, NodeCollectionManager, Node
+from builtins import str
+from distutils.util import strtobool
+from plynx.db.graph import Graph
+from plynx.db.node import Node
+from plynx.db.node_collection_manager import NodeCollectionManager
 from plynx.utils.common import to_object_id, parse_search_string
 from plynx.utils.db_connector import get_db_connector
 from plynx.constants import NodeStatus
@@ -93,7 +97,7 @@ class GraphCollectionManager(object):
         return graphs
 
     @staticmethod
-    def get_db_graphs(search=None, per_page=20, offset=0, status=None, recent=False):
+    def get_db_graphs(search='', per_page=20, offset=0, status=None):
         """Get subset of the Graphs.
 
         Args:
@@ -104,7 +108,7 @@ class GraphCollectionManager(object):
         Return:
             (list of dicts)     List of Graphs in dict format
         """
-        if status and isinstance(status, basestring):
+        if status and isinstance(status, str):
             status = [status]
 
         aggregate_list = []
@@ -143,16 +147,20 @@ class GraphCollectionManager(object):
             aggregate_list.append({"$match": and_query})
 
         # sort
-        sort_key = 'update_date' if recent else 'insertion_date'
+        sort_key = search_parameters.get('order', 'insertion_date')
+        try:
+            sort_order = -1 if strtobool(search_parameters.get('desc', '1')) else 1
+        except ValueError:
+            sort_order = -1
         aggregate_list.append({
-            "$sort": {sort_key: -1}
+            "$sort": {sort_key: sort_order}
             }
         )
         # counts and pagination
         aggregate_list.append({
             '$facet': {
                 "metadata": [{"$count": "total"}],
-                "list": [{"$skip": offset}, {"$limit": per_page}],
+                "list": [{"$skip": int(offset)}, {"$limit": int(per_page)}],
             }
         })
 

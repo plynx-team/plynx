@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from plynx.web import run_backend
+from plynx.web.common import run_backend
 
 
 if __name__ == "__main__":

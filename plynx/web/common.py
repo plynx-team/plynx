@@ -1,9 +1,9 @@
-#!/usr/bin/env python
 import logging
+import traceback
 from flask import Flask, request, g, Response
 from flask_cors import CORS
 from functools import wraps
-from plynx.db import User
+from plynx.db.user import User
 from plynx.utils.config import get_config
 from plynx.utils.common import JSONEncoder
 
@@ -41,7 +41,10 @@ def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         auth = request.authorization
-        if not auth or not verify_password(auth.username, auth.password):
+        if not auth:
+            # if auth not provided, try default
+            auth = {'username': DEFAULT_USERNAME, 'password': DEFAULT_PASSWORD}
+        if not verify_password(auth['username'], auth['password']):
             return authenticate()
         return f(*args, **kwargs)
     return decorated
@@ -85,6 +88,25 @@ def make_fail_response(message):
         'status': 'failed',
         'message': message
     })
+
+
+def make_success_response(message='Completed', **extra_response):
+    return JSONEncoder().encode(dict(
+        {
+            'status': 'success',
+            'message': message,
+        }, **extra_response))
+
+
+def handle_errors(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            app.logger.error(traceback.format_exc())
+            return make_fail_response('Internal error: "{}"'.format(repr(e))), 500
+    return decorated
 
 
 def run_backend():

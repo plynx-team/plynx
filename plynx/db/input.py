@@ -1,4 +1,4 @@
-from plynx.db import DBObjectField, DBObject
+from plynx.db.db_object import DBObject, DBObjectField
 
 
 class InputValue(DBObject):

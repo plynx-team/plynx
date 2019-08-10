@@ -66,13 +66,10 @@ export default class Graphs extends Component {
     /* eslint-disable no-await-in-loop */
     /* eslint-disable no-unmodified-loop-condition */
     while (loading) {
-      await PLynxApi.endpoints.graphs.getAll({
-        query: {
-          offset: 0,
-          per_page: 10,
-          search: '',
-          recent: true,
-        }
+      await PLynxApi.endpoints.search_graphs.create({
+        offset: 0,
+        per_page: 10,
+        search: 'order:update_date'
       })
       .then(handleResponse)
       .catch(handleError);

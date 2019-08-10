@@ -1,4 +1,4 @@
-from plynx.db import User
+from plynx.db.user import User
 
 
 LIST_USERS = 'list_users'
