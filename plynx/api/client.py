@@ -20,6 +20,10 @@ class Client(object):
                 os.environ.get('PLYNX_TOKEN_PATH', '') or \
                 os.path.join(os.path.expanduser("~"), '.plynx_token')
 
+            if not os.path.exists(token_path):
+                raise ValueError(
+                    'You must specify `token` or `token_path`. Default file `{}` not found'.format(token_path)
+                )
             with open(token_path) as f:
                 self._refresh_token = f.readline().rstrip()
 
