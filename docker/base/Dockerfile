@@ -22,6 +22,21 @@ ADD ./wsgi.py /app/wsgi.py
 # Copy licence
 ADD ./LICENSE /app
 
+# Copy test data
+ADD ./docker/test/scripts /app/scripts
+ADD ./docker/test/data_00 /app/data_00
+
+# master / worker port
+EXPOSE 17011
+
+# backend port
+EXPOSE 5000
+
+# Create worker user
+RUN useradd -c "Worker" worker  -s /bin/bash
+RUN chmod 700 /app
+RUN chmod 1777 /tmp
+
 # Build PLynx package
 ADD ./plynx /tmp/plynx
 ADD ./setup.py /tmp/setup.py

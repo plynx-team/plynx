@@ -3,7 +3,7 @@ DOCKER_COMPOSE_FILE = ./docker-compose.yml
 DOCKER_COMPOSE_DEV_FILE = ./docker-compose-dev.yml
 
 build_backend:
-	PLYNX_IMAGES="base backend master worker test" sh ./scripts/build_images.sh
+	PLYNX_IMAGES="base" sh ./scripts/build_images.sh
 
 build_frontend:
 	PLYNX_IMAGES="ui ui_dev" sh ./scripts/build_images.sh
