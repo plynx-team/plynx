@@ -22,6 +22,6 @@ down:
 	docker-compose -f $(DOCKER_COMPOSE_FILE) down
 
 dev:
-	PLYNX_IMAGES="base base_dev ui_dev" sh ./scripts/build_images.sh
+	PLYNX_IMAGES="base ui_dev" sh ./scripts/build_images.sh
 	python -m webbrowser "http://localhost:3001/"
 	docker-compose -f $(DOCKER_COMPOSE_DEV_FILE) up --abort-on-container-exit --scale backend=1

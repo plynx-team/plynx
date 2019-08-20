@@ -24,6 +24,8 @@ services:
             - ./plynx:/app/plynx
         environment:
             - PLYNX_MODE=master
+            - PLYNX_CONFIG=/app/config.yaml
+        command: sh /app/watch.sh
 
     workers:
         image: khaxis/plynx:base_dev
@@ -37,6 +39,9 @@ services:
             - ./plynx:/app/plynx
         environment:
             - PLYNX_MODE=worker
+            - PLYNX_CONFIG=/app/config.yaml
+        command: sh /app/watch.sh
+
     backend:
         image: khaxis/plynx:base_dev
         container_name: "backend"
@@ -51,6 +56,8 @@ services:
             - ./plynx:/app/plynx
         environment:
             - PLYNX_MODE=backend
+            - PLYNX_CONFIG=/app/config.yaml
+        command: sh /app/watch.sh
 
     frontend:
         image: khaxis/plynx:ui_dev

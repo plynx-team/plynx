@@ -23,8 +23,8 @@ ADD ./wsgi.py /app/wsgi.py
 ADD ./LICENSE /app
 
 # Copy test data
-ADD ./docker/test/scripts /app/scripts
-ADD ./docker/test/data_00 /app/data_00
+ADD ./docker/base/scripts /app/scripts
+ADD ./docker/base/data_00 /app/data_00
 
 # master / worker port
 EXPOSE 17011
@@ -36,6 +36,9 @@ EXPOSE 5000
 RUN useradd -c "Worker" worker  -s /bin/bash
 RUN chmod 700 /app
 RUN chmod 1777 /tmp
+
+# Add dev watch script
+COPY ./scripts/watch.sh /app/watch.sh
 
 # Build PLynx package
 ADD ./plynx /tmp/plynx
