@@ -44,3 +44,8 @@ COPY ./scripts/watch.sh /app/watch.sh
 ADD ./plynx /tmp/plynx
 ADD ./setup.py /tmp/setup.py
 RUN cd /tmp && python setup.py install
+
+# install extra docker requirements
+ADD ./docker/base/requirements.txt /app/requirements.txt
+RUN pip install -r /app/requirements.txt
+RUN rm /app/requirements.txt
