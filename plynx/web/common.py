@@ -6,6 +6,7 @@ from functools import wraps
 from plynx.db.user import User
 from plynx.utils.config import get_config
 from plynx.utils.common import JSONEncoder
+from plynx.utils.db_connector import check_connection
 
 app = Flask(__name__)
 
@@ -112,6 +113,8 @@ def handle_errors(f):
 def run_backend():
     global _config
     _config = get_config()
+
+    check_connection()
 
     # Create default user if in single user mode
     if not _config.auth.secret_key:

@@ -1,3 +1,4 @@
+import logging
 import pymongo
 from plynx.constants import Collections
 from plynx.utils.config import get_db_config
@@ -38,3 +39,12 @@ def get_db_connector():
         _db.authenticate(connectionConfig.user, connectionConfig.password)
     init_indexes()
     return _db
+
+
+def check_connection():
+    try:
+        logging.info('Try db connection')
+        get_db_connector().client.server_info()
+    except pymongo.errors.ServerSelectionTimeoutError as err:
+        logging.error('Connection failed')
+        raise

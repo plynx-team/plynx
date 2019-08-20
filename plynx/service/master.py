@@ -14,6 +14,7 @@ from plynx.db.service_state import MasterState, WorkerState
 from plynx.graph.graph_scheduler import GraphScheduler
 from plynx.utils.config import get_master_config
 from plynx.graph.base_nodes import NodeCollection
+from plynx.utils.db_connector import check_connection
 
 
 MasterJobDescription = namedtuple('MasterJobDescription', ['graph_id', 'job'])
@@ -412,6 +413,9 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
 def run_master():
     """Run master Daemon. It will run in the same thread."""
+    # Check connection to the db
+    check_connection()
+
     logging.info('Init Master')
     master_config = get_master_config()
     logging.info(master_config)
