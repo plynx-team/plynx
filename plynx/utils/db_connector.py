@@ -33,7 +33,7 @@ def get_db_connector():
     if _db:
         return _db
     connectionConfig = get_db_config()
-    client = pymongo.MongoClient(connectionConfig.host, connectionConfig.port)
+    client = pymongo.MongoClient(connectionConfig.host, connectionConfig.port, read_preference=pymongo.read_preferences.PrimaryPreferred())
     _db = client['plynx']
     if connectionConfig.user:
         _db.authenticate(connectionConfig.user, connectionConfig.password)
