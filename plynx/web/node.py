@@ -31,7 +31,7 @@ def post_search_nodes():
     res = node_collection_manager.get_db_nodes(user_id=user_id, **query)
 
     return JSONEncoder().encode({
-        'nodes': res['list'],
+        'items': res['list'],
         'total_count': res['metadata'][0]['total'] if res['metadata'] else 0,
         'resources_dict': resource_manager.resources_dict,
         'status': 'success'})
