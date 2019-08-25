@@ -39,6 +39,11 @@ function renderItem(node) {
 
 
 export default class ListPage extends Component {
+  constructor(props) {
+    super(props);
+    document.title = "Operations - PLynx";
+  }
+
   render() {
     const header = [
        {title: "Header", tag: ""},

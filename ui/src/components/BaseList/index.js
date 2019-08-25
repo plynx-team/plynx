@@ -16,14 +16,17 @@ import '../controls.css';
 export default class ListPage extends Component {
   constructor(props) {
     super(props);
-    document.title = this.props.title;
     const username = cookie.load('username');
+    var search = username ? 'author:' + username + ' ' : '';
+    if (this.props.search) {
+        search = this.props.search
+    }
     this.state = {
       items: [],
       loading: true,
       pageCount: 0,
       resources_dict: {},
-      search: username ? 'author:' + username + ' ' : '',
+      search: search,
     };
     this.perPage = 20;
 
@@ -152,7 +155,7 @@ export default class ListPage extends Component {
             }
             <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
             <div className="menu">
-              {this.props.menu()}
+              {this.props.menu && this.props.menu()}
             </div>
             <div className="search">
               <SearchBar

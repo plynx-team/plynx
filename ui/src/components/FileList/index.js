@@ -18,6 +18,7 @@ export default class ListPage extends Component {
 
   constructor(props) {
       super(props);
+      document.title = "Files - PLynx";
       this.state = {
         fileObj: null,
         uploadFile: false,
@@ -187,7 +188,6 @@ export default class ListPage extends Component {
                       {"Create new File"}
                     </div>
                     }
-                title="Files - PLynx"
                 tag="file-list-item"
                 endpoint={PLynxApi.endpoints.search_nodes}
                 extraSearch={{base_node_names: ['file']}}
