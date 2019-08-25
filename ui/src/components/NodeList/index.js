@@ -51,7 +51,8 @@ export default class ListPage extends Component {
     return (
         <BaseList
             menu={() => <a className="menu-button" href="/nodes/new">{"Create new Operation"}</a>}
-            title="Node List - PLynx"
+            title="Operations - PLynx"
+            tag="node-list-item"
             endpoint={PLynxApi.endpoints.search_nodes}
             extraSearch={{base_node_names: OPERATIONS}}
             header={header}

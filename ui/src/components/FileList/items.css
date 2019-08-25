@@ -1,3 +1,32 @@
+.file-list-item {
+  grid-template-columns: 200px 200px 100px 1fr 200px 200px;
+}
+
+.file-list-item .Type .Widget {
+  display: inline-block;
+  width: 150px;
+  background-color: #c29b3c;
+  text-align: center;
+  border-radius: 2px;
+  border: 1px #bbb solid;
+}
+
+.file-list-item .Id {
+  min-width: 300px;
+}
+
+.file-list-item .Type .Widget img, .file-list-item .Type .Widget svg {
+  vertical-align:middle;
+}
+
+.file-list-item .Status.READY {
+  color:green;
+}
+
+.file-list-item .Status.DEPRECATED {
+  color:red;
+}
+
 .FileDialogBody, .FileUploadDialogBody {
   margin: 5px;
 }
@@ -48,4 +77,10 @@
   text-align: right;
   right: 5px;
   bottom: 5px;
+}
+
+@media (min-width: 1100px) {
+  .file-list-item {
+    grid-template-columns: 300px 300px 300px 250px 200px 250px;
+  }
 }

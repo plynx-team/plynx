@@ -15,7 +15,7 @@ export default class List extends Component {
 
     return (
       <div className='list'>
-        <div className='node-list-item list-header'>
+        <div className={this.props.tag + ' list-header'}>
           {headerItems}
         </div>
         {listItems}

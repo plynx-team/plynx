@@ -1,40 +1,29 @@
 import React, { Component } from 'react';
-import ReactDOM from 'react-dom';
-import AlertContainer from '../3rd_party/react-alert';
-import cookie from 'react-cookies';
 import { PLynxApi } from '../../API';
-import FileList from './FileList';
-import ReactPaginate from 'react-paginate';
-import LoadingScreen from '../LoadingScreen';
+import BaseList from '../BaseList';
+import {ResourceConsumer} from '../../contexts';
+import {HotKeys} from 'react-hotkeys';
+import Icon from '../Common/Icon';
 import FileDialog from '../Dialogs/FileDialog';
 import FileUploadDialog from '../Dialogs/FileUploadDialog';
 import PreviewDialog from '../Dialogs/PreviewDialog';
-import { ACTION, ALERT_OPTIONS, RESPONCE_STATUS, KEY_MAP } from '../../constants';
-import SearchBar from '../Common/SearchBar';
-import {ResourceProvider} from '../../contexts';
-import {HotKeys} from 'react-hotkeys';
-import './style.css';
+import { listTextElement } from '../Common/listElements';
+import { ACTION, RESPONCE_STATUS, KEY_MAP } from '../../constants';
 import '../Common/ListPage.css';
 import '../controls.css';
+import './items.css'
 
 
-export default class FileListPage extends Component {
+export default class ListPage extends Component {
+
   constructor(props) {
-    super(props);
-    document.title = "Files List - PLynx";
-    const username = cookie.load('username');
-    this.state = {
-      nodes: [],
-      loading: true,
-      pageCount: 0,
-      search: username ? 'author:' + username + ' ' : '',
-      fileObj: null,
-      uploadFile: false,
-      previewData: null,
-    };
-    this.perPage = 20;
-
-    this.loadFiles();
+      super(props);
+      this.state = {
+        fileObj: null,
+        uploadFile: false,
+        previewData: null,
+      };
+      this.perPage = 20;
   }
 
   keyHandlers = {
@@ -43,126 +32,49 @@ export default class FileListPage extends Component {
     },
   }
 
-  showAlert(message, type) {
-    this.msg.show(message, {
-      time: 5000,
-      type: 'error',
-      icon: <img src={"/alerts/" + type + ".svg"} width="32" height="32" alt={type}/>
-    });
-  }
+  renderItem(node) {
+    const file_type = node.outputs[0].file_type;
+    return (
+        <div
+          className='list-item file-list-item'
+          onClick={() => this.handleFileClick(node)}
+          key={node._id}
+        >
 
-  componentDidMount() {
-    this.mounted = true;
-  }
+          <div className='ItemHeader'>
+            <div className='TitleDescription'>
+              <div className='Title'>
+                {node.title}
+              </div>
+              <div className='Description'>
+                &ldquo;{node.description}&rdquo;
+              </div>
+            </div>
+            <div className={node.starred ? 'star-visible' : 'star-hidden'}>
+              <img src="/icons/star.svg" alt="star" />
+            </div>
+          </div>
 
-  componentWillUnmount() {
-    this.mounted = false;
-  }
+          <div className={'Type'}>
+            <ResourceConsumer className={'Type'}>
+            { resources_dict => <div className='Widget'>
+                <Icon
+                  type_descriptor={resources_dict[file_type]}
+                  width={"20"}
+                  height={"20"}
+                />
 
-  async loadFiles() {
-    // Loading
-
-    const self = this;
-    let loading = true;
-    let sleepPeriod = 1000;
-    const sleepMaxPeriod = 10000;
-    const sleepStep = 1000;
-
-    if (this.mounted) {
-      self.setState({
-        loading: true,
-      });
-    }
-
-    const handleResponse = (response) => {
-      const data = response.data;
-      console.log(data.nodes);
-      self.setState(
-        {
-          nodes: data.nodes,
-          resources_dict: response.data.resources_dict,
-          pageCount: Math.ceil(data.total_count / self.perPage)
-        });
-      loading = false;
-      ReactDOM.findDOMNode(self.fileList).scrollTop = 0;
-    };
-
-    const handleError = (error) => {
-      if (error.response.status === 401) {
-        PLynxApi.getAccessToken()
-        .then((isSuccessfull) => {
-          if (!isSuccessfull) {
-            console.error("Could not refresh token");
-            self.props.history.push("/login/");
-          } else {
-            self.showAlert('Updated access token', 'success');
-          }
-        });
-      }
-    };
-
-    /* eslint-disable no-await-in-loop */
-    /* eslint-disable no-unmodified-loop-condition */
-    while (loading) {
-      await PLynxApi.endpoints.search_nodes.create({
-        offset: self.state.offset,
-        per_page: self.perPage,
-        base_node_names: ['file'],
-        search: self.state.search,
-      })
-      .then(handleResponse)
-      .catch(handleError);
-      if (loading) {
-        await self.sleep(sleepPeriod);
-        sleepPeriod = Math.min(sleepPeriod + sleepStep, sleepMaxPeriod);
-      }
-    }
-    /* eslint-enable no-unmodified-loop-condition */
-    /* eslint-enable no-await-in-loop */
-
-    // Stop loading
-    self.setState({
-      loading: false,
-    });
-  }
-
-  sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  handlePageClick = (data) => {
-    const selected = data.selected;
-    const offset = Math.ceil(selected * this.perPage);
-    console.log(selected, offset);
-
-    this.setState({offset: offset}, () => {
-      this.loadNodes();
-    });
-  };
-
-  handlePageClick = (data) => {
-    const selected = data.selected;
-    const offset = Math.ceil(selected * this.perPage);
-    console.log(selected, offset);
-
-    this.setState({offset: offset}, () => {
-      this.loadFiles();
-    });
-    ReactDOM.findDOMNode(this.fileList).scrollTop = 0;
-  };
-
-  handleFileClick(fileObj) {
-    this.setState({
-      fileObj: fileObj,
-      uploadFile: false
-    });
-  }
-
-  handleCloseDialog() {
-    this.setState({
-      fileObj: null,
-      uploadFile: false
-    });
+                {resources_dict[file_type].alias}
+              </div>
+            }
+            </ResourceConsumer>
+          </div>
+          { listTextElement('Status ' + node.node_status, node.node_status) }
+          { listTextElement('Id', node._id) }
+          { listTextElement('Author', node._user[0].username) }
+          { listTextElement('Created', node.insertion_date) }
+        </div>
+    );
   }
 
   postFile(file, action, retryCount) {
@@ -179,7 +91,7 @@ export default class FileListPage extends Component {
       console.log(data);
       self.setState({loading: false});
       if (data.status === RESPONCE_STATUS.SUCCESS) {
-        self.loadFiles();
+        window.location.reload();
         self.showAlert("Saved", 'success');
       } else if (data.status === RESPONCE_STATUS.VALIDATION_FAILED) {
         console.warn(data.message);
@@ -197,6 +109,7 @@ export default class FileListPage extends Component {
       }
     })
     .catch((error) => {
+        console.log('!!!@#@!#!', error);
       if (error.response.status === 401) {
         PLynxApi.getAccessToken()
         .then((isSuccessfull) => {
@@ -215,27 +128,18 @@ export default class FileListPage extends Component {
     });
   }
 
+  handleNewFileClick(e) {
+      e.stopPropagation();
+      e.preventDefault();
+
+      this.setState({
+        fileObj: null,
+        uploadFile: true
+      });
+  }
+
   handleDeprecate(fileObj) {
     this.postFile(fileObj, ACTION.DEPRECATE, 1);
-  }
-
-  handleNewFileClick(e) {
-    e.stopPropagation();
-    e.preventDefault();
-
-    this.setState({
-      fileObj: null,
-      uploadFile: true
-    });
-  }
-
-  handleSearchUpdate(search) {
-    this.setState({
-      offset: 0,
-      search: search,
-    }, () => {
-      this.loadFiles();
-    });
   }
 
   handlePreview(data) {
@@ -246,74 +150,77 @@ export default class FileListPage extends Component {
     this.setState({previewData: null});
   }
 
-  render() {
-    return (
-      <HotKeys className='ListPage'
-               handlers={this.keyHandlers} keyMap={KEY_MAP}
-      >
-        <ResourceProvider value={this.state.resources_dict}>
-          {this.state.loading &&
-            <LoadingScreen />
-          }
-          <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
-          <div className="menu">
-            <div className="menu-button"
-               onClick={(e) => this.handleNewFileClick(e)}
-               >
-              {"Create new File"}
-            </div>
-          </div>
-          <div className="search">
-            <SearchBar
-                onSearchUpdate={(search) => this.handleSearchUpdate(search)}
-                search={this.state.search}
-            />
-          </div>
-          {this.state.fileObj &&
-            <FileDialog
-              onClose={() => this.handleCloseDialog()}
-              onDeprecate={(fileObj) => this.handleDeprecate(fileObj)}
-              fileObj={this.state.fileObj}
-              hideDeprecate={this.state.fileObj._readonly}
-              onPreview={(previewData) => this.handlePreview(previewData)}
-              />
-          }
-          {
-            this.state.previewData &&
-            <PreviewDialog className="PreviewDialog"
-              title={this.state.previewData.title}
-              file_type={this.state.previewData.file_type}
-              resource_id={this.state.previewData.resource_id}
-              download_name={this.state.previewData.download_name}
-              onClose={() => this.handleClosePreview()}
-            />
-          }
-          {this.state.uploadFile &&
-            <FileUploadDialog
-              onClose={() => this.handleCloseDialog()}
-              onPostFile={(file) => this.postFile(file, ACTION.SAVE, 1)}
-            />
-          }
+  handleFileClick(fileObj) {
+    this.setState({
+      fileObj: fileObj,
+      uploadFile: false
+    });
+  }
 
-          <FileList files={this.state.nodes}
-                    ref={(child) => {
-                      this.fileList = child;
-                    }}
-                    onClick={(fileObj) => this.handleFileClick(fileObj)}
-          />
-          <ReactPaginate previousLabel={"Previous"}
-                         nextLabel={"Next"}
-                         breakLabel={<div>...</div>}
-                         breakClassName={"break-me"}
-                         pageCount={this.state.pageCount}
-                         marginPagesDisplayed={2}
-                         pageRangeDisplayed={5}
-                         onPageChange={this.handlePageClick}
-                         containerClassName={"pagination"}
-                         subContainerClassName={"pages pagination"}
-                         activeClassName={"active"} />
-        </ResourceProvider>
-      </HotKeys>
+  handleCloseDialog() {
+    this.setState({
+      fileObj: null,
+      uploadFile: false,
+      previewData: null,
+    });
+  }
+
+
+  render() {
+    const header = [
+       {title: "Header", tag: ""},
+       {title: "Type", tag: "Type"},
+       {title: "Status", tag: "Status"},
+       {title: "Id", tag: "Id"},
+       {title: "Author", tag: "Author"},
+       {title: "Created", tag: "Created"},
+    ];
+    return (
+        <HotKeys className='ListPage'
+                 handlers={this.keyHandlers} keyMap={KEY_MAP}
+        >
+            <BaseList
+                menu={() =>
+                    <div className="menu-button"
+                       onClick={(e) => this.handleNewFileClick(e)}
+                       >
+                      {"Create new File"}
+                    </div>
+                    }
+                title="Files - PLynx"
+                tag="file-list-item"
+                endpoint={PLynxApi.endpoints.search_nodes}
+                extraSearch={{base_node_names: ['file']}}
+                header={header}
+                renderItem={(node) => this.renderItem(node)}
+            >
+                {this.state.uploadFile &&
+                  <FileUploadDialog
+                    onClose={() => this.handleCloseDialog()}
+                    onPostFile={(file) => this.postFile(file, ACTION.SAVE, 1)}
+                  />
+                }
+                {this.state.fileObj &&
+                  <FileDialog
+                    onClose={() => this.handleCloseDialog()}
+                    onDeprecate={(fileObj) => this.handleDeprecate(fileObj)}
+                    fileObj={this.state.fileObj}
+                    hideDeprecate={this.state.fileObj._readonly}
+                    onPreview={(previewData) => this.handlePreview(previewData)}
+                    />
+                }
+                {
+                  this.state.previewData &&
+                  <PreviewDialog className="PreviewDialog"
+                    title={this.state.previewData.title}
+                    file_type={this.state.previewData.file_type}
+                    resource_id={this.state.previewData.resource_id}
+                    download_name={this.state.previewData.download_name}
+                    onClose={() => this.handleClosePreview()}
+                  />
+                }
+            </BaseList>
+        </HotKeys>
     );
   }
 }

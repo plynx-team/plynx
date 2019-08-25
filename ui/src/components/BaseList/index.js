@@ -8,6 +8,7 @@ import ReactPaginate from 'react-paginate';
 import LoadingScreen from '../LoadingScreen';
 import { ALERT_OPTIONS } from '../../constants';
 import SearchBar from '../Common/SearchBar';
+import {ResourceProvider} from '../../contexts';
 import '../Common/ListPage.css';
 import '../controls.css';
 
@@ -21,6 +22,7 @@ export default class ListPage extends Component {
       items: [],
       loading: true,
       pageCount: 0,
+      resources_dict: {},
       search: username ? 'author:' + username + ' ' : '',
     };
     this.perPage = 20;
@@ -60,12 +62,12 @@ export default class ListPage extends Component {
     }
 
     function handleResponse(response) {
-        console.log('a', response);
       const data = response.data;
       console.log(data.items);
       self.setState(
         {
           items: data.items,
+          resources_dict: data.resources_dict,
           pageCount: Math.ceil(data.total_count / self.perPage)
         });
       loading = false;
@@ -143,38 +145,42 @@ export default class ListPage extends Component {
   render() {
     return (
       <div className='ListPage'>
-        {this.state.loading &&
-          <LoadingScreen />
-        }
-        <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
-        <div className="menu">
-          {this.props.menu()}
-        </div>
-        <div className="search">
-          <SearchBar
-              onSearchUpdate={(search) => this.handleSearchUpdate(search)}
-              search={this.state.search}
-          />
-        </div>
-        <List
-            header={this.props.header}
-            items={this.state.items}
-                   ref={(child) => {
-                     this.itemList = child;
-                   }}
-            renderItem={this.props.renderItem}
-        />
-        <ReactPaginate previousLabel={"Previous"}
-                       nextLabel={"Next"}
-                       breakLabel={<div>...</div>}
-                       breakClassName={"break-me"}
-                       pageCount={this.state.pageCount}
-                       marginPagesDisplayed={2}
-                       pageRangeDisplayed={5}
-                       onPageChange={this.handlePageClick}
-                       containerClassName={"pagination"}
-                       subContainerClassName={"pages pagination"}
-                       activeClassName={"active"} />
+        <ResourceProvider value={this.state.resources_dict}>
+            {this.props.children}
+            {this.state.loading &&
+              <LoadingScreen />
+            }
+            <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
+            <div className="menu">
+              {this.props.menu()}
+            </div>
+            <div className="search">
+              <SearchBar
+                  onSearchUpdate={(search) => this.handleSearchUpdate(search)}
+                  search={this.state.search}
+              />
+            </div>
+            <List
+                header={this.props.header}
+                items={this.state.items}
+                       ref={(child) => {
+                         this.itemList = child;
+                       }}
+                renderItem={this.props.renderItem}
+                tag={this.props.tag}
+            />
+            <ReactPaginate previousLabel={"Previous"}
+                           nextLabel={"Next"}
+                           breakLabel={<div>...</div>}
+                           breakClassName={"break-me"}
+                           pageCount={this.state.pageCount}
+                           marginPagesDisplayed={2}
+                           pageRangeDisplayed={5}
+                           onPageChange={this.handlePageClick}
+                           containerClassName={"pagination"}
+                           subContainerClassName={"pages pagination"}
+                           activeClassName={"active"} />
+        </ResourceProvider>
       </div>
     );
   }
