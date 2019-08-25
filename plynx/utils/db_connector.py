@@ -45,6 +45,6 @@ def check_connection():
     try:
         logging.info('Try db connection')
         get_db_connector().client.server_info()
-    except pymongo.errors.ServerSelectionTimeoutError as err:
+    except pymongo.errors.ServerSelectionTimeoutError:
         logging.error('Connection failed')
         raise
