@@ -5,7 +5,7 @@ import { OPERATIONS } from '../../constants';
 import { listTextElement } from '../Common/listElements';
 import '../Common/ListPage.css';
 import '../controls.css';
-import './items.css'
+import './items.css';
 
 
 function renderItem(node) {
@@ -34,8 +34,8 @@ function renderItem(node) {
         { listTextElement('Created', node.insertion_date) }
         { listTextElement('Updated', node.update_date) }
       </a>
-    );
-};
+  );
+}
 
 
 export default class ListPage extends Component {

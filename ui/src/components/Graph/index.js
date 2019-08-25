@@ -900,11 +900,11 @@ ENDPOINT = '` + API_ENDPOINT + `'
           }
         });
       } else {
-          try {
-            self.showAlert(error.response.data.message, 'failed');
-          } catch {
-            self.showAlert('Unknown error', 'failed');
-          }
+        try {
+          self.showAlert(error.response.data.message, 'failed');
+        } catch {
+          self.showAlert('Unknown error', 'failed');
+        }
       }
       self.setState({loading: false});
     });
@@ -1031,7 +1031,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
               value: this.generatedCodeHeader + this.state.generatedCode,
             }}
             onClose={() => this.handleCloseGeneratedCodeDialog()}
-            readOnly={true}
+            readOnly
           />
         }
 

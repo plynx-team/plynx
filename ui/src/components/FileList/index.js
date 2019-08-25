@@ -11,20 +11,19 @@ import { listTextElement } from '../Common/listElements';
 import { ACTION, RESPONCE_STATUS, KEY_MAP } from '../../constants';
 import '../Common/ListPage.css';
 import '../controls.css';
-import './items.css'
+import './items.css';
 
 
 export default class ListPage extends Component {
-
   constructor(props) {
-      super(props);
-      document.title = "Files - PLynx";
-      this.state = {
-        fileObj: null,
-        uploadFile: false,
-        previewData: null,
-      };
-      this.perPage = 20;
+    super(props);
+    document.title = "Files - PLynx";
+    this.state = {
+      fileObj: null,
+      uploadFile: false,
+      previewData: null,
+    };
+    this.perPage = 20;
   }
 
   keyHandlers = {
@@ -110,7 +109,7 @@ export default class ListPage extends Component {
       }
     })
     .catch((error) => {
-        console.log('!!!@#@!#!', error);
+      console.log('!!!@#@!#!', error);
       if (error.response.status === 401) {
         PLynxApi.getAccessToken()
         .then((isSuccessfull) => {
@@ -130,13 +129,13 @@ export default class ListPage extends Component {
   }
 
   handleNewFileClick(e) {
-      e.stopPropagation();
-      e.preventDefault();
+    e.stopPropagation();
+    e.preventDefault();
 
-      this.setState({
-        fileObj: null,
-        uploadFile: true
-      });
+    this.setState({
+      fileObj: null,
+      uploadFile: true
+    });
   }
 
   handleDeprecate(fileObj) {
@@ -181,8 +180,7 @@ export default class ListPage extends Component {
                  handlers={this.keyHandlers} keyMap={KEY_MAP}
         >
             <BaseList
-                menu={() =>
-                    <div className="menu-button"
+                menu={() => <div className="menu-button"
                        onClick={(e) => this.handleNewFileClick(e)}
                        >
                       {"Create new File"}

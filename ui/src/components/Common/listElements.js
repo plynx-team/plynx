@@ -9,5 +9,5 @@ export function listTextElement(className, text, key) {
           {text}
         </div>
       </div>
-    );
+  );
 }

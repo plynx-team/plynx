@@ -9,17 +9,32 @@ import LoadingScreen from '../LoadingScreen';
 import { ALERT_OPTIONS } from '../../constants';
 import SearchBar from '../Common/SearchBar';
 import {ResourceProvider} from '../../contexts';
+import PropTypes from 'prop-types';
 import '../Common/ListPage.css';
 import '../controls.css';
 
 
 export default class ListPage extends Component {
+  static propTypes = {
+    search: PropTypes.string,
+    children: PropTypes.array,
+    menu: PropTypes.func,
+    extraSearch: PropTypes.object,
+    tag: PropTypes.string.isRequired,
+    header: PropTypes.array.isRequired,
+    renderItem: PropTypes.func.isRequired,
+    endpoint: PropTypes.shape({
+      create: PropTypes.func.isRequired,
+    }),
+  }
+
+
   constructor(props) {
     super(props);
     const username = cookie.load('username');
-    var search = username ? 'author:' + username + ' ' : '';
+    let search = username ? 'author:' + username + ' ' : '';
     if (this.props.search) {
-        search = this.props.search
+      search = this.props.search;
     }
     this.state = {
       items: [],
@@ -89,11 +104,11 @@ export default class ListPage extends Component {
           }
         });
       } else {
-          try {
-            self.showAlert(error.response.data.message, 'failed');
-          } catch {
-            self.showAlert('Unknown error', 'failed');
-          }
+        try {
+          self.showAlert(error.response.data.message, 'failed');
+        } catch {
+          self.showAlert('Unknown error', 'failed');
+        }
       }
     }
 

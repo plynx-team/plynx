@@ -4,7 +4,7 @@ import BaseList from '../BaseList';
 import { listTextElement } from '../Common/listElements';
 import '../Common/ListPage.css';
 import '../controls.css';
-import './items.css'
+import './items.css';
 
 
 export function renderItem(item) {
@@ -29,8 +29,8 @@ export function renderItem(item) {
         { listTextElement('Created', item.insertion_date) }
         { listTextElement('Updated', item.update_date) }
       </a>
-    );
-};
+  );
+}
 
 export const LIST_HEADER = [
    {title: "Header", tag: ""},
