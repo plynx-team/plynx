@@ -1,1 +1,1 @@
-export const API_ENDPOINT = 'http://localhost:5000/plynx/api/v0';
+export const API_ENDPOINT = '/plynx/api/v0';
