@@ -419,7 +419,7 @@ def run_master():
     logging.info('Init Master')
     master_config = get_master_config()
     logging.info(master_config)
-    master = Master((master_config.host, master_config.port), ClientTCPHandler)
+    master = Master((master_config.internal_host, master_config.port), ClientTCPHandler)
 
     # Activate the server; this will keep running until you
     # interrupt the program with Ctrl-C
