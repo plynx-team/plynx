@@ -1,11 +1,18 @@
 from plynx.utils.config import get_storage_config
 
-DEFAULT_STORAGE_CONFIG = get_storage_config()
+_driver = None
 
 
 def get_driver(storage_config=None):
+    global _driver
+    if not _driver:
+        _driver = _get_driver_handler(storage_config)
+    return _driver
+
+
+def _get_driver_handler(storage_config=None):
     if storage_config is None:
-        storage_config = DEFAULT_STORAGE_CONFIG
+        storage_config = get_storage_config()
     if storage_config.scheme == 'file':
         from plynx.utils.remote.file import RemoteFile
         return RemoteFile(storage_config)
