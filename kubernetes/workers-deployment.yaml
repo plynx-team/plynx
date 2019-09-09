@@ -1,0 +1,47 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -f docker-compose.yml
+    kompose.version: 1.18.0 ()
+  creationTimestamp: null
+  labels:
+    io.kompose.service: worker
+  name: worker
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        io.kompose.service: worker
+    spec:
+      volumes:
+      - name: google-cloud-key
+        secret:
+          secretName: gs-key
+      containers:
+      - image: khaxis/plynx:base
+        name: worker
+        command:
+          - plynx
+          - worker
+          - "--host"
+          - master
+          - "--port"
+          - "17011"
+          - "-vvvv"
+          - "--storage-scheme"
+          - gs
+          - "--storage-prefix"
+          - "gs://plynx-prod/resources/"
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: google-cloud-key
+          mountPath: /var/secrets/google
+        env:
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /var/secrets/google/key.json
+      restartPolicy: Always

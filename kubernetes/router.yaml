@@ -1,0 +1,16 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: api-router
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /plynx/api/v0/*
+        backend:
+          serviceName: backend
+          servicePort: 5000
+      - path: /*
+        backend:
+          serviceName: frontend
+          servicePort: 80
