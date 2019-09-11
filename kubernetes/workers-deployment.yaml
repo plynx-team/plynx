@@ -9,7 +9,7 @@ metadata:
     io.kompose.service: worker
   name: worker
 spec:
-  replicas: 1
+  replicas: 3
   strategy:
     type: Recreate
   template:
@@ -34,9 +34,9 @@ spec:
           - "17011"
           - "-vvvv"
           - "--storage-scheme"
-          - gs
+          - $(STORAGE_SCHEME)
           - "--storage-prefix"
-          - "gs://plynx-prod/resources/"
+          - $(STORAGE_PREFIX)
         imagePullPolicy: Always
         volumeMounts:
         - name: google-cloud-key
@@ -44,4 +44,14 @@ spec:
         env:
         - name: GOOGLE_APPLICATION_CREDENTIALS
           value: /var/secrets/google/key.json
+        - name: STORAGE_SCHEME
+          valueFrom:
+            configMapKeyRef:
+              name: storage-config
+              key: storage-scheme
+        - name: STORAGE_PREFIX
+          valueFrom:
+            configMapKeyRef:
+              name: storage-config
+              key: storage-prefix
       restartPolicy: Always

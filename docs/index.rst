@@ -13,5 +13,6 @@ Content
     concepts
     rest
     internal
+    kubernetes
     license
     _api/index

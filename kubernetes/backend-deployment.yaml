@@ -35,9 +35,9 @@ spec:
           - "--db-host"
           - mongo
           - "--storage-scheme"
-          - gs
+          - $(STORAGE_SCHEME)
           - "--storage-prefix"
-          - "gs://plynx-prod/resources/"
+          - $(STORAGE_PREFIX)
           - "--secret-key"
           - $(SECRET_KEY)
         ports:
@@ -58,4 +58,14 @@ spec:
             secretKeyRef:
               name: secret-key
               key: secret.txt
+        - name: STORAGE_SCHEME
+          valueFrom:
+            configMapKeyRef:
+              name: storage-config
+              key: storage-scheme
+        - name: STORAGE_PREFIX
+          valueFrom:
+            configMapKeyRef:
+              name: storage-config
+              key: storage-prefix
       restartPolicy: Always
