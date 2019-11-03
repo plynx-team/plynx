@@ -378,6 +378,7 @@ class ReactBlockGraph extends React.Component {
   computePinIndexfromLabel(pins, pinLabel) {
     let reval = 0;
 
+    // eslint-disable-next-line no-unused-vars
     for (const pin of pins) {
       if (pin.name === pinLabel) {
         return reval;
@@ -392,6 +393,7 @@ class ReactBlockGraph extends React.Component {
   getBlockbyId(blocks, nid) {
     let reval = 0;
 
+    // eslint-disable-next-line no-unused-vars
     for (const block of blocks) {
       if (block.nid === nid) {
         return blocks[reval];
