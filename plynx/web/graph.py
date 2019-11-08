@@ -40,7 +40,7 @@ def post_search_graphs():
     res = graph_collection_manager.get_db_graphs(**query)
 
     return JSONEncoder().encode({
-        'graphs': res['list'],
+        'items': res['list'],
         'total_count': res['metadata'][0]['total'] if res['metadata'] else 0,
         'status': 'success'})
 

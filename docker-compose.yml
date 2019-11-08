@@ -12,7 +12,7 @@ services:
             - 27017:27017
         command: mongod --smallfiles --logpath=/dev/null # --quiet
     master:
-        image: khaxis/plynx:master
+        image: khaxis/plynx:base
         container_name: "master"
         ports:
             - 17011:17011
@@ -20,8 +20,9 @@ services:
             - mongodb
         links:
             - mongodb
+        command: plynx master -vvv
     workers:
-        image: khaxis/plynx:worker
+        image: khaxis/plynx:base
         volumes:
             - ./data:/data
         depends_on:
@@ -29,8 +30,9 @@ services:
         links:
             - master
             - mongodb
+        command: plynx worker -vvv --host master
     backend:
-        image: khaxis/plynx:backend
+        image: khaxis/plynx:base
         container_name: "backend"
         ports:
             - "5000:5000"
@@ -40,15 +42,18 @@ services:
             - mongodb
         volumes:
             - ./data:/data
+        command: plynx backend -vvv
     test:
-        image: khaxis/plynx:test
+        image: khaxis/plynx:base
         container_name: "test"
         depends_on:
             - backend
         links:
             - backend
             - mongodb
-
+        environment:
+            - PLYNX_ENDPOINT=http://backend:5000/plynx/api/v0
+        command: ./scripts/run_tests.sh
     frontend:
         image: khaxis/plynx:ui
         container_name: "frontend"

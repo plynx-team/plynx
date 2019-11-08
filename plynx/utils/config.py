@@ -99,8 +99,8 @@ def get_web_config():
     return WebConfig(
         host=_config.get('web', {}).get('host', '0.0.0.0'),
         port=int(_config.get('web', {}).get('port', 5000)),
-        endpoint=_config.get('web', {}).get('endpoint', 'http://127.0.0.1:3001'),
-        api_endpoint=_config.get('web', {}).get('api_endpoint', 'http://127.0.0.1:5000/plynx/api/v0'),
+        endpoint=_config.get('web', {}).get('endpoint', '/'),
+        api_endpoint=_config.get('web', {}).get('api_endpoint', '/plynx/api/v0'),
         debug=bool(_config.get('web', {}).get('debug', False)),
     )
 

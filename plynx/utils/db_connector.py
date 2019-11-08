@@ -1,3 +1,4 @@
+import logging
 import pymongo
 from plynx.constants import Collections
 from plynx.utils.config import get_db_config
@@ -32,9 +33,18 @@ def get_db_connector():
     if _db:
         return _db
     connectionConfig = get_db_config()
-    client = pymongo.MongoClient(connectionConfig.host, connectionConfig.port)
+    client = pymongo.MongoClient(connectionConfig.host, connectionConfig.port, read_preference=pymongo.read_preferences.PrimaryPreferred())
     _db = client['plynx']
     if connectionConfig.user:
         _db.authenticate(connectionConfig.user, connectionConfig.password)
     init_indexes()
     return _db
+
+
+def check_connection():
+    try:
+        logging.info('Try db connection')
+        get_db_connector().client.server_info()
+    except pymongo.errors.ServerSelectionTimeoutError:
+        logging.error('Connection failed')
+        raise

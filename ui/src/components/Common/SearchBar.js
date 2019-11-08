@@ -16,9 +16,6 @@ export default class SearchBar extends Component {
     this.state = {
       search: this.search
     };
-  }
-
-  componentWillMount() {
     this.timer = null;
   }
 

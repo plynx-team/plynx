@@ -54,7 +54,7 @@ export default class NodesBar extends Component {
       console.log(data);
       self.setState(
         {
-          items: data.nodes,
+          items: data.items,
           pageCount: Math.ceil(data.total_count / self.perPage)
         });
       loading = false;

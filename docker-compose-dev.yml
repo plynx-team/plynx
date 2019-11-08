@@ -12,7 +12,7 @@ services:
             - 27017:27017
         command: mongod --smallfiles --logpath=/dev/null # --quiet
     master:
-        image: khaxis/plynx:base_dev
+        image: khaxis/plynx:base
         container_name: "master"
         ports:
             - 17011:17011
@@ -24,9 +24,11 @@ services:
             - ./plynx:/app/plynx
         environment:
             - PLYNX_MODE=master
+            - PLYNX_CONFIG=/app/config.yaml
+        command: sh /app/watch.sh
 
     workers:
-        image: khaxis/plynx:base_dev
+        image: khaxis/plynx:base
         depends_on:
             - master
         links:
@@ -37,8 +39,11 @@ services:
             - ./plynx:/app/plynx
         environment:
             - PLYNX_MODE=worker
+            - PLYNX_CONFIG=/app/config.yaml
+        command: sh /app/watch.sh
+
     backend:
-        image: khaxis/plynx:base_dev
+        image: khaxis/plynx:base
         container_name: "backend"
         ports:
             - "5000:5000"
@@ -51,6 +56,8 @@ services:
             - ./plynx:/app/plynx
         environment:
             - PLYNX_MODE=backend
+            - PLYNX_CONFIG=/app/config.yaml
+        command: sh /app/watch.sh
 
     frontend:
         image: khaxis/plynx:ui_dev

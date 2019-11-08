@@ -3,12 +3,11 @@ import plynx
 from setuptools import setup, find_packages
 
 install_requires = [
-    'pymongo>=3.5.1',
-    'pyyaml>=3.11',
+    'pymongo>=3.9.0',
+    'pyyaml>=5.1.2',
     'passlib>=1.7.1',
-    'python-dateutil>=2.8.0',
     'itsdangerous>=0.24',
-    'Flask>=0.12.2',
+    'Flask>=1.0.2',
     'Flask-Cors>=3.0.3',
     'Flask-HTTPAuth>=3.2.3',
     'gevent==1.3.7',
