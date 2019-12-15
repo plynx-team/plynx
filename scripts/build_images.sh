@@ -2,7 +2,7 @@
 
 set -e
 
-PLYNX_IMAGES=${PLYNX_IMAGES:="base backend master worker test ui"}
+PLYNX_IMAGES=${PLYNX_IMAGES:="base ui ui_dev"}
 
 for IMAGE in ${PLYNX_IMAGES}; do
   docker build --rm -t khaxis/plynx:${IMAGE} -f docker/${IMAGE}/Dockerfile . ;
