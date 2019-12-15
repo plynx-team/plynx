@@ -2,7 +2,7 @@ import logging
 import yaml
 import os
 from collections import namedtuple
-from pydoc import locate
+import pydoc
 
 PLYNX_CONFIG_PATH = os.getenv('PLYNX_CONFIG_PATH', 'config.yaml')
 _config = None
@@ -122,7 +122,7 @@ def get_cloud_service_config():
 
 def get_plugins():
     resources = [
-        locate(class_path)
+        pydoc.locate(class_path)
         for class_path in _config.get('plugins', {}).get('resources', DEFAULT_PLUGIN_RESOURCES)
     ]
     return PluginsConfig(

@@ -1,0 +1,2 @@
+class NodeNotFound(ModuleNotFoundError):
+    pass

@@ -7,6 +7,7 @@ from plynx.service.master import run_master
 from plynx.service.worker import run_worker
 from plynx.service.users import run_users
 from plynx.service.cache import run_cache
+from plynx.service.exec import run_exec
 from plynx.web.common import run_backend
 from plynx.utils.logs import set_logging_level
 
@@ -41,6 +42,11 @@ def users(args):
 
 def version(args):
     print(__version__)
+
+
+def exec(args):
+    set_logging_level(args.pop('verbose'))
+    run_exec(**args)
 
 
 def worker(args):
@@ -193,6 +199,12 @@ class CLIFactory(object):
             "Do not prompt to confirm reset. Use with care!",
             "store_true",
             default=False),
+
+        # Exec
+        'filename': Arg(
+            ('-f', '--filename'),
+            help='Path to file',
+            type=str),
     }
 
     SUBPARSERS = (
@@ -223,6 +235,10 @@ class CLIFactory(object):
             'func': cache,
             'help': "Cache cli utils",
             'args': ('verbose', 'mode', 'start_datetime', 'end_datetime', 'yes'),
+        }, {
+            'func': exec,
+            'help': "Execute single node",
+            'args': ('verbose', 'filename'),
         },
     )
 

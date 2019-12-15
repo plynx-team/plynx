@@ -97,6 +97,11 @@ class Node(DBObject):
             default=False,
             is_list=False,
             ),
+        'workdir': DBObjectField(
+            type=str,
+            default='/tmp',
+            is_list=False,
+            ),
     }
 
     DB_COLLECTION = Collections.NODES
