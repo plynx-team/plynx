@@ -1,5 +1,7 @@
+from pymongo import ReturnDocument
 from past.builtins import basestring
 from collections import OrderedDict
+from plynx.constants import NodeRunningStatus
 from plynx.utils.common import to_object_id, parse_search_string
 from plynx.utils.db_connector import get_db_connector
 
@@ -7,8 +9,12 @@ from plynx.utils.db_connector import get_db_connector
 class NodeCollectionManager(object):
     """NodeCollectionManager contains all the operations to work with Nodes in the database."""
 
-    @staticmethod
-    def get_db_nodes(status='', base_node_names=None, search='', per_page=20, offset=0, user_id=None):
+    def __init__(self, collection):
+        super(NodeCollectionManager, self).__init__()
+
+        self.collection = collection
+
+    def get_db_nodes(self, status='', base_node_names=None, search='', per_page=20, offset=0, user_id=None):
         """Get subset of the Nodes.
 
         Args:
@@ -88,16 +94,15 @@ class NodeCollectionManager(object):
             }
         })
 
-        return next(get_db_connector().nodes.aggregate(aggregate_list), None)
+        return next(get_db_connector()[self.collection].aggregate(aggregate_list), None)
 
-    @staticmethod
-    def get_db_nodes_by_ids(ids):
+    def get_db_nodes_by_ids(self, ids):
         """Find all the Nodes with a given IDs.
 
         Args:
             ids    (list of ObjectID):  Node Ids
         """
-        db_nodes = get_db_connector().nodes.find({
+        db_nodes = get_db_connector()[self.collection].find({
             '_id': {
                 '$in': list(ids)
             }
@@ -105,8 +110,7 @@ class NodeCollectionManager(object):
 
         return list(db_nodes)
 
-    @staticmethod
-    def get_db_node(node_id, user_id=None):
+    def get_db_node(self, node_id, user_id=None):
         """Get dict representation of the Graph.
 
         Args:
@@ -116,7 +120,30 @@ class NodeCollectionManager(object):
         Return:
             (dict)  dict representation of the Graph
         """
-        res = get_db_connector().nodes.find_one({'_id': to_object_id(node_id)})
+        res = get_db_connector()[self.collection].find_one({'_id': to_object_id(node_id)})
         if res:
             res['_readonly'] = (user_id != to_object_id(res['author']))
         return res
+
+    def pick_node(self, kinds):
+        node = get_db_connector()[self.collection].find_one_and_update(
+            {
+                '$and': [
+                    {
+                        'kind': {
+                            '$in': kinds,
+                        }
+                    },
+                    {
+                        'node_running_status': NodeRunningStatus.READY
+                    },
+                ],
+            },
+            {
+                '$set': {
+                    'node_running_status': NodeRunningStatus.RUNNING
+                }
+            },
+            return_document=ReturnDocument.AFTER
+        )
+        return node

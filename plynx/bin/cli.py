@@ -90,6 +90,13 @@ class CLIFactory(object):
             type=int,
             levels=['master', 'port'],
             ),
+        'executors': Arg(
+            ("-e", "--executors"),
+            help="Master port",
+            default=_config.master.executors,
+            action='append',
+            levels=['master', 'executors'],
+            ),
 
         # Worker
         'worker_id': Arg(
@@ -211,7 +218,7 @@ class CLIFactory(object):
         {
             'func': master,
             'help': 'Run Master',
-            'args': ('verbose', 'internal_master_host', 'master_port', 'db_host', 'db_port', 'db_user', 'db_password'),
+            'args': ('verbose', 'internal_master_host', 'master_port', 'db_host', 'db_port', 'db_user', 'db_password', 'executors'),
         }, {
             'func': worker,
             'help': 'Run Worker',

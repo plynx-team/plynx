@@ -4,4 +4,5 @@ class Collections:
     MASTER_STATE = 'master_state'
     NODE_CACHE = 'node_cache'
     NODES = 'nodes'
+    RUNS = 'runs'
     USERS = 'users'

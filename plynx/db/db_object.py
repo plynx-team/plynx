@@ -76,9 +76,10 @@ class DBObject(object):
             )
         return cls.from_dict(obj_dict)
 
-    def save(self, force=False):
+    def save(self, force=False, collection=None):
         """Save Object in the database"""
-        if not self.__class__.DB_COLLECTION:
+        collection = collection or self.__class__.DB_COLLECTION
+        if not collection:
             raise ClassNotSavable(
                 "Class `{}` is not savable.".format(
                     self.__class__.__name__
@@ -92,7 +93,7 @@ class DBObject(object):
         obj_dict = self.to_dict()
         obj_dict["update_date"] = now
 
-        getattr(get_db_connector(), self.__class__.DB_COLLECTION).find_one_and_update(
+        getattr(get_db_connector(), collection).find_one_and_update(
             {'_id': obj_dict['_id']},
             {
                 "$setOnInsert": {"insertion_date": now},

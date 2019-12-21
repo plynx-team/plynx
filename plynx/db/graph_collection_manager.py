@@ -11,7 +11,7 @@ from plynx.constants import NodeStatus
 class GraphCollectionManager(object):
     """GraphCollectionManager contains all the operations to work with Graphs in the database."""
 
-    node_collection_manager = NodeCollectionManager()
+    node_collection_manager = NodeCollectionManager(collection='nodes')
 
     @staticmethod
     def _update_node_statuses(db_graph):

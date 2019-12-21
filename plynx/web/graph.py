@@ -1,7 +1,5 @@
 import json
-from plynx.db.input import InputValue
-from plynx.db.parameter import Parameter
-from plynx.db.node import Node
+from plynx.db.node import Node, Parameter, InputValue
 from plynx.db.node_collection_manager import NodeCollectionManager
 from plynx.db.graph import Graph
 from plynx.db.graph_collection_manager import GraphCollectionManager
@@ -14,7 +12,7 @@ from plynx.constants import GraphRunningStatus, GraphPostAction, GraphPostStatus
 from plynx.utils.config import get_web_config
 
 
-node_collection_manager = NodeCollectionManager()
+node_collection_manager = NodeCollectionManager(collection='nodes')
 graph_collection_manager = GraphCollectionManager()
 graph_cancellation_manager = GraphCancellationManager()
 WEB_CONFIG = get_web_config()

@@ -23,22 +23,21 @@ services:
         volumes:
             - ./plynx:/app/plynx
         environment:
-            - PLYNX_MODE=master
+            - PLYNX_MODE=master -e plynx.executors.dag.DAG
             - PLYNX_CONFIG=/app/config.yaml
         command: sh /app/watch.sh
 
     workers:
         image: khaxis/plynx:base
         depends_on:
-            - master
+            - mongodb
         links:
-            - master
             - mongodb
         volumes:
             - ./data:/data
             - ./plynx:/app/plynx
         environment:
-            - PLYNX_MODE=worker
+            - PLYNX_MODE=master -e plynx.executors.local.BashJinja2 -e plynx.executors.local.PythonNode
             - PLYNX_CONFIG=/app/config.yaml
         command: sh /app/watch.sh
 

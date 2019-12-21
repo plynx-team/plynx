@@ -1,123 +1,29 @@
 import sys
-import socketserver
 import threading
 import logging
 import queue
 import time
+import six
+import traceback
 from collections import namedtuple
-from plynx.service.tcp_utils import send_msg, recv_msg
-from plynx.service.messages import RunStatus, WorkerMessageType, MasterMessageType, MasterMessage
-from plynx.constants import NodeRunningStatus, GraphRunningStatus
-from plynx.db.graph_collection_manager import GraphCollectionManager
-from plynx.db.graph_cancellation_manager import GraphCancellationManager
+from plynx.constants import JobReturnStatus, NodeRunningStatus, GraphRunningStatus
+from plynx.db.node_collection_manager import NodeCollectionManager
 from plynx.db.service_state import MasterState, WorkerState
-from plynx.graph.graph_scheduler import GraphScheduler
 from plynx.utils.config import get_master_config
 from plynx.graph.base_nodes import NodeCollection
 from plynx.utils.db_connector import check_connection
+import plynx.executors.factory as factory
+from plynx.utils.file_handler import upload_file_stream
 
 
 MasterJobDescription = namedtuple('MasterJobDescription', ['graph_id', 'job'])
 
-graph_collection_manager = GraphCollectionManager()
-graph_cancellation_manager = GraphCancellationManager()
+node_collection_manager = NodeCollectionManager(collection='runs')
+# graph_cancellation_manager = GraphCancellationManager()
 node_collection = NodeCollection()
 
-MESSAGE_TYPE_TO_NODE_RUNNING_STATUS = {
-    WorkerMessageType.JOB_FINISHED_SUCCESS: NodeRunningStatus.SUCCESS,
-    WorkerMessageType.JOB_FINISHED_FAILED: NodeRunningStatus.FAILED,
-}
 
-
-class WorkerInfo(object):
-    """Worker related information like current job or last heartbeat timestamp."""
-
-    def __init__(self, **kwargs):
-        self.job_description = None
-        self.last_heartbeat_ts = None
-        self.host = ''
-        self.num_finished_jobs = 0
-
-
-class ClientTCPHandler(socketserver.BaseRequestHandler):
-    """The request handler class for Master server.
-
-    It is instantiated once per connection to the server, and must
-    override the handle() method to implement communication to the
-    client.
-    """
-
-    def handle(self):
-        """Handle TCP connection."""
-        worker_message = recv_msg(self.request)
-        worker_id = worker_message.worker_id
-        graph_id = worker_message.graph_id
-        response = None
-        if worker_message.message_type == WorkerMessageType.HEARTBEAT:
-            # track worker existance and responsiveness
-            host, _ = self.request.getpeername()
-            self.server.track_worker(
-                worker_id=worker_message.worker_id,
-                host=host,
-            )
-
-            # check worker status
-            if worker_message.run_status == RunStatus.IDLE:
-                self.server.allocate_job(worker_message.worker_id)
-            elif worker_message.run_status == RunStatus.RUNNING:
-                node = worker_message.body.node
-                node.node_running_status = NodeRunningStatus.RUNNING
-                if not self.server.update_node(worker_id, node):
-                    # Kill the Job if it is not found in the Scheduler
-                    response = MasterMessage(
-                        worker_id=worker_id,
-                        message_type=MasterMessageType.KILL,
-                        job=node._id,
-                        graph_id=graph_id
-                    )
-
-            if not response:
-                response = self.make_aknowledge_message(worker_id)
-
-        elif worker_message.message_type == WorkerMessageType.GET_JOB:
-            job_description = self.server.get_job_description(worker_id)
-            if job_description:
-                response = MasterMessage(
-                    worker_id=worker_id,
-                    message_type=MasterMessageType.SET_JOB,
-                    job=job_description.job,
-                    graph_id=job_description.graph_id
-                )
-                logging.info("SET_JOB worker_id: {}".format(worker_id))
-            else:
-                response = self.make_aknowledge_message(worker_id)
-
-        elif worker_message.message_type in MESSAGE_TYPE_TO_NODE_RUNNING_STATUS:
-            node = worker_message.body.node
-            node.node_running_status = MESSAGE_TYPE_TO_NODE_RUNNING_STATUS[worker_message.message_type]
-            if self.server.update_node(worker_id, node):
-                logging.info("Job `{}` finished with status `{}`".format(node._id, node.node_running_status))
-            else:
-                logging.info(
-                    "Scheduler not found for Job `{}`. Graph `{}` might have been be canceled".format(node._id, graph_id)
-                )
-
-            response = self.make_aknowledge_message(worker_id)
-
-        if response:
-            send_msg(self.request, response)
-
-    @staticmethod
-    def make_aknowledge_message(worker_id):
-        return MasterMessage(
-            worker_id=worker_id,
-            message_type=MasterMessageType.AKNOWLEDGE,
-            job=None,
-            graph_id=None
-        )
-
-
-class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
+class Master(object):
     """Master main class.
 
     Args:
@@ -155,30 +61,13 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
     # Recalculating Workers' statuses timeout
     WORKER_MONITORING_TIMEOUT = 10
 
-    def __init__(self, server_address, RequestHandlerClass):
-        socketserver.TCPServer.__init__(self, server_address, RequestHandlerClass)
+    def __init__(self, master_config):
+        self.executors = master_config.executors
         self._stop_event = threading.Event()
         self._job_description_queue = queue.Queue()
         # Mapping of Worker ID to WorkerInfo
         self._worker_to_info = {}
         self._worker_to_info_lock = threading.Lock()
-
-        # Pick up all the Graphs with status RUNNING and set it to READY
-        # The have probably been in progress then the their master exited
-        running_graphs = graph_collection_manager.get_graphs(GraphRunningStatus.RUNNING)
-        if len(running_graphs) > 0:
-            logging.info(
-                "Found {} running graphs. Setting them to '{}' state".format(
-                    len(running_graphs),
-                    GraphRunningStatus.READY,
-                )
-            )
-            for graph in running_graphs:
-                graph.graph_running_status = GraphRunningStatus.READY
-                for node in graph.nodes:
-                    if node.node_running_status in [NodeRunningStatus.RUNNING, NodeRunningStatus.IN_QUEUE]:
-                        node.node_running_status = NodeRunningStatus.CREATED
-                graph.save()
 
         self._graph_id_to_scheduler = {}
         self._new_graph_schedulers = []
@@ -186,90 +75,80 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
 
         # Start new threads
         self._thread_db_status_update = threading.Thread(target=self._run_db_status_update, args=())
-        self._thread_db_status_update.daemon = True     # Daemonize thread
         self._thread_db_status_update.start()
 
-        self._thread_scheduler = threading.Thread(target=self._run_scheduler, args=())
-        self._thread_scheduler.daemon = True            # Daemonize thread
-        self._thread_scheduler.start()
-
+        """
         self._thread_worker_monitoring = threading.Thread(target=self._run_worker_monitoring, args=())
         self._thread_worker_monitoring.daemon = True    # Daemonize thread
         self._thread_worker_monitoring.start()
+        """
+
+    def serve_forever(self):
+        """
+        Run the master.
+        """
+        self._stop_event.wait()
+
+    def execute_job(self, executor):
+        try:
+            timeout_parameter = executor.node.get_parameter_by_name('_timeout', throw=False)
+            if timeout_parameter:
+                _node_timeout = int(timeout_parameter.value)
+            else:
+                _node_timeout = None
+
+            try:
+                status = JobReturnStatus.FAILED
+                executor.init_workdir()
+                status = executor.run()
+            except Exception:
+                try:
+                    f = six.BytesIO()
+                    f.write(traceback.format_exc().encode())
+                    executor.node.get_log_by_name('worker').resource_id = upload_file_stream(f)
+                    logging.error(traceback.format_exc())
+                except Exception:
+                    logging.critical(traceback.format_exc())
+                    raise
+            finally:
+                executor.clean_up()
+
+            self._job_killed = True
+            logging.info('Node {node_id} `{title}` finished with status `{status}`'.format(
+                node_id=executor.node._id,
+                title=executor.node.title,
+                status=status,
+                ))
+            if status == JobReturnStatus.SUCCESS:
+                executor.node.node_running_status = NodeRunningStatus.SUCCESS
+            elif status == JobReturnStatus.FAILED:
+                executor.node.node_running_status = NodeRunningStatus.FAILED
+            else:
+                raise Exception("Unknown return status value: `{}`".format(status))
+        except Exception:
+            executor.node.node_running_status = NodeRunningStatus.FAILED
+        finally:
+            executor.node.save(collection='runs')
 
     def _run_db_status_update(self):
         """Syncing with the database."""
         try:
             while not self._stop_event.is_set():
-                graphs = graph_collection_manager.get_graphs(GraphRunningStatus.READY)
-                for graph in graphs:
-                    graph_scheduler = GraphScheduler(graph, node_collection)
-                    graph_scheduler.graph.graph_running_status = GraphRunningStatus.RUNNING
-                    graph_scheduler.graph.save()
+                node = node_collection_manager.pick_node(kinds=self.executors)
+                if node:
+                    logging.info('New node found: {} {} {}'.format(node['_id'], node['node_running_status'], node['title']))
+                    executor = factory.materialize(node)
 
-                    with self._graph_schedulers_lock:
-                        self._new_graph_schedulers.append(graph_scheduler)
+                    thread = threading.Thread(target=self.execute_job, args=(executor, ))
+                    thread.start()
 
-                self._stop_event.wait(timeout=Master.SDB_STATUS_UPDATE_TIMEOUT)
+                else:
+                    self._stop_event.wait(timeout=Master.SDB_STATUS_UPDATE_TIMEOUT)
         except Exception:
             self.stop()
             raise
         finally:
             logging.info("Exit {}".format(self._run_db_status_update.__name__))
-
-    def _run_scheduler(self):
-        """
-        Synchronization of the Schedulers.
-        The process picks up new Graphs from _run_db_status_update().
-        It also queries each Scheduler for the new Jobs and puts them into the queue.
-        """
-        try:
-            while not self._stop_event.is_set():
-                with self._graph_schedulers_lock:
-                    # add new Schedules
-                    self._graph_id_to_scheduler.update(
-                        {
-                            graph_scheduler.graph._id: graph_scheduler
-                            for graph_scheduler in self._new_graph_schedulers
-                        })
-                    self._new_graph_schedulers = []
-
-                    # pull Graph cancellation events and cancel the Graphs
-                    graph_cancellations = list(graph_cancellation_manager.get_graph_cancellations())
-                    for graph_cancellation in graph_cancellations:
-                        if graph_cancellation.graph_id in self._graph_id_to_scheduler:
-                            self._graph_id_to_scheduler[graph_cancellation.graph_id].graph.cancel()
-                    graph_cancellation_manager.remove([graph_cancellation._id for graph_cancellation in graph_cancellations])
-
-                    # check the running Schedulers
-                    new_to_queue = []
-                    finished_graph_ids = set()
-                    for graph_id, scheduler in self._graph_id_to_scheduler.items():
-                        if scheduler.finished():
-                            finished_graph_ids.add(graph_id)
-                            continue
-                        # pop new Jobs
-                        new_to_queue.extend([
-                            MasterJobDescription(graph_id=graph_id, job=job) for job in scheduler.pop_jobs()
-                        ])
-
-                    # remove Schedulers with finished Graphs
-                    for graph_id in finished_graph_ids:
-                        del self._graph_id_to_scheduler[graph_id]
-
-                # End self._graph_schedulers_lock
-
-                for job_description in new_to_queue:
-                    self._job_description_queue.put(job_description)
-                if new_to_queue:
-                    logging.info('Queue length: {}'.format(self._job_description_queue.qsize()))
-
-                self._stop_event.wait(timeout=Master.SCHEDULER_TIMEOUT)
-        except Exception:
-            self.stop()
-            raise
-        finally:
-            logging.info("Exit {}".format(self._run_scheduler.__name__))
 
     def _run_worker_monitoring(self):
         try:
@@ -345,33 +224,6 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
         except queue.Empty:
             return None
 
-    def allocate_job(self, worker_id):
-        with self._worker_to_info_lock:
-            if worker_id not in self._worker_to_info:
-                # Register the worker
-                self._worker_to_info[worker_id] = WorkerInfo()
-            if self._worker_to_info[worker_id].job_description is not None:
-                # worker already has a Job
-                return False
-        # TODO use more verbose loop
-        while True:
-            job_description = self._get_job_description_from_queue()
-            if not job_description:
-                return False
-            # TODO potential deadlock: Two locks in the same time
-            with self._graph_schedulers_lock:
-                scheduler = self._graph_id_to_scheduler.get(job_description.graph_id, None)
-                # CANCELED and FAILED Graphs should not have jobs assigned. Check for RUNNING status
-                if scheduler and scheduler.graph.graph_running_status == GraphRunningStatus.RUNNING:
-                    with self._worker_to_info_lock:
-                        self._worker_to_info.get(worker_id).job_description = job_description
-                    node = job_description.job.node
-                    node.node_running_status = NodeRunningStatus.IN_QUEUE
-                    scheduler.update_node(node)
-                    logging.info('Queue length: {}'.format(self._job_description_queue.qsize()))
-                    return True
-        return False
-
     def get_job_description(self, worker_id):
         with self._worker_to_info_lock:
             worker_info = self._worker_to_info.get(worker_id, None)
@@ -408,7 +260,6 @@ class Master(socketserver.ThreadingMixIn, socketserver.TCPServer):
     def stop(self):
         """Stop Master."""
         self._stop_event.set()
-        self.shutdown()
 
 
 def run_master():
@@ -419,7 +270,7 @@ def run_master():
     logging.info('Init Master')
     master_config = get_master_config()
     logging.info(master_config)
-    master = Master((master_config.internal_host, master_config.port), ClientTCPHandler)
+    master = Master(master_config)
 
     # Activate the server; this will keep running until you
     # interrupt the program with Ctrl-C

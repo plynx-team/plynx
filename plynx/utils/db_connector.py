@@ -25,6 +25,9 @@ def init_indexes():
     ])
     _db[Collections.NODES].create_index([('title', pymongo.TEXT), ('description', pymongo.TEXT)])
 
+    _db[Collections.RUNS].create_index('insertion_date')
+    _db[Collections.RUNS].create_index([('title', pymongo.TEXT), ('description', pymongo.TEXT)])
+
     _db[Collections.USERS].create_index('username', unique=True)
 
 

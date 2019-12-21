@@ -6,4 +6,5 @@ class ParameterTypes:
     ENUM = 'enum'
     LIST_STR = 'list_str'
     LIST_INT = 'list_int'
+    LIST_NODE = 'list_node'
     CODE = 'code'

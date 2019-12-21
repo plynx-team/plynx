@@ -1,20 +1,9 @@
-from abc import ABCMeta, abstractmethod
+import os
+import shutil
+from abc import abstractmethod
 
 
-class abstractstatic(staticmethod):
-    __slots__ = ()
-
-    def __init__(self, function):
-        super(abstractstatic, self).__init__(function)
-        function.__isabstractmethod__ = True
-    __isabstractmethod__ = True
-
-
-class Node:
-    __metaclass__ = ABCMeta
-
-    # Methods
-
+class BaseExecutor:
     def __init__(self, node):
         self.node = node
 
@@ -30,10 +19,20 @@ class Node:
     def kill(self):
         pass
 
-    @abstractstatic
+    @staticmethod
+    @abstractmethod
     def get_base_name():
         pass
 
-    @classmethod
+    @staticmethod
+    @abstractmethod
     def get_default(cls):
         pass
+
+    def init_workdir(self):
+        if not os.path.exists(self.node.workdir):
+            os.makedirs(self.node.workdir)
+
+    def clean_up(self):
+        if os.path.exists(self.node.workdir):
+            shutil.rmtree(self.node.workdir, ignore_errors=True)

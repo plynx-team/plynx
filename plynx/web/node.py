@@ -7,7 +7,7 @@ from plynx.graph.base_nodes import NodeCollection
 from plynx.plugins.managers import resource_manager
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 from plynx.utils.common import to_object_id, JSONEncoder
-from plynx.constants import NodeStatus, NodePostAction, NodePostStatus
+from plynx.constants import NodeStatus, NodePostAction, NodePostStatus, Collections
 
 PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'base_node_names', 'search'}
 PERMITTED_READONLY_POST_ACTIONS = {
@@ -15,7 +15,7 @@ PERMITTED_READONLY_POST_ACTIONS = {
     NodePostAction.PREVIEW_CMD,
 }
 
-node_collection_manager = NodeCollectionManager()
+node_collection_manager = NodeCollectionManager(collection=Collections.NODES)
 node_collection = NodeCollection()
 
 

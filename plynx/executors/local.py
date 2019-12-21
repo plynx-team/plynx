@@ -8,13 +8,12 @@ import jinja2
 from past.builtins import basestring
 from collections import defaultdict
 from plynx.constants import JobReturnStatus, NodeStatus, ParameterTypes
-from plynx.db.parameter import Parameter
-from plynx.db.output import Output
+from plynx.db.node import Parameter, Output
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
 from plynx.utils.config import get_worker_config
 from plynx.plugins.managers import resource_manager
 from plynx.plugins.resources import File as FileCls
-from plynx.executors.base import Node
+from plynx.executors.base import BaseExecutor
 from plynx.constants import NodeResources
 
 WORKER_CONFIG = get_worker_config()
@@ -57,7 +56,7 @@ class ResourceMerger(object):
         return self._dict
 
 
-class BaseBash(Node):
+class BaseBash(BaseExecutor):
     logs_lock = threading.Lock()
 
     def __init__(self, node=None):
@@ -144,7 +143,7 @@ class BaseBash(Node):
 
     @classmethod
     def get_default(cls):
-        node = Node()
+        node = BaseExecutor()
         node.title = ''
         node.description = ''
         node.base_node_name = cls.get_base_name()
@@ -152,7 +151,7 @@ class BaseBash(Node):
         node.starred = False
         node.parameters = [
             Parameter.from_dict({
-                'name': 'cmd',
+                'name': '_cmd',
                 'parameter_type': ParameterTypes.CODE,
                 'value': {
                     'mode': 'sh',
@@ -164,7 +163,7 @@ class BaseBash(Node):
                 }
             ),
             Parameter.from_dict({
-                'name': 'cacheable',
+                'name': '_cacheable',
                 'parameter_type': ParameterTypes.BOOL,
                 'value': True,
                 'mutable_type': False,
@@ -284,7 +283,7 @@ class BaseBash(Node):
         self.upload_logs(final=True)
 
     def _extract_cmd_text(self):
-        parameter = self.node.get_parameter_by_name('cmd')
+        parameter = self.node.get_parameter_by_name('_cmd')
         if parameter.parameter_type == ParameterTypes.CODE:
             return parameter.value.value
         elif parameter.parameter_type == ParameterTypes.TEXT:
