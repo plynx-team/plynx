@@ -3,9 +3,8 @@ import time
 from collections import defaultdict
 from plynx.db.node import Node
 from plynx.constants import JobReturnStatus, NodeRunningStatus, GraphRunningStatus
-from plynx.graph.base_nodes import NodeCollection
 from plynx.utils.common import to_object_id
-from plynx.executors.base import BaseExecutor
+from plynx.plugins.executors import BaseExecutor
 from plynx.db.node_collection_manager import NodeCollectionManager
 
 node_collection_manager = NodeCollectionManager(collection='runs')
@@ -25,7 +24,7 @@ class DAG(BaseExecutor):
 
     """
 
-    def __init__(self, node_dict, node_collection=None):
+    def __init__(self, node_dict):
         super(DAG, self).__init__(node_dict)
 
         self.subnodes = None
@@ -45,10 +44,6 @@ class DAG(BaseExecutor):
         self.node_id_to_dependents = defaultdict(lambda: set())
         self.node_id_to_dependency_index = defaultdict(lambda: 0)
         self.uncompleted_nodes_count = 0
-        if node_collection:
-            self.node_collection = node_collection
-        else:
-            self.node_collection = NodeCollection()
 
         for node in self.subnodes:
             # ignore nodes in finished statuses
@@ -115,7 +110,6 @@ class DAG(BaseExecutor):
                         continue
                 except Exception as err:
                     logging.exception("Unable to update cache: `{}`".format(err))
-            # job = self.node_collection.make_job(node)
             res.append(node)
         del self.dependency_index_to_node_ids[0]
 

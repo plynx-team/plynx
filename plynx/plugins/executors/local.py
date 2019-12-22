@@ -13,7 +13,7 @@ from plynx.utils.file_handler import get_file_stream, upload_file_stream
 from plynx.utils.config import get_worker_config
 from plynx.plugins.managers import resource_manager
 from plynx.plugins.resources.common import File as FileCls
-from plynx.executors.base import BaseExecutor
+from plynx.plugins.executors import BaseExecutor
 from plynx.constants import NodeResources
 
 WORKER_CONFIG = get_worker_config()

@@ -14,7 +14,7 @@ from plynx.db.service_state import MasterState, WorkerState
 from plynx.utils.config import get_master_config
 from plynx.graph.base_nodes import NodeCollection
 from plynx.utils.db_connector import check_connection
-import plynx.executors.factory as factory
+from plynx.plugins.executors import materialize_executor
 from plynx.utils.file_handler import upload_file_stream
 
 
@@ -141,7 +141,7 @@ class Master(object):
                 node = node_collection_manager.pick_node(kinds=self.executors)
                 if node:
                     logging.info('New node found: {} {} {}'.format(node['_id'], node['node_running_status'], node['title']))
-                    executor = factory.materialize(node)
+                    executor = materialize_executor(node)
 
                     thread = threading.Thread(target=self.execute_job, args=(executor, ))
                     thread.start()

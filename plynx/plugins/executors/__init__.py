@@ -1,6 +1,9 @@
 import os
 import shutil
+import pydoc
 from abc import abstractmethod
+import plynx.utils.exceptions
+from plynx.db.node import Node
 
 
 class BaseExecutor:
@@ -37,3 +40,22 @@ class BaseExecutor:
     def clean_up(self):
         if os.path.exists(self.workdir):
             shutil.rmtree(self.workdir, ignore_errors=True)
+
+
+def materialize_executor(node_dict):
+    """
+    Create a Node object from a dictionary
+
+    Parameters:
+    node_dict (dict): dictionary representation of a Node
+
+    Returns:
+    Node: Derived from plynx.nodes.base.Node class
+    """
+    kind = node_dict['kind']
+    cls = pydoc.locate(kind)
+    if not cls:
+        raise plynx.utils.exceptions.NodeNotFound(
+            'Node kind `{}` not found'.format(kind)
+        )
+    return pydoc.locate(kind)(Node.from_dict(node_dict))

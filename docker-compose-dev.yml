@@ -23,7 +23,7 @@ services:
         volumes:
             - ./plynx:/app/plynx
         environment:
-            - PLYNX_MODE=master -e plynx.executors.dag.DAG
+            - PLYNX_MODE=master -e plynx.plugins.executors.dag.DAG
             - PLYNX_CONFIG=/app/config.yaml
         command: sh /app/watch.sh
 
@@ -37,7 +37,7 @@ services:
             - ./data:/data
             - ./plynx:/app/plynx
         environment:
-            - PLYNX_MODE=master -e plynx.executors.local.BashJinja2 -e plynx.executors.local.PythonNode
+            - PLYNX_MODE=master -e plynx.plugins.executors.local.BashJinja2 -e plynx.plugins.executors.local.PythonNode
             - PLYNX_CONFIG=/app/config.yaml
         command: sh /app/watch.sh
 

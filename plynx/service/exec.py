@@ -1,10 +1,10 @@
 import json
-import plynx.executors.factory as factory
+from plynx.plugins.executors import materialize_executor
 
 
 def run_exec(filename):
     with open(filename) as f:
-        node = factory.materialize(json.load(f))
+        node = materialize_executor(json.load(f))
     node.run()
     print('Success')
     return 0
