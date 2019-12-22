@@ -16,7 +16,7 @@ import LoadingScreen from '../LoadingScreen';
 import DemoScreen from '../DemoScreen';
 import FileDialog from '../Dialogs/FileDialog';
 import CodeDialog from '../Dialogs/CodeDialog';
-import {ResourceProvider} from '../../contexts';
+import {PluginsProvider} from '../../contexts';
 import {ObjectID} from 'bson';
 import {HotKeys} from 'react-hotkeys';
 import {
@@ -106,7 +106,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
 
     const loadGraph = (response) => {
       self.setState({
-        resources_dict: response.data.resources_dict,
+        plugins_dict: response.data.plugins_dict,
       });
       self.loadGraphFromJson(response.data.data);
       console.log(graph_id);
@@ -965,7 +965,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
     <HotKeys className="GraphNode"
              handlers={this.keyHandlers} keyMap={KEY_MAP}
     >
-      <ResourceProvider value={this.state.resources_dict}>
+      <PluginsProvider value={this.state.plugins_dict}>
         <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
         { demoPreview &&
           <DemoScreen onApprove={() => this.handleApprove()} onClose={() => {
@@ -1078,7 +1078,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
                       key={"prop" + this.state.graphId + this.state.loading}
                       onFileShow={(nid) => this.handleShowFile(nid)}
         />
-      </ResourceProvider>
+      </PluginsProvider>
     </HotKeys>
     );
   }

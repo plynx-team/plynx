@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { PLynxApi } from '../../API';
 import BaseList from '../BaseList';
-import {ResourceConsumer} from '../../contexts';
+import {PluginsConsumer} from '../../contexts';
 import {HotKeys} from 'react-hotkeys';
 import Icon from '../Common/Icon';
 import FileDialog from '../Dialogs/FileDialog';
@@ -56,18 +56,18 @@ export default class ListPage extends Component {
           </div>
 
           <div className={'Type'}>
-            <ResourceConsumer className={'Type'}>
-            { resources_dict => <div className='Widget'>
+            <PluginsConsumer className={'Type'}>
+            { plugins_dict => <div className='Widget'>
                 <Icon
-                  type_descriptor={resources_dict[file_type]}
+                  type_descriptor={plugins_dict.resources_dict[file_type]}
                   width={"20"}
                   height={"20"}
                 />
 
-                {resources_dict[file_type].alias}
+                {plugins_dict.resources_dict[file_type].alias}
               </div>
             }
-            </ResourceConsumer>
+            </PluginsConsumer>
           </div>
           { listTextElement('Status ' + node.node_status, node.node_status) }
           { listTextElement('Id', node._id) }

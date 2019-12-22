@@ -8,30 +8,37 @@ from plynx.web.common import app, requires_auth, make_fail_response, handle_erro
 from plynx.utils.common import to_object_id, JSONEncoder
 from plynx.constants import NodeStatus, NodePostAction, NodePostStatus, Collections
 
-PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'base_node_names', 'search'}
+PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'base_node_names', 'search', 'is_graph'}
 PERMITTED_READONLY_POST_ACTIONS = {
     NodePostAction.VALIDATE,
     NodePostAction.PREVIEW_CMD,
 }
 
-node_collection_manager = NodeCollectionManager(collection=Collections.NODES)
+node_collection_managers = {
+    collection: NodeCollectionManager(collection=collection)
+    for collection in [Collections.NODES, Collections.RUNS]
+}
 
-
-@app.route('/plynx/api/v0/search_nodes', methods=['POST'])
+@app.route('/plynx/api/v0/search_<collection>', methods=['POST'])
 @handle_errors
 @requires_auth
-def post_search_nodes():
+def post_search_nodes(collection):
     query = json.loads(request.data)
+    app.logger.debug(request.data)
+
     user_id = to_object_id(g.user._id)
     if len(query.keys() - PAGINATION_QUERY_KEYS):
         return make_fail_response('Unknown keys: `{}`'.format(query.keys() - PAGINATION_QUERY_KEYS)), 400
 
-    res = node_collection_manager.get_db_nodes(user_id=user_id, **query)
+    res = node_collection_managers[collection].get_db_nodes(user_id=user_id, **query)
 
     return JSONEncoder().encode({
         'items': res['list'],
         'total_count': res['metadata'][0]['total'] if res['metadata'] else 0,
-        'resources_dict': resource_manager.resources_dict,
+        'plugins_dict': {
+            'resources_dict': resource_manager.resources_dict,
+            'executors_info': executor_manager.executors_info,
+        },
         'status': 'success'})
 
 
@@ -44,7 +51,10 @@ def get_nodes(node_link=None):
     if False or node_link in node_collection.name_to_class:
         return JSONEncoder().encode({
             'data': node_collection.name_to_class[node_link].get_default().to_dict(),
-            'resources_dict': resource_manager.resources_dict,
+            'plugins_dict': {
+                'resources_dict': resource_manager.resources_dict,
+                'executors_info': executor_manager.executors_info,
+            },
             'status': 'success'})
     else:
         try:
@@ -56,6 +66,7 @@ def get_nodes(node_link=None):
             return JSONEncoder().encode({
                 'data': node,
                 'resources_dict': resource_manager.resources_dict,
+                'executors_info': executor_manager.executors_info,
                 'status': 'success'})
         else:
             return make_fail_response('Node `{}` was not found'.format(node_link)), 404

@@ -9,7 +9,7 @@ import ParameterList from './ParameterList';
 import DeprecateDialog from '../Dialogs/DeprecateDialog';
 import TextViewDialog from '../Dialogs/TextViewDialog';
 import LoadingScreen from '../LoadingScreen';
-import {ResourceProvider} from '../../contexts';
+import {PluginsConsumer} from '../../contexts';
 import { ObjectID } from 'bson';
 import {HotKeys} from 'react-hotkeys';
 import { ACTION, RESPONCE_STATUS, ALERT_OPTIONS, NODE_RUNNING_STATUS, KEY_MAP } from '../../constants';
@@ -271,7 +271,7 @@ export default class Node extends Component {
       <HotKeys className='EditNodeMain'
                handlers={this.keyHandlers} keyMap={KEY_MAP}
       >
-        <ResourceProvider value={this.state.resources_dict}>
+        <PluginsConsumer value={this.state.plugins_dict}>
           <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
           {this.state.loading &&
             <LoadingScreen
@@ -377,7 +377,7 @@ export default class Node extends Component {
             </div>
 
           </div>
-        </ResourceProvider>
+        </PluginsConsumer>
       </HotKeys>
     );
   }

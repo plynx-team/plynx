@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import {ResourceConsumer} from '../../contexts';
+import {PluginsConsumer} from '../../contexts';
 
 export default class InOutItem extends Component {
   static propTypes = {
@@ -82,8 +82,8 @@ export default class InOutItem extends Component {
           <div className='InOutCellTitle'>
             Type:
           </div>
-          <ResourceConsumer>
-          { resources_dict => <div className='InOutCellValue'>
+          <PluginsConsumer>
+          { plugins_dict => <div className='InOutCellValue'>
               {
                 this.props.varName === 'inputs' &&
                 <select className='InOutValue'
@@ -93,7 +93,7 @@ export default class InOutItem extends Component {
                   readOnly={this.state.readOnly}
                 >
                 {
-                  Object.values(resources_dict).map((description) => <option
+                  Object.values(plugins_dict).map((description) => <option
                       value={description.name}
                       key={description.name}
                       >
@@ -113,7 +113,7 @@ export default class InOutItem extends Component {
                   readOnly={this.state.readOnly}
                 >
                 {
-                  Object.values(resources_dict).map((description) => <option
+                  Object.values(plugins_dict).map((description) => <option
                       value={description.name}
                       key={description.name}
                       >
@@ -126,7 +126,7 @@ export default class InOutItem extends Component {
 
             </div>
           }
-          </ResourceConsumer>
+          </PluginsConsumer>
         </div>
 
         {! (this.state.min_count === undefined) &&

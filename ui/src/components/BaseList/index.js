@@ -8,7 +8,7 @@ import ReactPaginate from 'react-paginate';
 import LoadingScreen from '../LoadingScreen';
 import { ALERT_OPTIONS } from '../../constants';
 import SearchBar from '../Common/SearchBar';
-import {ResourceProvider} from '../../contexts';
+import {PluginsProvider} from '../../contexts';
 import PropTypes from 'prop-types';
 import '../Common/ListPage.css';
 import '../controls.css';
@@ -82,10 +82,11 @@ export default class ListPage extends Component {
     function handleResponse(response) {
       const data = response.data;
       console.log(data.items);
+      console.log('AAAA', data.plugins_dict);
       self.setState(
         {
           items: data.items,
-          resources_dict: data.resources_dict,
+          plugins_dict: data.plugins_dict,
           pageCount: Math.ceil(data.total_count / self.perPage)
         });
       loading = false;
@@ -163,7 +164,7 @@ export default class ListPage extends Component {
   render() {
     return (
       <div className='ListPage'>
-        <ResourceProvider value={this.state.resources_dict}>
+        <PluginsProvider value={this.state.plugins_dict}>
             {this.props.children}
             {this.state.loading &&
               <LoadingScreen />
@@ -198,7 +199,7 @@ export default class ListPage extends Component {
                            containerClassName={"pagination"}
                            subContainerClassName={"pages pagination"}
                            activeClassName={"active"} />
-        </ResourceProvider>
+        </PluginsProvider>
       </div>
     );
   }

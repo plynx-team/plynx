@@ -30,15 +30,15 @@ class _ExecutorManager(object):
             all_executors.add(parent)
             for child in children:
                 all_executors.add(child)
-        self.executor_to_class = {
+        self.name_to_class = {
             class_path: pydoc.locate(class_path)
             for class_path in all_executors
         }
 
         self.executors_info = {
             executor_name: {
-                'alias': self.executor_to_class[executor_name].ALIAS,
-                'is_graph': self.executor_to_class[executor_name].IS_GRAPH,
+                'alias': self.name_to_class[executor_name].ALIAS,
+                'is_graph': self.name_to_class[executor_name].IS_GRAPH,
                 'children': self.executors_map.get(executor_name, [])
             } for executor_name in all_executors
         }

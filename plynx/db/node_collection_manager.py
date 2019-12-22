@@ -14,7 +14,7 @@ class NodeCollectionManager(object):
 
         self.collection = collection
 
-    def get_db_nodes(self, status='', base_node_names=None, search='', per_page=20, offset=0, user_id=None):
+    def get_db_nodes(self, status='', node_kinds=None, is_graph=None, search='', per_page=20, offset=0, user_id=None):
         """Get subset of the Nodes.
 
         Args:
@@ -29,16 +29,16 @@ class NodeCollectionManager(object):
         """
         if status and isinstance(status, basestring):
             status = [status]
-        if base_node_names and isinstance(base_node_names, basestring):
-            base_node_names = [base_node_names]
+        if node_kinds and isinstance(node_kinds, basestring):
+            node_kinds = [node_kinds]
 
         aggregate_list = []
         search_parameters, search_string = parse_search_string(search)
 
         # Match
         and_query = {}
-        if base_node_names:
-            and_query['base_node_name'] = {'$in': base_node_names}
+        if node_kinds:
+            and_query['kinds'] = {'$in': node_kinds}
         if status:
             and_query['node_status'] = {'$in': status}
         if search_string:
