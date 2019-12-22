@@ -6,6 +6,7 @@ from abc import abstractmethod
 class BaseExecutor:
     def __init__(self, node):
         self.node = node
+        self.workdir = None
 
     @abstractmethod
     def run(self):
@@ -30,9 +31,9 @@ class BaseExecutor:
         pass
 
     def init_workdir(self):
-        if not os.path.exists(self.node.workdir):
-            os.makedirs(self.node.workdir)
+        if not os.path.exists(self.workdir):
+            os.makedirs(self.workdir)
 
     def clean_up(self):
-        if os.path.exists(self.node.workdir):
-            shutil.rmtree(self.node.workdir, ignore_errors=True)
+        if os.path.exists(self.workdir):
+            shutil.rmtree(self.workdir, ignore_errors=True)

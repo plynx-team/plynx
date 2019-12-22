@@ -1,7 +1,7 @@
 from plynx.graph.base_nodes import BaseNode
 from plynx.constants import JobReturnStatus, NodeStatus, ParameterTypes
 from plynx.db.node import Node, Parameter, Output
-from plynx.plugins.resources import File as FileCls
+from plynx.plugins.resources.common import File as FileCls
 
 
 class GetResource(BaseNode):

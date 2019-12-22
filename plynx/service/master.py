@@ -1,3 +1,4 @@
+import os
 import sys
 import threading
 import logging
@@ -5,6 +6,7 @@ import queue
 import time
 import six
 import traceback
+import uuid
 from collections import namedtuple
 from plynx.constants import JobReturnStatus, NodeRunningStatus, GraphRunningStatus
 from plynx.db.node_collection_manager import NodeCollectionManager
@@ -99,6 +101,8 @@ class Master(object):
 
             try:
                 status = JobReturnStatus.FAILED
+                if not executor.workdir:
+                    executor.workdir = os.path.join('/tmp', str(uuid.uuid1()))
                 executor.init_workdir()
                 status = executor.run()
             except Exception:

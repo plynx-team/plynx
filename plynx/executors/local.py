@@ -12,7 +12,7 @@ from plynx.db.node import Parameter, Output
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
 from plynx.utils.config import get_worker_config
 from plynx.plugins.managers import resource_manager
-from plynx.plugins.resources import File as FileCls
+from plynx.plugins.resources.common import File as FileCls
 from plynx.executors.base import BaseExecutor
 from plynx.constants import NodeResources
 
@@ -62,7 +62,6 @@ class BaseBash(BaseExecutor):
     def __init__(self, node=None):
         super(BaseBash, self).__init__(node)
         self.sp = None
-        self.workdir = self.node.workdir
         self.logs_sizes = {}
         self.final_logs_uploaded = False
         self.logs = {}

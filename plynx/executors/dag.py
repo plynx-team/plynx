@@ -200,7 +200,7 @@ class DAG(BaseExecutor):
 
             new_jobs = self.pop_jobs()
             if len(new_jobs) == 0:
-                time.sleep(_GRAPH_ITERATION_SLEEP * 5)
+                time.sleep(_GRAPH_ITERATION_SLEEP)
                 continue
 
             for node in new_jobs:

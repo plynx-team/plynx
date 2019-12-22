@@ -4,7 +4,7 @@ from plynx.db.db_object import DBObject, DBObjectField
 from plynx.db.validation_error import ValidationError
 from plynx.utils.common import ObjectId
 from plynx.constants import NodeStatus, NodeRunningStatus, ValidationTargetType, ValidationCode
-from plynx.plugins.resources import File as FileCls
+from plynx.plugins.resources.common import File as FileCls
 from plynx.constants import ParameterTypes
 
 
@@ -189,11 +189,6 @@ class Node(DBObject):
         'starred': DBObjectField(
             type=bool,
             default=False,
-            is_list=False,
-            ),
-        'workdir': DBObjectField(
-            type=str,
-            default='/tmp',
             is_list=False,
             ),
     }

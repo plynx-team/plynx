@@ -2,7 +2,7 @@ import os
 import json
 import uuid
 from plynx.constants import NodeResources
-from plynx.plugins.base import BaseResource
+from plynx.plugins.resources import BaseResource
 from plynx.utils.config import get_cloud_service_config
 
 

@@ -18,15 +18,15 @@ CloudServiceConfig = namedtuple('CloudServiceConfig', 'prefix url_prefix url_pos
 PluginsConfig = namedtuple('PluginsConfig', 'resources')
 
 DEFAULT_PLUGIN_RESOURCES = [
-    'plynx.plugins.resources.File',
-    'plynx.plugins.resources.PDF',
-    'plynx.plugins.resources.Image',
-    'plynx.plugins.resources.CSV',
-    'plynx.plugins.resources.TSV',
-    'plynx.plugins.resources.Json',
-    'plynx.plugins.resources.Executable',
-    'plynx.plugins.resources.Directory',
-    'plynx.plugins.cloud_resources.CloudStorage',
+    'plynx.plugins.resources.common.File',
+    'plynx.plugins.resources.common.PDF',
+    'plynx.plugins.resources.common.Image',
+    'plynx.plugins.resources.common.CSV',
+    'plynx.plugins.resources.common.TSV',
+    'plynx.plugins.resources.common.Json',
+    'plynx.plugins.resources.common.Executable',
+    'plynx.plugins.resources.common.Directory',
+    'plynx.plugins.resources.cloud_resources.CloudStorage',
 ]
 
 Config = namedtuple(

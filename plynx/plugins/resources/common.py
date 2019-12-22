@@ -3,7 +3,7 @@ import stat
 import json
 import zipfile
 from plynx.constants import NodeResources
-from plynx.plugins.base import BaseResource
+from plynx.plugins.resources import BaseResource
 from plynx.utils.common import zipdir
 from plynx.utils.config import get_web_config
 

@@ -13,7 +13,7 @@ from plynx.utils.file_handler import get_file_stream, upload_file_stream
 from plynx.utils.config import get_worker_config
 from plynx.graph.base_nodes import BaseNode
 from plynx.plugins.managers import resource_manager
-from plynx.plugins.resources import File as FileCls
+from plynx.plugins.resources.common import File as FileCls
 
 WORKER_CONFIG = get_worker_config()
 TMP_DIR = '/tmp'
