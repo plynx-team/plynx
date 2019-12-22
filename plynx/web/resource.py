@@ -1,6 +1,7 @@
 import json
 from flask import request, send_file, g
-from plynx.graph.base_nodes.file import File as FileNodeClass
+# !!! TODO figure out with files
+# from plynx.graph.base_nodes.file import File as FileNodeClass
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 from plynx.plugins.resources import PreviewObject
 from plynx.plugins.resources.common import File as FileCls

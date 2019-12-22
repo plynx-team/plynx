@@ -12,7 +12,6 @@ from plynx.constants import JobReturnStatus, NodeRunningStatus, GraphRunningStat
 from plynx.db.node_collection_manager import NodeCollectionManager
 from plynx.db.service_state import MasterState, WorkerState
 from plynx.utils.config import get_master_config
-from plynx.graph.base_nodes import NodeCollection
 from plynx.utils.db_connector import check_connection
 from plynx.plugins.executors import materialize_executor
 from plynx.utils.file_handler import upload_file_stream
@@ -22,7 +21,6 @@ MasterJobDescription = namedtuple('MasterJobDescription', ['graph_id', 'job'])
 
 node_collection_manager = NodeCollectionManager(collection='runs')
 # graph_cancellation_manager = GraphCancellationManager()
-node_collection = NodeCollection()
 
 
 class Master(object):

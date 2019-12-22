@@ -3,7 +3,6 @@ import json
 from flask import request, g
 from plynx.db.node import Node
 from plynx.db.node_collection_manager import NodeCollectionManager
-from plynx.graph.base_nodes import NodeCollection
 from plynx.plugins.managers import resource_manager
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 from plynx.utils.common import to_object_id, JSONEncoder
@@ -16,7 +15,6 @@ PERMITTED_READONLY_POST_ACTIONS = {
 }
 
 node_collection_manager = NodeCollectionManager(collection=Collections.NODES)
-node_collection = NodeCollection()
 
 
 @app.route('/plynx/api/v0/search_nodes', methods=['POST'])
@@ -43,7 +41,7 @@ def post_search_nodes():
 def get_nodes(node_link=None):
     user_id = to_object_id(g.user._id)
     # if node_link is a base node
-    if node_link in node_collection.name_to_class:
+    if False or node_link in node_collection.name_to_class:
         return JSONEncoder().encode({
             'data': node_collection.name_to_class[node_link].get_default().to_dict(),
             'resources_dict': resource_manager.resources_dict,

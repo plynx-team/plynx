@@ -20,4 +20,9 @@ class _ResourceManager(object):
         return self.name_to_resource[resource_name]
 
 
+class _ExecutorManager(object):
+    def __init__(self):
+        pass
+
 resource_manager = _ResourceManager()
+executor_manager = _ExecutorManager()
