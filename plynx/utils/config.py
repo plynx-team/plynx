@@ -1,8 +1,8 @@
 import logging
 import yaml
 import os
-from collections import namedtuple
 import pydoc
+from collections import namedtuple
 
 PLYNX_CONFIG_PATH = os.getenv('PLYNX_CONFIG_PATH', 'config.yaml')
 _config = None
@@ -17,11 +17,13 @@ DemoConfig = namedtuple('DemoConfig', 'enabled, graph_ids')
 CloudServiceConfig = namedtuple('CloudServiceConfig', 'prefix url_prefix url_postfix')
 PluginsConfig = namedtuple('PluginsConfig', 'executors resources')
 
-DEFAULT_PLUGIN_EXECUTORS = [
-    'plynx.plugins.executors.dag.DAG',
-    'plynx.plugins.executors.local.BashJinja2',
-    'plynx.plugins.executors.local.PythonNode',
-]
+
+DEFAULT_PLUGIN_EXECUTORS = {
+    'plynx.plugins.executors.dag.DAG': [
+        'plynx.plugins.executors.local.BashJinja2',
+        'plynx.plugins.executors.local.PythonNode'
+    ]
+}
 
 DEFAULT_PLUGIN_RESOURCES = [
     'plynx.plugins.resources.common.File',
@@ -128,16 +130,12 @@ def get_cloud_service_config():
 
 
 def get_plugins():
-    executors = [
-        pydoc.locate(class_path)
-        for class_path in _config.get('plugins', {}).get('executors', DEFAULT_PLUGIN_EXECUTORS)
-    ]
     resources = [
         pydoc.locate(class_path)
         for class_path in _config.get('plugins', {}).get('resources', DEFAULT_PLUGIN_RESOURCES)
     ]
     return PluginsConfig(
-        executors=executors,
+        executors=_config.get('plugins', {}).get('executors', DEFAULT_PLUGIN_EXECUTORS),
         resources=resources,
     )
 

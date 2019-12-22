@@ -23,6 +23,8 @@ class DAG(BaseExecutor):
         graph (str or Graph)
 
     """
+    ALIAS = 'DAG'
+    IS_GRAPH = True
 
     def __init__(self, node_dict):
         super(DAG, self).__init__(node_dict)

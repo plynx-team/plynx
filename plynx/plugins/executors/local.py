@@ -311,6 +311,7 @@ class BashJinja2(BaseBash):
     # For example `{{{{ '{{{{' }}}} param['_timeout'] {{{{ '}}}}' }}}}` or `{{{{ '{{{{' }}}} input['abc'] {{{{ '}}}}' }}}}`
 
     '''
+    ALIAS = 'BashJinja2'
 
     def __init__(self, node=None):
         super(BashJinja2, self).__init__(node)
@@ -361,6 +362,8 @@ class BashJinja2(BaseBash):
 
 
 class PythonNode(BaseBash):
+    ALIAS = 'PythonNode'
+
     def __init__(self, node=None):
         super(PythonNode, self).__init__(node)
 

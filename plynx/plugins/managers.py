@@ -1,4 +1,5 @@
 import logging
+import pydoc
 from plynx.utils.config import get_plugins
 
 
@@ -22,7 +23,28 @@ class _ResourceManager(object):
 
 class _ExecutorManager(object):
     def __init__(self):
-        pass
+        plugins = get_plugins()
+        self.executors_map = plugins.executors
+        all_executors = set()
+        for parent, children in self.executors_map.items():
+            all_executors.add(parent)
+            for child in children:
+                all_executors.add(child)
+        self.executor_to_class = {
+            class_path: pydoc.locate(class_path)
+            for class_path in all_executors
+        }
+
+        self.executors_info = {
+            executor_name: {
+                'alias': self.executor_to_class[executor_name].ALIAS,
+                'is_graph': self.executor_to_class[executor_name].IS_GRAPH,
+                'children': self.executors_map.get(executor_name, [])
+            } for executor_name in all_executors
+        }
+
+        logging.info('Executors info: {}'.format(str(self.executors_info)))
+
 
 resource_manager = _ResourceManager()
 executor_manager = _ExecutorManager()

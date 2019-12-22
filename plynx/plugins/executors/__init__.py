@@ -7,6 +7,9 @@ from plynx.db.node import Node
 
 
 class BaseExecutor:
+    ALIAS = None
+    IS_GRAPH = False
+
     def __init__(self, node):
         self.node = node
         self.workdir = None
@@ -58,4 +61,4 @@ def materialize_executor(node_dict):
         raise plynx.utils.exceptions.NodeNotFound(
             'Node kind `{}` not found'.format(kind)
         )
-    return pydoc.locate(kind)(Node.from_dict(node_dict))
+    return cls(Node.from_dict(node_dict))

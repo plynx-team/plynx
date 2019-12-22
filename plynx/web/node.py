@@ -3,7 +3,7 @@ import json
 from flask import request, g
 from plynx.db.node import Node
 from plynx.db.node_collection_manager import NodeCollectionManager
-from plynx.plugins.managers import resource_manager
+from plynx.plugins.managers import resource_manager, executor_manager
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 from plynx.utils.common import to_object_id, JSONEncoder
 from plynx.constants import NodeStatus, NodePostAction, NodePostStatus, Collections
