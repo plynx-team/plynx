@@ -1,0 +1,15 @@
+.editor-view {
+    width: 100%;
+    height: 100%;
+    font-family: 'Source Sans Pro', sans-serif;
+}
+
+.editor-view > .ControlButtons.readonly {
+  left: 10px;
+  top: 6px;
+}
+
+.editor-view > .ControlButtons.editable {
+  left: 260px;
+  top: 6px;
+}

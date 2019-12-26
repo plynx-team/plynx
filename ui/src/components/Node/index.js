@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import AlertContainer from '../3rd_party/react-alert';
 import { PLynxApi } from '../../API';
 import NodeProperties from './NodeProperties';
 import ControlButtons from './ControlButtons';
@@ -8,11 +7,10 @@ import InOutList from './InOutList';
 import ParameterList from './ParameterList';
 import DeprecateDialog from '../Dialogs/DeprecateDialog';
 import TextViewDialog from '../Dialogs/TextViewDialog';
-import LoadingScreen from '../LoadingScreen';
-import {PluginsConsumer} from '../../contexts';
+import {PluginsProvider, PluginsConsumer} from '../../contexts';
 import { ObjectID } from 'bson';
 import {HotKeys} from 'react-hotkeys';
-import { ACTION, RESPONCE_STATUS, ALERT_OPTIONS, NODE_RUNNING_STATUS, KEY_MAP } from '../../constants';
+import { ACTION, RESPONCE_STATUS, NODE_RUNNING_STATUS, KEY_MAP } from '../../constants';
 
 import './style.css';
 
@@ -26,7 +24,7 @@ export default class Node extends Component {
       loading: true,
       readOnly: true,
       deprecateQuestionDialog: false,
-      deprecateParentDialog: false
+      deprecateParentDialog: false,
     };
   }
 
@@ -41,71 +39,14 @@ export default class Node extends Component {
   }
 
   async componentDidMount() {
-    // Loading
-
-    const self = this;
-    let loading = true;
-    const node_id = this.props.match.params.node_id.replace(/\$+$/, '');
-    let sleepPeriod = 1000;
-    const sleepMaxPeriod = 10000;
-    const sleepStep = 1000;
-
-    const processResponse = (response) => {
-      self.setState({
-        resources_dict: response.data.resources_dict,
-      });
-      const node = response.data.data;
-      self.loadNodeFromJson(node);
-      if (node_id === 'new') {
-        self.props.history.replace("/nodes/" + node._id);
-      }
-      loading = false;
-    };
-
-    const processError = (error) => {
-      console.error(error);
-      if (error.response.status === 404) {
-        self.props.history.replace("/not_found");
-        window.location.reload(false);
-        loading = false;
-      } else if (error.response.status === 401) {
-        PLynxApi.getAccessToken()
-            .then((isSuccessfull) => {
-              if (!isSuccessfull) {
-                console.error("Could not refresh token");
-                self.showAlert('Failed to authenticate', 'failed');
-              } else {
-                self.showAlert('Updated access token', 'success');
-              }
-            });
-      } else {
-        self.showAlert(error.response.message, 'failed');
-      }
-    };
-
-    /* eslint-disable no-await-in-loop */
-    /* eslint-disable no-unmodified-loop-condition */
-    while (loading) {
-      await PLynxApi.endpoints.nodes.getOne({ id: node_id === 'new' ? 'bash_jinja2' : node_id})
-      .then(processResponse)
-      .catch(processError);
-      if (loading) {
-        await self.sleep(sleepPeriod);
-        sleepPeriod = Math.min(sleepPeriod + sleepStep, sleepMaxPeriod);
-      }
-    }
-    /* eslint-enable no-unmodified-loop-condition */
-    /* eslint-enable no-await-in-loop */
-
-    // Stop loading
-    self.setState({
-      loading: false,
-    });
+      console.log('componentDidMount');
+    this.loadNodeFromJson(this.props.node)
   }
 
   loadNodeFromJson(data) {
     console.log("loadNodeFromJson", data);
-    this.setState({node: data});
+    this.node = data;
+    this.setState({node: this.node});
     document.title = data.title + " - Node - PLynx";
     const node_status = data.node_status;
     this.setState({readOnly: node_status !== NODE_RUNNING_STATUS.CREATED});
@@ -120,9 +61,14 @@ export default class Node extends Component {
   }
 
   handleParameterChanged(name, value) {
+      /*
     const node = this.state.node;
     node[name] = value;
     this.setState(node);
+*/
+    this.node[name] = value;
+    this.setState({node: this.node});
+    this.props.onNodeChange(this.node);
   }
 
   handleSave() {
@@ -248,14 +194,6 @@ export default class Node extends Component {
     });
   }
 
-  showAlert(message, type) {
-    this.msg.show(message, {
-      time: 5000,
-      type: 'error',
-      icon: <img src={"/alerts/" + type + ".svg"} width="32" height="32" alt={type} />
-    });
-  }
-
   render() {
     let node = this.state.node;
     const key = (this.state.node ? this.state.node._id : '') + this.state.readOnly;
@@ -271,12 +209,7 @@ export default class Node extends Component {
       <HotKeys className='EditNodeMain'
                handlers={this.keyHandlers} keyMap={KEY_MAP}
       >
-        <PluginsConsumer value={this.state.plugins_dict}>
-          <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
-          {this.state.loading &&
-            <LoadingScreen
-            ></LoadingScreen>
-          }
+        <PluginsProvider value={this.props.plugins_dict}>
           {
             this.state.deprecateQuestionDialog &&
             <DeprecateDialog
@@ -305,19 +238,24 @@ export default class Node extends Component {
             />
           }
           <div className='EditNodeHeader'>
-            <NodeProperties
-              title={node.title}
-              description={node.description}
-              base_node_name={node.base_node_name}
-              parentNode={node.parent_node}
-              successorNode={node.successor_node}
-              nodeStatus={node.node_status}
-              created={node.insertion_date}
-              updated={node.update_date}
-              onParameterChanged={(name, value) => this.handleParameterChanged(name, value)}
-              readOnly={this.state.readOnly}
-              key={key}
-            />
+            <PluginsConsumer>
+            { plugins_dict =>
+                <NodeProperties
+                  title={node.title}
+                  description={node.description}
+                  kind={node.kind}
+                  parentNode={node.parent_node}
+                  successorNode={node.successor_node}
+                  nodeStatus={node.node_status}
+                  created={node.insertion_date}
+                  updated={node.update_date}
+                  onParameterChanged={(name, value) => this.handleParameterChanged(name, value)}
+                  readOnly={this.state.readOnly}
+                  executors_info={plugins_dict.executors_info}
+                  key={key}
+                 />
+             }
+            </PluginsConsumer>
             <ControlButtons
               onSave={() => this.handleSave()}
               onSaveApprove={() => this.handleSaveApprove()}
@@ -377,7 +315,7 @@ export default class Node extends Component {
             </div>
 
           </div>
-        </PluginsConsumer>
+        </PluginsProvider>
       </HotKeys>
     );
   }

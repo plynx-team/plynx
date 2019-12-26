@@ -26,7 +26,7 @@ export default class NodeProperties extends Component {
     this.state = {
       title: this.props.title,
       description: this.props.description,
-      base_node_name: this.props.base_node_name,
+      kind: this.props.kind,
       parentNode: this.props.parentNode,
       nodeStatus: this.props.nodeStatus,
       created: this.props.created,
@@ -39,7 +39,7 @@ export default class NodeProperties extends Component {
       return;
     }
     let newValue = value;
-    if (name === 'base_node_name') {
+    if (name === 'kind') {
       newValue = value.values[value.index];
     }
     this.setState({[name]: newValue});
@@ -48,8 +48,12 @@ export default class NodeProperties extends Component {
 
   render() {
     // Find index of base_node_name
+    console.log('>>>>>>>>>', this.props.executors_info);
     let base_node_index = PROGRAMMABLE_OPERATIONS.indexOf(this.state.base_node_name);
     let base_nodes = null;
+    const kinds = Object.keys(this.props.executors_info);
+    const kindIndex = kinds.findIndex(knd => this.props.kind === knd)
+    console.log(kinds, kindIndex, this.props.kind);
     if (base_node_index < 0) {
       base_node_index = 0;
       base_nodes = [this.state.base_node_name];
@@ -73,11 +77,11 @@ export default class NodeProperties extends Component {
         read_only: this.state.readOnly,
       },
       {
-        name: 'base_node_name',
-        widget: { alias: 'Base Node' },
+        name: 'kind',
+        widget: { alias: 'Kind' },
         value: {
-          index: base_node_index,
-          values: base_nodes,
+          index: kindIndex,
+          values: kinds,
         },
         parameter_type: 'enum',
         read_only: this.state.readOnly,

@@ -63,9 +63,7 @@ export default class ParameterList extends Component {
       name: name,
       parameter_type: 'str',
       value: '',
-      widget: {
-        alias: name
-      },
+      widget: name,
       mutable_type: true,
       publicable: true,
       removable: true,

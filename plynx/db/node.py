@@ -485,7 +485,7 @@ class Parameter(DBObject):
             is_list=False,
             ),
         'widget': DBObjectField(
-            type=ParameterWidget,
+            type=str,
             default=None,
             is_list=False,
             ),

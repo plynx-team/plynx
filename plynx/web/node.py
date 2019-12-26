@@ -42,13 +42,13 @@ def post_search_nodes(collection):
         'status': 'success'})
 
 
-@app.route('/plynx/api/v0/nodes/<node_link>', methods=['GET'])
+@app.route('/plynx/api/v0/<collection>/<node_link>', methods=['GET'])
 @handle_errors
 @requires_auth
-def get_nodes(node_link=None):
+def get_nodes(collection, node_link=None):
     user_id = to_object_id(g.user._id)
     # if node_link is a base node
-    if False or node_link in node_collection.name_to_class:
+    if False and node_link in node_collection.name_to_class:
         return JSONEncoder().encode({
             'data': node_collection.name_to_class[node_link].get_default().to_dict(),
             'plugins_dict': {
@@ -61,21 +61,23 @@ def get_nodes(node_link=None):
             node_id = to_object_id(node_link)
         except Exception:
             return make_fail_response('Invalid ID'), 404
-        node = node_collection_manager.get_db_node(node_id, user_id)
+        node = node_collection_managers[collection].get_db_node(node_id, user_id)
         if node:
             return JSONEncoder().encode({
                 'data': node,
-                'resources_dict': resource_manager.resources_dict,
-                'executors_info': executor_manager.executors_info,
+                'plugins_dict': {
+                    'resources_dict': resource_manager.resources_dict,
+                    'executors_info': executor_manager.executors_info,
+                },
                 'status': 'success'})
         else:
             return make_fail_response('Node `{}` was not found'.format(node_link)), 404
 
 
-@app.route('/plynx/api/v0/nodes', methods=['POST'])
+@app.route('/plynx/api/v0/<collections>', methods=['POST'])
 @handle_errors
 @requires_auth
-def post_node():
+def post_node(collections):
     app.logger.debug(request.data)
 
     data = json.loads(request.data)
@@ -83,7 +85,7 @@ def post_node():
     node = Node.from_dict(data['node'])
     node.author = g.user._id
     node.starred = False
-    db_node = node_collection_manager.get_db_node(node._id, g.user._id)
+    db_node = node_collection_managers[collections].get_db_node(node._id, g.user._id)
     action = data['action']
     if db_node and db_node['_readonly'] and action not in PERMITTED_READONLY_POST_ACTIONS:
         return make_fail_response('Permission denied'), 403

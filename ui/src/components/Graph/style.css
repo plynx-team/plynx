@@ -156,3 +156,11 @@ a .PropertiesHeader:hover {
   color: #337ab7;
   display: inline;
 }
+
+.GraphNode > .ControlButtons.readonly {
+  left: 10px;
+}
+
+.GraphNode > .ControlButtons.editable {
+  left: 260px;
+}

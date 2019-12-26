@@ -36,8 +36,7 @@ export default class Header extends Component {
   }
 
   render() {
-    const showMenuButton = this.state.width < 1100;
-    const showMenu = !showMenuButton || this.state.showMenu;
+    const showMenu = this.state.showMenu;
 
     return (
       <div className="Header" onMouseUp={() => this.onMouseUp()}>
@@ -46,7 +45,6 @@ export default class Header extends Component {
           <Navigation showMenu={showMenu}/>
         </div>
         {
-          showMenuButton &&
           <div className="menu-button-sl" onMouseUp={(e) => this.onMenuClick(e)}>
             <img src="/icons/menu.svg" alt="menu" />
           </div>

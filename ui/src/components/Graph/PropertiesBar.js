@@ -7,93 +7,75 @@ import { Link } from 'react-router-dom';
 import './style.css';
 
 
+const allEqual = arr => arr.every( v => v === arr[0] )
+
+
 export default class PropertiesBar extends Component {
   constructor(props) {
     super(props);
-    this.state = {
-      graphId: props.graphId,
-      nodeId: null,
-      bigTitle: "Graph",
-      parameters: [
-        {
-          name: 'title',
-          parameter_type: "str",
-          value: props.graphTitle,
-          widget: {
-            alias: "Title"
-          }
-        },
-        {
-          name: 'description',
-          parameter_type: "str",
-          value: props.graphDescription,
-          widget: {
-            alias: "Description"
-          }
-        }
-      ],
-      outputs: [],
-      logs: [],
-      editable: true
-    };
+    this.state = this.getStateDict([props.initialNode]);
+  }
 
-    if ('editable' in props) {
-      this.state.editable = props.editable;
-    }
+  getStateDict(nodes) {
+      var commonParameters = JSON.parse(JSON.stringify(nodes.length > 0 ? nodes[0].parameters : []));
+      var ii, jj;
+      for (ii = 1; ii < nodes.length; ++ii) {
+          var indexesToRemove = [];
+          for (jj = 0; jj < commonParameters.length; ++jj) {
+              let commonParam = commonParameters[jj];
+              if (!nodes[ii].parameters.find(param => {
+                  return param.name === commonParam.name && param.parameter_type === commonParam.parameter_type && param.value === commonParam.value
+                  })
+              ) {
+                  indexesToRemove.push(jj);
+              }
+          }
+          while(indexesToRemove.length) {
+              commonParameters.splice(indexesToRemove.pop(), 1);
+          }
+      }
+      if (allEqual(nodes.map(node => node.description))) {
+          commonParameters.unshift({
+            name: '_DESCRIPTION',
+            widget: 'Description',
+            value: nodes[0].description,
+            parameter_type: 'str',
+          });
+      }
+      if (allEqual(nodes.map(node => node.title))) {
+          commonParameters.unshift({
+            name: '_TITLE',
+            widget: 'title',
+            value: nodes[0].title,
+            parameter_type: 'str',
+          });
+      }
+      return {
+          nodes: nodes,
+          parameters: commonParameters,
+          outputs: nodes.map(node => node.outputs).flat(1),
+          logs: nodes.map(node => node.logs).flat(1),
+          nodeId: nodes.map(node => node._id).join(),
+          editable: this.props.editable,
+      };
   }
 
   // TODO replace it with more general functions
   /* eslint-disable max-params */
   /* eslint-disable no-param-reassign */
-  setNodeData(graphId, nodeId, base_node_name, bigTitle, bigDescription, parameters, outputs, logs, parent_node) {
-    parameters = parameters.slice(0);
-    parameters.unshift({
-      name: '_DESCRIPTION',
-      widget: {
-        alias: 'Description',
-      },
-      value: bigDescription,
-      parameter_type: 'str',
-    });
-    this.setState(
-      {
-        graphId: graphId,
-        nodeId: nodeId,
-        bigTitle: bigTitle,
-        parameters: parameters,
-        outputs: outputs,
-        logs: logs,
-        parent_node: parent_node,
-        base_node_name: base_node_name
-      }
-    );
+  setNodeData(node) {
+    this.setNodeDataArr([node]);
+  }
+
+  setNodeDataArr(nodes) {
+    this.setState(this.getStateDict(nodes))
   }
   /* eslint-enable no-param-reassign */
   /* eslint-enable max-params */
 
-  setGraphData(graphId, bigTitle, parameters) {
-    this.setState(
-      {
-        graphId: graphId,
-        nodeId: null,
-        bigTitle: bigTitle,
-        parameters: parameters,
-        outputs: [],
-        logs: []
-      }
-    );
-  }
-
-  clearData() {
-    this.setState({
-      nodeId: "",
-      title: "",
-      parameters: []
-    });
-  }
 
   handleParameterChanged(name, value) {
-    this.props.onParameterChanged(this.state.nodeId, name, value);
+    this.props.onParameterChanged(this.state.nodes.map(node => node._id), name, value);
   }
 
   handlePreview(previewData) {
@@ -104,6 +86,7 @@ export default class PropertiesBar extends Component {
 
   render() {
     const self = this;
+
     let parametersList = [];
     if (this.state.parameters) {
       parametersList = this.state.parameters.filter(
@@ -114,7 +97,7 @@ export default class PropertiesBar extends Component {
       .map(
         (parameter) => <ParameterItem
           name={parameter.name}
-          alias={parameter.widget.alias}
+          alias={parameter.widget}
           value={parameter.value}
           parameterType={parameter.parameter_type}
           key={this.state.nodeId + "$" + parameter.name}
@@ -133,7 +116,7 @@ export default class PropertiesBar extends Component {
           resourceName={output.name}
           resourceId={output.resource_id}
           nodeId={self.state.nodeId}
-          key={self.state.nodeId + "$" + output.name}
+          key={output.resource_id}
           fileType={output.file_type}
           onPreview={(previewData) => self.handlePreview(previewData)}
           />;
@@ -152,7 +135,7 @@ export default class PropertiesBar extends Component {
           resourceName={log.name}
           resourceId={log.resource_id}
           nodeId={this.state.nodeId}
-          key={this.state.nodeId + '$' + log.name}
+          key={log.resource_id}
           fileType={'file'}
           onPreview={(previewData) => this.handlePreview(previewData)}
         />);
@@ -168,16 +151,19 @@ export default class PropertiesBar extends Component {
         }}
         >
         {
-          !this.state.nodeId &&
-          <div className="PropertiesHeader">{(this.state.bigTitle ? this.state.bigTitle + ' ' : ' ') + 'Properties'}</div>
+            this.state.nodes.length > 1 &&
+            <div className="PropertiesHeader">
+                {'Properties of ' + this.state.nodes.length + ' nodes'}
+            </div>
         }
         {
-          (this.state.nodeId && this.state.base_node_name !== 'file') &&
-          <Link to={'/nodes/' + this.state.parent_node}>
+            this.state.nodes.length === 1 &&
             <div className="PropertiesHeader">
-              {(this.state.bigTitle ? this.state.bigTitle + ' ' : ' ')}<img src="/icons/external-link.svg" width="12" height="12" alt="^" />
+                {'Properties of ' + this.state.nodes[0].title + ' '}
+                <Link to={'/nodes/' + this.state.nodes[0].parent_node}>
+                  <img src="/icons/external-link.svg" width="12" height="12" alt="^" />
+                </Link>
             </div>
-          </Link>
         }
         {
           (this.state.nodeId && this.state.base_node_name === 'file') &&
@@ -196,8 +182,8 @@ export default class PropertiesBar extends Component {
 
         <div className='PropertiesBoxRoot'>
           {parametersList.length > 0 && makePropertiesBox('Parameters', parametersList)}
-          {!this.state.editable && outputsList.length > 0 && makePropertiesBox('Outputs', outputsList)}
-          {!this.state.editable && logsList.length > 0 && makePropertiesBox('Logs', logsList)}
+          {outputsList.length > 0 && makePropertiesBox('Outputs', outputsList)}
+          {logsList.length > 0 && makePropertiesBox('Logs', logsList)}
         </div>
 
       </div>
@@ -207,9 +193,7 @@ export default class PropertiesBar extends Component {
 
 PropertiesBar.propTypes = {
   editable: PropTypes.bool,
-  graphDescription: PropTypes.string,
-  graphId: PropTypes.string,
-  graphTitle: PropTypes.string,
+  initialNode: PropTypes.object,
   onFileShow: PropTypes.func,
   onParameterChanged: PropTypes.func,
   onPreview: PropTypes.func,

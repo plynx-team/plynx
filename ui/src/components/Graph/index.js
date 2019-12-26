@@ -3,16 +3,13 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import queryString from 'query-string';
 import ReactNodeGraph from '../3rd_party/react_node_graph';
-import AlertContainer from '../3rd_party/react-alert';
 import { PLynxApi } from '../../API';
 import { typesValid } from '../../graphValidation';
 import cookie from 'react-cookies';
 import NodesBar from './NodesBar';
 import PreviewDialog from '../Dialogs/PreviewDialog';
 import PropertiesBar from './PropertiesBar';
-import Controls from './Controls';
 import withDragDropContext from './withDragDropContext';
-import LoadingScreen from '../LoadingScreen';
 import DemoScreen from '../DemoScreen';
 import FileDialog from '../Dialogs/FileDialog';
 import CodeDialog from '../Dialogs/CodeDialog';
@@ -21,8 +18,6 @@ import {ObjectID} from 'bson';
 import {HotKeys} from 'react-hotkeys';
 import {
   ACTION,
-  RESPONCE_STATUS,
-  ALERT_OPTIONS,
   VALIDATION_CODES,
   GRAPH_RUNNING_STATUS,
   NODE_RUNNING_STATUS,
@@ -54,7 +49,7 @@ class Graph extends Component {
 
   constructor(props) {
     super(props);
-    this.graph = {};
+    this.graph_node = {};
     this.node_lookup = {};
     this.block_lookup = {};
     this.connections = [];
@@ -63,8 +58,9 @@ class Graph extends Component {
     this.state = {
       blocks: [],
       connections: [],
+      graph: {},
       graphId: null,
-      editable: false,
+      editable: null,
       loading: true,
       title: "",
       description: "",
@@ -97,76 +93,25 @@ ENDPOINT = '` + API_ENDPOINT + `'
   async componentDidMount() {
     // Loading
 
-    const self = this;
-    let loading = true;
-    const graph_id = this.props.match.params.graph_id.replace(/\$+$/, '');
-    let sleepPeriod = 1000;
-    const sleepMaxPeriod = 10000;
-    const sleepStep = 1000;
-
-    const loadGraph = (response) => {
-      self.setState({
-        plugins_dict: response.data.plugins_dict,
-      });
-      self.loadGraphFromJson(response.data.data);
-      console.log(graph_id);
-      if (graph_id === 'new') {
-        self.props.history.replace("/graphs/" + self.graph._id);
-      }
-      loading = false;
-    };
-
-    const handleError = (error) => {
-      console.error(error);
-      console.error('-----------');
-      if (error.response.status === 404) {
-        self.props.history.replace("/not_found");
-        window.location.reload(false);
-        loading = false;
-      }
-      if (error.response.status === 401) {
-        PLynxApi.getAccessToken()
-        .then((isSuccessfull) => {
-          if (!isSuccessfull) {
-            console.error("Could not refresh token");
-            self.showAlert('Failed to authenticate', 'failed');
-          } else {
-            self.showAlert('Updated access token', 'success');
-          }
-        });
-      }
-    };
-
-    /* eslint-disable no-await-in-loop */
-    /* eslint-disable no-unmodified-loop-condition */
-    while (loading) {
-      await PLynxApi.endpoints.graphs.getOne({ id: graph_id})
-      .then(loadGraph)
-      .catch(handleError);
-      if (loading) {
-        await self.sleep(sleepPeriod);
-        sleepPeriod = Math.min(sleepPeriod + sleepStep, sleepMaxPeriod);
-      }
-    }
-    /* eslint-enable no-unmodified-loop-condition */
-    /* eslint-enable no-await-in-loop */
-
-    // Stop loading
-    self.setState({
-      loading: false,
-    });
+    this.loadGraphFromJson(this.props.node)
   }
 
   loadGraphFromJson(data) {
-    this.graph = data;
-    document.title = this.graph.title + " - Graph - PLynx";
-    console.log(this.graph);
+    this.graph_node = data;
+    document.title = this.graph_node.title + " - Graph - PLynx";
+    console.log(this.graph_node);
     this.connections = [];
     this.blocks = [];
     const ts = new ObjectID().toString();
+    for (let i = 0; i < this.graph_node.parameters.length; ++i) {
+        if (this.graph_node.parameters[i].name === '_nodes') {
+            this.nodes = this.graph_node.parameters[i].value.value;
+            break
+        }
+    }
 
-    for (let i = 0; i < this.graph.nodes.length; ++i) {
-      const node = this.graph.nodes[i];
+    for (let i = 0; i < this.nodes.length; ++i) {
+      const node = this.nodes[i];
       const inputs = [];
       const outputs = [];
       const specialParameterNames = [];
@@ -229,24 +174,24 @@ ENDPOINT = '` + API_ENDPOINT + `'
       this.block_lookup[node._id] = this.blocks[this.blocks.length - 1];
     }
 
+    /*
     const nid = queryString.parse(this.props.location.search).nid;
+    */
+    const nid = null;
 
     this.setState({
       "blocks": this.blocks,
       "connections": this.connections,
-      "graphId": this.graph._id,
-      "editable": this.graph.graph_running_status.toUpperCase() === GRAPH_RUNNING_STATUS.CREATED,
-      "loading": false,
-      "title": this.graph.title,
-      "description": this.graph.description,
-      "graphRunningStatus": this.graph.graph_running_status,
+      "graph": this.graph_node,
+      "editable": this.graph_node.node_running_status.toUpperCase() === GRAPH_RUNNING_STATUS.CREATED,
+
     }, () => {
       if (nid) {
         this.mainGraph.getDecoratedComponentInstance().selectBlocks([nid]);
       }
     });
 
-    const st = this.graph.graph_running_status.toUpperCase();
+    const st = this.graph_node.node_running_status.toUpperCase();
     if (st === 'READY' || st === GRAPH_RUNNING_STATUS.RUNNING || st === GRAPH_RUNNING_STATUS.FAILED_WAITING) {
       this.timeout = setTimeout(() => this.checkGraphStatus(), 1000);
     }
@@ -275,7 +220,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
 
     this.setState({
       "blocks": this.blocks,
-      "loading": false,
       "graphRunningStatus": newGraph.graph_running_status,
     });
 
@@ -296,7 +240,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
   checkGraphStatus() {
     const self = this;
     const graph_id = self.graph._id;
-    PLynxApi.endpoints.graphs.getOne({ id: graph_id})
+    PLynxApi.endpoints.nodes.getOne({ id: graph_id})
     .then((response) => {
       self.updateGraphFromJson(response.data.data);
     })
@@ -373,9 +317,9 @@ ENDPOINT = '` + API_ENDPOINT + `'
       });
     }
 
-    console.log(this.graph);
-
     this.setState({connections: this.connections});
+
+    this.props.onNodeChange(this.graph_node);
   }
 
   onRemoveConnector(connector) {
@@ -394,10 +338,12 @@ ENDPOINT = '` + API_ENDPOINT + `'
 
     this.connections = connections;
     this.setState({connections: connections});
+
+    this.props.onNodeChange(this.graph_node);
   }
 
   onRemoveBlock(nid) {
-    this.graph.nodes = this.graph.nodes.filter((node) => {
+    this.nodes = this.nodes.filter((node) => {
       return node._id !== nid;
     });
     delete this.node_lookup[nid];
@@ -406,6 +352,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
     });
 
     this.setState({blocks: this.blocks});
+
+    this.props.onNodeChange(this.graph_node);
   }
 
   onCopyBlock(copyList, offset) {
@@ -487,6 +435,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
       nodes: this.nodes,
       connections: this.connections,
     });
+
+    this.props.onNodeChange(this.graph_node);
   }
 
   onOutputClick(nid, outputIndex) {
@@ -538,6 +488,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
     const node = this.node_lookup[nid];
     node.x = pos.x;
     node.y = pos.y;
+
+    this.props.onNodeChange(this.graph_node);
   }
 
   handleBlocksSelect(nids) {
@@ -547,17 +499,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
       const nid = nids[0];
       const node = this.node_lookup[nid];
       if (node) {
-        this.propertiesBar.setNodeData(
-          this.graph._id,
-          node._id,
-          node.base_node_name,
-          node.title,
-          node.description,
-          node.parameters,
-          node.outputs,
-          node.logs,
-          node.parent_node,
-        );
+        this.propertiesBar.setNodeData(node);
 
         if (this.block_lookup[nid].highlight) {
           this.block_lookup[nid].highlight = false;
@@ -567,49 +509,10 @@ ENDPOINT = '` + API_ENDPOINT + `'
         }
       }
     } else if (nids.length > 1) {
-      this.propertiesBar.clearData();
+      this.propertiesBar.setNodeDataArr(nids.map((nid) => this.node_lookup[nid]));
     } else {
-      this.handleAllBlocksDeselect();
+      this.propertiesBar.setNodeData(this.graph_node);
     }
-  }
-
-  handleBlockDeselect(nid) {
-    console.log('block deselected : ' + nid);
-
-    if (this.block_lookup[nid].highlight) {
-      this.block_lookup[nid].highlight = false;
-      this.setState({
-        "blocks": this.blocks
-      });
-    }
-    // var node = this.node_lookup[nid];
-    // this.propertiesBar.clearData();
-  }
-
-  handleAllBlocksDeselect() {
-    console.log("Graph properties");
-    this.propertiesBar.setGraphData(
-      this.graph._id,
-      "Graph",
-      [
-        {
-          name: 'title',
-          parameter_type: "str",
-          value: this.state.title,
-          widget: {
-            alias: "Title"
-          }
-        },
-        {
-          name: 'description',
-          parameter_type: "str",
-          value: this.state.description,
-          widget: {
-            alias: "Description"
-          }
-        }
-      ]
-    );
   }
 
   handleSave() {
@@ -681,31 +584,37 @@ ENDPOINT = '` + API_ENDPOINT + `'
     this.postGraph(this.graph, false, ACTION.CANCEL);
   }
 
-  handleParameterChanged(nodeId, name, value) {
-    if (nodeId) {
-      const node = this.node_lookup[nodeId];
-      const node_parameter = node.parameters.find(
-        (node_input) => {
-          return node_input.name === name;
+  handleParameterChanged(node_ids, name, value) {
+    for (var ii = 0; ii < node_ids.length; ++ii) {
+        var node_id = node_ids[ii];
+        var node;
+        if (node_id in this.node_lookup) {
+            node = this.node_lookup[node_id];
+        } else {
+            node = this.graph_node;
         }
-      );
-      if (node_parameter) {
-        node_parameter.value = value;
-      } else if (name === '_DESCRIPTION') {
-        const block = this.block_lookup[nodeId];
-        node.description = value;
-        block.description = value;
-
-        this.setState({
-          blocks: this.blocks
-        });
-      } else {
-        throw new Error("Parameter not found");
-      }
-    } else {
-      this.setState({[name]: value});
-      this.graph[name] = value;
+        const node_parameter = node.parameters.find(
+          (param) => {
+            return param.name === name;
+          }
+        );
+        if (node_parameter) {
+          node_parameter.value = value;
+      } else if (name === '_DESCRIPTION' || name === '_TITLE') {
+            var inName = name.substring(1, name.length).toLowerCase()
+            const block = this.block_lookup[node_id];
+            node[inName] = value;
+            if (block) { // the case of graph itself
+                block[inName] = value;
+            } else {
+                // using for node, it is hard to update descriptions
+                this.setState({graph: this.graph_node})
+            }
+        } else {
+          throw new Error("Parameter not found");
+        }
     }
+    this.props.onNodeChange(this.graph_node);
   }
 
   handlePreview(previewData) {
@@ -822,7 +731,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
     this.node_lookup[node._id] = node;
     this.block_lookup[node._id] = this.blocks[this.blocks.length - 1];
 
-    this.graph.nodes.push(node);
+    this.nodes.push(node);
     console.log("node", node);
 
     this.setState({
@@ -830,84 +739,9 @@ ENDPOINT = '` + API_ENDPOINT + `'
       connections: this.connections,
     });
 
+    this.props.onNodeChange(this.graph_node);
+
     return node._id;
-  }
-
-  postGraph(graph, reloadOnSuccess, action) {
-    /* action might be in {'save', 'validate', 'approve', 'deprecate'}*/
-    const self = this;
-    self.setState({loading: true});
-    PLynxApi.endpoints.graphs
-    .create({
-      graph: graph,
-      actions: [action]
-    })
-    .then((response) => {
-      const data = response.data;
-      console.log(data);
-      self.setState({loading: false});
-      if (data.status === RESPONCE_STATUS.SUCCESS) {
-        if (reloadOnSuccess) {
-          window.location.reload();
-        }
-        if (action === ACTION.SAVE) {
-          self.showAlert("Saved", 'success');
-        } else if (action === ACTION.VALIDATE) {
-          self.showAlert("Valid", 'success');
-        } else if (action === ACTION.REARRANGE) {
-          self.loadGraphFromJson(data.graph);
-        } else if (action === ACTION.UPGRADE_NODES) {
-          self.loadGraphFromJson(data.graph);
-          let message = "";
-          if (data.upgraded_nodes_count > 0) {
-            message = "Upgraded " + data.upgraded_nodes_count +
-              (data.upgraded_nodes_count > 1 ? " Nodes" : " Node");
-          } else {
-            message = "No Nodes upgraded";
-          }
-          self.showAlert(message, 'success');
-        } else if (action === ACTION.GENERATE_CODE) {
-          self.setState({
-            generatedCode: data.code
-          });
-        } else {
-          self.showAlert("Success", 'success');
-        }
-        if (cookie.load('demoPreview')) {
-          cookie.remove('demoPreview', { path: '/' });
-        }
-      } else if (data.status === RESPONCE_STATUS.VALIDATION_FAILED) {
-        console.warn(data.message);
-        // TODO smarter traverse
-        self.showValidationError(data.validation_error);
-
-        self.showAlert(data.message, 'failed');
-      } else {
-        console.warn(data.message);
-        self.showAlert(data.message, 'failed');
-      }
-    })
-    .catch((error) => {
-      console.log(error);
-      if (error.response.status === 401) {
-        PLynxApi.getAccessToken()
-        .then((isSuccessfull) => {
-          if (!isSuccessfull) {
-            console.error("Could not refresh token");
-            self.showAlert('Failed to authenticate', 'failed');
-          } else {
-            self.showAlert('Failed to save the graph, please try again', 'failed');
-          }
-        });
-      } else {
-        try {
-          self.showAlert(error.response.data.message, 'failed');
-        } catch {
-          self.showAlert('Unknown error', 'failed');
-        }
-      }
-      self.setState({loading: false});
-    });
   }
 
   showValidationError(validationError) {
@@ -950,14 +784,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
     }
   }
 
-  showAlert(message, type) {
-    this.msg.show(message, {
-      time: 5000,
-      type: 'error',
-      icon: <img src={"/alerts/" + type + ".svg"} width="32" height="32" alt="alert"/>
-    });
-  }
-
   render() {
     const demoPreview = !!cookie.load('demoPreview');
 
@@ -965,21 +791,16 @@ ENDPOINT = '` + API_ENDPOINT + `'
     <HotKeys className="GraphNode"
              handlers={this.keyHandlers} keyMap={KEY_MAP}
     >
-      <PluginsProvider value={this.state.plugins_dict}>
-        <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
+      <PluginsProvider value={this.props.plugins_dict}>
         { demoPreview &&
           <DemoScreen onApprove={() => this.handleApprove()} onClose={() => {
             cookie.remove('demoPreview', { path: '/' });
             this.forceUpdate();
           }} />
         }
-        {this.state.loading &&
-          <LoadingScreen
-          ></LoadingScreen>
-        }
         <div className={'BackgroundLabels ' + (this.state.editable ? 'editable' : 'readonly')}>
-          <div className="Title">{this.state.title}</div>
-          <div className="Description">&ldquo;{this.state.description}&rdquo;</div>
+          <div className="Title">{this.state.graph.title}</div>
+          <div className="Description">&ldquo;{this.state.graph.description}&rdquo;</div>
         </div>
         {this.state.fileObj &&
           <FileDialog
@@ -990,18 +811,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
             onPreview={(previewData) => this.handlePreview(previewData)}
             />
         }
-        <Controls className="ControlButtons"
-                  readonly={!this.state.editable}
-                  graphRunningStatus={this.state.graphRunningStatus}
-                  onSave={() => this.handleSave()}
-                  onValidate={() => this.handleValidate()}
-                  onApprove={() => this.handleApprove()}
-                  onRearrange={() => this.handleRearrange()}
-                  onGenerateCode={() => this.handleGenerateCode()}
-                  onUpgradeNodes={() => this.handleUpgradeNodes()}
-                  onClone={() => this.handleClone()}
-                  onCancel={() => this.handleCancel()}
-        />
         {
           (this.state.previewData) &&
           <PreviewDialog className="PreviewDialog"
@@ -1056,28 +865,25 @@ ENDPOINT = '` + API_ENDPOINT + `'
           onBlocksSelect={(nids) => {
             this.handleBlocksSelect(nids);
           }}
-          onBlockDeselect={(nid) => {
-            this.handleBlockDeselect(nid);
-          }}
           onDrop={(nodeObj) => this.handleDrop(nodeObj, true)}
-          onAllBlocksDeselect={() => this.handleAllBlocksDeselect()}
+          onAllBlocksDeselect={() => this.handleBlocksSelect([])}
           onSavePressed={() => this.handleSave()}
-          key={'graph' + this.state.graphId + this.state.loading}
+          key={'graph' + this.state.editable}
         />
 
+        { this.state.editable !== null &&
         <PropertiesBar className="PropertiesBar"
                       ref={(child) => {
                         this.propertiesBar = child;
                       }}
-                      onParameterChanged={(nodeId, name, value) => this.handleParameterChanged(nodeId, name, value)}
+                      onParameterChanged={(node_ids, name, value) => this.handleParameterChanged(node_ids, name, value)}
                       editable={this.state.editable}
+                      initialNode={this.graph_node}
                       onPreview={(previewData) => this.handlePreview(previewData)}
-                      graphId={this.graph._id}
-                      graphTitle={this.state.title}
-                      graphDescription={this.state.description}
-                      key={"prop" + this.state.graphId + this.state.loading}
+                      key={"prop" + this.state.editable}
                       onFileShow={(nid) => this.handleShowFile(nid)}
         />
+        }
       </PluginsProvider>
     </HotKeys>
     );

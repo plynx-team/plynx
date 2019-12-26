@@ -93,7 +93,7 @@ export default class InOutItem extends Component {
                   readOnly={this.state.readOnly}
                 >
                 {
-                  Object.values(plugins_dict).map((description) => <option
+                  Object.values(plugins_dict.resources_dict).map((description) => <option
                       value={description.name}
                       key={description.name}
                       >
@@ -113,7 +113,7 @@ export default class InOutItem extends Component {
                   readOnly={this.state.readOnly}
                 >
                 {
-                  Object.values(plugins_dict).map((description) => <option
+                  Object.values(plugins_dict.resources_dict).map((description) => <option
                       value={description.name}
                       key={description.name}
                       >

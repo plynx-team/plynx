@@ -82,7 +82,7 @@ export default class NodesBar extends Component {
         offset: self.state.offset,
         per_page: self.perPage,
         status: "READY",
-        base_node_names: self.state.baseNodeNames,
+        //base_node_names: self.state.baseNodeNames,
         search: this.state.search,
       })
       .then(handleResponse)

@@ -123,12 +123,31 @@
   background-color: #62a6f3;
 }
 
+
 .control-button-text {
   padding-left: 5px;
 }
 
 .control-button-text {
   display: none;
+}
+
+.control-toggle {
+  display: inline-flex;
+  margin-right: 20px;
+}
+
+.control-toggle > .control-button {
+  border-radius: 0px;
+  margin: 0px;
+}
+
+.control-toggle > .first {
+  border-radius: 15px 0px 0px 15px;
+}
+
+.control-toggle > .last {
+  border-radius: 0px 15px 15px 0px;
 }
 
 @media (min-width: 1100px) {
