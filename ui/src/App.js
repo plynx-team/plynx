@@ -70,6 +70,7 @@ class App extends Component {
             <Route exact path="/welcome" component={Welcome} />
             <Route exact path="/dashboard" component={Dashboard} />
             <Route path="/nodes" component={NodeRouter}/>
+            <Route path="/runs" component={NodeRouter}/>
             <Route path="/files" component={FileRouter}/>
             <Route path="/graphs" component={GraphRouter}/>
             <Route exact path="/login" component={LogIn} />

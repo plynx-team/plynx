@@ -8,7 +8,7 @@ import jinja2
 from past.builtins import basestring
 from collections import defaultdict
 from plynx.constants import JobReturnStatus, NodeStatus, ParameterTypes
-from plynx.db.node import Parameter, Output
+from plynx.db.node import Node, Parameter, Output
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
 from plynx.utils.config import get_worker_config
 import plynx.plugins.managers as plugin_magagers
@@ -141,13 +141,8 @@ class BaseBash(BaseExecutor):
         )
 
     @classmethod
-    def get_default(cls):
-        node = BaseExecutor()
-        node.title = ''
-        node.description = ''
-        node.base_node_name = cls.get_base_name()
-        node.node_status = NodeStatus.CREATED
-        node.starred = False
+    def get_default_node(cls):
+        node = Node()
         node.parameters = [
             Parameter.from_dict({
                 'name': '_cmd',
@@ -356,9 +351,11 @@ class BashJinja2(BaseBash):
     def status(self):
         pass
 
-    @staticmethod
-    def get_base_name():
-        return 'bash_jinja2'
+    @classmethod
+    def get_default_node(cls):
+        node = super().get_default_node()
+        node.title = 'New'
+        return node
 
 
 class PythonNode(BaseBash):
@@ -410,10 +407,6 @@ class PythonNode(BaseBash):
     def status(self):
         pass
 
-    @staticmethod
-    def get_base_name():
-        return 'python'
-
     @classmethod
     def _get_arguments_string(cls, var_name, arguments):
         res = ['{} = {{}}'.format(var_name)]
@@ -431,3 +424,12 @@ class PythonNode(BaseBash):
         if isinstance(value, basestring):
             repr(value)
         return value
+
+    @classmethod
+    def get_default_node(cls):
+        node = super().get_default_node()
+        node.title = 'New'
+        param = list(filter(lambda p: p.name == '_cmd', node.parameters))[0]
+        param.value.mode = 'python'
+        param.value.value = 'print("hello world")'
+        return node

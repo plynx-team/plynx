@@ -8,6 +8,33 @@ from plynx.plugins.resources.common import File as FileCls
 from plynx.constants import ParameterTypes
 
 
+def _clone_update_in_place(node, original_node=None):
+    node._id = ObjectId()
+
+    if node.node_running_status == NodeRunningStatus.STATIC:
+        return node
+    node.node_running_status = NodeRunningStatus.READY
+    node.node_status = NodeStatus.CREATED
+    node.original_node = original_node
+
+    sub_nodes = node.get_parameter_by_name('_nodes', throw=False)
+    if sub_nodes:
+        object_id_mapping = {}
+        for sub_node in sub_nodes.value.value:
+            prev_id = ObjectId(sub_node._id)
+            _clone_update_in_place(sub_node)
+            object_id_mapping[prev_id] = sub_node._id
+
+        for sub_node in sub_nodes.value.value:
+            for input in sub_node.inputs:
+                for input_value in input.values:
+                    input_value.node_id = object_id_mapping[ObjectId(input_value.node_id)]
+
+    for output_or_log in node.outputs + node.logs:
+        output_or_log.resource_id = None
+    return node
+
+
 class Output(DBObject):
     """Basic Output structure."""
 
@@ -121,17 +148,27 @@ class Node(DBObject):
             default='Description',
             is_list=False,
             ),
+        # Kind, such as plynx.plugins.executors.local.BashJinja2. Derived from from plynx.plugins.executors.BaseExecutor class.
         'kind': DBObjectField(
             type=str,
             default='bash_jinja2',
             is_list=False,
             ),
+        # ID of previous version of the node, always refer to `nodes` collection.
         'parent_node': DBObjectField(
             type=ObjectId,
             default=None,
             is_list=False,
             ),
+        # ID of next version of the node, always refer to `nodes` collection.
         'successor_node': DBObjectField(
+            type=ObjectId,
+            default=None,
+            is_list=False,
+            ),
+        # ID of original node, used in `runs`, always refer to `nodes` collection.
+        # A Run refers to original node
+        'original_node': DBObjectField(
             type=ObjectId,
             default=None,
             is_list=False,
@@ -294,6 +331,9 @@ class Node(DBObject):
         self.x = other_node.x
         self.y = other_node.y
 
+    def clone(self):
+        return _clone_update_in_place(self.copy(), original_node=self._id)
+
     def __str__(self):
         return 'Node(_id="{}")'.format(self._id)
 
@@ -304,11 +344,11 @@ class Node(DBObject):
         for parameter in arr:
             if parameter.name == name:
                 return parameter
+        if throw:
+            raise Exception('Parameter "{}" not found in {}'.format(name, self.title))
         if default:
             arr.append(default(name))
             return arr[-1]
-        if throw:
-            raise Exception('Parameter "{}" not found in {}'.format(name, self.title))
         return None
 
     def get_input_by_name(self, name, throw=True):
@@ -320,7 +360,7 @@ class Node(DBObject):
     def get_output_by_name(self, name, throw=True):
         return self._get_custom_element(self.outputs, name, throw)
 
-    def get_log_by_name(self, name, throw=True):
+    def get_log_by_name(self, name, throw=False):
         return self._get_custom_element(self.logs, name, throw, default=Node._DEFAULT_LOG)
 
 

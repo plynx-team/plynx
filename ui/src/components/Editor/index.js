@@ -8,6 +8,7 @@ import Controls from './Controls';
 import LoadingScreen from '../LoadingScreen';
 import {
   ACTION,
+  RELOAD_OPTIONS,
   RESPONCE_STATUS,
   ALERT_OPTIONS,
   VALIDATION_CODES,
@@ -15,14 +16,15 @@ import {
 } from '../../constants';
 import Graph from '../Graph';
 import Node from '../Node';
+import RunList from '../NodeList/runList';
 import "./style.css";
 
 
 export const VIEW_MODE = Object.freeze({
   NONE: 'NONE',
-  GRAPH: 'GRAPH',
-  NODE: 'NODE',
-  RUNS: 'RUNS',
+  GRAPH: 0,
+  NODE: 1,
+  RUNS: 2,
 });
 
 
@@ -32,7 +34,7 @@ export default class Editor extends Component {
     location: PropTypes.object.isRequired,
     match: PropTypes.shape({
       params: PropTypes.shape({
-        graph_id: PropTypes.string,
+        node_id: PropTypes.string,
       }),
     }),
   }
@@ -63,24 +65,35 @@ export default class Editor extends Component {
 
     const self = this;
     let loading = true;
-    const graph_id = this.props.match.params.node_id.replace(/\$+$/, '');
+    const node_id = this.props.match.params.node_id.replace(/\$+$/, '');
     let sleepPeriod = 1000;
     const sleepMaxPeriod = 10000;
     const sleepStep = 1000;
 
     const loadNode = (response) => {
       self.node = response.data.data;
+      const executor_info = response.data.plugins_dict.executors_info[self.node.kind];
+      const is_graph = executor_info.is_graph;
+
+      const node_running_status = self.node.node_running_status.toUpperCase();
+
       self.setState({
         node: self.node,
         plugins_dict: response.data.plugins_dict,
-        editable: self.node.node_running_status.toUpperCase() === GRAPH_RUNNING_STATUS.CREATED,
-        view_mode: VIEW_MODE.GRAPH,
+        editable: node_running_status === GRAPH_RUNNING_STATUS.CREATED,
+        view_mode: is_graph ? VIEW_MODE.GRAPH : VIEW_MODE.NODE,
+        is_graph: is_graph,
       });
 
-      console.log(graph_id);
-      if (graph_id === 'new') {
-        self.props.history.replace("/graphs/" + self.graph._id);
+      console.log('node_id:', node_id);
+      if (!node_id.startsWith(self.node._id)) {
+        self.props.history.replace("/" + self.props.collection + "/" + self.node._id + '$');
       }
+
+      if (['READY', 'RUNNING', 'FAILED_WAITING'].indexOf(node_running_status) > -1) {
+        this.timeout = setTimeout(() => this.checkNodeStatus(), 1000);
+      }
+
       loading = false;
     };
 
@@ -111,7 +124,7 @@ export default class Editor extends Component {
     /* eslint-disable no-await-in-loop */
     /* eslint-disable no-unmodified-loop-condition */
     while (loading) {
-      await PLynxApi.endpoints.nodes.getOne({ id: graph_id})
+      await PLynxApi.endpoints[self.props.collection].getOne({ id: node_id})
       .then(loadNode)
       .catch(handleError);
       if (loading) {
@@ -128,11 +141,57 @@ export default class Editor extends Component {
     });
   }
 
-  postGraph(node, reloadOnSuccess, action) {
+  componentWillUnmount() {
+    if (this.timeout) {
+      clearTimeout(this.timeout);
+    }
+  }
+
+  checkNodeStatus() {
+    const self = this;
+    const node_id = self.node._id;
+    PLynxApi.endpoints[self.props.collection].getOne({ id: node_id})
+    .then((response) => {
+        self.node = response.data.data;
+
+        const node_running_status = self.node.node_running_status.toUpperCase();
+
+        self.setState({
+          node: self.node,
+          editable: node_running_status === GRAPH_RUNNING_STATUS.CREATED,
+        });
+        if (self.graph) {
+            self.graph.ref.current.updateGraphFromJson(self.node);
+        }
+
+        if (['READY', 'RUNNING', 'FAILED_WAITING'].indexOf(node_running_status) > -1) {
+          this.timeout = setTimeout(() => this.checkNodeStatus(), 1000);
+        }
+    })
+    .catch((error) => {
+      console.log(error);
+      if (error.response.status === 401) {
+        PLynxApi.getAccessToken()
+        .then((isSuccessfull) => {
+          if (isSuccessfull) {
+            self.timeout = setTimeout(() => self.checkNodeStatus(), 1000);
+          } else {
+            console.error("Could not refresh token");
+            self.showAlert('Failed to authenticate', 'failed');
+          }
+        });
+      }
+    });
+  }
+
+  postNode({node, reloadOption, action}={}) {
     /* action might be in {'save', 'validate', 'approve', 'deprecate'}*/
     const self = this;
     self.setState({loading: true});
-    PLynxApi.endpoints.nodes
+
+    console.log(action, node);
+
+    PLynxApi.endpoints[self.props.collection]
     .create({
       node: node,
       action: action
@@ -142,9 +201,10 @@ export default class Editor extends Component {
       console.log(data);
       self.setState({loading: false});
       if (data.status === RESPONCE_STATUS.SUCCESS) {
-        if (reloadOnSuccess) {
+        if (reloadOption === RELOAD_OPTIONS.RELOAD) {
           window.location.reload();
         }
+
         if (action === ACTION.SAVE) {
           self.showAlert("Saved", 'success');
         } else if (action === ACTION.VALIDATE) {
@@ -165,6 +225,9 @@ export default class Editor extends Component {
           self.setState({
             generatedCode: data.code
           });
+        } else if (action === ACTION.CREATE_RUN) {
+          self.showAlert("Created new run with id: " + response.data.run_id, 'success');
+          window.open('/runs/' + response.data.run_id, '_blank');
         } else {
           self.showAlert("Success", 'success');
         }
@@ -258,34 +321,59 @@ export default class Editor extends Component {
   }
 
   handleSave() {
-    console.log(this.node);
-    this.postGraph(this.node, false, ACTION.SAVE);
+    this.postNode({
+        node: this.node,
+        action: ACTION.SAVE,
+        reloadOption: RELOAD_OPTIONS.NONE,
+    });
   }
 
   handleValidate() {
-    console.log(this.node);
-    this.postGraph(this.node, false, ACTION.VALIDATE);
+    this.postNode({
+        node: this.node,
+        action: ACTION.VALIDATE,
+        reloadOption: RELOAD_OPTIONS.NONE,
+    });
   }
 
   handleApprove() {
-    console.log(this.node);
-    this.postGraph(this.node, true, ACTION.APPROVE);
+    this.postNode({
+        node: this.node,
+        action: ACTION.CREATE_RUN,
+        reloadOption: RELOAD_OPTIONS.NEW_TAB,
+    });
   }
 
   handleRearrange() {
-    this.postGraph(this.node, false, ACTION.REARRANGE);
+    this.postNode({
+        node: this.node,
+        action: ACTION.REARRANGE,
+        reloadOption: RELOAD_OPTIONS.NONE,
+    });
   }
 
   handleGenerateCode() {
-    this.postGraph(this.node, false, ACTION.GENERATE_CODE);
+    this.postNode({
+        node: this.node,
+        action: ACTION.GENERATE_CODE,
+        reloadOption: RELOAD_OPTIONS.NONE,
+    });
   }
 
   handleUpgradeNodes() {
-    this.postGraph(this.node, false, ACTION.UPGRADE_NODES);
+    this.postNode({
+        node: this.node,
+        action: ACTION.UPGRADE_NODES,
+        reloadOption: RELOAD_OPTIONS.NONE,
+    });
   }
 
   handleCancel() {
-    this.postGraph(this.node, false, ACTION.CANCEL);
+    this.postNode({
+        node: this.node,
+        action: ACTION.CANCEL,
+        reloadOption: RELOAD_OPTIONS.NONE,
+    });
   }
 
   render() {
@@ -310,10 +398,14 @@ export default class Editor extends Component {
                     onUpgradeNodes={() => this.handleUpgradeNodes()}
                     onClone={() => this.handleClone()}
                     onCancel={() => this.handleCancel()}
+                    index={this.state.view_mode}
+                    is_graph={this.state.is_graph}
+                    key={this.state.view_mode}
           />
           {
               this.state.view_mode === VIEW_MODE.GRAPH &&
               <Graph
+                ref={a => this.graph = a}
                 node={this.state.node}
                 plugins_dict={this.state.plugins_dict}
                 onNodeChange={(node) => this.handleNodeChange(node)}
@@ -325,6 +417,13 @@ export default class Editor extends Component {
                 node={this.state.node}
                 plugins_dict={this.state.plugins_dict}
                 onNodeChange={(node) => this.handleNodeChange(node)}
+              />
+          }
+          {
+              this.state.view_mode === VIEW_MODE.RUNS &&
+              <RunList
+                showControlls={false}
+                search={"original_node:" + this.state.node._id}
               />
           }
           <pre>

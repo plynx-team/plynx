@@ -142,6 +142,11 @@
   margin: 0px;
 }
 
+.control-toggle > .control-button.disabled {
+  background-color: #444;
+  cursor: default;
+}
+
 .control-toggle > .first {
   border-radius: 15px 0px 0px 15px;
 }

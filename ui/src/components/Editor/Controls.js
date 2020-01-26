@@ -23,7 +23,8 @@ export default class Controls extends Component {
     super(props);
 
     this.state = {
-      index: 0,
+      index: this.props.index,
+      is_graph: this.props.is_graph,
     };
   }
 
@@ -36,6 +37,7 @@ export default class Controls extends Component {
                   img: 'save.svg',
                   text: 'Graph',
                   value: VIEW_MODE.GRAPH,
+                  enabled: this.state.is_graph,
               },
               {
                 img: 'check-square.svg',
@@ -51,6 +53,7 @@ export default class Controls extends Component {
           index: this.state.index,
           func: (view_mode) => this.props.onViewMode(view_mode),
           onIndexChange: (index) => this.setState({index: index}),
+          key: this.state.index,
         })
         }
         {!this.props.readonly &&

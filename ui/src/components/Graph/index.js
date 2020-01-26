@@ -3,7 +3,6 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import queryString from 'query-string';
 import ReactNodeGraph from '../3rd_party/react_node_graph';
-import { PLynxApi } from '../../API';
 import { typesValid } from '../../graphValidation';
 import cookie from 'react-cookies';
 import NodesBar from './NodesBar';
@@ -190,11 +189,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
         this.mainGraph.getDecoratedComponentInstance().selectBlocks([nid]);
       }
     });
-
-    const st = this.graph_node.node_running_status.toUpperCase();
-    if (st === 'READY' || st === GRAPH_RUNNING_STATUS.RUNNING || st === GRAPH_RUNNING_STATUS.FAILED_WAITING) {
-      this.timeout = setTimeout(() => this.checkGraphStatus(), 1000);
-    }
   }
 
   updateGraphFromJson(newGraph) {
@@ -208,55 +202,22 @@ ENDPOINT = '` + API_ENDPOINT + `'
       blocks_lookup_index[block.nid] = i;
     }
 
-    for (i = 0; i < newGraph.nodes.length; ++i) {
-      const node = this.graph.nodes[i];
+    let newNodes = newGraph.parameters.filter((p) => p.name === '_nodes')[0].value.value;
+
+    for (i = 0; i < newNodes.length; ++i) {
+      const node = newNodes[i];
       block = this.blocks[blocks_lookup_index[node._id]];
       block.nodeRunningStatus = node.node_running_status;
       block.nodeStatus = node.node_status;
       block.cacheUrl = node.cache_url;
-      this.node_lookup[node._id] = newGraph.nodes[i];
+      this.node_lookup[node._id] = newNodes[i];
       this.block_lookup[node._id] = block;
     }
 
+    this.graph_node = newGraph;
+
     this.setState({
       "blocks": this.blocks,
-      "graphRunningStatus": newGraph.graph_running_status,
-    });
-
-    const st = this.graph.graph_running_status.toUpperCase();
-    if (st === 'READY' || st === GRAPH_RUNNING_STATUS.RUNNING || st === GRAPH_RUNNING_STATUS.FAILED_WAITING) {
-      this.timeout = setTimeout(() => this.checkGraphStatus(), 1000);
-    }
-
-    this.graph = newGraph;
-  }
-
-  componentWillUnmount() {
-    if (this.timeout) {
-      clearTimeout(this.timeout);
-    }
-  }
-
-  checkGraphStatus() {
-    const self = this;
-    const graph_id = self.graph._id;
-    PLynxApi.endpoints.nodes.getOne({ id: graph_id})
-    .then((response) => {
-      self.updateGraphFromJson(response.data.data);
-    })
-    .catch((error) => {
-      console.log(error);
-      if (error.response.status === 401) {
-        PLynxApi.getAccessToken()
-        .then((isSuccessfull) => {
-          if (isSuccessfull) {
-            self.timeout = setTimeout(() => self.checkGraphStatus(), 1000);
-          } else {
-            console.error("Could not refresh token");
-            self.showAlert('Failed to authenticate', 'failed');
-          }
-        });
-      }
     });
   }
 
@@ -343,9 +304,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   onRemoveBlock(nid) {
-    this.nodes = this.nodes.filter((node) => {
-      return node._id !== nid;
-    });
+    this.nodes.splice(this.nodes.indexOf(node => node._id == nid));
     delete this.node_lookup[nid];
     this.blocks = this.blocks.filter((block) => {
       return block.nid !== nid;

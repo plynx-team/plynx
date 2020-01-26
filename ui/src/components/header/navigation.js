@@ -22,13 +22,10 @@ class Navigation extends Component {
               <NavLink to='/dashboard' className="Item">Dashboard</NavLink>
             }
             {this.state.refreshTokenExists &&
-              <NavLink to='/files' className="Item">Files</NavLink>
+              <NavLink to='/nodes' className="Item">Nodes</NavLink>
             }
             {this.state.refreshTokenExists &&
-              <NavLink to='/nodes' className="Item">Operations</NavLink>
-            }
-            {this.state.refreshTokenExists &&
-              <NavLink to='/graphs' className="Item">Graphs</NavLink>
+              <NavLink to='/runs' className="Item">Runs</NavLink>
             }
             {separator()}
             <a href='https://plynx.readthedocs.io/en/latest/overview.html' className="Item">Docs</a>

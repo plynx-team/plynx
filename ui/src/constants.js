@@ -38,6 +38,7 @@ export const SPECIAL_TYPE_NAMES = ['code'];
 export const ACTION = Object.freeze({
   SAVE: 'SAVE',
   APPROVE: 'APPROVE',
+  CREATE_RUN: 'CREATE_RUN',
   VALIDATE: 'VALIDATE',
   DEPRECATE: 'DEPRECATE',
   MANDATORY_DEPRECATE: 'MANDATORY_DEPRECATE',
@@ -46,6 +47,12 @@ export const ACTION = Object.freeze({
   PREVIEW_CMD: 'PREVIEW_CMD',
   CANCEL: 'CANCEL',
   GENERATE_CODE: 'GENERATE_CODE',
+});
+
+export const RELOAD_OPTIONS = Object.freeze({
+  NONE: 'NONE',
+  RELOAD: 'RELOAD',
+  NEW_TAB: 'NEW_TAB',
 });
 
 export const RESPONCE_STATUS = Object.freeze({

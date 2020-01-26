@@ -28,12 +28,7 @@ class BaseExecutor:
 
     @staticmethod
     @abstractmethod
-    def get_base_name():
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def get_default(cls):
+    def get_default_node(cls):
         pass
 
     def init_workdir(self):

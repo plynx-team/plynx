@@ -6,7 +6,7 @@ from plynx.db.node_collection_manager import NodeCollectionManager
 from plynx.plugins.managers import resource_manager, executor_manager
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 from plynx.utils.common import to_object_id, JSONEncoder
-from plynx.constants import NodeStatus, NodePostAction, NodePostStatus, Collections
+from plynx.constants import NodeStatus, NodeRunningStatus, NodePostAction, NodePostStatus, Collections
 
 PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'base_node_names', 'search', 'is_graph'}
 PERMITTED_READONLY_POST_ACTIONS = {
@@ -30,6 +30,7 @@ def post_search_nodes(collection):
     if len(query.keys() - PAGINATION_QUERY_KEYS):
         return make_fail_response('Unknown keys: `{}`'.format(query.keys() - PAGINATION_QUERY_KEYS)), 400
 
+    app.logger.debug(query)
     res = node_collection_managers[collection].get_db_nodes(user_id=user_id, **query)
 
     return JSONEncoder().encode({
@@ -48,9 +49,11 @@ def post_search_nodes(collection):
 def get_nodes(collection, node_link=None):
     user_id = to_object_id(g.user._id)
     # if node_link is a base node
-    if False and node_link in node_collection.name_to_class:
+    if node_link in executor_manager.executors_info:
+        data = executor_manager.name_to_class[node_link].get_default_node().to_dict()
+        data['kind'] = node_link
         return JSONEncoder().encode({
-            'data': node_collection.name_to_class[node_link].get_default().to_dict(),
+            'data': data,
             'plugins_dict': {
                 'resources_dict': resource_manager.resources_dict,
                 'executors_info': executor_manager.executors_info,
@@ -62,6 +65,7 @@ def get_nodes(collection, node_link=None):
         except Exception:
             return make_fail_response('Invalid ID'), 404
         node = node_collection_managers[collection].get_db_node(node_id, user_id)
+        app.logger.debug(node)
         if node:
             return JSONEncoder().encode({
                 'data': node,
@@ -109,6 +113,27 @@ def post_node(collections):
 
         node.node_status = NodeStatus.READY
         node.save(force=True)
+
+    elif action == NodePostAction.CREATE_RUN:
+        if node.node_status != NodeStatus.CREATED:
+            return make_fail_response('Node status `{}` expected. Found `{}`'.format(NodeStatus.CREATED, node.node_status))
+        validation_error = node.get_validation_error()
+        if validation_error:
+            return JSONEncoder().encode({
+                'status': NodePostStatus.VALIDATION_FAILED,
+                'message': 'Node validation failed',
+                'validation_error': validation_error.to_dict()
+            })
+
+        node = node.clone()
+        node.save(collection=Collections.RUNS)
+        return JSONEncoder().encode(
+            {
+                'status': NodePostStatus.SUCCESS,
+                'message': 'Run Node(_id=`{}`) successfully created'.format(str(node._id)),
+                'run_id': str(node._id),
+            })
+
 
     elif action == NodePostAction.VALIDATE:
         validation_error = node.get_validation_error()

@@ -7,10 +7,12 @@ export function makeControlButton(props) {
     <div
        onClick={(e) => {
          e.preventDefault();
-         props.func();
+         if (props.enabled !== false) {
+            props.func();
+         }
        }}
        key={props.key}
-       className={["control-button", (props.className || ''), (props.selected ? "selected" : "")].join(" ")}
+       className={["control-button", (props.className || ''), (props.selected ? "selected" : ""), (props.enabled !== false ? 'enabled' : 'disabled')].join(" ")}
     >
        <img src={"/icons/" + props.img} alt={props.text}/>
        <div className='control-button-text'>{props.text}</div>
@@ -18,29 +20,46 @@ export function makeControlButton(props) {
   );
 }
 
+// TODO make a single function makeControlButton and makeControlLink
+export function makeControlLink(props) {
+  return (
+    <a
+       href={props.href}
+       key={props.key}
+       className={["control-button", (props.className || ''), (props.selected ? "selected" : ""), (props.enabled !== false ? 'enabled' : 'disabled')].join(" ")}
+    >
+       <img src={"/icons/" + props.img} alt={props.text}/>
+       <div className='control-button-text'>{props.text}</div>
+    </a>
+  );
+}
+
 export function makeControlToggles(props) {
     return (
-        <div className='control-toggle'>
-        {props.items.map(
-            (item, index) => {
-                if (index === props.index) {
-                    item["selected"] = true;
-                }
-                item["key"] = index;
-                item.func = () => {
-                    props.func(item.value);
-                    props.onIndexChange(index);
-                }
-                if (index === 0) {
-                    item['className'] = 'first';
-                }
-                if (index === props.items.length - 1) {
-                    item['className'] = 'last';
-                }
+        <div
+            className='control-toggle'
+            key={props.key}
+        >
+            {props.items.map(
+                (item, index) => {
+                    if (index === props.index) {
+                        item["selected"] = true;
+                    }
+                    item["key"] = index;
+                    item.func = () => {
+                        props.func(item.value);
+                        props.onIndexChange(index);
+                    }
+                    if (index === 0) {
+                        item['className'] = 'first';
+                    }
+                    if (index === props.items.length - 1) {
+                        item['className'] = 'last';
+                    }
 
-                return makeControlButton(item);
-            }
-        )}
+                    return makeControlButton(item);
+                }
+            )}
         </div>
     );
 }

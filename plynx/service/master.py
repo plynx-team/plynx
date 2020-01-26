@@ -127,7 +127,8 @@ class Master(object):
                 executor.node.node_running_status = NodeRunningStatus.FAILED
             else:
                 raise Exception("Unknown return status value: `{}`".format(status))
-        except Exception:
+        except Exception as e:
+            logging.warning('Execution failed: {}'.format(e))
             executor.node.node_running_status = NodeRunningStatus.FAILED
         finally:
             executor.node.save(collection='runs')

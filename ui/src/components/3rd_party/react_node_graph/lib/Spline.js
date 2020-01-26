@@ -95,7 +95,7 @@ class Spline extends React.Component {
     const color = "#" + this.props.color;
     const style = {
       stroke: color,
-      strokeWidth: selected ? 5 : 2,
+      strokeWidth: selected ? 8 : 5,
     };
 
     return (

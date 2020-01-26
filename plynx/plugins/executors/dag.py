@@ -1,7 +1,8 @@
 import logging
 import time
 from collections import defaultdict
-from plynx.db.node import Node
+from plynx.constants import ParameterTypes
+from plynx.db.node import Node, Parameter, Output
 from plynx.constants import JobReturnStatus, NodeRunningStatus, GraphRunningStatus
 from plynx.utils.common import to_object_id
 from plynx.plugins.executors import BaseExecutor
@@ -185,6 +186,38 @@ class DAG(BaseExecutor):
                 return parameter.value
         return False
 
+    @classmethod
+    def get_default_node(cls):
+        node = Node()
+        node.parameters = [
+            Parameter.from_dict({
+                'name': '_nodes',
+                'parameter_type': ParameterTypes.LIST_NODE,
+                'value': [],
+                'mutable_type': False,
+                'publicable': False,
+                'removable': False,
+                }
+            ),
+            Parameter.from_dict({
+                'name': '_cacheable',
+                'parameter_type': ParameterTypes.BOOL,
+                'value': False,
+                'mutable_type': False,
+                'publicable': False,
+                'removable': False,
+            }),
+            Parameter.from_dict({
+                'name': '_timeout',
+                'parameter_type': ParameterTypes.INT,
+                'value': 600,
+                'mutable_type': False,
+                'publicable': True,
+                'removable': False
+            }),
+        ]
+        return node
+
     def execute_node(self, node):
         node.save(collection='runs')
 
@@ -193,7 +226,6 @@ class DAG(BaseExecutor):
     def run(self):
         self.node.save(collection='runs')
         while not self.finished():
-
             new_jobs = self.pop_jobs()
             if len(new_jobs) == 0:
                 time.sleep(_GRAPH_ITERATION_SLEEP)

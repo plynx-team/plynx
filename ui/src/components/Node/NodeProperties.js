@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
-import { PROGRAMMABLE_OPERATIONS, NODE_STATUS } from '../../constants';
+import { NODE_STATUS } from '../../constants';
 import ParameterItem from '../Common/ParameterItem';
 import makePropertiesBox from '../Common/makePropertiesBox';
 import './NodeProperties.css';
@@ -48,19 +48,9 @@ export default class NodeProperties extends Component {
 
   render() {
     // Find index of base_node_name
-    console.log('>>>>>>>>>', this.props.executors_info);
-    let base_node_index = PROGRAMMABLE_OPERATIONS.indexOf(this.state.base_node_name);
-    let base_nodes = null;
     const kinds = Object.keys(this.props.executors_info);
     const kindIndex = kinds.findIndex(knd => this.props.kind === knd)
     console.log(kinds, kindIndex, this.props.kind);
-    if (base_node_index < 0) {
-      base_node_index = 0;
-      base_nodes = [this.state.base_node_name];
-    } else {
-      base_nodes = PROGRAMMABLE_OPERATIONS;
-    }
-
     const customPropertiesItems = [
       {
         name: 'title',

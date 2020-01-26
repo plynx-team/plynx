@@ -4,12 +4,7 @@
     font-family: 'Source Sans Pro', sans-serif;
 }
 
-.editor-view > .ControlButtons.readonly {
-  left: 10px;
-  top: 6px;
-}
-
-.editor-view > .ControlButtons.editable {
+.editor-view > .ControlButtons {
   left: 260px;
   top: 6px;
 }

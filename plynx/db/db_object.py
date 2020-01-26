@@ -60,18 +60,19 @@ class DBObject(object):
             setattr(self, field_name, value)
 
     @classmethod
-    def load(cls, _id):
+    def load(cls, _id, collection=None):
         """Load object from db.
 
         Args:
             _id     (str, ObjectId):    ID of the object in DB
         """
-        obj_dict = getattr(get_db_connector(), cls.DB_COLLECTION).find_one({'_id': ObjectId(_id)})
+        collection = collection or self.__class__.DB_COLLECTION
+        obj_dict = getattr(get_db_connector(), collection).find_one({'_id': ObjectId(_id)})
         if not obj_dict:
             raise DBObjectNotFound(
                 'Object `{_id}` not found in `{collection}` collection'.format(
                     _id=_id,
-                    collection=cls.DB_COLLECTION,
+                    collection=collection,
                 )
             )
         return cls.from_dict(obj_dict)
