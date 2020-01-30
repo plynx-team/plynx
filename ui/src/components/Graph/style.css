@@ -17,6 +17,7 @@
   height: 100%;
   display: inline-block;
   flex-direction: column;
+  background-color: #404040;
 }
 
 .NodesBarInner {
@@ -34,7 +35,7 @@
   margin: 3px 3px 3px 6px;
 }
 
-.NodeBarHeader .menu .menuButton,.selected {
+.NodeBarHeader .menu .menuButton {
   background-color: #62a6f3;
 }
 
@@ -42,6 +43,7 @@
   flex: 1;
   overflow:auto;
   background: url('dark-circles.png');
+  background-color: #404040;
   height: 1px;
 }
 

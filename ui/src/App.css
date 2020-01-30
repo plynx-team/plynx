@@ -60,10 +60,11 @@ body{
                                   supported by Chrome and Opera */
 }
 
-.ControlButtons {
-  z-index: 21050;
-  position: fixed;
-  top: 100px;
+.control-panel {
+  background-color: #2b2b2b;
+  padding: 3px;
+  border-top: 1px solid #000;
+  border-bottom: 1px solid #000;
 }
 
 /* Mobile dependent */

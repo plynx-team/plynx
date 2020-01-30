@@ -186,18 +186,9 @@
 
 @media (min-width: 1100px) {
 
-  .Header .menu-button-sl {
-    top: 0px;
-  }
-
-  .Header .menu-button-sl img {
-    width: 30px;
-    height: 30px;
-  }
-
   .Header .logo {
     top: 4px;
-    left: 50px;
+    left: 10px;
     margin-left: 0;
   }
 
@@ -206,15 +197,36 @@
   }
 
   .Header .NavigationItems {
+    display: block;
     padding: 0;
-    font-size: 25pt;
+    font-size: 17pt;
     width: auto;
   }
 
+  .Header .separator {
+    display: inline-block;
+    border-left: 1px #333 solid;
+    width: 0px;
+    height: auto;
+  }
+
   .Header .Navigation {
-    top: 40px;
-    left: 0px;
-    height: calc(100% - 40px);
+    top: 6px;
+    left: 180px;
+    width: auto;
+    height: auto;
+    padding-left: 10px;
+    padding-right: 10px;
+    background-color: inherit;
+  }
+
+  .Header .NavigationItems .Item:hover:not(.active) {
+    border-bottom: 1px solid white;
+  }
+
+  .Header .NavigationItems .active {
+    border-left: 0;
+    border-bottom: 3px solid #2196F3;
   }
 
   .Header .NavigationItems .Item {

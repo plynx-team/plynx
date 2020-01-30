@@ -3,8 +3,3 @@
     height: 100%;
     font-family: 'Source Sans Pro', sans-serif;
 }
-
-.editor-view > .ControlButtons {
-  left: 260px;
-  top: 6px;
-}

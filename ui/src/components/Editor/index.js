@@ -386,7 +386,7 @@ export default class Editor extends Component {
             <LoadingScreen
             ></LoadingScreen>
           }
-          <Controls className="ControlButtons"
+          <Controls className="control-panel"
                     onViewMode={(view_mode) => this.setState({view_mode: view_mode})}
                     readonly={!this.state.editable}
                     graphRunningStatus={this.state.graphRunningStatus}
