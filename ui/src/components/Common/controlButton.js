@@ -11,7 +11,7 @@ export function makeControlButton(props) {
             props.func();
          }
        }}
-       key={props.key}
+       key={props.text}
        className={["control-button", (props.className || ''), (props.selected ? "selected" : ""), (props.enabled !== false ? 'enabled' : 'disabled')].join(" ")}
     >
        <img src={"/icons/" + props.img} alt={props.text}/>
@@ -34,6 +34,15 @@ export function makeControlLink(props) {
   );
 }
 
+export function makeControlSeparator(props) {
+    return (
+        <div
+            className='control-separator'
+            key={props.key}
+        />
+    );
+}
+
 export function makeControlToggles(props) {
     return (
         <div
@@ -47,7 +56,7 @@ export function makeControlToggles(props) {
                     }
                     item["key"] = index;
                     item.func = () => {
-                        props.func(item.value);
+                        if (props.func) props.func(item.value);
                         props.onIndexChange(index);
                     }
                     if (index === 0) {
@@ -60,6 +69,24 @@ export function makeControlToggles(props) {
                     return makeControlButton(item);
                 }
             )}
+        </div>
+    );
+}
+
+
+export function makeControlPanel(props) {
+    return (
+        <div
+            className='control-panel'
+            key={props.key}
+        >
+            {
+                props.items.map(
+                    (item) => {
+                        return item.render(item.props);
+                    }
+                )
+            }
         </div>
     );
 }

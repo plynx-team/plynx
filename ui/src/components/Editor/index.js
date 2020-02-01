@@ -1,10 +1,8 @@
-/* eslint max-lines: 0 */
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import AlertContainer from '../3rd_party/react-alert';
 import { PLynxApi } from '../../API';
 import cookie from 'react-cookies';
-import Controls from './Controls';
 import LoadingScreen from '../LoadingScreen';
 import {
   ACTION,
@@ -12,11 +10,12 @@ import {
   RESPONCE_STATUS,
   ALERT_OPTIONS,
   VALIDATION_CODES,
-  GRAPH_RUNNING_STATUS,
+  NODE_STATUS,
 } from '../../constants';
 import Graph from '../Graph';
 import Node from '../Node';
 import RunList from '../NodeList/runList';
+import { makeControlPanel, makeControlToggles, makeControlButton, makeControlSeparator } from '../Common/controlButton';
 import "./style.css";
 
 
@@ -60,6 +59,22 @@ export default class Editor extends Component {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+  updateNode(node, force) {
+      this.node = node;
+
+      this.setState({
+        node: this.node,
+        editable: this.node.node_status.toUpperCase() === NODE_STATUS.CREATED,
+      });
+      if (this.graph) {
+          if (force) {
+              this.graph.ref.current.loadGraphFromJson(this.node);
+          } else {
+              this.graph.ref.current.updateGraphFromJson(this.node);
+          }
+      }
+  }
+
   async componentDidMount() {
     // Loading
 
@@ -71,16 +86,16 @@ export default class Editor extends Component {
     const sleepStep = 1000;
 
     const loadNode = (response) => {
-      self.node = response.data.data;
+      self.updateNode(response.data.node, true);
+
       const executor_info = response.data.plugins_dict.executors_info[self.node.kind];
       const is_graph = executor_info.is_graph;
 
       const node_running_status = self.node.node_running_status.toUpperCase();
+      const editable = self.node.node_status.toUpperCase() === NODE_STATUS.CREATED;
 
       self.setState({
-        node: self.node,
         plugins_dict: response.data.plugins_dict,
-        editable: node_running_status === GRAPH_RUNNING_STATUS.CREATED,
         view_mode: is_graph ? VIEW_MODE.GRAPH : VIEW_MODE.NODE,
         is_graph: is_graph,
       });
@@ -90,7 +105,7 @@ export default class Editor extends Component {
         self.props.history.replace("/" + self.props.collection + "/" + self.node._id + '$');
       }
 
-      if (['READY', 'RUNNING', 'FAILED_WAITING'].indexOf(node_running_status) > -1) {
+      if (!editable && ['READY', 'RUNNING', 'FAILED_WAITING'].indexOf(node_running_status) > -1) {
         this.timeout = setTimeout(() => this.checkNodeStatus(), 1000);
       }
 
@@ -152,17 +167,9 @@ export default class Editor extends Component {
     const node_id = self.node._id;
     PLynxApi.endpoints[self.props.collection].getOne({ id: node_id})
     .then((response) => {
-        self.node = response.data.data;
+        self.updateNode(response.data.node, false)
 
         const node_running_status = self.node.node_running_status.toUpperCase();
-
-        self.setState({
-          node: self.node,
-          editable: node_running_status === GRAPH_RUNNING_STATUS.CREATED,
-        });
-        if (self.graph) {
-            self.graph.ref.current.updateGraphFromJson(self.node);
-        }
 
         if (['READY', 'RUNNING', 'FAILED_WAITING'].indexOf(node_running_status) > -1) {
           this.timeout = setTimeout(() => this.checkNodeStatus(), 1000);
@@ -203,14 +210,16 @@ export default class Editor extends Component {
       if (data.status === RESPONCE_STATUS.SUCCESS) {
         if (reloadOption === RELOAD_OPTIONS.RELOAD) {
           window.location.reload();
+        } else if (reloadOption === RELOAD_OPTIONS.OPEN_NEW_LINK) {
+          this.props.history.push(response.data.url);
         }
 
         if (action === ACTION.SAVE) {
           self.showAlert("Saved", 'success');
         } else if (action === ACTION.VALIDATE) {
           self.showAlert("Valid", 'success');
-        } else if (action === ACTION.REARRANGE) {
-          self.loadGraphFromJson(data.graph);
+      } else if (action === ACTION.REARRANGE_NODES) {
+          self.updateNode(data.node, true)
         } else if (action === ACTION.UPGRADE_NODES) {
           self.loadGraphFromJson(data.graph);
           let message = "";
@@ -347,7 +356,7 @@ export default class Editor extends Component {
   handleRearrange() {
     this.postNode({
         node: this.node,
-        action: ACTION.REARRANGE,
+        action: ACTION.REARRANGE_NODES,
         reloadOption: RELOAD_OPTIONS.NONE,
     });
   }
@@ -376,6 +385,118 @@ export default class Editor extends Component {
     });
   }
 
+  handleClone() {
+    this.postNode({
+        node: this.node,
+        action: ACTION.CLONE,
+        reloadOption: RELOAD_OPTIONS.OPEN_NEW_LINK,
+    });
+  }
+
+  makeControls() {
+      let items = [
+          {
+              render: makeControlToggles,
+              props: {
+                  items: [
+                      {
+                        img: 'save.svg',
+                        text: 'Graph',
+                        value: VIEW_MODE.GRAPH,
+                        enabled: this.state.is_graph,
+                    },
+                    {
+                      img: 'check-square.svg',
+                      text: 'Properties',
+                      value: VIEW_MODE.NODE,
+                    },
+                    {
+                      img: 'check-square.svg',
+                      text: 'Runs',
+                      value: VIEW_MODE.RUNS,
+                    },
+                  ],
+                index: this.state.view_mode,
+                onIndexChange: (view_mode) => this.setState({view_mode: view_mode}),
+                key: 'key' + this.state.view_mode,
+              }
+          },
+
+          {
+              render: makeControlSeparator,
+              props: {key: 'separator_1'}
+          },
+
+          {
+              render: makeControlButton,
+              props: {
+                img: 'save.svg',
+                text: 'Save',
+                enabled: this.state.editable,
+                func: () => this.handleSave(),
+              },
+          }, {
+              render: makeControlButton,
+              props: {
+                img: 'check-square.svg',
+                text: 'Validate',
+                enabled: this.state.editable,
+                func: () => this.handleValidate(),
+              },
+          }, {
+              render: makeControlButton,
+              props: {
+                img: 'play.svg',
+                text: 'Run',
+                enabled: this.state.is_graph,
+                func: () => this.handleApprove(),
+              },
+          }, {
+              render: makeControlButton,
+              props: {
+                img: 'copy.svg',
+                text: 'Clone',
+                func: () => this.handleClone(),
+              },
+          },
+
+          {
+              render: makeControlSeparator,
+              props: {key: 'separator_2'}
+          },
+
+          {
+              render: makeControlButton,
+              props: {
+                img: 'trending-up.svg',
+                text: 'Upgrade Nodes',
+                enabled: this.state.is_graph,
+                func: () => this.handleUpgradeNodes(),
+              },
+          }, {
+              render: makeControlButton,
+              props: {
+                img: 'rearrange.svg',
+                text: 'Rearrange nodes',
+                enabled: this.state.is_graph,
+                func: () => this.handleRearrange(),
+              },
+          }, {
+              render: makeControlButton,
+              props: {
+                img: 'preview.svg',
+                text: 'API',
+                func: () => this.handleGenerateCode(),
+              }
+          },
+      ];
+
+      return makeControlPanel({
+          items: items,
+          key: this.state.view_mode + this.state.editable,
+      });
+  }
+
   render() {
     return (
         <div
@@ -386,22 +507,7 @@ export default class Editor extends Component {
             <LoadingScreen
             ></LoadingScreen>
           }
-          <Controls className="control-panel"
-                    onViewMode={(view_mode) => this.setState({view_mode: view_mode})}
-                    readonly={!this.state.editable}
-                    graphRunningStatus={this.state.graphRunningStatus}
-                    onSave={() => this.handleSave()}
-                    onValidate={() => this.handleValidate()}
-                    onApprove={() => this.handleApprove()}
-                    onRearrange={() => this.handleRearrange()}
-                    onGenerateCode={() => this.handleGenerateCode()}
-                    onUpgradeNodes={() => this.handleUpgradeNodes()}
-                    onClone={() => this.handleClone()}
-                    onCancel={() => this.handleCancel()}
-                    index={this.state.view_mode}
-                    is_graph={this.state.is_graph}
-                    key={this.state.view_mode}
-          />
+          {this.makeControls()}
           {
               this.state.view_mode === VIEW_MODE.GRAPH &&
               <Graph

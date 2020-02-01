@@ -67,6 +67,11 @@ body{
   border-bottom: 1px solid #000;
 }
 
+div:focus {
+  outline: 0;
+  outline: none;
+}
+
 /* Mobile dependent */
 
 .Header {

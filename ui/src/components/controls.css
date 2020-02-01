@@ -136,9 +136,13 @@
   display: none;
 }
 
+.control-separator {
+  margin-right: 20px;
+  display: inline;
+}
+
 .control-toggle {
   display: inline-flex;
-  margin-right: 20px;
 }
 
 .control-toggle > .control-button {
@@ -146,9 +150,15 @@
   margin: 0px;
 }
 
+.control-button.disabled {
+  display: none;
+}
+
 .control-toggle > .control-button.disabled {
+  display: inline-flex;
   background-color: #444;
   cursor: default;
+  color: #777;
 }
 
 .control-toggle > .first {

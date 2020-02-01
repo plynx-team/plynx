@@ -12,6 +12,7 @@ PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'base_node_names', 'sea
 PERMITTED_READONLY_POST_ACTIONS = {
     NodePostAction.VALIDATE,
     NodePostAction.PREVIEW_CMD,
+    NodePostAction.CLONE,
 }
 
 node_collection_managers = {
@@ -53,7 +54,7 @@ def get_nodes(collection, node_link=None):
         data = executor_manager.name_to_class[node_link].get_default_node().to_dict()
         data['kind'] = node_link
         return JSONEncoder().encode({
-            'data': data,
+            'node': data,
             'plugins_dict': {
                 'resources_dict': resource_manager.resources_dict,
                 'executors_info': executor_manager.executors_info,
@@ -68,7 +69,7 @@ def get_nodes(collection, node_link=None):
         app.logger.debug(node)
         if node:
             return JSONEncoder().encode({
-                'data': node,
+                'node': node,
                 'plugins_dict': {
                     'resources_dict': resource_manager.resources_dict,
                     'executors_info': executor_manager.executors_info,
@@ -130,10 +131,23 @@ def post_node(collections):
         return JSONEncoder().encode(
             {
                 'status': NodePostStatus.SUCCESS,
-                'message': 'Run Node(_id=`{}`) successfully created'.format(str(node._id)),
+                'message': 'Run(_id=`{}`) successfully created'.format(str(node._id)),
                 'run_id': str(node._id),
+                'url': '/{}/{}'.format(Collections.RUNS, node._id),
             })
 
+    elif action == NodePostAction.CLONE:
+
+        node = node.clone()
+        node.save(collection=Collections.NODES)
+
+        return JSONEncoder().encode(
+            {
+                'status': NodePostStatus.SUCCESS,
+                'message': 'Node(_id=`{}`) successfully created'.format(str(node._id)),
+                'node_id': str(node._id),
+                'url': '/{}/{}'.format(Collections.NODES, node._id),
+            })
 
     elif action == NodePostAction.VALIDATE:
         validation_error = node.get_validation_error()
@@ -166,6 +180,21 @@ def post_node(collections):
                 'preview_text': job.run(preview=True)
             })
 
+    elif action == NodePostAction.REARRANGE_NODES:
+        node.arrange_auto_layout()
+        return JSONEncoder().encode(dict(
+            {
+                'status': NodePostStatus.SUCCESS,
+                'message': 'Successfully created preview',
+                'node': node.to_dict(),
+            }
+        ))
+    elif action == NodePostAction.UPGRADE_NODES:
+        raise NotImplementedError()
+    elif action == NodePostAction.CANCEL:
+        raise NotImplementedError()
+    elif action == NodePostAction.GENERATE_CODE:
+        raise NotImplementedError()
     else:
         return make_fail_response('Unknown action `{}`'.format(action))
 
