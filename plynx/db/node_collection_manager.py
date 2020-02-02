@@ -1,9 +1,11 @@
 from pymongo import ReturnDocument
 from past.builtins import basestring
 from collections import OrderedDict
-from plynx.constants import NodeRunningStatus
+from plynx.constants import NodeRunningStatus, Collections
 from plynx.utils.common import to_object_id, parse_search_string
 from plynx.utils.db_connector import get_db_connector
+
+_PROPERTIES_TO_GET_FROM_SUBS = ['node_running_status', 'logs', 'outputs', 'cache_url']
 
 
 class NodeCollectionManager(object):
@@ -124,8 +126,26 @@ class NodeCollectionManager(object):
             (dict)  dict representation of the Graph
         """
         res = get_db_connector()[self.collection].find_one({'_id': to_object_id(node_id)})
-        if res:
-            res['_readonly'] = (user_id != to_object_id(res['author']))
+        if not res:
+            return res
+
+        res['_readonly'] = (user_id != to_object_id(res['author']))
+        # TODO join collections using database capabilities
+        if self.collection == Collections.RUNS:
+            sub_nodes_dicts = None
+            for parameter in res['parameters']:
+                if parameter['name'] == '_nodes':
+                    sub_nodes_dicts = parameter['value']['value']
+                    break
+            if sub_nodes_dicts:
+                id_to_updated_node_dict = {}
+                for upd_node_dict in self.get_db_nodes_by_ids(set(map(lambda node_dict: node_dict['_id'], sub_nodes_dicts))):
+                    id_to_updated_node_dict[upd_node_dict['_id']] = upd_node_dict
+                for sub_node_dict in sub_nodes_dicts:
+                    if sub_node_dict['_id'] not in id_to_updated_node_dict:
+                        continue
+                    for prop in _PROPERTIES_TO_GET_FROM_SUBS:
+                        sub_node_dict[prop] = id_to_updated_node_dict[sub_node_dict['_id']][prop]
         return res
 
     def pick_node(self, kinds):

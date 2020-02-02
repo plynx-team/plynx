@@ -12,6 +12,7 @@ import {
   VALIDATION_CODES,
   NODE_STATUS,
   COLLECTIONS,
+  ACTIVE_NODE_RUNNING_STATUSES,
 } from '../../constants';
 import Graph from '../Graph';
 import Node from '../Node';
@@ -98,9 +99,6 @@ export default class Editor extends Component {
       const executor_info = response.data.plugins_dict.executors_info[self.node.kind];
       const is_graph = executor_info.is_graph;
 
-      const node_running_status = self.node.node_running_status.toUpperCase();
-      const editable = self.node.node_status.toUpperCase() === NODE_STATUS.CREATED;
-
       self.setState({
         plugins_dict: response.data.plugins_dict,
         view_mode: is_graph ? VIEW_MODE.GRAPH : VIEW_MODE.NODE,
@@ -112,9 +110,7 @@ export default class Editor extends Component {
         self.props.history.replace("/" + self.props.collection + "/" + self.node._id + '$');
       }
 
-      if (!editable && ['READY', 'RUNNING', 'FAILED_WAITING'].indexOf(node_running_status) > -1) {
-        this.timeout = setTimeout(() => this.checkNodeStatus(), 1000);
-      }
+      self.initializeUpdate();
 
       const first_time_approved_node_id = window.sessionStorage.getItem(FIRST_TIME_APPROVED_STATE);
       if (first_time_approved_node_id === self.node._id) {
@@ -184,11 +180,7 @@ export default class Editor extends Component {
     .then((response) => {
         self.updateNode(response.data.node, false)
 
-        const node_running_status = self.node.node_running_status.toUpperCase();
-
-        if (['READY', 'RUNNING', 'FAILED_WAITING'].indexOf(node_running_status) > -1) {
-          this.timeout = setTimeout(() => this.checkNodeStatus(), 1000);
-        }
+        self.initializeUpdate();
     })
     .catch((error) => {
       console.log(error);
@@ -206,12 +198,20 @@ export default class Editor extends Component {
     });
   }
 
-  postNode({node, reloadOption, action}={}) {
+  initializeUpdate() {
+      const node_running_status = this.node.node_running_status.toUpperCase();
+      if (this.props.collection === COLLECTIONS.RUNS && ACTIVE_NODE_RUNNING_STATUSES.has(node_running_status)) {
+        this.timeout = setTimeout(() => this.checkNodeStatus(), 1000);
+      }
+  }
+
+  postNode({node, reloadOption, action, retryOnAuth = true}={}) {
     /* action might be in {'save', 'validate', 'approve', 'deprecate'}*/
     const self = this;
     self.setState({loading: true});
 
     console.log(action, node);
+
 
     PLynxApi.endpoints[self.props.collection]
     .create({
@@ -283,7 +283,12 @@ export default class Editor extends Component {
             console.error("Could not refresh token");
             self.showAlert('Failed to authenticate', 'failed');
           } else {
-            self.showAlert('Failed to save the graph, please try again', 'failed');
+            if (retryOnAuth) {
+                // Token updated, try posting again
+                self.postNode({node:node, reloadOption:reloadOption, action:action, retryOnAuth:false})
+            } else {
+                self.showAlert('Failed to save the graph, please try again', 'failed');
+            }
           }
         });
       } else {
