@@ -108,11 +108,11 @@ See :ref:`intro-node`.
 +---------------------+-------------+-------------------------------------------------------------------------------------------+
 | cache_url           | ``STRING``  | URL to the cached operation.                                                              |
 +---------------------+-------------+-------------------------------------------------------------------------------------------+
-| parent_node         | ``STRING``  | Reference to the parent Node. It refers to `nodes` collection.                            |
+| parent_node_id      | ``STRING``  | Reference to the parent Node. It refers to `nodes` collection.                            |
 +---------------------+-------------+-------------------------------------------------------------------------------------------+
 | starred             | ``BOOLEAN`` | Flag is set to `true` if the Node is prioritized.                                         |
 +---------------------+-------------+-------------------------------------------------------------------------------------------+
-| successor_node      | ``STRING``  | If the Node is deprecated this field will reference to a successor in `nodes` collection. |
+| successor_node_id   | ``STRING``  | If the Node is deprecated this field will reference to a successor in `nodes` collection. |
 +---------------------+-------------+-------------------------------------------------------------------------------------------+
 | x                   | ``INTEGER`` | `X` position in the Graph.                                                                |
 +---------------------+-------------+-------------------------------------------------------------------------------------------+

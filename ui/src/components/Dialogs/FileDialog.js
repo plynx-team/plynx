@@ -18,7 +18,7 @@ export default class FileDialog extends Component {
       description: PropTypes.string.isRequired,
       insertion_date: PropTypes.string,
       node_status: PropTypes.oneOf(Object.values(NODE_STATUS)).isRequired,
-      parent_node: PropTypes.string,
+      original_node_id: PropTypes.string,
       outputs: PropTypes.array.isRequired,
     }),
     hideDeprecate: PropTypes.bool.isRequired,
@@ -97,7 +97,7 @@ export default class FileDialog extends Component {
           <div className='Summary'>
             <div className='Item'>
               <div className={'Name'}>Id:</div>
-              <div className={'Id'}>{this.props.fileObj.parent_node || this.props.fileObj._id}</div>
+              <div className={'Id'}>{this.props.fileObj.original_node_id || this.props.fileObj._id}</div>
             </div>
 
             <div className='Item'>

@@ -5,6 +5,8 @@ from abc import abstractmethod
 import plynx.utils.exceptions
 from plynx.db.node import Node
 
+TMP_DIR = '/tmp/plx'
+
 
 class BaseExecutor:
     ALIAS = None
@@ -12,7 +14,7 @@ class BaseExecutor:
 
     def __init__(self, node):
         self.node = node
-        self.workdir = None
+        self.workdir = TMP_DIR
 
     @abstractmethod
     def run(self):

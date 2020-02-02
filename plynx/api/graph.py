@@ -91,14 +91,14 @@ class Graph(object):
     def _dictify(self):
         nodes = [node for node in traverse_nodes(self, self.targets)]
         plynx_nodes = {}
-        for base_node_name, parent_node in set([(n.base_node_name, n.parent_node) for n in nodes]):
-            obj = _get_obj('nodes', parent_node, self.client)
-            plynx_nodes[parent_node] = obj
+        for base_node_name, parent_node_id in set([(n.base_node_name, n.parent_node_id) for n in nodes]):
+            obj = _get_obj('nodes', parent_node_id, self.client)
+            plynx_nodes[parent_node_id] = obj
 
         res_nodes = []
         for node in nodes:
             node_dict = node._dictify()
-            plynx_node = copy.deepcopy(plynx_nodes[node.parent_node])
+            plynx_node = copy.deepcopy(plynx_nodes[node.parent_node_id])
             update_recursive(plynx_node, node_dict)
             res_nodes.append(plynx_node)
 

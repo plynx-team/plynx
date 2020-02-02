@@ -637,8 +637,10 @@ ENDPOINT = '` + API_ENDPOINT + `'
     let i = 0;
 
     if (replaceParentNode) {
-      node.parent_node = node._id;
+      node.original_node_id = node._id;
     }
+    node.parent_node_id = null;
+    node.successor_node_id = null;
     node._id = new ObjectID().toString();
 
     if (node.inputs) {

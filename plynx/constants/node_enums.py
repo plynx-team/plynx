@@ -68,3 +68,9 @@ class NodePostStatus:
     SUCCESS = 'SUCCESS'
     FAILED = 'FAILED'
     VALIDATION_FAILED = 'VALIDATION_FAILED'
+
+
+class NodeClonePolicy:
+    NODE_TO_NODE = 0
+    NODE_TO_RUN = 1
+    RUN_TO_NODE = 2

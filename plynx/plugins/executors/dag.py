@@ -56,9 +56,9 @@ class DAG(BaseExecutor):
             dependency_index = 0
             for node_input in node.inputs:
                 for input_value in node_input.values:
-                    parent_node_id = to_object_id(input_value.node_id)
-                    self.node_id_to_dependents[parent_node_id].add(node_id)
-                    if not NodeRunningStatus.is_finished(self.node_id_to_node[parent_node_id].node_running_status):
+                    dep_node_id = to_object_id(input_value.node_id)
+                    self.node_id_to_dependents[dep_node_id].add(node_id)
+                    if not NodeRunningStatus.is_finished(self.node_id_to_node[dep_node_id].node_running_status):
                         dependency_index += 1
 
             if not NodeRunningStatus.is_finished(node.node_running_status):

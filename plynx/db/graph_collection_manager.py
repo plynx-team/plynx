@@ -18,7 +18,7 @@ class GraphCollectionManager(object):
         if not db_graph:
             return None
         node_ids = set(
-            [to_object_id(node['parent_node']) for node in db_graph['nodes']]
+            [to_object_id(node['parent_node_id']) for node in db_graph['nodes']]
         )
         db_nodes = GraphCollectionManager.node_collection_manager.get_db_nodes_by_ids(node_ids)
 
@@ -27,7 +27,7 @@ class GraphCollectionManager(object):
         }
 
         for g_node in db_graph['nodes']:
-            id = to_object_id(g_node['parent_node'])
+            id = to_object_id(g_node['parent_node_id'])
             if id in node_id_to_db_node:
                 db_node = node_id_to_db_node[id]
                 g_node['node_status'] = db_node['node_status']
@@ -36,10 +36,10 @@ class GraphCollectionManager(object):
 
     @staticmethod
     def _transplant_node(node, new_node):
-        if to_object_id(node.parent_node) == new_node._id:
+        if to_object_id(node.parent_node_id) == new_node._id:
             return node
         new_node.apply_properties(node)
-        new_node.parent_node = str(new_node._id)
+        new_node.parent_node_id = str(new_node._id)
         new_node._id = node._id
         return new_node
 
@@ -53,7 +53,7 @@ class GraphCollectionManager(object):
             (int)   Number of upgraded Nodes
         """
         node_ids = set(
-            [to_object_id(node.parent_node) for node in graph.nodes]
+            [to_object_id(node.parent_node_id) for node in graph.nodes]
         )
         db_nodes = GraphCollectionManager.node_collection_manager.get_db_nodes_by_ids(node_ids)
         new_node_db_mapping = {}
@@ -62,8 +62,8 @@ class GraphCollectionManager(object):
             original_parent_node_id = db_node['_id']
             new_db_node = db_node
             if original_parent_node_id not in new_node_db_mapping:
-                while new_db_node['node_status'] != NodeStatus.READY and 'successor_node' in new_db_node and new_db_node['successor_node']:
-                    n = GraphCollectionManager.node_collection_manager.get_db_node(new_db_node['successor_node'])
+                while new_db_node['node_status'] != NodeStatus.READY and 'successor_node_id' in new_db_node and new_db_node['successor_node_id']:
+                    n = GraphCollectionManager.node_collection_manager.get_db_node(new_db_node['successor_node_id'])
                     if n:
                         new_db_node = n
                     else:
@@ -73,11 +73,11 @@ class GraphCollectionManager(object):
         new_nodes = [
             GraphCollectionManager._transplant_node(
                 node,
-                Node.from_dict(new_node_db_mapping[to_object_id(node.parent_node)])
+                Node.from_dict(new_node_db_mapping[to_object_id(node.parent_node_id)])
             ) for node in graph.nodes]
 
         upgraded_nodes_count = sum(
-            1 for node, new_node in zip(graph.nodes, new_nodes) if node.parent_node != new_node.parent_node
+            1 for node, new_node in zip(graph.nodes, new_nodes) if node.parent_node_id != new_node.parent_node_id
         )
 
         graph.nodes = new_nodes

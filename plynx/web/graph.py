@@ -237,7 +237,7 @@ def post_graph_node_action(graph_id, action):
             return make_fail_response('Node was not found'), 404
         node = Node.from_dict(node_dict)
         node.x, node.y = x, y
-        node.parent_node = node._id
+        node.original_node_id = node._id
         node._id = ObjectId()
         graph.nodes.append(node)
         graph.save()

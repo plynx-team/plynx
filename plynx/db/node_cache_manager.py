@@ -8,7 +8,7 @@ class NodeCacheManager(object):
     """The Node cache interface.
 
     The cache is defined by Node's
-        - parent_node
+        - original_node_id
         - inputs
         - parameters
     """

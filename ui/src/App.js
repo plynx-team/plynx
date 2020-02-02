@@ -10,7 +10,6 @@ import NodeRouter from './components/NodeRouter';
 import FileRouter from './components/FileRouter';
 import GraphRouter from './components/GraphRouter';
 import NotFound from './components/NotFound';
-import FeedbackButton from './components/FeedbackButton';
 import APIDialog from './components/Dialogs/APIDialog';
 
 import './App.css';
@@ -60,9 +59,6 @@ class App extends Component {
     return (
       <div className="App">
         <Header onAPIDialogClick={() => this.handleAPIDialogClick()}/>
-        {cookie.load('username') &&
-          <FeedbackButton/>
-        }
         <div className="Content">
           {this.state.showApiDialog && <APIDialog onClose={() => this.handleAPIDialogClose()}/>}
           <Switch>

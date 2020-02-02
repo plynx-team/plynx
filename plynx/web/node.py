@@ -6,7 +6,7 @@ from plynx.db.node_collection_manager import NodeCollectionManager
 from plynx.plugins.managers import resource_manager, executor_manager
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 from plynx.utils.common import to_object_id, JSONEncoder
-from plynx.constants import NodeStatus, NodeRunningStatus, NodePostAction, NodePostStatus, Collections
+from plynx.constants import NodeStatus, NodeRunningStatus, NodePostAction, NodePostStatus, Collections, NodeClonePolicy
 
 PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'base_node_names', 'search', 'is_graph'}
 PERMITTED_READONLY_POST_ACTIONS = {
@@ -126,7 +126,7 @@ def post_node(collections):
                 'validation_error': validation_error.to_dict()
             })
 
-        node = node.clone()
+        node = node.clone(NodeClonePolicy.NODE_TO_RUN)
         node.save(collection=Collections.RUNS)
         return JSONEncoder().encode(
             {
@@ -137,8 +137,13 @@ def post_node(collections):
             })
 
     elif action == NodePostAction.CLONE:
+        node_clone_policy = None
+        if collections == Collections.NODES:
+            node_clone_policy = NodeClonePolicy.NODE_TO_NODE
+        elif collections == Collections.RUNS:
+            node_clone_policy = NodeClonePolicy.RUN_TO_NODE
 
-        node = node.clone()
+        node = node.clone(node_clone_policy)
         node.save(collection=Collections.NODES)
 
         return JSONEncoder().encode(
@@ -171,13 +176,12 @@ def post_node(collections):
         node.node_status = NodeStatus.MANDATORY_DEPRECATED
         node.save(force=True)
     elif action == NodePostAction.PREVIEW_CMD:
-        job = node_collection.make_job(node)
 
         return JSONEncoder().encode(
             {
                 'status': NodePostStatus.SUCCESS,
                 'message': 'Successfully created preview',
-                'preview_text': job.run(preview=True)
+                'preview_text': executor_manager.name_to_class[node.kind](node).run(preview=True)
             })
 
     elif action == NodePostAction.REARRANGE_NODES:

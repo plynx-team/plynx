@@ -2,6 +2,7 @@
 import React, { Component } from 'react';
 import { PLynxApi } from '../../API';
 import LoadingScreen from '../LoadingScreen';
+import FeedbackButton from '../FeedbackButton';
 import { SPECIAL_USERS } from '../../constants';
 import cookie from 'react-cookies';
 
@@ -110,6 +111,7 @@ export default class Welcome extends Component {
         {this.state.loading &&
           <LoadingScreen />
         }
+        <FeedbackButton/>
         <div className="Top">
           <video id="background-video" loop autoPlay>
             <source src="video.mp4" type="video/mp4" />

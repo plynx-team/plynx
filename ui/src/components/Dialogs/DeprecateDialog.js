@@ -64,7 +64,7 @@ export default class DeprecateDialog extends Component {
     const self = this;
     PLynxApi.endpoints.nodes.getOne({ id: node_id})
     .then((response) => {
-      const node = response.data.data;
+      const node = response.data.node;
       self.setState({[destination]: node});
       self.setState({[destination + '_id']: node._id});
       self.setState({[destination + '_loading']: false});

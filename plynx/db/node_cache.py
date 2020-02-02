@@ -97,7 +97,7 @@ class NodeCache(DBObject):
             user_id = ''    # TODO after demo
         inputs = node.inputs
         parameters = node.parameters
-        parent_node = node.parent_node
+        original_node_id = node.original_node_id
 
         sorted_inputs = sorted(inputs, key=lambda x: x.name)
         inputs_hash = ','.join([
@@ -119,7 +119,7 @@ class NodeCache(DBObject):
 
         return hashlib.sha256(
             '{};{};{};{}'.format(
-                parent_node,
+                original_node_id,
                 inputs_hash,
                 parameters_hash,
                 str(user_id)).encode('utf-8')

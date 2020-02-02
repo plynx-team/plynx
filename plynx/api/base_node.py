@@ -142,7 +142,7 @@ class Params(NodeProps):
 class BaseNode():
     def _dictify(self):
         node_dict = {
-            'parent_node': self.parent_node,
+            'parent_node_id': self.parent_node_id,
             'description': self.description,
             'title': self.title,
             'node_running_status': self.node_running_status,

@@ -160,7 +160,7 @@ export default class PropertiesBar extends Component {
             this.state.nodes.length === 1 &&
             <div className="PropertiesHeader">
                 {'Properties of ' + this.state.nodes[0].title + ' '}
-                <Link to={'/nodes/' + this.state.nodes[0].parent_node}>
+                <Link to={'/nodes/' + this.state.nodes[0].original_node_id}>
                   <img src="/icons/external-link.svg" width="12" height="12" alt="^" />
                 </Link>
             </div>

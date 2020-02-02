@@ -1,6 +1,6 @@
 from past.builtins import basestring
 from collections import defaultdict, deque
-from plynx.constants import Collections
+from plynx.constants import Collections, NodeClonePolicy
 from plynx.db.db_object import DBObject, DBObjectField
 from plynx.db.validation_error import ValidationError
 from plynx.utils.common import ObjectId
@@ -9,21 +9,33 @@ from plynx.plugins.resources.common import File as FileCls
 from plynx.constants import ParameterTypes
 
 
-def _clone_update_in_place(node, original_node=None):
+def _clone_update_in_place(node, node_clone_policy):
+    old_node_id = node._id
     node._id = ObjectId()
+    node.successor_node_id = None
+    if node_clone_policy == NodeClonePolicy.NODE_TO_NODE:
+        node.parent_node_id = old_node_id
+        node.original_node_id = None
+    elif node_clone_policy == NodeClonePolicy.NODE_TO_RUN:
+        node.parent_node_id = None
+        node.original_node_id = old_node_id
+    elif node_clone_policy == NodeClonePolicy.RUN_TO_NODE:
+        node.parent_node_id = node.original_node_id
+        node.original_node_id = None
+    else:
+        raise Exception('Unknown clone policy `{}`'.format(node_clone_policy))
 
     if node.node_running_status == NodeRunningStatus.STATIC:
         return node
     node.node_running_status = NodeRunningStatus.READY
     node.node_status = NodeStatus.CREATED
-    node.original_node = original_node
 
     sub_nodes = node.get_parameter_by_name('_nodes', throw=False)
     if sub_nodes:
         object_id_mapping = {}
         for sub_node in sub_nodes.value.value:
             prev_id = ObjectId(sub_node._id)
-            _clone_update_in_place(sub_node)
+            _clone_update_in_place(sub_node, node_clone_policy)
             object_id_mapping[prev_id] = sub_node._id
 
         for sub_node in sub_nodes.value.value:
@@ -156,20 +168,20 @@ class Node(DBObject):
             is_list=False,
             ),
         # ID of previous version of the node, always refer to `nodes` collection.
-        'parent_node': DBObjectField(
+        'parent_node_id': DBObjectField(
             type=ObjectId,
             default=None,
             is_list=False,
             ),
         # ID of next version of the node, always refer to `nodes` collection.
-        'successor_node': DBObjectField(
+        'successor_node_id': DBObjectField(
             type=ObjectId,
             default=None,
             is_list=False,
             ),
         # ID of original node, used in `runs`, always refer to `nodes` collection.
         # A Run refers to original node
-        'original_node': DBObjectField(
+        'original_node_id': DBObjectField(
             type=ObjectId,
             default=None,
             is_list=False,
@@ -332,8 +344,8 @@ class Node(DBObject):
         self.x = other_node.x
         self.y = other_node.y
 
-    def clone(self):
-        return _clone_update_in_place(self.copy(), original_node=self._id)
+    def clone(self, node_clone_policy):
+        return _clone_update_in_place(self.copy(), node_clone_policy)
 
     def __str__(self):
         return 'Node(_id="{}")'.format(self._id)

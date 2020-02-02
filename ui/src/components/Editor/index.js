@@ -15,6 +15,8 @@ import {
 import Graph from '../Graph';
 import Node from '../Node';
 import RunList from '../NodeList/runList';
+import DeprecateDialog from '../Dialogs/DeprecateDialog';
+import TextViewDialog from '../Dialogs/TextViewDialog';
 import { makeControlPanel, makeControlToggles, makeControlButton, makeControlSeparator } from '../Common/controlButton';
 import "./style.css";
 
@@ -26,6 +28,8 @@ export const VIEW_MODE = Object.freeze({
   RUNS: 2,
 });
 
+
+const FIRST_TIME_APPROVED_STATE = 'first_time_approved_state';
 
 export default class Editor extends Component {
   static propTypes = {
@@ -45,6 +49,8 @@ export default class Editor extends Component {
       editable: false,
       loading: true,
       view_mode: VIEW_MODE.NONE,
+      deprecateQuestionDialog: false,
+      deprecateParentDialog: false,
     };
 
     let token = cookie.load('refresh_token');
@@ -107,6 +113,14 @@ export default class Editor extends Component {
 
       if (!editable && ['READY', 'RUNNING', 'FAILED_WAITING'].indexOf(node_running_status) > -1) {
         this.timeout = setTimeout(() => this.checkNodeStatus(), 1000);
+      }
+
+      const first_time_approved_node_id = window.sessionStorage.getItem(FIRST_TIME_APPROVED_STATE);
+      if (first_time_approved_node_id === self.node._id) {
+        this.setState({deprecateParentDialog: true});
+      }
+      if (first_time_approved_node_id) {
+        window.sessionStorage.removeItem('first_time_approved_state');
       }
 
       loading = false;
@@ -209,6 +223,9 @@ export default class Editor extends Component {
       self.setState({loading: false});
       if (data.status === RESPONCE_STATUS.SUCCESS) {
         if (reloadOption === RELOAD_OPTIONS.RELOAD) {
+          if (action === ACTION.APPROVE && node.parent_node_id) {
+            window.sessionStorage.setItem(FIRST_TIME_APPROVED_STATE, node._id);
+          }
           window.location.reload();
         } else if (reloadOption === RELOAD_OPTIONS.OPEN_NEW_LINK) {
           this.props.history.push(response.data.url);
@@ -218,7 +235,9 @@ export default class Editor extends Component {
           self.showAlert("Saved", 'success');
         } else if (action === ACTION.VALIDATE) {
           self.showAlert("Valid", 'success');
-      } else if (action === ACTION.REARRANGE_NODES) {
+        } if (action === ACTION.PREVIEW_CMD) {
+          self.setState({preview_text: data.preview_text});
+        } else if (action === ACTION.REARRANGE_NODES) {
           self.updateNode(data.node, true)
         } else if (action === ACTION.UPGRADE_NODES) {
           self.loadGraphFromJson(data.graph);
@@ -337,6 +356,14 @@ export default class Editor extends Component {
     });
   }
 
+  handlePreview() {
+      this.postNode({
+          node: this.node,
+          action: ACTION.PREVIEW_CMD,
+          reloadOption: RELOAD_OPTIONS.NONE,
+      });
+  }
+
   handleValidate() {
     this.postNode({
         node: this.node,
@@ -345,11 +372,19 @@ export default class Editor extends Component {
     });
   }
 
-  handleApprove() {
+  handleRun() {
     this.postNode({
         node: this.node,
         action: ACTION.CREATE_RUN,
         reloadOption: RELOAD_OPTIONS.NEW_TAB,
+    });
+  }
+
+  handleApprove() {
+    this.postNode({
+        node: this.node,
+        action: ACTION.APPROVE,
+        reloadOption: RELOAD_OPTIONS.RELOAD,
     });
   }
 
@@ -390,6 +425,25 @@ export default class Editor extends Component {
         node: this.node,
         action: ACTION.CLONE,
         reloadOption: RELOAD_OPTIONS.OPEN_NEW_LINK,
+    });
+  }
+
+  handleDeprecateClick() {
+    this.setState({deprecateQuestionDialog: true});
+  }
+
+  handleDeprecate(node, action) {
+    this.postNode({
+        node: node,
+        action: action,
+        reloadOption: RELOAD_OPTIONS.RELOAD,
+    });
+  }
+
+  handleCloseDeprecateDialog() {
+    this.setState({
+      deprecateQuestionDialog: false,
+      deprecateParentDialog: false
     });
   }
 
@@ -449,7 +503,23 @@ export default class Editor extends Component {
                 img: 'play.svg',
                 text: 'Run',
                 enabled: this.state.is_graph,
+                func: () => this.handleRun(),
+              },
+          }, {
+              render: makeControlButton,
+              props: {
+                img: 'play.svg',
+                text: 'Approve',
+                enabled: !this.state.is_graph && this.state.editable,
                 func: () => this.handleApprove(),
+              },
+          }, {
+              render: makeControlButton,
+              props: {
+                img: 'x.svg',
+                text: 'Deprecate',
+                enabled: !this.state.is_graph && !this.state.editable,
+                func: () => this.handleDeprecateClick(),
               },
           }, {
               render: makeControlButton,
@@ -486,8 +556,17 @@ export default class Editor extends Component {
               props: {
                 img: 'preview.svg',
                 text: 'API',
+                enabled: this.state.is_graph,
                 func: () => this.handleGenerateCode(),
               }
+          }, {
+              render: makeControlButton,
+              props: {
+                img: 'preview.svg',
+                text: 'Preview',
+                enabled: !this.state.is_graph,
+                func: () => this.handlePreview(),
+              },
           },
       ];
 
@@ -507,34 +586,60 @@ export default class Editor extends Component {
             <LoadingScreen
             ></LoadingScreen>
           }
+          {
+            this.state.deprecateQuestionDialog &&
+            <DeprecateDialog
+              onClose={() => this.handleCloseDeprecateDialog()}
+              prev_node_id={this.state.node._id}
+              onDeprecate={(node_, action) => this.handleDeprecate(node_, action)}
+              title={"Would you like to deprecate this Operation?"}
+              />
+          }
+          {
+            this.state.deprecateParentDialog &&
+            <DeprecateDialog
+              onClose={() => this.handleCloseDeprecateDialog()}
+              prev_node_id={this.state.node.parent_node_id}
+              new_node_id={this.state.node._id}
+              onDeprecate={(node_, action) => this.handleDeprecate(node_, action)}
+              title={"Would you like to deprecate parent Operation?"}
+              />
+          }
+          {
+            this.state.preview_text &&
+            <TextViewDialog className="TextViewDialog"
+              title='Preview'
+              text={this.state.preview_text}
+              onClose={() => this.setState({preview_text: null})}
+            />
+          }
           {this.makeControls()}
-          {
-              this.state.view_mode === VIEW_MODE.GRAPH &&
-              <Graph
-                ref={a => this.graph = a}
-                node={this.state.node}
-                plugins_dict={this.state.plugins_dict}
-                onNodeChange={(node) => this.handleNodeChange(node)}
-              />
-          }
-          {
-              this.state.view_mode === VIEW_MODE.NODE &&
-              <Node
-                node={this.state.node}
-                plugins_dict={this.state.plugins_dict}
-                onNodeChange={(node) => this.handleNodeChange(node)}
-              />
-          }
-          {
-              this.state.view_mode === VIEW_MODE.RUNS &&
-              <RunList
-                showControlls={false}
-                search={"original_node:" + this.state.node._id}
-              />
-          }
-          <pre>
-          {JSON.stringify(this.state, null, 4)}
-          </pre>
+          <div className="editor-content">
+              {
+                  this.state.view_mode === VIEW_MODE.GRAPH &&
+                  <Graph
+                    ref={a => this.graph = a}
+                    node={this.state.node}
+                    plugins_dict={this.state.plugins_dict}
+                    onNodeChange={(node) => this.handleNodeChange(node)}
+                  />
+              }
+              {
+                  this.state.view_mode === VIEW_MODE.NODE &&
+                  <Node
+                    node={this.state.node}
+                    plugins_dict={this.state.plugins_dict}
+                    onNodeChange={(node) => this.handleNodeChange(node)}
+                  />
+              }
+              {
+                  this.state.view_mode === VIEW_MODE.RUNS &&
+                  <RunList
+                    showControlls={false}
+                    search={"original_node_id:" + this.state.node._id}
+                  />
+              }
+          </div>
         </div>
     );
   }

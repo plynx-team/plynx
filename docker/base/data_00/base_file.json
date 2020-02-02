@@ -16,6 +16,6 @@
   "node_status": "READY",
   "y": 0,
   "x": 0,
-  "parent_node": null,
+  "parent_node_id": null,
   "starred": true
 }

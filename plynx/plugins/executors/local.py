@@ -17,7 +17,6 @@ from plynx.plugins.executors import BaseExecutor
 from plynx.constants import NodeResources
 
 WORKER_CONFIG = get_worker_config()
-TMP_DIR = '/tmp'
 
 
 class ResourceMerger(object):
