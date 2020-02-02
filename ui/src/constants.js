@@ -155,3 +155,8 @@ export const CODE_LANGUAGES = [
 export const CODE_THEMES = [
   'chaos',
 ];
+
+export const COLLECTIONS = Object.freeze({
+  TEMPLATES: 'templates',
+  RUNS: 'runs',
+});

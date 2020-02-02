@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { NavLink } from 'react-router-dom';
 import { separator } from './common';
 import cookie from 'react-cookies';
+import { COLLECTIONS } from '../../constants';
 
 import './style.css';
 
@@ -22,10 +23,10 @@ class Navigation extends Component {
               <NavLink to='/dashboard' className="Item">Dashboard</NavLink>
             }
             {this.state.refreshTokenExists &&
-              <NavLink to='/nodes' className="Item">Nodes</NavLink>
+              <NavLink to={`/${COLLECTIONS.TEMPLATES}`} className="Item">Templates</NavLink>
             }
             {this.state.refreshTokenExists &&
-              <NavLink to='/runs' className="Item">Runs</NavLink>
+              <NavLink to={`/${COLLECTIONS.RUNS}`} className="Item">Runs</NavLink>
             }
             {separator()}
             <a href='https://plynx.readthedocs.io/en/latest/overview.html' className="Item">Docs</a>

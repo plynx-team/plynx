@@ -11,6 +11,7 @@ import {
   ALERT_OPTIONS,
   VALIDATION_CODES,
   NODE_STATUS,
+  COLLECTIONS,
 } from '../../constants';
 import Graph from '../Graph';
 import Node from '../Node';
@@ -255,7 +256,7 @@ export default class Editor extends Component {
           });
         } else if (action === ACTION.CREATE_RUN) {
           self.showAlert("Created new run with id: " + response.data.run_id, 'success');
-          window.open('/runs/' + response.data.run_id, '_blank');
+          window.open(`/${COLLECTIONS.RUNS}/${response.data.run_id}`, '_blank');
         } else {
           self.showAlert("Success", 'success');
         }

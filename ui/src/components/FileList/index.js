@@ -8,7 +8,7 @@ import FileDialog from '../Dialogs/FileDialog';
 import FileUploadDialog from '../Dialogs/FileUploadDialog';
 import PreviewDialog from '../Dialogs/PreviewDialog';
 import { listTextElement } from '../Common/listElements';
-import { ACTION, RESPONCE_STATUS, KEY_MAP } from '../../constants';
+import { ACTION, RESPONCE_STATUS, KEY_MAP, COLLECTIONS } from '../../constants';
 import '../Common/ListPage.css';
 import '../controls.css';
 import './items.css';
@@ -81,7 +81,7 @@ export default class ListPage extends Component {
     /* action might be in {'save', 'validate', 'approve', 'deprecate'}*/
     const self = this;
     self.setState({loading: true});
-    PLynxApi.endpoints.nodes
+    PLynxApi.endpoints[COLLECTIONS.TEMPLATES]
     .create({
       node: file,
       action: action
@@ -187,7 +187,7 @@ export default class ListPage extends Component {
                     </div>
                     }
                 tag="file-list-item"
-                endpoint={PLynxApi.endpoints.search_nodes}
+                endpoint={PLynxApi.endpoints[`search_${COLLECTIONS.TEMPLATES}`]}
                 extraSearch={{base_node_names: ['file']}}
                 header={header}
                 renderItem={(node) => this.renderItem(node)}

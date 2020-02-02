@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
-import { NODE_STATUS } from '../../constants';
+import { NODE_STATUS, COLLECTIONS } from '../../constants';
 import ParameterItem from '../Common/ParameterItem';
 import makePropertiesBox from '../Common/makePropertiesBox';
 import './NodeProperties.css';
@@ -92,12 +92,12 @@ export default class NodeProperties extends Component {
       makeKeyValueRow('Node Status', <i>{this.state.nodeStatus}</i>, 'node_status'),
       makeKeyValueRow(
           'Parent Node',
-          this.state.parentNode ? <Link to={'/nodes/' + this.state.parentNode}>{this.state.parentNode}</Link> : <i>null</i>,
+          this.state.parentNode ? <Link to={`/${COLLECTIONS.TEMPLATES}/${this.state.parentNode}`}>{this.state.parentNode}</Link> : <i>null</i>,
           'parent_node'
         ),
       makeKeyValueRow(
           'Successor',
-          this.props.successorNode ? <Link to={'/nodes/' + this.props.successorNode}>{this.props.successorNode}</Link> : <i>null</i>,
+          this.props.successorNode ? <Link to={`/${COLLECTIONS.TEMPLATES}/${this.state.successorNode}`}>{this.props.successorNode}</Link> : <i>null</i>,
           'successor'
         ),
       makeKeyValueRow('Created', <i>{this.props.created}</i>, 'created'),

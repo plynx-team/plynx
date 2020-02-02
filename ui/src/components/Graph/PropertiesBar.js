@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import OutputItem from './OutputItem';
 import ParameterItem from '../Common/ParameterItem';
 import makePropertiesBox from '../Common/makePropertiesBox';
+import { COLLECTIONS } from '../../constants';
 import { Link } from 'react-router-dom';
 import './style.css';
 
@@ -160,7 +161,7 @@ export default class PropertiesBar extends Component {
             this.state.nodes.length === 1 &&
             <div className="PropertiesHeader">
                 {'Properties of ' + this.state.nodes[0].title + ' '}
-                <Link to={'/nodes/' + this.state.nodes[0].original_node_id}>
+                <Link to={`/${COLLECTIONS.TEMPLATES}/${this.state.nodes[0].original_node_id}`}>
                   <img src="/icons/external-link.svg" width="12" height="12" alt="^" />
                 </Link>
             </div>

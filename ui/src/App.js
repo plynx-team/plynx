@@ -11,6 +11,7 @@ import FileRouter from './components/FileRouter';
 import GraphRouter from './components/GraphRouter';
 import NotFound from './components/NotFound';
 import APIDialog from './components/Dialogs/APIDialog';
+import { COLLECTIONS } from './constants';
 
 import './App.css';
 
@@ -65,8 +66,8 @@ class App extends Component {
             <Route exact path="/" component={Welcome} />
             <Route exact path="/welcome" component={Welcome} />
             <Route exact path="/dashboard" component={Dashboard} />
-            <Route path="/nodes" component={NodeRouter}/>
-            <Route path="/runs" component={NodeRouter}/>
+            <Route path={`/${COLLECTIONS.TEMPLATES}`} component={NodeRouter}/>
+            <Route path={`/${COLLECTIONS.RUNS}`} component={NodeRouter}/>
             <Route path="/files" component={FileRouter}/>
             <Route path="/graphs" component={GraphRouter}/>
             <Route exact path="/login" component={LogIn} />

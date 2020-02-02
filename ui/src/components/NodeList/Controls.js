@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { GRAPH_RUNNING_STATUS } from '../../constants';
+import { GRAPH_RUNNING_STATUS, COLLECTIONS } from '../../constants';
 import { makeControlLink, makeControlToggles } from '../Common/controlButton';
 import { VIEW_MODE } from '../Editor/index'
 
@@ -31,15 +31,15 @@ export default class Controls extends Component {
     const CREATE_BUTTONS = [
         {
             text: "Create BashJinja2",
-            href: "/nodes/plynx.plugins.executors.local.BashJinja2",
+            href: `/${COLLECTIONS.TEMPLATES}/plynx.plugins.executors.local.BashJinja2`,
         },
         {
             text: "Create PythonNode",
-            href: "/nodes/plynx.plugins.executors.local.PythonNode",
+            href: `/${COLLECTIONS.TEMPLATES}/plynx.plugins.executors.local.PythonNode`,
         },
         {
             text: "Create Graph",
-            href: "/nodes/plynx.plugins.executors.dag.DAG",
+            href: `/${COLLECTIONS.TEMPLATES}/plynx.plugins.executors.dag.DAG`,
         },
     ];
     return (

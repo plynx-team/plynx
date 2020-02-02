@@ -2,15 +2,16 @@ import React, { Component } from 'react';
 import { PLynxApi } from '../../API';
 import BaseList from '../BaseList';
 import Controls from './Controls';
+import { COLLECTIONS } from '../../constants';
 import { renderNodeItem, NODE_ITEM_HEADER } from './common';
 
 
-const renderItem = renderNodeItem('nodes', 'node_status');
+const renderItem = renderNodeItem(COLLECTIONS.TEMPLATES, 'node_status');
 
 export default class ListPage extends Component {
   constructor(props) {
     super(props);
-    document.title = "Nodes - PLynx";
+    document.title = "Templates - PLynx";
   }
 
   render() {
@@ -23,10 +24,10 @@ export default class ListPage extends Component {
 
             />
             <BaseList
-                menu={() => <a className="menu-button" href="/nodes/new">{"Create new Operation"}</a>}
+                menu={() => <a className="menu-button" href={`/${COLLECTIONS.TEMPLATES}/new`}>{"Create new Operation"}</a>}
                 title="Operations - PLynx"
                 tag="node-list-item"
-                endpoint={PLynxApi.endpoints.search_nodes}
+                endpoint={PLynxApi.endpoints[`search_${COLLECTIONS.TEMPLATES}`]}
                 extraSearch={{is_graph: false}}
                 header={NODE_ITEM_HEADER}
                 renderItem={renderItem}

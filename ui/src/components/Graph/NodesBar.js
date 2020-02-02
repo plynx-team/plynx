@@ -1,4 +1,3 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
 import { PLynxApi } from '../../API';
@@ -6,7 +5,7 @@ import NodeBarHeader from './NodeBarHeader';
 import NodeBarList from './NodeBarList';
 import ReactPaginate from 'react-paginate';
 import LoadingScreen from '../LoadingScreen';
-import { OPERATIONS } from '../../constants';
+import { OPERATIONS, COLLECTIONS } from '../../constants';
 import './style.css';
 
 export default class NodesBar extends Component {
@@ -78,7 +77,7 @@ export default class NodesBar extends Component {
     /* eslint-disable no-await-in-loop */
     /* eslint-disable no-unmodified-loop-condition */
     while (loading) {
-      await PLynxApi.endpoints.search_nodes.create({
+      await PLynxApi.endpoints[`search_${COLLECTIONS.TEMPLATES}`].create({
         offset: self.state.offset,
         per_page: self.perPage,
         status: "READY",

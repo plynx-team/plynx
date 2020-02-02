@@ -2,10 +2,11 @@ import React, { Component } from 'react';
 import { PLynxApi } from '../../API';
 import BaseList from '../BaseList';
 import Controls from './Controls';
+import { COLLECTIONS } from '../../constants';
 import { renderNodeItem, NODE_ITEM_HEADER } from './common';
 
 
-const renderItem = renderNodeItem('runs', 'node_running_status');
+const renderItem = renderNodeItem(COLLECTIONS.RUNS, 'node_running_status');
 
 export default class ListPage extends Component {
   constructor(props) {
@@ -24,10 +25,10 @@ export default class ListPage extends Component {
                 />
             }
             <BaseList
-                menu={() => <a className="menu-button" href="/runs/new">{"Create new Operation"}</a>}
+                menu={() => <a className="menu-button" href={`/${COLLECTIONS.TEMPLATES}/new`}>{"Create new Operation"}</a>}
                 title="Operations - PLynx"
                 tag="node-list-item"
-                endpoint={PLynxApi.endpoints.search_runs}
+                endpoint={PLynxApi.endpoints[`search_${COLLECTIONS.RUNS}`]}
                 search={this.props.search}
                 extraSearch={{is_graph: false}}
                 header={NODE_ITEM_HEADER}
