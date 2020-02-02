@@ -128,6 +128,26 @@
   background-color: rgba(145, 80, 80, 0.6);
 }
 
+.node-running-status-in_queue .svg-graph {
+  background-color: #333333;
+}
+
+.node-running-status-running .svg-graph {
+  background-color: #004466;
+}
+
+.node-running-status-failed .svg-graph {
+  background-color: #440000;
+}
+
+.node-running-status-success .svg-graph {
+  background-color: #004400;
+}
+
+.node-running-status-canceled .svg-graph {
+  background-color: #552020;
+}
+
 .node.error-highlight {
   box-shadow: 0 0 8px 3px #ff0000;
 }

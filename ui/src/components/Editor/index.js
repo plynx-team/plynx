@@ -583,9 +583,10 @@ export default class Editor extends Component {
   }
 
   render() {
+    let node_running_status = this.state.node ? this.state.node.node_running_status.toLowerCase(): "";
     return (
         <div
-          className="editor-view"
+          className={`editor-view node-running-status-${node_running_status}`}
         >
           <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
           {this.state.loading &&
