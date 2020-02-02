@@ -43,8 +43,8 @@ class NodeCollectionManager(object):
             and_query['node_status'] = {'$in': status}
         if search_string:
             and_query['$text'] = {'$search': search_string}
-        if 'parent_node_id' in  search_parameters:
-            and_query['parent_node_id'] = to_object_id(search_parameters['parent_node_id'])
+        if 'original_node_id' in  search_parameters:
+            and_query['original_node_id'] = to_object_id(search_parameters['original_node_id'])
         if len(and_query):
             aggregate_list.append({"$match": and_query})
 

@@ -17,7 +17,7 @@ PERMITTED_READONLY_POST_ACTIONS = {
 
 node_collection_managers = {
     collection: NodeCollectionManager(collection=collection)
-    for collection in [Collections.NODES, Collections.RUNS]
+    for collection in [Collections.TEMPLATES, Collections.RUNS]
 }
 
 @app.route('/plynx/api/v0/search_<collection>', methods=['POST'])
@@ -138,20 +138,20 @@ def post_node(collections):
 
     elif action == NodePostAction.CLONE:
         node_clone_policy = None
-        if collections == Collections.NODES:
+        if collections == Collections.TEMPLATES:
             node_clone_policy = NodeClonePolicy.NODE_TO_NODE
         elif collections == Collections.RUNS:
             node_clone_policy = NodeClonePolicy.RUN_TO_NODE
 
         node = node.clone(node_clone_policy)
-        node.save(collection=Collections.NODES)
+        node.save(collection=Collections.TEMPLATES)
 
         return JSONEncoder().encode(
             {
                 'status': NodePostStatus.SUCCESS,
                 'message': 'Node(_id=`{}`) successfully created'.format(str(node._id)),
                 'node_id': str(node._id),
-                'url': '/{}/{}'.format(Collections.NODES, node._id),
+                'url': '/{}/{}'.format(Collections.TEMPLATES, node._id),
             })
 
     elif action == NodePostAction.VALIDATE:

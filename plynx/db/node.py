@@ -18,7 +18,7 @@ def _clone_update_in_place(node, node_clone_policy):
         node.original_node_id = None
     elif node_clone_policy == NodeClonePolicy.NODE_TO_RUN:
         node.parent_node_id = None
-        node.original_node_id = old_node_id
+        node.original_node_id = node.original_node_id or old_node_id
     elif node_clone_policy == NodeClonePolicy.RUN_TO_NODE:
         node.parent_node_id = node.original_node_id
         node.original_node_id = None
@@ -243,7 +243,7 @@ class Node(DBObject):
             ),
     }
 
-    DB_COLLECTION = Collections.NODES
+    DB_COLLECTION = Collections.TEMPLATES
 
     def _DEFAULT_LOG(name):
         return Output.from_dict({

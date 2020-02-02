@@ -18,12 +18,12 @@ def init_indexes():
 
     _db[Collections.NODE_CACHE].create_index('key', unique=True)
 
-    _db[Collections.NODES].create_index('insertion_date')
-    _db[Collections.NODES].create_index([
+    _db[Collections.TEMPLATES].create_index('insertion_date')
+    _db[Collections.TEMPLATES].create_index([
         ('starred', pymongo.DESCENDING),
         ('insertion_date', pymongo.DESCENDING)
     ])
-    _db[Collections.NODES].create_index([('title', pymongo.TEXT), ('description', pymongo.TEXT)])
+    _db[Collections.TEMPLATES].create_index([('title', pymongo.TEXT), ('description', pymongo.TEXT)])
 
     _db[Collections.RUNS].create_index('insertion_date')
     _db[Collections.RUNS].create_index([('title', pymongo.TEXT), ('description', pymongo.TEXT)])
