@@ -10,7 +10,7 @@ const renderItem = renderNodeItem('nodes', 'node_status');
 export default class ListPage extends Component {
   constructor(props) {
     super(props);
-    document.title = "Operations - PLynx";
+    document.title = "Nodes - PLynx";
   }
 
   render() {

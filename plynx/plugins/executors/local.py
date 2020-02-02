@@ -17,11 +17,15 @@ from plynx.plugins.executors import BaseExecutor
 from plynx.constants import NodeResources
 
 WORKER_CONFIG = get_worker_config()
+_RESOURCE_MERGER_FUNC = lambda: defaultdict(list)
 
 
 class ResourceMerger(object):
-    def __init__(self):
-        self._dict = defaultdict(lambda: defaultdict(list))
+    def __init__(self, mandatory_keys=None):
+        self._dict = defaultdict(_RESOURCE_MERGER_FUNC)
+        mandatory_keys = mandatory_keys or []
+        for key in mandatory_keys:
+            self._dict[key] = _RESOURCE_MERGER_FUNC()
 
     def append(self, resource_dict, resource_name, is_list):
         for key, value in resource_dict.items():
@@ -192,7 +196,7 @@ class BaseBash(BaseExecutor):
         return node
 
     def _prepare_inputs(self, preview=False):
-        resource_merger = ResourceMerger()
+        resource_merger = ResourceMerger([NodeResources.INPUT])
         for input in self.node.inputs:
             is_list = not (input.min_count == 1 and input.max_count == 1)
             if preview:
@@ -216,7 +220,7 @@ class BaseBash(BaseExecutor):
         return resource_merger.get_dict()
 
     def _prepare_outputs(self, preview=False):
-        resource_merger = ResourceMerger()
+        resource_merger = ResourceMerger([NodeResources.OUTPUT])
         for output in self.node.outputs:
             filename = os.path.join(self.workdir, 'o_{}'.format(output.name))
             resource_merger.append(
