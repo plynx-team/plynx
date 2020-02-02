@@ -11,6 +11,16 @@ import './style.css';
 const allEqual = arr => arr.every( v => v === arr[0] )
 
 
+const renderNodeLink = node => {
+    let node_id = node.original_node_id || node.parent_node_id;
+    if (node_id) {
+        return <Link to={`/${COLLECTIONS.TEMPLATES}/${node.original_node_id || node.parent_node_id}`}>
+          {node.title}
+        </Link>;
+    }
+    return node.title;
+}
+
 export default class PropertiesBar extends Component {
   constructor(props) {
     super(props);
@@ -160,10 +170,8 @@ export default class PropertiesBar extends Component {
         {
             this.state.nodes.length === 1 &&
             <div className="PropertiesHeader">
-                {'Properties of ' + this.state.nodes[0].title + ' '}
-                <Link to={`/${COLLECTIONS.TEMPLATES}/${this.state.nodes[0].original_node_id}`}>
-                  <img src="/icons/external-link.svg" width="12" height="12" alt="^" />
-                </Link>
+                {'Properties of '}
+                {renderNodeLink(this.state.nodes[0])}
             </div>
         }
         {

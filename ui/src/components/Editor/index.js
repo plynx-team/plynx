@@ -53,6 +53,7 @@ export default class Editor extends Component {
       view_mode: VIEW_MODE.NONE,
       deprecateQuestionDialog: false,
       deprecateParentDialog: false,
+      collection: null,
     };
 
     let token = cookie.load('refresh_token');
@@ -72,7 +73,8 @@ export default class Editor extends Component {
 
       this.setState({
         node: this.node,
-        editable: this.node.node_status.toUpperCase() === NODE_STATUS.CREATED,
+        editable: this.props.collection === COLLECTIONS.TEMPLATES && this.node.node_status.toUpperCase() === NODE_STATUS.CREATED,
+        collection: this.props.collection,
       });
       if (this.graph) {
           if (force) {
@@ -460,18 +462,18 @@ export default class Editor extends Component {
               props: {
                   items: [
                       {
-                        img: 'save.svg',
+                        img: 'grid.svg',
                         text: 'Graph',
                         value: VIEW_MODE.GRAPH,
                         enabled: this.state.is_graph,
                     },
                     {
-                      img: 'check-square.svg',
+                      img: 'sliders.svg',
                       text: 'Properties',
                       value: VIEW_MODE.NODE,
                     },
                     {
-                      img: 'check-square.svg',
+                      img: 'list.svg',
                       text: 'Runs',
                       value: VIEW_MODE.RUNS,
                     },
@@ -508,7 +510,7 @@ export default class Editor extends Component {
               props: {
                 img: 'play.svg',
                 text: 'Run',
-                enabled: this.state.is_graph,
+                enabled: this.state.is_graph && this.state.collection === COLLECTIONS.TEMPLATES,
                 func: () => this.handleRun(),
               },
           }, {
@@ -546,7 +548,7 @@ export default class Editor extends Component {
               props: {
                 img: 'trending-up.svg',
                 text: 'Upgrade Nodes',
-                enabled: this.state.is_graph,
+                enabled: this.state.is_graph && this.state.editable,
                 func: () => this.handleUpgradeNodes(),
               },
           }, {

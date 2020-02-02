@@ -96,15 +96,19 @@
   font-weight: 900;
   font-size: 17px;
   padding: 4px;
-  cursor: pointer;
 }
 
 .PropertiesBar a {
   text-decoration: none;
 }
 
-a .PropertiesHeader:hover {
+.PropertiesHeader a {
+  color: #fff;
   text-decoration: underline;
+}
+
+.PropertiesHeader a:hover{
+  color: #005599;
 }
 
 .PropertiesBoxRoot {
