@@ -42,7 +42,9 @@ class App extends Component {
                  pathTuple[2] !== '' &&
                  prevPathTuple[2] !== 'new') {
         window.location.reload();
-      } else if (this.reloadOnChangePath && prevPathTuple[1] !== pathTuple[1]) {
+      } else if (this.reloadOnChangePath &&
+                prevPathTuple[1] !== pathTuple[1] &&
+                prevPathTuple[2] !== pathTuple[2] ) {
         window.location.reload();
       } else {
         this.reloadOnChangePath = true;

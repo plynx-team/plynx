@@ -243,7 +243,7 @@ export default class Editor extends Component {
         } else if (action === ACTION.REARRANGE_NODES) {
           self.updateNode(data.node, true)
         } else if (action === ACTION.UPGRADE_NODES) {
-          self.loadGraphFromJson(data.graph);
+          self.updateNode(data.node, true)
           let message = "";
           if (data.upgraded_nodes_count > 0) {
             message = "Upgraded " + data.upgraded_nodes_count +
@@ -631,6 +631,7 @@ export default class Editor extends Component {
                     node={this.state.node}
                     plugins_dict={this.state.plugins_dict}
                     onNodeChange={(node) => this.handleNodeChange(node)}
+                    editable={this.state.editable}
                   />
               }
               {

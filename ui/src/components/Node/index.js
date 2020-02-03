@@ -92,7 +92,7 @@ export default class Node extends Component {
                   description={node.description}
                   kind={node.kind}
                   parentNode={node.parent_node_id}
-                  successorNode={node.successor_node}
+                  successorNode={node.successor_node_id}
                   nodeStatus={node.node_status}
                   created={node.insertion_date}
                   updated={node.update_date}

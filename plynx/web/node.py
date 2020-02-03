@@ -79,10 +79,10 @@ def get_nodes(collection, node_link=None):
             return make_fail_response('Node `{}` was not found'.format(node_link)), 404
 
 
-@app.route('/plynx/api/v0/<collections>', methods=['POST'])
+@app.route('/plynx/api/v0/<collection>', methods=['POST'])
 @handle_errors
 @requires_auth
-def post_node(collections):
+def post_node(collection):
     app.logger.debug(request.data)
 
     data = json.loads(request.data)
@@ -90,7 +90,7 @@ def post_node(collections):
     node = Node.from_dict(data['node'])
     node.author = g.user._id
     node.starred = False
-    db_node = node_collection_managers[collections].get_db_node(node._id, g.user._id)
+    db_node = node_collection_managers[collection].get_db_node(node._id, g.user._id)
     action = data['action']
     if db_node and db_node['_readonly'] and action not in PERMITTED_READONLY_POST_ACTIONS:
         return make_fail_response('Permission denied'), 403
@@ -138,9 +138,9 @@ def post_node(collections):
 
     elif action == NodePostAction.CLONE:
         node_clone_policy = None
-        if collections == Collections.TEMPLATES:
+        if collection == Collections.TEMPLATES:
             node_clone_policy = NodeClonePolicy.NODE_TO_NODE
-        elif collections == Collections.RUNS:
+        elif collection == Collections.RUNS:
             node_clone_policy = NodeClonePolicy.RUN_TO_NODE
 
         node = node.clone(node_clone_policy)
@@ -194,7 +194,15 @@ def post_node(collections):
             }
         ))
     elif action == NodePostAction.UPGRADE_NODES:
-        raise NotImplementedError()
+        upd = node_collection_managers[collection].upgrade_sub_nodes(node)
+        return JSONEncoder().encode(dict(
+            {
+                'status': NodePostStatus.SUCCESS,
+                'message': 'Successfully updated nodes',
+                'node': node.to_dict(),
+                'upgraded_nodes_count': upd,
+            }
+        ))
     elif action == NodePostAction.CANCEL:
         raise NotImplementedError()
     elif action == NodePostAction.GENERATE_CODE:

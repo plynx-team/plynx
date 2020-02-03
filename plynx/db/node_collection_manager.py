@@ -1,7 +1,8 @@
 from pymongo import ReturnDocument
 from past.builtins import basestring
 from collections import OrderedDict
-from plynx.constants import NodeRunningStatus, Collections
+from plynx.db.node import Node
+from plynx.constants import NodeRunningStatus, Collections, NodeStatus
 from plynx.utils.common import to_object_id, parse_search_string
 from plynx.utils.db_connector import get_db_connector
 
@@ -101,19 +102,33 @@ class NodeCollectionManager(object):
 
         return next(get_db_connector()[self.collection].aggregate(aggregate_list), None)
 
-    def get_db_nodes_by_ids(self, ids):
+    def get_db_nodes_by_ids(self, ids, collection=None):
         """Find all the Nodes with a given IDs.
 
         Args:
             ids    (list of ObjectID):  Node Ids
         """
-        db_nodes = get_db_connector()[self.collection].find({
+        db_nodes = get_db_connector()[collection or self.collection].find({
             '_id': {
                 '$in': list(ids)
             }
         })
 
         return list(db_nodes)
+
+    def _update_sub_nodes_fields(self, sub_nodes_dicts, reference_node_id, target_props, reference_collection=None):
+        if not sub_nodes_dicts:
+            return
+        reference_collection = reference_collection or self.collection
+        id_to_updated_node_dict = {}
+        upd_node_ids = set(map(lambda node_dict: node_dict[reference_node_id], sub_nodes_dicts))
+        for upd_node_dict in self.get_db_nodes_by_ids(upd_node_ids, collection=reference_collection):
+            id_to_updated_node_dict[upd_node_dict['_id']] = upd_node_dict
+        for sub_node_dict in sub_nodes_dicts:
+            if sub_node_dict[reference_node_id] not in id_to_updated_node_dict:
+                continue
+            for prop in target_props:
+                sub_node_dict[prop] = id_to_updated_node_dict[sub_node_dict[reference_node_id]][prop]
 
     def get_db_node(self, node_id, user_id=None):
         """Get dict representation of the Graph.
@@ -130,23 +145,70 @@ class NodeCollectionManager(object):
             return res
 
         res['_readonly'] = (user_id != to_object_id(res['author']))
+
+
+        sub_nodes_dicts = None
+        for parameter in res['parameters']:
+            if parameter['name'] == '_nodes':
+                sub_nodes_dicts = parameter['value']['value']
+                break
+
         # TODO join collections using database capabilities
         if self.collection == Collections.RUNS:
-            sub_nodes_dicts = None
-            for parameter in res['parameters']:
-                if parameter['name'] == '_nodes':
-                    sub_nodes_dicts = parameter['value']['value']
-                    break
-            if sub_nodes_dicts:
-                id_to_updated_node_dict = {}
-                for upd_node_dict in self.get_db_nodes_by_ids(set(map(lambda node_dict: node_dict['_id'], sub_nodes_dicts))):
-                    id_to_updated_node_dict[upd_node_dict['_id']] = upd_node_dict
-                for sub_node_dict in sub_nodes_dicts:
-                    if sub_node_dict['_id'] not in id_to_updated_node_dict:
-                        continue
-                    for prop in _PROPERTIES_TO_GET_FROM_SUBS:
-                        sub_node_dict[prop] = id_to_updated_node_dict[sub_node_dict['_id']][prop]
+            self._update_sub_nodes_fields(sub_nodes_dicts, '_id', _PROPERTIES_TO_GET_FROM_SUBS)
+        self._update_sub_nodes_fields(sub_nodes_dicts, 'original_node_id', ['node_status'], reference_collection=Collections.TEMPLATES)
+
         return res
+
+    @staticmethod
+    def _transplant_node(node, new_node):
+        if to_object_id(node.parent_node_id) == new_node._id:
+            return node
+        new_node.apply_properties(node)
+        new_node.original_node_id = new_node._id
+        new_node._id = node._id
+        return new_node
+
+    def upgrade_sub_nodes(self, node):
+        """Upgrade deprecated Nodes.
+
+        The function does not change the Graph in the database.
+
+        Return:
+            (int)   Number of upgraded Nodes
+        """
+        assert self.collection == Collections.TEMPLATES
+        sub_nodes = node.get_parameter_by_name('_nodes').value.value
+        node_ids = set(
+            [node.original_node_id for node in sub_nodes]
+        )
+        db_nodes = self.get_db_nodes_by_ids(node_ids)
+        new_node_db_mapping = {}
+
+        for db_node in db_nodes:
+            original_parent_node_id = db_node['_id']
+            new_db_node = db_node
+            if original_parent_node_id not in new_node_db_mapping:
+                while new_db_node['node_status'] != NodeStatus.READY and 'successor_node_id' in new_db_node and new_db_node['successor_node_id']:
+                    n = self.get_db_node(new_db_node['successor_node_id'])
+                    if n:
+                        new_db_node = n
+                    else:
+                        break
+                new_node_db_mapping[original_parent_node_id] = new_db_node
+
+        new_nodes = [
+            NodeCollectionManager._transplant_node(
+                node,
+                Node.from_dict(new_node_db_mapping[to_object_id(node.original_node_id)])
+            ) for node in sub_nodes]
+
+        upgraded_nodes_count = sum(
+            1 for node, new_node in zip(sub_nodes, new_nodes) if node.parent_node_id != new_node.parent_node_id
+        )
+
+        node.get_parameter_by_name('_nodes').value.value = new_nodes
+        return upgraded_nodes_count
 
     def pick_node(self, kinds):
         node = get_db_connector()[self.collection].find_one_and_update(

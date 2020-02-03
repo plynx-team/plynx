@@ -95,7 +95,7 @@ export default class DeprecateDialog extends Component {
     const node = this.state.prev_node;
     const new_node = this.state.new_node;
     if (new_node) {
-      node.successor_node = new_node._id;
+      node.successor_node_id = new_node._id;
     }
     if (mode === 'optionally') {
       this.props.onDeprecate(node, ACTION.DEPRECATE);

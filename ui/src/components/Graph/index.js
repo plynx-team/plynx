@@ -182,7 +182,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
       "blocks": this.blocks,
       "connections": this.connections,
       "graph": this.graph_node,
-      "editable": this.graph_node.node_running_status.toUpperCase() === GRAPH_RUNNING_STATUS.CREATED,
+      "editable": this.props.editable,
 
     }, () => {
       if (nid) {
@@ -499,44 +499,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
 
   handleUpgradeNodes() {
     this.postGraph(this.graph, false, ACTION.UPGRADE_NODES);
-  }
-
-  handleClone() {
-    this.graph.graph_running_status = GRAPH_RUNNING_STATUS.CREATED;
-    this.graph._id = new ObjectID().toString();
-    let j = 0;
-    for (let i = 0; i < this.graph.nodes.length; ++i) {
-      const node = this.graph.nodes[i];
-      if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
-        node.node_running_status = NODE_RUNNING_STATUS.CREATED;
-      }
-      if (node.inputs) {
-        for (j = 0; j < node.inputs.length; ++j) {
-          const input_values = node.inputs[j].values;
-          for (let k = 0; k < input_values.length; ++k) {
-            input_values[k].resource_id = null;
-          }
-        }
-      }
-      if (node.logs) {
-        for (j = 0; j < node.logs.length; ++j) {
-          node.logs[j].resource_id = null;
-        }
-      }
-      if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
-        for (j = 0; j < node.outputs.length; ++j) {
-          node.outputs[j].resource_id = null;
-        }
-      }
-      node.cache_url = null;
-    }
-    this.setState({
-      editable: true,
-      graphId: this.graph._id,
-      graphRunningStatus: this.graph.graph_running_status,
-    });
-    this.loadGraphFromJson(this.graph);
-    this.props.history.push("/graphs/" + this.graph._id + '$');
   }
 
   handleCancel() {
