@@ -45,6 +45,7 @@ class App extends Component {
       } else if (this.reloadOnChangePath &&
                 prevPathTuple[1] !== pathTuple[1] &&
                 prevPathTuple[2] !== pathTuple[2] ) {
+        // Case /templates/abc -> /runs/abc
         window.location.reload();
       } else {
         this.reloadOnChangePath = true;
