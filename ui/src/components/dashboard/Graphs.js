@@ -1,8 +1,7 @@
 import React, { Component } from 'react';
 import { PLynxApi } from '../../API';
 import { LIST_HEADER, renderItem } from '../GraphList';
-import BaseList from '../BaseList';
-import '../Common/List.css';
+import BaseList from '../nodeList/baseList';
 import './Graphs.css';
 
 export default class Graphs extends Component {

@@ -1,4 +1,5 @@
 import React from 'react';
+import SearchBar from './SearchBar';
 import PropTypes from 'prop-types';
 
 
@@ -73,13 +74,21 @@ export function makeControlToggles(props) {
     );
 }
 
+export function makeControlSearchBar(props) {
+    return <SearchBar
+        onSearchUpdate={(search) => props.func(search)}
+        search={props.search}
+    />
+}
 
-export function makeControlPanel(props) {
+
+export function makeControlPanel({props, children_func} = {}) {
     return (
         <div
             className='control-panel'
             key={props.key}
         >
+            { children_func && children_func()  }
             {
                 props.items.map(
                     (item) => {

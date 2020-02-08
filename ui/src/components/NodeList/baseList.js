@@ -8,17 +8,19 @@ import ReactPaginate from 'react-paginate';
 import LoadingScreen from '../LoadingScreen';
 import { ALERT_OPTIONS } from '../../constants';
 import SearchBar from '../Common/SearchBar';
-import {PluginsProvider} from '../../contexts';
+import { makeControlPanel } from '../Common/controlButton';
+import {PluginsProvider, PluginsConsumer} from '../../contexts';
 import PropTypes from 'prop-types';
-import '../Common/ListPage.css';
+import './list.css';
 import '../controls.css';
 
 
 export default class ListPage extends Component {
   static propTypes = {
     search: PropTypes.string,
+    virtualCollection: PropTypes.string,
     children: PropTypes.array,
-    menu: PropTypes.func,
+    menuPanelDescriptor: PropTypes.array,
     extraSearch: PropTypes.object,
     tag: PropTypes.string.isRequired,
     header: PropTypes.array.isRequired,
@@ -82,7 +84,6 @@ export default class ListPage extends Component {
     function handleResponse(response) {
       const data = response.data;
       console.log(data.items);
-      console.log('AAAA', data.plugins_dict);
       self.setState(
         {
           items: data.items,
@@ -170,15 +171,19 @@ export default class ListPage extends Component {
               <LoadingScreen />
             }
             <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
-            <div className="menu">
-              {this.props.menu && this.props.menu()}
-            </div>
-            <div className="search">
-              <SearchBar
-                  onSearchUpdate={(search) => this.handleSearchUpdate(search)}
-                  search={this.state.search}
-              />
-            </div>
+            {
+                makeControlPanel({
+                    props: {
+                        items: [...this.props.menuPanelDescriptor, ...(this.state.plugins_dict ? this.props.pluginsDictMenuTransformer(this.state.plugins_dict): [])],
+                    },
+                    children_func: () => {
+                        return <SearchBar
+                                onSearchUpdate={(search) => this.handleSearchUpdate(search)}
+                                search={this.state.search}
+                                />
+                            }
+                } )
+            }
             <List
                 header={this.props.header}
                 items={this.state.items}

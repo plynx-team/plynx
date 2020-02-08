@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { PLynxApi } from '../../API';
-import BaseList from '../BaseList';
+import BaseList from '../nodeList/baseList';
 import {PluginsConsumer} from '../../contexts';
 import {HotKeys} from 'react-hotkeys';
 import Icon from '../Common/Icon';
@@ -9,7 +9,6 @@ import FileUploadDialog from '../Dialogs/FileUploadDialog';
 import PreviewDialog from '../Dialogs/PreviewDialog';
 import { listTextElement } from '../Common/listElements';
 import { ACTION, RESPONCE_STATUS, KEY_MAP, COLLECTIONS } from '../../constants';
-import '../Common/ListPage.css';
 import '../controls.css';
 import './items.css';
 

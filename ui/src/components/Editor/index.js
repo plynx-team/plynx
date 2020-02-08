@@ -16,7 +16,7 @@ import {
 } from '../../constants';
 import Graph from '../Graph';
 import Node from '../Node';
-import RunList from '../NodeList/runList';
+import RunList from '../nodeList/runList';
 import DeprecateDialog from '../Dialogs/DeprecateDialog';
 import TextViewDialog from '../Dialogs/TextViewDialog';
 import { makeControlPanel, makeControlToggles, makeControlButton, makeControlSeparator } from '../Common/controlButton';
@@ -578,9 +578,12 @@ export default class Editor extends Component {
           },
       ];
 
-      return makeControlPanel({
-          items: items,
-          key: this.state.view_mode + this.state.editable,
+      return makeControlPanel(
+          {
+              props: {
+                  items: items,
+                  key: this.state.view_mode + this.state.editable,
+              },
       });
   }
 

@@ -44,7 +44,7 @@
 .pagination li {
     display: inline-block;
     border-radius: 2px;
-    color: black;
+    color: #ddd;
     font-weight: 400;
     font-size: 13pt;
     white-space: nowrap;
@@ -55,11 +55,11 @@
 }
 
 .pagination li:hover {
-  background-color: darkgrey;
+  background-color: #555;
 }
 
 .pagination li.active {
-    background-color: #62a6f3;
+    background-color: #3f6da0;
 }
 
 .pagination li.break-me {

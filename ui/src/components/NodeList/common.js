@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
 import {PluginsConsumer} from '../../contexts';
 import { listTextElement } from '../Common/listElements';
-import '../Common/ListPage.css';
 import '../controls.css';
 import './items.css';
 
@@ -29,10 +28,7 @@ export function renderNodeItem(hrefPrefix, statusName) {
             { listTextElement('Status ' + node[statusName], node[statusName]) }
             { listTextElement('Id', node._id) }
             <PluginsConsumer>
-                { plugins_info => listTextElement('Kind', plugins_info.executors_info[node.kind].alias)}
-            </PluginsConsumer>
-            <PluginsConsumer>
-                { plugins_info => listTextElement('Type', plugins_info.executors_info[node.kind].is_graph ? "Graph": "Operation")}
+                { plugins_info => listTextElement('Type', plugins_info.operations_dict[node.kind] ? plugins_info.operations_dict[node.kind].title : "Error")}
             </PluginsConsumer>
             { listTextElement('Author', node._user.length > 0 ? node._user[0].username : 'Unknown') }
             { listTextElement('Created', node.insertion_date) }
@@ -46,7 +42,6 @@ export const NODE_ITEM_HEADER = [
    {title: "Header", tag: ""},
    {title: "Status", tag: "Status"},
    {title: "Node Id", tag: "Id"},
-   {title: "Kind", tag: "Kind"},
    {title: "Type", tag: "Type"},
    {title: "Author", tag: "Author"},
    {title: "Created", tag: "Created"},

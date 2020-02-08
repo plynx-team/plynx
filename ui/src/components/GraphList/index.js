@@ -1,8 +1,7 @@
 import React, { Component } from 'react';
 import { PLynxApi } from '../../API';
-import BaseList from '../BaseList';
+import BaseList from '../nodeList/baseList';
 import { listTextElement } from '../Common/listElements';
-import '../Common/ListPage.css';
 import '../controls.css';
 import './items.css';
 

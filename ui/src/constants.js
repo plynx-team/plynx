@@ -170,3 +170,9 @@ export const COLLECTIONS = Object.freeze({
   TEMPLATES: 'templates',
   RUNS: 'runs',
 });
+
+export const VIRTUAL_COLLECTIONS = Object.freeze({
+  OPERATIONS: 'operations',
+  WORKFLOWS: 'workflows',
+  RUNS: 'runs',
+});

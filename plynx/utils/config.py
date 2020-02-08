@@ -1,7 +1,6 @@
 import logging
 import yaml
 import os
-import pydoc
 from collections import namedtuple
 
 PLYNX_CONFIG_PATH = os.getenv('PLYNX_CONFIG_PATH', 'config.yaml')
@@ -15,27 +14,10 @@ AuthConfig = namedtuple('AuthConfig', 'secret_key')
 WebConfig = namedtuple('WebConfig', 'host port endpoint api_endpoint debug')
 DemoConfig = namedtuple('DemoConfig', 'enabled, graph_ids')
 CloudServiceConfig = namedtuple('CloudServiceConfig', 'prefix url_prefix url_postfix')
-PluginsConfig = namedtuple('PluginsConfig', 'executors resources')
+OperationConfig = namedtuple('OperationConfig', 'kind title executor operations resources')
+WorkflowConfig = namedtuple('WorkflowConfig', 'kind title executor operations')
+PluginsConfig = namedtuple('PluginsConfig', 'resources operations workflows')
 
-
-DEFAULT_PLUGIN_EXECUTORS = {
-    'plynx.plugins.executors.dag.DAG': [
-        'plynx.plugins.executors.local.BashJinja2',
-        'plynx.plugins.executors.local.PythonNode'
-    ]
-}
-
-DEFAULT_PLUGIN_RESOURCES = [
-    'plynx.plugins.resources.common.File',
-    'plynx.plugins.resources.common.PDF',
-    'plynx.plugins.resources.common.Image',
-    'plynx.plugins.resources.common.CSV',
-    'plynx.plugins.resources.common.TSV',
-    'plynx.plugins.resources.common.Json',
-    'plynx.plugins.resources.common.Executable',
-    'plynx.plugins.resources.common.Directory',
-    'plynx.plugins.resources.cloud_resources.CloudStorage',
-]
 
 Config = namedtuple(
     'Config',
@@ -130,13 +112,51 @@ def get_cloud_service_config():
 
 
 def get_plugins():
-    resources = [
-        pydoc.locate(class_path)
-        for class_path in _config.get('plugins', {}).get('resources', DEFAULT_PLUGIN_RESOURCES)
-    ]
+    print(_config['plugins']['resource_groups'])
+    # resources
+    kind_to_resource_group = {
+        resource_group['kind']: resource_group['resources']
+        for resource_group in _config['plugins']['resource_groups']
+    }
+    # operations
+    kind_to_operation = {}
+    raw_operations = _config['plugins']['operations']
+    unique_operation_kinds = {raw_operation['kind'] for raw_operation in raw_operations}
+    for raw_operation in raw_operations:
+        kind = raw_operation['kind']
+        sub_operation_kinds = set(raw_operation.get('operations', []))
+        if len(sub_operation_kinds - unique_operation_kinds) > 0:
+            raise Exception('Unknown operations: `{}`'.format(sub_operation_kinds - unique_operation_kinds))
+        resources = []
+        for resource_group_kind in raw_operation['resource_groups']:
+            resources.extend(kind_to_resource_group[resource_group_kind])
+        resources = list(set(resources))
+        if len(resources) == 0:
+            raise Exception('Operation `{}` does not have resources'.format(kind))
+        kind_to_operation[kind] = OperationConfig(
+            kind=kind,
+            title=raw_operation['title'],
+            executor=raw_operation['executor'],
+            operations=list(sub_operation_kinds),
+            resources=resources,
+        )
+    # workflows
+    workflows = []
+    for raw_workflow in _config['plugins']['workflows']:
+        sub_operation_kinds = set(raw_workflow.get('operations', []))
+        if len(sub_operation_kinds - unique_operation_kinds) > 0:
+            raise Exception('Unknown operations: `{}`'.format(sub_operation_kinds - unique_operation_kinds))
+        workflows.append(WorkflowConfig(
+            kind=raw_workflow['kind'],
+            title=raw_workflow['title'],
+            executor=raw_workflow['executor'],
+            operations=list(sub_operation_kinds),
+        ))
+
     return PluginsConfig(
-        executors=_config.get('plugins', {}).get('executors', DEFAULT_PLUGIN_EXECUTORS),
-        resources=resources,
+        resources=[item for kinds in kind_to_resource_group.values() for item in kinds],
+        operations=list(kind_to_operation.values()),
+        workflows=workflows,
     )
 
 

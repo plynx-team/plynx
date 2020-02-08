@@ -11,7 +11,7 @@ import FileRouter from './components/FileRouter';
 import GraphRouter from './components/GraphRouter';
 import NotFound from './components/NotFound';
 import APIDialog from './components/Dialogs/APIDialog';
-import { COLLECTIONS } from './constants';
+import { COLLECTIONS, VIRTUAL_COLLECTIONS } from './constants';
 
 import './App.css';
 
@@ -71,6 +71,8 @@ class App extends Component {
             <Route exact path="/" component={Welcome} />
             <Route exact path="/welcome" component={Welcome} />
             <Route exact path="/dashboard" component={Dashboard} />
+            <Route path={`/${VIRTUAL_COLLECTIONS.OPERATIONS}`} component={NodeRouter}/>
+            <Route path={`/${VIRTUAL_COLLECTIONS.WORKFLOWS}`} component={NodeRouter}/>
             <Route path={`/${COLLECTIONS.TEMPLATES}`} component={NodeRouter}/>
             <Route path={`/${COLLECTIONS.RUNS}`} component={NodeRouter}/>
             <Route path="/files" component={FileRouter}/>

@@ -5,12 +5,16 @@ from flask import request, send_file, g
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 from plynx.plugins.resources import PreviewObject
 from plynx.plugins.resources.common import File as FileCls
-from plynx.plugins.managers import resource_manager
+from plynx.plugins.managers import operation_manager
 from plynx.utils.common import JSONEncoder
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
 from plynx.constants import ResourcePostStatus
 
-RESOURCE_TYPES = set(resource_manager.resources_dict)
+
+RESOURCE_TYPES = []
+for resource_list in map(lambda l: l['resources'], operation_manager.kind_to_operation.values()):
+    RESOURCE_TYPES.extend(resource_list)
+RESOURCE_TYPES = list(set(RESOURCE_TYPES))
 
 
 @app.route('/plynx/api/v0/resource/<resource_id>', methods=['GET'])

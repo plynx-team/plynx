@@ -28,3 +28,50 @@ web:
 demo:
   enabled: true
   graph_ids: []
+
+plugins:
+  resource_groups:
+    - kind: default-resources
+      resources:
+        - plynx.plugins.resources.common.File
+        - plynx.plugins.resources.common.PDF
+        - plynx.plugins.resources.common.Image
+        - plynx.plugins.resources.common.CSV
+        - plynx.plugins.resources.common.TSV
+        - plynx.plugins.resources.common.Json
+        - plynx.plugins.resources.common.Executable
+        - plynx.plugins.resources.common.Directory
+    - kind: cloud-resources
+      resources:
+        - plynx.plugins.resources.cloud_resources.CloudStorage
+  operations:
+    - kind: basic-bash-jinja2-operation
+      title: Basic BashJinja2
+      executor: plynx.plugins.executors.local.BashJinja2
+      resource_groups:
+        - default-resources
+        - cloud-resources
+    - kind: basic-python-node-operation
+      title: Basic Python
+      executor: plynx.plugins.executors.local.PythonNode
+      resource_groups:
+        - default-resources
+        - cloud-resources
+    - kind: basic-dag-operation
+      title: Composite Operation
+      executor: plynx.plugins.executors.dag.DAG
+      operations:
+        - basic-bash-jinja2-operation
+        - basic-python-node-operation
+        - basic-dag-operation
+      resource_groups:
+        - default-resources
+        - cloud-resources
+  workflows:
+    - kind: basic-dag-workflow
+      title: Basic DAG Workflow
+      executor: plynx.plugins.executors.dag.DAG
+      operations:
+        - basic-bash-jinja2-operation
+        - basic-python-node-operation
+        - basic-dag-operation

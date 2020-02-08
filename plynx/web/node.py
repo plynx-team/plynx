@@ -3,7 +3,7 @@ import json
 from flask import request, g
 from plynx.db.node import Node
 from plynx.db.node_collection_manager import NodeCollectionManager
-from plynx.plugins.managers import resource_manager, executor_manager
+from plynx.plugins.managers import resource_manager, operation_manager, workflow_manager, executor_manager
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 from plynx.utils.common import to_object_id, JSONEncoder
 from plynx.constants import NodeStatus, NodeRunningStatus, NodePostAction, NodePostStatus, Collections, NodeClonePolicy
@@ -18,6 +18,13 @@ PERMITTED_READONLY_POST_ACTIONS = {
 node_collection_managers = {
     collection: NodeCollectionManager(collection=collection)
     for collection in [Collections.TEMPLATES, Collections.RUNS]
+}
+
+PLUGINS_DICT = {
+    'resources_dict': resource_manager.kind_to_resource_dict,
+    'operations_dict': operation_manager.kind_to_operation,
+    'workflows_dict': workflow_manager.kind_to_workflow,
+    'executors_info': executor_manager.kind_info,
 }
 
 @app.route('/plynx/api/v0/search_<collection>', methods=['POST'])
@@ -37,10 +44,7 @@ def post_search_nodes(collection):
     return JSONEncoder().encode({
         'items': res['list'],
         'total_count': res['metadata'][0]['total'] if res['metadata'] else 0,
-        'plugins_dict': {
-            'resources_dict': resource_manager.resources_dict,
-            'executors_info': executor_manager.executors_info,
-        },
+        'plugins_dict': PLUGINS_DICT,
         'status': 'success'})
 
 
@@ -50,15 +54,12 @@ def post_search_nodes(collection):
 def get_nodes(collection, node_link=None):
     user_id = to_object_id(g.user._id)
     # if node_link is a base node
-    if node_link in executor_manager.executors_info:
-        data = executor_manager.name_to_class[node_link].get_default_node().to_dict()
+    if node_link in executor_manager.kind_to_executor_class:
+        data = executor_manager.kind_to_executor_class[node_link].get_default_node().to_dict()
         data['kind'] = node_link
         return JSONEncoder().encode({
             'node': data,
-            'plugins_dict': {
-                'resources_dict': resource_manager.resources_dict,
-                'executors_info': executor_manager.executors_info,
-            },
+            'plugins_dict': PLUGINS_DICT,
             'status': 'success'})
     else:
         try:
@@ -70,10 +71,7 @@ def get_nodes(collection, node_link=None):
         if node:
             return JSONEncoder().encode({
                 'node': node,
-                'plugins_dict': {
-                    'resources_dict': resource_manager.resources_dict,
-                    'executors_info': executor_manager.executors_info,
-                },
+                'plugins_dict': PLUGINS_DICT,
                 'status': 'success'})
         else:
             return make_fail_response('Node `{}` was not found'.format(node_link)), 404

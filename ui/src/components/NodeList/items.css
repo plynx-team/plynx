@@ -6,16 +6,19 @@
 }
 
 .node-list-item {
-  grid-template-columns: 200px 200px 1fr 200px 100px 200px 200px 200px;
+  grid-template-columns: 200px 200px 1fr 200px 200px 200px 200px;
 }
 
 .node-list-item .Id {
   min-width: 300px;
 }
 
+.node-list-view .Bar {
+  background-color: #404040;
+}
 
 .node-list-item .Status.CREATED {
-  color:blue;
+  color: blue;
 }
 
 .node-list-item .Status.READY {
@@ -35,6 +38,6 @@
 
 @media (min-width: 1100px) {
   .node-list-item {
-    grid-template-columns: 250px 150px 300px 150px 150px 200px 250px 250px;
+    grid-template-columns: 250px 150px 300px 150px 200px 250px 250px;
   }
 }

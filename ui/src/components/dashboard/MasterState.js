@@ -3,7 +3,6 @@ import PropTypes from 'prop-types';
 import { PLynxApi } from '../../API';
 import { SimpleLoader } from '../LoadingScreen';
 import NodeItem from '../Common/NodeItem';
-import '../Common/List.css';
 import './MasterState.css';
 
 class ListItem extends Component {

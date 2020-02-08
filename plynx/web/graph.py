@@ -6,7 +6,7 @@ from plynx.db.graph_collection_manager import GraphCollectionManager
 from plynx.db.graph_cancellation_manager import GraphCancellationManager
 from flask import request, g
 from plynx.web.common import app, requires_auth, make_fail_response, make_success_response, handle_errors
-from plynx.plugins.managers import resource_manager
+# from plynx.plugins.managers import resource_manager
 from plynx.utils.common import JSONEncoder, update_dict_recursively, ObjectId
 from plynx.constants import GraphRunningStatus, GraphPostAction, GraphPostStatus, GraphNodePostAction
 from plynx.utils.config import get_web_config

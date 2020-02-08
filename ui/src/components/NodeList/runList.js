@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { PLynxApi } from '../../API';
-import BaseList from '../BaseList';
+import BaseList from './baseList';
 import Controls from './Controls';
 import { COLLECTIONS } from '../../constants';
 import { renderNodeItem, NODE_ITEM_HEADER } from './common';

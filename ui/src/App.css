@@ -21,6 +21,7 @@ body{
 .App {
   display: flex;
   height: 100%;
+  font-family: 'Source Sans Pro', sans-serif;
   flex-direction: column;
 }
 
@@ -65,6 +66,7 @@ body{
   padding: 3px;
   border-top: 1px solid #000;
   border-bottom: 1px solid #000;
+  display: flex;
 }
 
 div:focus {
