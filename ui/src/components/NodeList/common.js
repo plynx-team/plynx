@@ -28,7 +28,13 @@ export function renderNodeItem(hrefPrefix, statusName) {
             { listTextElement('Status ' + node[statusName], node[statusName]) }
             { listTextElement('Id', node._id) }
             <PluginsConsumer>
-                { plugins_info => listTextElement('Type', plugins_info.operations_dict[node.kind] ? plugins_info.operations_dict[node.kind].title : "Error")}
+            {
+                plugins_info => listTextElement(
+                    'Type',
+                        plugins_info.operations_dict[node.kind] ? plugins_info.operations_dict[node.kind].title :
+                        (plugins_info.workflows_dict[node.kind] ? plugins_info.workflows_dict[node.kind].title : '<ERROR>')
+                )
+            }
             </PluginsConsumer>
             { listTextElement('Author', node._user.length > 0 ? node._user[0].username : 'Unknown') }
             { listTextElement('Created', node.insertion_date) }

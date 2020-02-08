@@ -8,7 +8,7 @@ import ReactPaginate from 'react-paginate';
 import LoadingScreen from '../LoadingScreen';
 import { ALERT_OPTIONS } from '../../constants';
 import SearchBar from '../Common/SearchBar';
-import { makeControlPanel } from '../Common/controlButton';
+import { makeControlPanel, makeControlLink } from '../Common/controlButton';
 import {PluginsProvider, PluginsConsumer} from '../../contexts';
 import PropTypes from 'prop-types';
 import './list.css';
@@ -162,6 +162,25 @@ export default class ListPage extends Component {
     });
   }
 
+  generateCreateDefs(plugins_info) {
+      if (!plugins_info || !this.props.virtualCollection) {
+          return [];
+      }
+      return Object.values(plugins_info[`${this.props.virtualCollection}_dict`]).map(
+          (operation) => {
+              return {
+                  render: makeControlLink,
+                  props: {
+                    img: 'plus.svg',
+                    text: operation.title,
+                    href: `/templates/${operation.kind}`,
+                    key: operation.kind
+                  },
+              };
+          }
+      )
+  }
+
   render() {
     return (
       <div className='ListPage'>
@@ -171,19 +190,22 @@ export default class ListPage extends Component {
               <LoadingScreen />
             }
             <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
+            <PluginsConsumer>
             {
-                makeControlPanel({
-                    props: {
-                        items: [...this.props.menuPanelDescriptor, ...(this.state.plugins_dict ? this.props.pluginsDictMenuTransformer(this.state.plugins_dict): [])],
-                    },
-                    children_func: () => {
-                        return <SearchBar
-                                onSearchUpdate={(search) => this.handleSearchUpdate(search)}
-                                search={this.state.search}
-                                />
-                            }
-                } )
+                plugins_info =>
+                    makeControlPanel({
+                        props: {
+                            items: [...this.props.menuPanelDescriptor, ...this.generateCreateDefs(plugins_info)],
+                        },
+                        children_func: () => {
+                            return <SearchBar
+                                    onSearchUpdate={(search) => this.handleSearchUpdate(search)}
+                                    search={this.state.search}
+                                    />
+                                }
+                    } )
             }
+            </PluginsConsumer>
             <List
                 header={this.props.header}
                 items={this.state.items}

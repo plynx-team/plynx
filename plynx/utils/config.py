@@ -6,7 +6,7 @@ from collections import namedtuple
 PLYNX_CONFIG_PATH = os.getenv('PLYNX_CONFIG_PATH', 'config.yaml')
 _config = None
 
-MasterConfig = namedtuple('MasterConfig', 'internal_host host port executors')
+MasterConfig = namedtuple('MasterConfig', 'internal_host host port kinds')
 WorkerConfig = namedtuple('WorkerConfig', 'user')
 MongoConfig = namedtuple('MongoConfig', 'user password host port')
 StorageConfig = namedtuple('StorageConfig', 'scheme prefix credential_path')
@@ -50,7 +50,7 @@ def get_master_config():
         internal_host=_config.get('master', {}).get('internal_host', '0.0.0.0'),
         host=_config.get('master', {}).get('host', '127.0.0.1'),
         port=int(_config.get('master', {}).get('port', 17011)),
-        executors=(_config.get('master', {}).get('executors', [])),
+        kinds=(_config.get('master', {}).get('kinds', [])),
     )
 
 

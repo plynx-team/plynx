@@ -17,12 +17,20 @@ class NodeCollectionManager(object):
 
         self.collection = collection
 
-    def get_db_nodes(self, status='', node_kinds=None, search='', per_page=20, offset=0, user_id=None, is_graph=None, **fields):
+    def get_db_nodes(
+        self, status='',
+        node_kinds=None,
+        virtual_collection=None,
+        search='',
+        per_page=20,
+        offset=0,
+        user_id=None,
+        is_graph=None,
+        **fields):
         """Get subset of the Nodes.
 
         Args:
             status              (str, None):                Node Running Status
-            base_node_names     (str, list of str, None):   Node Running Status
             search              (str, None):                Search pattern
             per_page            (int):                      Number of Nodes per page
             offset              (int):                      Offset
@@ -41,7 +49,7 @@ class NodeCollectionManager(object):
         # Match
         and_query = {}
         if node_kinds:
-            and_query['kinds'] = {'$in': node_kinds}
+            and_query['kind'] = {'$in': node_kinds}
         if status:
             and_query['node_status'] = {'$in': status}
         if search_string:

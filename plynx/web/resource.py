@@ -5,7 +5,7 @@ from flask import request, send_file, g
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 from plynx.plugins.resources import PreviewObject
 from plynx.plugins.resources.common import File as FileCls
-from plynx.plugins.managers import operation_manager
+from plynx.plugins.managers import operation_manager, resource_manager
 from plynx.utils.common import JSONEncoder
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
 from plynx.constants import ResourcePostStatus
@@ -30,7 +30,7 @@ def get_resource(resource_id):
             fp=fp,
             resource_id=resource_id,
         )
-        return resource_manager[file_type].preview(preview_object)
+        return resource_manager.name_to_resource_cls[file_type].preview(preview_object)
     return send_file(
         fp,
         attachment_filename=resource_id)

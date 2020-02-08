@@ -74,3 +74,8 @@ class NodeClonePolicy:
     NODE_TO_NODE = 0
     NODE_TO_RUN = 1
     RUN_TO_NODE = 2
+
+
+class NodeVirtualCollection:
+    OPERATIONS = 'operations'
+    WORKFLOWS = 'workflows'

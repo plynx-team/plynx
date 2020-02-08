@@ -396,11 +396,14 @@ class Node(DBObject):
         queued_node_ids = set()
         children_ids = defaultdict(set)
 
-        sub_nodes = self.get_parameter_by_name('_nodes')
+        sub_nodes = self.get_parameter_by_name('_nodes').value.value
 
-        node_ids = set([node._id for node in sub_nodes.value.value])
+        if len(sub_nodes) == 0:
+            return
+
+        node_ids = set([node._id for node in sub_nodes])
         non_zero_node_ids = set()
-        for node in sub_nodes.value.value:
+        for node in sub_nodes:
             node_id_to_node[node._id] = node
             for input in node.inputs:
                 for value in input.values:
@@ -497,8 +500,6 @@ class Node(DBObject):
                 node = node_id_to_node[node_id]
                 node.x = LEFT_PADDING + (max_level - level) * LEVEL_WIDTH
                 node.y = TOP_PADDING + level_padding + cum_heights[index]
-
-        return None, None
 
 
 class ParameterEnum(DBObject):

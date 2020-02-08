@@ -9,10 +9,12 @@ _plugins = get_plugins()
 class _ResourceManager(object):
     def __init__(self):
         self.resources = _plugins.resources
-        self.kind_to_resource_cls = {
-            resource_kind: pydoc.locate(resource_kind)
-            for resource_kind in self.resources
-        }
+        self.kind_to_resource_cls = {}
+        self.name_to_resource_cls = {}
+        for resource_kind in self.resources:
+            resource_cls = pydoc.locate(resource_kind)
+            self.kind_to_resource_cls[resource_kind] = resource_cls
+            self.name_to_resource_cls[resource_cls.NAME] = resource_cls
         self.kind_to_resource_dict = {
             resource_kind: cls.to_dict()
             for resource_kind, cls in self.kind_to_resource_cls.items()

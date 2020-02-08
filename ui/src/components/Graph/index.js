@@ -37,8 +37,6 @@ function parameterIsSpecial(parameter) {
 
 class Graph extends Component {
   static propTypes = {
-    history: PropTypes.object.isRequired,
-    location: PropTypes.object.isRequired,
     match: PropTypes.shape({
       params: PropTypes.shape({
         graph_id: PropTypes.string,

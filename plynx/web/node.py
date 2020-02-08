@@ -6,9 +6,9 @@ from plynx.db.node_collection_manager import NodeCollectionManager
 from plynx.plugins.managers import resource_manager, operation_manager, workflow_manager, executor_manager
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 from plynx.utils.common import to_object_id, JSONEncoder
-from plynx.constants import NodeStatus, NodeRunningStatus, NodePostAction, NodePostStatus, Collections, NodeClonePolicy
+from plynx.constants import NodeStatus, NodeRunningStatus, NodePostAction, NodePostStatus, Collections, NodeClonePolicy, NodeVirtualCollection
 
-PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'base_node_names', 'search', 'is_graph'}
+PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'node_kinds', 'search', 'is_graph'}
 PERMITTED_READONLY_POST_ACTIONS = {
     NodePostAction.VALIDATE,
     NodePostAction.PREVIEW_CMD,
@@ -34,11 +34,16 @@ def post_search_nodes(collection):
     query = json.loads(request.data)
     app.logger.debug(request.data)
 
+    virtual_collection = query.pop('virtual_collection', None)
+    if virtual_collection == NodeVirtualCollection.OPERATIONS:
+        query['node_kinds'] = list(operation_manager.kind_to_operation.keys())
+    elif virtual_collection == NodeVirtualCollection.WORKFLOWS:
+        query['node_kinds'] = list(workflow_manager.kind_to_workflow.keys())
+
     user_id = to_object_id(g.user._id)
     if len(query.keys() - PAGINATION_QUERY_KEYS):
         return make_fail_response('Unknown keys: `{}`'.format(query.keys() - PAGINATION_QUERY_KEYS)), 400
 
-    app.logger.debug(query)
     res = node_collection_managers[collection].get_db_nodes(user_id=user_id, **query)
 
     return JSONEncoder().encode({
@@ -179,7 +184,7 @@ def post_node(collection):
             {
                 'status': NodePostStatus.SUCCESS,
                 'message': 'Successfully created preview',
-                'preview_text': executor_manager.name_to_class[node.kind](node).run(preview=True)
+                'preview_text': executor_manager.kind_to_executor_class[node.kind](node).run(preview=True)
             })
 
     elif action == NodePostAction.REARRANGE_NODES:

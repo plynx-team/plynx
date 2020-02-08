@@ -52,8 +52,10 @@ def materialize_executor(node_dict):
     Returns:
     Node: Derived from plynx.nodes.base.Node class
     """
+    # TODO don't use late import
+    from plynx.plugins.managers import executor_manager
     kind = node_dict['kind']
-    cls = pydoc.locate(kind)
+    cls = executor_manager.kind_to_executor_class.get(kind)
     if not cls:
         raise plynx.utils.exceptions.NodeNotFound(
             'Node kind `{}` not found'.format(kind)

@@ -62,7 +62,7 @@ class Master(object):
     WORKER_MONITORING_TIMEOUT = 10
 
     def __init__(self, master_config):
-        self.executors = master_config.executors
+        self.kinds = master_config.kinds
         self._stop_event = threading.Event()
         self._job_description_queue = queue.Queue()
         # Mapping of Worker ID to WorkerInfo
@@ -137,7 +137,7 @@ class Master(object):
         """Syncing with the database."""
         try:
             while not self._stop_event.is_set():
-                node = node_collection_manager.pick_node(kinds=self.executors)
+                node = node_collection_manager.pick_node(kinds=self.kinds)
                 if node:
                     logging.info('New node found: {} {} {}'.format(node['_id'], node['node_running_status'], node['title']))
                     executor = materialize_executor(node)
