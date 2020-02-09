@@ -14,9 +14,11 @@ AuthConfig = namedtuple('AuthConfig', 'secret_key')
 WebConfig = namedtuple('WebConfig', 'host port endpoint api_endpoint debug')
 DemoConfig = namedtuple('DemoConfig', 'enabled, graph_ids')
 CloudServiceConfig = namedtuple('CloudServiceConfig', 'prefix url_prefix url_postfix')
+ResourceConfig = namedtuple('ResourceConfig', 'kind title cls icon color')
+DummyOperationConfig = namedtuple('DummyOperationConfig', 'kind executor operations')
 OperationConfig = namedtuple('OperationConfig', 'kind title executor operations resources')
 WorkflowConfig = namedtuple('WorkflowConfig', 'kind title executor operations')
-PluginsConfig = namedtuple('PluginsConfig', 'resources operations workflows')
+PluginsConfig = namedtuple('PluginsConfig', 'resources operations workflows dummy_operations')
 
 
 Config = namedtuple(
@@ -112,11 +114,17 @@ def get_cloud_service_config():
 
 
 def get_plugins():
-    print(_config['plugins']['resource_groups'])
+    print(_config['plugins']['resources'])
     # resources
-    kind_to_resource_group = {
-        resource_group['kind']: resource_group['resources']
-        for resource_group in _config['plugins']['resource_groups']
+    kind_to_resource = {
+        raw_resource['kind']: ResourceConfig(
+            kind=raw_resource['kind'],
+            title=raw_resource['title'],
+            cls=raw_resource['cls'],
+            icon=raw_resource['icon'],
+            color=raw_resource.get('color', ''),
+        )
+        for raw_resource in _config['plugins']['resources']
     }
     # operations
     kind_to_operation = {}
@@ -127,18 +135,12 @@ def get_plugins():
         sub_operation_kinds = set(raw_operation.get('operations', []))
         if len(sub_operation_kinds - unique_operation_kinds) > 0:
             raise Exception('Unknown operations: `{}`'.format(sub_operation_kinds - unique_operation_kinds))
-        resources = []
-        for resource_group_kind in raw_operation['resource_groups']:
-            resources.extend(kind_to_resource_group[resource_group_kind])
-        resources = list(set(resources))
-        if len(resources) == 0:
-            raise Exception('Operation `{}` does not have resources'.format(kind))
         kind_to_operation[kind] = OperationConfig(
             kind=kind,
             title=raw_operation['title'],
             executor=raw_operation['executor'],
             operations=list(sub_operation_kinds),
-            resources=resources,
+            resources=[resource for kind, resource in kind_to_resource.items() if kind in raw_operation['resources']],
         )
     # workflows
     workflows = []
@@ -154,9 +156,10 @@ def get_plugins():
         ))
 
     return PluginsConfig(
-        resources=[item for kinds in kind_to_resource_group.values() for item in kinds],
+        resources=list(kind_to_resource.values()),
         operations=list(kind_to_operation.values()),
         workflows=workflows,
+        dummy_operations=[DummyOperationConfig(kind='dummy', executor='plynx.plugins.executors.Dummy', operations=[])]
     )
 
 

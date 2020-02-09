@@ -23,6 +23,7 @@ import {
   SPECIAL_TYPE_NAMES,
   OPERATIONS,
   KEY_MAP,
+  SPECIAL_NODE_IDS,
 } from '../../constants';
 import { API_ENDPOINT } from '../../configConsts';
 import { storeToClipboard, loadFromClipboard } from '../../utils';
@@ -47,9 +48,6 @@ class Graph extends Component {
   constructor(props) {
     super(props);
     this.graph_node = {};
-    this.node_lookup = {};
-    this.block_lookup = {};
-    this.connections = [];
     document.title = "Graph";
 
     this.state = {
@@ -97,6 +95,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
     this.graph_node = data;
     document.title = this.graph_node.title + " - Graph - PLynx";
     console.log(this.graph_node);
+    this.node_lookup = {};
+    this.block_lookup = {};
     this.connections = [];
     this.blocks = [];
     const ts = new ObjectID().toString();
@@ -107,31 +107,74 @@ ENDPOINT = '` + API_ENDPOINT + `'
         }
     }
 
+    var inputNode = null
     for (let i = 0; i < this.nodes.length; ++i) {
       const node = this.nodes[i];
-      const inputs = [];
-      const outputs = [];
+      if (node._id === SPECIAL_NODE_IDS.INPUT) {
+          inputNode = node;
+          node.outputs = this.graph_node.inputs.map(
+              (input) => { return {
+                    name: input.name,
+                    file_type: input.file_types[0],
+                    resource_id: null,
+                }}
+          );
+      } else if (node._id === SPECIAL_NODE_IDS.OUTPUT) {
+          let prevInputToValues = {}
+          for (const input of node.inputs) {
+              prevInputToValues[input.name + input.file_types[0]] = input.values;
+          }
+          node.inputs = this.graph_node.outputs.map(
+              (output) => { return {
+                    name: output.name,
+                    file_types: [output.file_type],
+                    values: prevInputToValues[output.name + output.file_type] ? prevInputToValues[output.name + output.file_type] : [],
+                    min_count: 1,
+                    max_count: 1,
+                }}
+          );
+      }
+      this.node_lookup[node._id] = node;
+    }
+
+    let i = 0
+    for (i = 0; i < this.nodes.length; ++i) {
+      const node = this.nodes[i];
+      const blockInputs = [];
+      const blockOutputs = [];
       const specialParameterNames = [];
       let j = 0;
 
-      if (node.inputs) {
-        for (j = 0; j < node.inputs.length; ++j) {
-          inputs.push({
+      for (j = 0; j < node.inputs.length; ++j) {
+          blockInputs.push({
             name: node.inputs[j].name,
             file_types: node.inputs[j].file_types
           });
+          const inputValueIndexToRemove = [];
           for (let k = 0; k < node.inputs[j].values.length; ++k) {
+            let from_block = node.inputs[j].values[k].node_id;
+            let from = node.inputs[j].values[k].output_id;
+
+            if (from_block === SPECIAL_NODE_IDS.INPUT && inputNode) {
+                let output = inputNode.outputs.filter((out) => out.name === from);
+                if (output.length === 0 || !typesValid(output[0], node.inputs[j])) {
+                    inputValueIndexToRemove.push(k);
+                    continue;
+                }
+            }
             this.connections.push({
-              "from_block": node.inputs[j].values[k].node_id,
-              "from": node.inputs[j].values[k].output_id,
+              "from_block": from_block,
+              "from": from,
               "to_block": node._id,
               "to": node.inputs[j].name}
               );
           }
-        }
+          for (let v = inputValueIndexToRemove.length - 1; v >= 0; --v) {
+              node.inputs[j].values.splice(inputValueIndexToRemove[v], 1)
+          }
       }
       for (j = 0; j < node.outputs.length; ++j) {
-        outputs.push({
+        blockOutputs.push({
           name: node.outputs[j].name,
           file_type: node.outputs[j].file_type
         });
@@ -159,15 +202,14 @@ ENDPOINT = '` + API_ENDPOINT + `'
         "y": node.y,
         "fields":
         {
-          "in": inputs,
-          "out": outputs
+          "in": blockInputs,
+          "out": blockOutputs
         },
         "nodeRunningStatus": node.node_running_status,
         "nodeStatus": node.node_status,
         "specialParameterNames": specialParameterNames,
         "_ts": ts,
       });
-      this.node_lookup[node._id] = node;
       this.block_lookup[node._id] = this.blocks[this.blocks.length - 1];
     }
 
@@ -242,18 +284,30 @@ ENDPOINT = '` + API_ENDPOINT + `'
     }
 
     if (node_input.max_count > 0 && node_input.values.length >= node_input.max_count) {
-      this.showAlert("No more slots for new connections left", 'warning');
+      this.props.showAlert("No more slots for new connections left", 'warning');
       return;
     }
 
     if (!typesValid(node_output, node_input)) {
-      this.showAlert("Incompatible types", 'warning');
+      this.props.showAlert("Incompatible types", 'warning');
       return;
+    }
+
+    if (from_nid == SPECIAL_NODE_IDS.INPUT) {
+        const graph_node_input = this.graph_node.inputs.find(
+          (node_input_) => {
+            return node_input_.name === from_pin;
+          }
+        );
+        if (graph_node_input.max_count < 0 && node_input.max_count >= 0) {
+            this.props.showAlert(`Graph input ${from_pin} is unlimited, but Operation has a limit of ${node_input.max_count}`, 'warning');
+            return;
+        }
     }
 
     if (node_input.values.filter(
         (a) => a.node_id === from_nid && a.output_id === from_pin).length > 0) {
-      this.showAlert("Connection already exists", 'warning');
+      this.props.showAlert("Connection already exists", 'warning');
       return;
     }
 
@@ -302,7 +356,11 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   onRemoveBlock(nid) {
-    this.nodes.splice(this.nodes.indexOf(node => node._id == nid));
+    if (this.node_lookup[nid].node_running_status === NODE_RUNNING_STATUS.SPECIAL) {
+        console.log('Cannot remove special node');
+        return;
+    }
+    this.nodes.splice(this.nodes.indexOf(node => node._id === nid));
     delete this.node_lookup[nid];
     this.blocks = this.blocks.filter((block) => {
       return block.nid !== nid;
@@ -314,7 +372,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   onCopyBlock(copyList, offset) {
-    const nodes = copyList.nids.map(nid => this.node_lookup[nid]);
+    const nodes = copyList.nids.map(nid => this.node_lookup[nid]).filter((node) => node && node.node_running_status !== NODE_RUNNING_STATUS.SPECIAL );
     const copyObject = {
       nodes: nodes,
       connectors: copyList.connectors,
@@ -360,21 +418,31 @@ ENDPOINT = '` + API_ENDPOINT + `'
       const from_node = this.node_lookup[from_block];
       const to_node = this.node_lookup[to_block];
       if (from_node && to_node) {
-        let index = -1;
-        for (let jj = 0; jj < to_node.inputs.length; ++jj) {
-          if (to_node.inputs[jj].name === connector.to) {
-            index = jj;
+        let from_index = -1;
+        let to_index = -1;
+        let jj;
+        for (jj = 0; jj < from_node.outputs.length; ++jj) {
+          if (from_node.outputs[jj].name === connector.from) {
+            from_index = jj;
             break;
           }
         }
-        if (index < 0) {
-          throw new Error("Index not found for " + connector.to);
+        for (jj = 0; jj < to_node.inputs.length; ++jj) {
+          if (to_node.inputs[jj].name === connector.to) {
+            to_index = jj;
+            break;
+          }
         }
-        if (to_node.inputs[index].max_count > 0 && to_node.inputs[index].values.length >= to_node.inputs[index].max_count) {
+
+        if (to_index < 0 || from_index < 0) {
+          console.log(`Index not found for connector ${connector}`);
+          continue;
+        }
+        if (to_node.inputs[to_index].max_count > 0 && to_node.inputs[to_index].values.length >= to_node.inputs[to_index].max_count) {
           continue;
         }
 
-        to_node.inputs[index].values.push({
+        to_node.inputs[to_index].values.push({
           "node_id": from_node._id,
           "output_id": connector.from,
         });
@@ -666,9 +734,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   showValidationError(validationError) {
-    const children = validationError.children;
-    for (let i = 0; i < children.length; ++i) {
-      const child = children[i];
+    for (let ii = 0; ii < validationError.children.length; ++ii) {
+      const child = validationError.children[ii]
       let nodeId = null;
       let node = null;
       switch (child.validation_code) {
@@ -684,7 +751,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
             "blocks": this.blocks
           });
 
-          this.showAlert("Deprecated Node found: `" + node.title + "`", 'warning');
+          this.props.showAlert("Deprecated Node found: `" + node.title + "`", 'warning');
           break;
         case VALIDATION_CODES.MISSING_INPUT:
           nodeId = validationError.object_id;
@@ -695,10 +762,13 @@ ENDPOINT = '` + API_ENDPOINT + `'
             "blocks": this.blocks
           });
 
-          this.showAlert("Missing input `" + child.object_id + "` in node `" + node.title + "`", 'warning');
+          this.props.showAlert("Missing input `" + child.object_id + "` in node `" + node.title + "`", 'warning');
           break;
         case VALIDATION_CODES.MISSING_PARAMETER:
-          this.showAlert("Missing parameter `" + child.object_id + "`", 'warning');
+          this.props.showAlert("Missing parameter `" + child.object_id + "`", 'warning');
+          break;
+        case VALIDATION_CODES.EMPTY_GRAPH:
+          this.props.showAlert("The graph is empty", 'warning');
           break;
         default:
       }

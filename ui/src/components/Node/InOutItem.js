@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import {PluginsConsumer} from '../../contexts';
+import { PluginsConsumer } from '../../contexts';
 
 export default class InOutItem extends Component {
   static propTypes = {
@@ -93,11 +93,11 @@ export default class InOutItem extends Component {
                   readOnly={this.state.readOnly}
                 >
                 {
-                  Object.values(plugins_dict.resources_dict).map((description) => <option
-                      value={description.name}
-                      key={description.name}
+                  plugins_dict.operations_dict[this.props.nodeKind].resources.map((description) => <option
+                      value={description.kind}
+                      key={description.kind}
                       >
-                      {description.alias}
+                      {description.title}
                       </option>
                   )
                 }
@@ -113,11 +113,11 @@ export default class InOutItem extends Component {
                   readOnly={this.state.readOnly}
                 >
                 {
-                  Object.values(plugins_dict.resources_dict).map((description) => <option
-                      value={description.name}
-                      key={description.name}
+                  plugins_dict.operations_dict[this.props.nodeKind].resources.map((description) => <option
+                      value={description.kind}
+                      key={description.kind}
                       >
-                      {description.alias}
+                      {description.title}
                       </option>
                   )
                 }

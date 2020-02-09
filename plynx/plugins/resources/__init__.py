@@ -13,25 +13,8 @@ def _force_decode(byte_array):
 
 
 class BaseResource(object):
-    NAME = None
-    ALIAS = None
-    ICON = None
-    COLOR = None
-
     def __init__(self):
-        assert type(self).NAME, 'NAME must be specified'
-        assert type(self).ALIAS, 'ALIAS must be specified'
-        assert type(self).ICON, 'ICON must be specified'
-        assert type(self).COLOR is not None, 'COLOR must be specified'
-
-    @classmethod
-    def to_dict(cls):
-        return {
-            'name': cls.NAME,
-            'alias': cls.ALIAS,
-            'icon': cls.ICON,
-            'color': cls.COLOR,
-        }
+        pass
 
     @staticmethod
     def prepare_input(filename, preview=False):

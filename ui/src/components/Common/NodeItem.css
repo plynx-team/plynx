@@ -46,7 +46,6 @@
   padding: 5px;
   display: inline-grid;
   grid-template-columns: 1fr 40px;
-  width: 100%;
 }
 
 .NodeItem .star-hidden {

@@ -1,3 +1,6 @@
+from bson.objectid import ObjectId
+
+
 class JobReturnStatus:
     SUCCESS = 'SUCCESS'
     FAILED = 'FAILED'
@@ -14,6 +17,7 @@ class NodeRunningStatus:
     FAILED = 'FAILED'
     FAILED_WAITING = 'FAILED_WAITING'
     CANCELED = 'CANCELED'
+    SPECIAL = 'SPECIAL'
 
     _FAILED_STATUSES = {
         FAILED,
@@ -79,3 +83,8 @@ class NodeClonePolicy:
 class NodeVirtualCollection:
     OPERATIONS = 'operations'
     WORKFLOWS = 'workflows'
+
+
+class SpecialNodeId:
+    INPUT = ObjectId('2419f9500000000000000000')
+    OUTPUT = ObjectId('56274ccc0000000000000000')

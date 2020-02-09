@@ -10,11 +10,6 @@ CLOUD_SERVICE_CONFIG = get_cloud_service_config()
 
 
 class CloudStorage(BaseResource):
-    NAME = 'cloud-storage'
-    ALIAS = 'Cloud Storage'
-    ICON = 'feathericons.hard-drive'
-    COLOR = '#5ed1ff'
-
     @staticmethod
     def prepare_input(filename, preview):
         if preview:

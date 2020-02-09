@@ -3,7 +3,7 @@ from plynx.db.input import Input
 from plynx.db.parameter import Parameter, ParameterWidget
 from plynx.db.output import Output
 from plynx.constants import ParameterTypes
-from plynx.plugins.resources import File as FileCls
+from plynx.plugins.resources import FILE_KIND
 import unittest
 
 
@@ -16,13 +16,13 @@ def get_test_node():
     node.inputs = []
     node.inputs.append(Input())
     node.inputs[-1].name = 'in'
-    node.inputs[-1].file_types = [FileCls.NAME]
+    node.inputs[-1].file_types = [FILE_KIND]
     node.inputs[-1].values = []
 
     node.outputs = []
     node.outputs.append(Output())
     node.outputs[-1].name = 'out'
-    node.outputs[-1].file_type = FileCls.NAME
+    node.outputs[-1].file_type = FILE_KIND
     node.outputs[-1].resource_id = None
 
     node.parameters = []

@@ -514,7 +514,7 @@ class ReactBlockGraph extends React.Component {
                       }}
 
                       selected={selectedBlock}
-                      readonly={!this.state.editable}
+                      readonly={!this.state.editable || block.nodeRunningStatus === NODE_RUNNING_STATUS.SPECIAL}
                     />;
           })}
 

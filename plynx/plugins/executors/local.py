@@ -12,7 +12,7 @@ from plynx.db.node import Node, Parameter, Output
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
 from plynx.utils.config import get_worker_config
 import plynx.plugins.managers as plugin_magagers
-from plynx.plugins.resources.common import File as FileCls
+from plynx.plugins.resources.common import FILE_KIND
 from plynx.plugins.executors import BaseExecutor
 from plynx.constants import NodeResources
 
@@ -144,55 +144,61 @@ class BaseBash(BaseExecutor):
         )
 
     @classmethod
-    def get_default_node(cls):
-        node = Node()
-        node.parameters = [
-            Parameter.from_dict({
-                'name': '_cmd',
-                'parameter_type': ParameterTypes.CODE,
-                'value': {
-                    'mode': 'sh',
-                    'value': 'set -e\n\n',
-                },
-                'mutable_type': False,
-                'publicable': False,
-                'removable': False,
-                }
-            ),
-            Parameter.from_dict({
-                'name': '_cacheable',
-                'parameter_type': ParameterTypes.BOOL,
-                'value': True,
-                'mutable_type': False,
-                'publicable': False,
-                'removable': False,
-            }),
-            Parameter.from_dict({
-                'name': '_timeout',
-                'parameter_type': ParameterTypes.INT,
-                'value': 600,
-                'mutable_type': False,
-                'publicable': True,
-                'removable': False
-            }),
-        ]
-        node.logs = [
-            Output.from_dict({
-                'name': 'stderr',
-                'file_type': FileCls.NAME,
-                'resource_id': None,
-            }),
-            Output({
-                'name': 'stdout',
-                'file_type': FileCls.NAME,
-                'resource_id': None,
-            }),
-            Output({
-                'name': 'worker',
-                'file_type': FileCls.NAME,
-                'resource_id': None,
-            }),
-        ]
+    def get_default_node(cls, is_workflow):
+        if is_workflow:
+            raise Exception('This class cannot be a workflow')
+        node = super().get_default_node(is_workflow)
+        node.parameters.extend(
+            [
+                Parameter.from_dict({
+                    'name': '_cmd',
+                    'parameter_type': ParameterTypes.CODE,
+                    'value': {
+                        'mode': 'sh',
+                        'value': 'set -e\n\n',
+                    },
+                    'mutable_type': False,
+                    'publicable': False,
+                    'removable': False,
+                    }
+                ),
+                Parameter.from_dict({
+                    'name': '_cacheable',
+                    'parameter_type': ParameterTypes.BOOL,
+                    'value': True,
+                    'mutable_type': False,
+                    'publicable': False,
+                    'removable': False,
+                }),
+                Parameter.from_dict({
+                    'name': '_timeout',
+                    'parameter_type': ParameterTypes.INT,
+                    'value': 600,
+                    'mutable_type': False,
+                    'publicable': True,
+                    'removable': False
+                }),
+            ]
+        )
+        node.logs.extend(
+            [
+                Output.from_dict({
+                    'name': 'stderr',
+                    'file_type': FILE_KIND,
+                    'resource_id': None,
+                }),
+                Output({
+                    'name': 'stdout',
+                    'file_type': FILE_KIND,
+                    'resource_id': None,
+                }),
+                Output({
+                    'name': 'worker',
+                    'file_type': FILE_KIND,
+                    'resource_id': None,
+                }),
+            ]
+        )
         return node
 
     def _prepare_inputs(self, preview=False):
@@ -309,7 +315,6 @@ class BashJinja2(BaseBash):
     # For example `{{{{ '{{{{' }}}} param['_timeout'] {{{{ '}}}}' }}}}` or `{{{{ '{{{{' }}}} input['abc'] {{{{ '}}}}' }}}}`
 
     '''
-    ALIAS = 'BashJinja2'
 
     def __init__(self, node=None):
         super(BashJinja2, self).__init__(node)
@@ -355,15 +360,13 @@ class BashJinja2(BaseBash):
         pass
 
     @classmethod
-    def get_default_node(cls):
-        node = super().get_default_node()
-        node.title = 'New'
+    def get_default_node(cls, is_workflow):
+        node = super().get_default_node(is_workflow)
+        node.title = 'New bash script'
         return node
 
 
 class PythonNode(BaseBash):
-    ALIAS = 'PythonNode'
-
     def __init__(self, node=None):
         super(PythonNode, self).__init__(node)
 
@@ -429,9 +432,9 @@ class PythonNode(BaseBash):
         return value
 
     @classmethod
-    def get_default_node(cls):
-        node = super().get_default_node()
-        node.title = 'New'
+    def get_default_node(cls, is_workflow):
+        node = super().get_default_node(is_workflow)
+        node.title = 'New python script'
         param = list(filter(lambda p: p.name == '_cmd', node.parameters))[0]
         param.value.mode = 'python'
         param.value.value = 'print("hello world")'

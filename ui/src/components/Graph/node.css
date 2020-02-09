@@ -128,6 +128,10 @@
   background-color: rgba(145, 80, 80, 0.6);
 }
 
+.node.running-status-special {
+  background-color: rgba(145, 80, 145, 0.6);
+}
+
 .node-running-status-in_queue .svg-graph {
   background-color: #333333;
 }

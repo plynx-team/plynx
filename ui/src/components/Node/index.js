@@ -115,6 +115,7 @@ export default class Node extends Component {
                   varName='inputs'
                   items={node.inputs}
                   key={key}
+                  nodeKind={node.kind}
                   onChanged={(value) => this.handleParameterChanged('inputs', value)}
                   readOnly={this.state.readOnly}
                 />
@@ -144,6 +145,7 @@ export default class Node extends Component {
                   varName='outputs'
                   items={node.outputs}
                   key={key}
+                  nodeKind={node.kind}
                   onChanged={(value) => this.handleParameterChanged('outputs', value)}
                   readOnly={this.state.readOnly}
                 />

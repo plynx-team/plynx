@@ -11,18 +11,10 @@ WEB_CONFIG = get_web_config()
 
 
 class File(BaseResource):
-    NAME = 'file'
-    ALIAS = 'File'
-    ICON = 'feathericons.file'
-    COLOR = '#fff'
+    pass
 
 
 class PDF(BaseResource):
-    NAME = 'pdf'
-    ALIAS = 'PDF file'
-    ICON = 'plynx.pdf'
-    COLOR = ''
-
     @classmethod
     def preview(cls, preview_object):
         return '<iframe src="{}" title="preview" type="application/pdf" width="100%"/>'.format(
@@ -33,11 +25,6 @@ class PDF(BaseResource):
 
 
 class Image(BaseResource):
-    NAME = 'image'
-    ALIAS = 'Image'
-    ICON = 'plynx.image'
-    COLOR = ''
-
     @classmethod
     def preview(cls, preview_object):
         return '<img src="{}" width="100%" alt="preview" />'.format(
@@ -68,26 +55,13 @@ class _BaseSeparated(BaseResource):
 
 class CSV(_BaseSeparated):
     SEPARATOR = ','
-    NAME = 'csv'
-    ALIAS = 'CSV file'
-    ICON = 'plynx.csv'
-    COLOR = ''
 
 
 class TSV(_BaseSeparated):
     SEPARATOR = '\t'
-    NAME = 'tsv'
-    ALIAS = 'TSV file'
-    ICON = 'plynx.tsv'
-    COLOR = ''
 
 
 class Json(BaseResource):
-    NAME = 'json'
-    ALIAS = 'JSON file'
-    ICON = 'plynx.json'
-    COLOR = ''
-
     @classmethod
     def preview(cls, preview_object):
         if preview_object.fp.getbuffer().nbytes > 1024 ** 2:
@@ -101,11 +75,6 @@ class Json(BaseResource):
 
 
 class Executable(BaseResource):
-    NAME = 'executable'
-    ALIAS = 'Executable'
-    ICON = 'feathericons.play'
-    COLOR = '#fcff57'
-
     @staticmethod
     def prepare_input(filename, preview):
         # `chmod +x` to the executable file
@@ -117,11 +86,6 @@ class Executable(BaseResource):
 
 
 class Directory(BaseResource):
-    NAME = 'directory'
-    ALIAS = 'Directory'
-    ICON = 'feathericons.folder'
-    COLOR = '#f44'
-
     @staticmethod
     def prepare_input(filename, preview):
         # extract zip file
@@ -154,3 +118,6 @@ class Directory(BaseResource):
             content_stream = '\n'.join(zf.namelist())
 
         return '<pre>{}</pre>'.format(content_stream)
+
+
+FILE_KIND = '.'.join([File().__class__.__module__, File().__class__.__name__])

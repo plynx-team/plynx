@@ -10,6 +10,7 @@ import {
   RESPONCE_STATUS,
   ALERT_OPTIONS,
   VALIDATION_CODES,
+  VALIDATION_TARGET_TYPE,
   NODE_STATUS,
   COLLECTIONS,
   ACTIVE_NODE_RUNNING_STATUSES,
@@ -76,11 +77,11 @@ export default class Editor extends Component {
         editable: this.props.collection === COLLECTIONS.TEMPLATES && this.node.node_status.toUpperCase() === NODE_STATUS.CREATED,
         collection: this.props.collection,
       });
-      if (this.graph) {
+      if (this.graphComponent) {
           if (force) {
-              this.graph.ref.current.loadGraphFromJson(this.node);
+              this.graphComponent.ref.current.loadGraphFromJson(this.node);
           } else {
-              this.graph.ref.current.updateGraphFromJson(this.node);
+              this.graphComponent.ref.current.updateGraphFromJson(this.node);
           }
       }
   }
@@ -99,6 +100,7 @@ export default class Editor extends Component {
       self.updateNode(response.data.node, true);
 
       const executor_info = response.data.plugins_dict.executors_info[self.node.kind];
+      console.log('plugins_dict', response.data.plugins_dict);
       const is_graph = executor_info.is_graph;
 
       self.setState({
@@ -259,8 +261,6 @@ export default class Editor extends Component {
         } else if (action === ACTION.CREATE_RUN) {
           self.showAlert("Created new run with id: " + response.data.run_id, 'success');
           window.open(`/${COLLECTIONS.RUNS}/${response.data.run_id}`, '_blank');
-        } else {
-          self.showAlert("Success", 'success');
         }
         if (cookie.load('demoPreview')) {
           cookie.remove('demoPreview', { path: '/' });
@@ -305,43 +305,43 @@ export default class Editor extends Component {
   }
 
   showValidationError(validationError) {
+    if (validationError.target === VALIDATION_TARGET_TYPE.GRAPH) {
+        if (this.graphComponent) {
+            this.graphComponent.ref.current.showValidationError(validationError);
+        } else {
+            this.showAlert('Errors in the graph structure', 'failed');
+        }
+        return;
+    }
+
+    console.log('>>', validationError);
     const children = validationError.children;
     for (let i = 0; i < children.length; ++i) {
       const child = children[i];
       let nodeId = null;
       let node = null;
+      console.log('?', child);
       switch (child.validation_code) {
         case VALIDATION_CODES.IN_DEPENDENTS:
           this.showValidationError(child);
           break;
-        case VALIDATION_CODES.DEPRECATED_NODE:
-          nodeId = validationError.object_id;
-          node = this.node_lookup[nodeId];
-
-          this.block_lookup[nodeId].highlight = true;
-          this.setState({
-            "blocks": this.blocks
-          });
-
-          this.showAlert("Deprecated Node found: `" + node.title + "`", 'warning');
-          break;
-        case VALIDATION_CODES.MISSING_INPUT:
-          nodeId = validationError.object_id;
-          node = this.node_lookup[nodeId];
-
-          this.block_lookup[nodeId].highlight = true;
-          this.setState({
-            "blocks": this.blocks
-          });
-
-          this.showAlert("Missing input `" + child.object_id + "` in node `" + node.title + "`", 'warning');
-          break;
         case VALIDATION_CODES.MISSING_PARAMETER:
           this.showAlert("Missing parameter `" + child.object_id + "`", 'warning');
           break;
+        case VALIDATION_CODES.MINIMUM_COUNT_MUST_NOT_BE_NEGATIVE:
+          this.showAlert(`Minimum count of inputs cannot be negative. Input: '${child.object_id}'`, 'warning');
+          break;
+        case VALIDATION_CODES.MAXIMUM_COUNT_MUST_BE_GREATER_THAN_MINIMUM:
+          this.showAlert(`Minimum number of inputs is greater than maximum. Input: '${child.object_id}'`, 'warning');
+          break;
+        case VALIDATION_CODES.MAXIMUM_COUNT_MUST_NOT_BE_ZERO:
+          this.showAlert(`Maximum number of inputs cannot be 0. Input: '${child.object_id}'`, 'warning');
+          break;
         default:
+          this.showAlert(`${child.validation_code}. Input: '${child.object_id}'`, 'warning');
       }
     }
+
   }
 
   showAlert(message, type) {
@@ -357,6 +357,7 @@ export default class Editor extends Component {
   }
 
   handleSave() {
+    console.log('to_save', this.node);
     this.postNode({
         node: this.node,
         action: ACTION.SAVE,
@@ -630,16 +631,18 @@ export default class Editor extends Component {
               {
                   this.state.view_mode === VIEW_MODE.GRAPH &&
                   <Graph
-                    ref={a => this.graph = a}
+                    ref={a => this.graphComponent = a}
                     node={this.state.node}
                     plugins_dict={this.state.plugins_dict}
                     onNodeChange={(node) => this.handleNodeChange(node)}
                     editable={this.state.editable}
+                    showAlert={(message, type) => this.showAlert(message, type)}
                   />
               }
               {
                   this.state.view_mode === VIEW_MODE.NODE &&
                   <Node
+                    ref={a => this.nodeComponent = a}
                     node={this.state.node}
                     plugins_dict={this.state.plugins_dict}
                     onNodeChange={(node) => this.handleNodeChange(node)}

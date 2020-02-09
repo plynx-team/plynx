@@ -118,7 +118,7 @@ export default class PropertiesBar extends Component {
     }
     const outputsList = this.state.outputs.filter(
       (output) => {
-        return output.resource_id !== null;
+        return output.resource_id;
       }
     ).map(
       (output) => {

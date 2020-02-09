@@ -117,6 +117,7 @@ export default class InOutList extends Component {
                             onChanged={(index, name, value) => this.handleChanged(index, name, value)}  // eslint-disable-line no-shadow
                             onRemove={(index) => this.handleRemoveItem(index)}                          // eslint-disable-line no-shadow
                             readOnly={this.state.readOnly}
+                            nodeKind={this.props.nodeKind}
                             minCount={item.min_count}
                             maxCount={item.max_count}
                           />
@@ -131,6 +132,7 @@ export default class InOutList extends Component {
                             onChanged={(index, name, value) => this.handleChanged(index, name, value)}  // eslint-disable-line no-shadow
                             onRemove={(index) => this.handleRemoveItem(index)}                          // eslint-disable-line no-shadow
                             readOnly={this.state.readOnly}
+                            nodeKind={this.props.nodeKind}
                           />
                         }
                       </div>
@@ -162,6 +164,7 @@ export default class InOutList extends Component {
 
 InOutList.propTypes = {
   varName: PropTypes.string,
+  nodeKind: PropTypes.string,
   items: PropTypes.array,
   readOnly: PropTypes.bool,
   onChanged: PropTypes.func,

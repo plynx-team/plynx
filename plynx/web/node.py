@@ -22,8 +22,8 @@ node_collection_managers = {
 
 PLUGINS_DICT = {
     'resources_dict': resource_manager.kind_to_resource_dict,
-    'operations_dict': operation_manager.kind_to_operation,
-    'workflows_dict': workflow_manager.kind_to_workflow,
+    'operations_dict': operation_manager.kind_to_operation_dict,
+    'workflows_dict': workflow_manager.kind_to_workflow_dict,
     'executors_info': executor_manager.kind_info,
 }
 
@@ -36,9 +36,9 @@ def post_search_nodes(collection):
 
     virtual_collection = query.pop('virtual_collection', None)
     if virtual_collection == NodeVirtualCollection.OPERATIONS:
-        query['node_kinds'] = list(operation_manager.kind_to_operation.keys())
+        query['node_kinds'] = list(operation_manager.kind_to_operation_dict.keys())
     elif virtual_collection == NodeVirtualCollection.WORKFLOWS:
-        query['node_kinds'] = list(workflow_manager.kind_to_workflow.keys())
+        query['node_kinds'] = list(workflow_manager.kind_to_workflow_dict.keys())
 
     user_id = to_object_id(g.user._id)
     if len(query.keys() - PAGINATION_QUERY_KEYS):
@@ -59,9 +59,12 @@ def post_search_nodes(collection):
 def get_nodes(collection, node_link=None):
     user_id = to_object_id(g.user._id)
     # if node_link is a base node
-    if node_link in executor_manager.kind_to_executor_class:
-        data = executor_manager.kind_to_executor_class[node_link].get_default_node().to_dict()
-        data['kind'] = node_link
+    if node_link in executor_manager.kind_to_executor_class and collection == Collections.TEMPLATES:
+        kind = node_link
+        data = executor_manager.kind_to_executor_class[kind].get_default_node(
+            is_workflow=kind in workflow_manager.kind_to_workflow_dict
+        ).to_dict()
+        data['kind'] = kind
         return JSONEncoder().encode({
             'node': data,
             'plugins_dict': PLUGINS_DICT,
@@ -158,7 +161,7 @@ def post_node(collection):
             })
 
     elif action == NodePostAction.VALIDATE:
-        validation_error = node.get_validation_error()
+        validation_error = executor_manager.kind_to_executor_class[node.kind](node).validate()
 
         if validation_error:
             return JSONEncoder().encode({

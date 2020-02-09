@@ -4,8 +4,8 @@ from plynx.constants import Collections, NodeClonePolicy
 from plynx.db.db_object import DBObject, DBObjectField
 from plynx.db.validation_error import ValidationError
 from plynx.utils.common import ObjectId
-from plynx.constants import NodeStatus, NodeRunningStatus, ValidationTargetType, ValidationCode
-from plynx.plugins.resources.common import File as FileCls
+from plynx.constants import NodeStatus, NodeRunningStatus, ValidationTargetType, ValidationCode, SpecialNodeId
+from plynx.plugins.resources.common import FILE_KIND
 from plynx.constants import ParameterTypes
 
 
@@ -164,7 +164,7 @@ class Node(DBObject):
         # Kind, such as plynx.plugins.executors.local.BashJinja2. Derived from from plynx.plugins.executors.BaseExecutor class.
         'kind': DBObjectField(
             type=str,
-            default='bash_jinja2',
+            default='dummy',
             is_list=False,
             ),
         # ID of previous version of the node, always refer to `nodes` collection.
@@ -248,76 +248,9 @@ class Node(DBObject):
     def _DEFAULT_LOG(name):
         return Output.from_dict({
             'name': name,
-            'file_type': FileCls.NAME,
+            'file_type': FILE_KIND,
             'resource_id': None,
         })
-
-    def get_validation_error(self):
-        """Validate Node.
-
-        Return:
-            (ValidationError)   Validation error if found; else None
-        """
-        violations = []
-        if self.title == '':
-            violations.append(
-                ValidationError(
-                    target=ValidationTargetType.PROPERTY,
-                    object_id='title',
-                    validation_code=ValidationCode.MISSING_PARAMETER
-                ))
-
-        for input in self.inputs:
-            if input.min_count < 0:
-                violations.append(
-                    ValidationError(
-                        target=ValidationTargetType.INPUT,
-                        object_id=input.name,
-                        validation_code=ValidationCode.MINIMUM_COUNT_MUST_NOT_BE_NEGATIVE
-                    ))
-            if input.min_count > input.max_count and input.max_count > 0:
-                violations.append(
-                    ValidationError(
-                        target=ValidationTargetType.INPUT,
-                        object_id=input.name,
-                        validation_code=ValidationCode.MINIMUM_COUNT_MUST_BE_GREATER_THAN_MAXIMUM
-                    ))
-            if input.max_count == 0:
-                violations.append(
-                    ValidationError(
-                        target=ValidationTargetType.INPUT,
-                        object_id=input.name,
-                        validation_code=ValidationCode.MAXIMUM_COUNT_MUST_NOT_BE_ZERO
-                    ))
-
-        # Meaning the node is in the graph. Otherwise souldn't be in validation step
-        if self.node_status != NodeStatus.CREATED:
-            for input in self.inputs:
-                if len(input.values) < input.min_count:
-                    violations.append(
-                        ValidationError(
-                            target=ValidationTargetType.INPUT,
-                            object_id=input.name,
-                            validation_code=ValidationCode.MISSING_INPUT
-                        ))
-
-            if self.node_status == NodeStatus.MANDATORY_DEPRECATED:
-                violations.append(
-                    ValidationError(
-                        target=ValidationTargetType.NODE,
-                        object_id=str(self._id),
-                        validation_code=ValidationCode.DEPRECATED_NODE
-                    ))
-
-        if len(violations) == 0:
-            return None
-
-        return ValidationError(
-            target=ValidationTargetType.NODE,
-            object_id=str(self._id),
-            validation_code=ValidationCode.IN_DEPENDENTS,
-            children=violations
-        )
 
     def apply_properties(self, other_node):
         """Apply Properties and Inputs of another Node.
@@ -413,8 +346,10 @@ class Node(DBObject):
 
         leaves = node_ids - non_zero_node_ids
         to_visit = deque()
+        # Alwasy put Output Node in the end
+        push_special = True if SpecialNodeId.OUTPUT in leaves and len(leaves) > 1 else False
         for leaf_id in leaves:
-            node_id_to_level[leaf_id] = 0
+            node_id_to_level[leaf_id] = 1 if push_special and leaf_id != SpecialNodeId.OUTPUT else 0
             to_visit.append(leaf_id)
 
         while to_visit:
@@ -456,9 +391,17 @@ class Node(DBObject):
         for node_id, level in node_id_to_level.items():
             level_to_node_ids[level].append(node_id)
 
-        # level_to_node_ids, node_id_to_node,
+        # Push Input Node up the level
+        if SpecialNodeId.INPUT in node_id_to_level and \
+            (node_id_to_level[SpecialNodeId.INPUT] != max_level or len(level_to_node_ids[max_level]) > 1):
+            input_level = node_id_to_level[SpecialNodeId.INPUT]
+            level_to_node_ids[input_level] = [node_id for node_id in level_to_node_ids[input_level] if node_id != SpecialNodeId.INPUT]
+            max_level += 1
+            node_id_to_level[SpecialNodeId.INPUT] = max_level
+            level_to_node_ids[max_level] = [SpecialNodeId.INPUT]
 
-        for level in range(max_level, -1, -1):
+
+        for level in range(max_level, - 1, -1):
             level_node_ids = level_to_node_ids[level]
             index_to_node_id = []
             for node_id in level_node_ids:

@@ -3,13 +3,14 @@ import shutil
 import pydoc
 from abc import abstractmethod
 import plynx.utils.exceptions
-from plynx.db.node import Node
+from plynx.db.node import Node, Parameter, ParameterTypes, NodeRunningStatus
+from plynx.db.validation_error import ValidationError
+from plynx.constants import NodeStatus, SpecialNodeId, ValidationTargetType, ValidationCode
 
 TMP_DIR = '/tmp/plx'
 
 
 class BaseExecutor:
-    ALIAS = None
     IS_GRAPH = False
 
     def __init__(self, node):
@@ -28,10 +29,46 @@ class BaseExecutor:
     def kill(self):
         pass
 
-    @staticmethod
-    @abstractmethod
-    def get_default_node(cls):
-        pass
+    @classmethod
+    def get_default_node(cls, is_workflow):
+        node = Node()
+        if cls.IS_GRAPH:
+            nodes_parameter = Parameter.from_dict({
+                'name': '_nodes',
+                'parameter_type': ParameterTypes.LIST_NODE,
+                'value': [],
+                'mutable_type': False,
+                'publicable': False,
+                'removable': False,
+                }
+            )
+            if not is_workflow:
+                # need to add inputs and outputs
+                import logging
+                logging.info(type(nodes_parameter.value.value), 'a')
+                nodes_parameter.value.value.extend(
+                    [
+                        Node.from_dict({
+                            '_id': SpecialNodeId.INPUT,
+                            'title': 'Input',
+                            'description': 'Operation inputs',
+                            'node_running_status': NodeRunningStatus.SPECIAL,
+                            'node_status': NodeStatus.READY,
+                        }),
+                        Node.from_dict({
+                            '_id': SpecialNodeId.OUTPUT,
+                            'title': 'Output',
+                            'description': 'Operation outputs',
+                            'node_running_status': NodeRunningStatus.SPECIAL,
+                            'node_status': NodeStatus.READY,
+                        }),
+                    ]
+                )
+            node.parameters.extend([
+                nodes_parameter,
+            ])
+            node.arrange_auto_layout()
+        return node
 
     def init_workdir(self):
         if not os.path.exists(self.workdir):
@@ -40,6 +77,91 @@ class BaseExecutor:
     def clean_up(self):
         if os.path.exists(self.workdir):
             shutil.rmtree(self.workdir, ignore_errors=True)
+
+    def validate(self):
+        """Validate Node.
+
+        Return:
+            (ValidationError)   Validation error if found; else None
+        """
+        violations = []
+        if self.node.title == '':
+            violations.append(
+                ValidationError(
+                    target=ValidationTargetType.PROPERTY,
+                    object_id='title',
+                    validation_code=ValidationCode.MISSING_PARAMETER
+                ))
+
+        for input in self.node.inputs:
+            if input.min_count < 0:
+                violations.append(
+                    ValidationError(
+                        target=ValidationTargetType.INPUT,
+                        object_id=input.name,
+                        validation_code=ValidationCode.MINIMUM_COUNT_MUST_NOT_BE_NEGATIVE
+                    ))
+            if input.min_count > input.max_count and input.max_count > 0:
+                violations.append(
+                    ValidationError(
+                        target=ValidationTargetType.INPUT,
+                        object_id=input.name,
+                        validation_code=ValidationCode.MAXIMUM_COUNT_MUST_BE_GREATER_THAN_MINIMUM
+                    ))
+            if input.max_count == 0:
+                violations.append(
+                    ValidationError(
+                        target=ValidationTargetType.INPUT,
+                        object_id=input.name,
+                        validation_code=ValidationCode.MAXIMUM_COUNT_MUST_NOT_BE_ZERO
+                    ))
+
+        # Meaning the node is in the graph. Otherwise souldn't be in validation step
+        if self.node.node_status != NodeStatus.CREATED:
+            for input in self.node.inputs:
+                if len(input.values) < input.min_count:
+                    violations.append(
+                        ValidationError(
+                            target=ValidationTargetType.INPUT,
+                            object_id=input.name,
+                            validation_code=ValidationCode.MISSING_INPUT
+                        ))
+
+            if self.node.node_status == NodeStatus.MANDATORY_DEPRECATED:
+                violations.append(
+                    ValidationError(
+                        target=ValidationTargetType.NODE,
+                        object_id=str(self.node._id),
+                        validation_code=ValidationCode.DEPRECATED_NODE
+                    ))
+
+        if len(violations) == 0:
+            return None
+
+        return ValidationError(
+            target=ValidationTargetType.NODE,
+            object_id=str(self.node._id),
+            validation_code=ValidationCode.IN_DEPENDENTS,
+            children=violations
+        )
+
+
+class Dummy(BaseExecutor):
+    def __init__(self, node=None):
+        super(Dummy, self).__init__(node)
+
+    def run(self):
+        raise NotImplementedError()
+
+    def status(self):
+        raise NotImplementedError()
+
+    def kill(self):
+        raise NotImplementedError()
+
+    @classmethod
+    def get_default_node(cls, is_workflow):
+        raise NotImplementedError()
 
 
 def materialize_executor(node_dict):

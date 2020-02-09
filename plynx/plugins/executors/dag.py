@@ -3,9 +3,10 @@ import time
 from collections import defaultdict
 from plynx.constants import ParameterTypes
 from plynx.db.node import Node, Parameter, Output
-from plynx.constants import JobReturnStatus, NodeRunningStatus, GraphRunningStatus
+from plynx.db.validation_error import ValidationError
+from plynx.constants import JobReturnStatus, NodeRunningStatus, ValidationTargetType, ValidationCode
 from plynx.utils.common import to_object_id
-from plynx.plugins.executors import BaseExecutor
+from plynx.plugins.executors import BaseExecutor, materialize_executor
 from plynx.db.node_collection_manager import NodeCollectionManager
 
 node_collection_manager = NodeCollectionManager(collection='runs')
@@ -24,7 +25,6 @@ class DAG(BaseExecutor):
         graph (str or Graph)
 
     """
-    ALIAS = 'DAG'
     IS_GRAPH = True
 
     def __init__(self, node_dict):
@@ -165,7 +165,7 @@ class DAG(BaseExecutor):
             self.uncompleted_nodes_count -= 1
 
         if self.uncompleted_nodes_count == 0 and not NodeRunningStatus.is_failed(self.node.node_running_status):
-            self.node.node_running_status = GraphRunningStatus.SUCCESS
+            self.node.node_running_status = NodeRunningStatus.SUCCESS
 
         self.node.save(collection='runs')
 
@@ -187,35 +187,29 @@ class DAG(BaseExecutor):
         return False
 
     @classmethod
-    def get_default_node(cls):
-        node = Node()
-        node.parameters = [
-            Parameter.from_dict({
-                'name': '_nodes',
-                'parameter_type': ParameterTypes.LIST_NODE,
-                'value': [],
-                'mutable_type': False,
-                'publicable': False,
-                'removable': False,
-                }
-            ),
-            Parameter.from_dict({
-                'name': '_cacheable',
-                'parameter_type': ParameterTypes.BOOL,
-                'value': False,
-                'mutable_type': False,
-                'publicable': False,
-                'removable': False,
-            }),
-            Parameter.from_dict({
-                'name': '_timeout',
-                'parameter_type': ParameterTypes.INT,
-                'value': 600,
-                'mutable_type': False,
-                'publicable': True,
-                'removable': False
-            }),
-        ]
+    def get_default_node(cls, is_workflow):
+        node = super().get_default_node(is_workflow)
+        node.parameters.extend(
+            [
+                Parameter.from_dict({
+                    'name': '_cacheable',
+                    'parameter_type': ParameterTypes.BOOL,
+                    'value': False,
+                    'mutable_type': False,
+                    'publicable': False,
+                    'removable': False,
+                }),
+                Parameter.from_dict({
+                    'name': '_timeout',
+                    'parameter_type': ParameterTypes.INT,
+                    'value': 600,
+                    'mutable_type': False,
+                    'publicable': True,
+                    'removable': False
+                }),
+            ]
+        )
+        node.title = 'New DAG workflow'
         return node
 
     def execute_node(self, node):
@@ -235,3 +229,37 @@ class DAG(BaseExecutor):
                 self.execute_node(node)
 
         return JobReturnStatus.SUCCESS if NodeRunningStatus.is_succeeded(self.node.node_running_status) else JobReturnStatus.FAILED
+
+    def validate(self):
+        validation_error = super().validate()
+        if validation_error:
+            return validation_error
+
+        violations = []
+        sub_nodes = self.node.get_parameter_by_name('_nodes').value.value
+
+        if len(sub_nodes) == 0:
+            violations.append(
+                ValidationError(
+                    target=ValidationTargetType.GRAPH,
+                    object_id=str(self.node._id),
+                    validation_code=ValidationCode.EMPTY_GRAPH
+                ))
+
+        for node in sub_nodes:
+            node_violation = materialize_executor(node.to_dict()).validate()
+            if node_violation:
+                violations.append(node_violation)
+
+        if len(violations) == 0:
+            return None
+
+        if len(violations) == 0:
+            return None
+
+        return ValidationError(
+            target=ValidationTargetType.GRAPH,
+            object_id=str(self.node._id),
+            validation_code=ValidationCode.IN_DEPENDENTS,
+            children=violations
+        )
