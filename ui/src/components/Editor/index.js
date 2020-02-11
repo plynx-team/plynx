@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import queryString from 'query-string'
 import AlertContainer from '../3rd_party/react-alert';
 import { PLynxApi } from '../../API';
 import cookie from 'react-cookies';
@@ -25,7 +26,7 @@ import "./style.css";
 
 
 export const VIEW_MODE = Object.freeze({
-  NONE: 'NONE',
+  NONE: 'none',
   GRAPH: 0,
   NODE: 1,
   RUNS: 2,
@@ -93,6 +94,9 @@ export default class Editor extends Component {
     const self = this;
     let loading = true;
     const node_id = this.props.match.params.node_id.replace(/\$+$/, '');
+    console.log('params', this.props.match.params);
+    console.log('match', this.props.match);
+    console.log('props', this.props);
     let sleepPeriod = 1000;
     const sleepMaxPeriod = 10000;
     const sleepStep = 1000;
@@ -104,9 +108,15 @@ export default class Editor extends Component {
       console.log('plugins_dict', response.data.plugins_dict);
       const is_graph = executor_info.is_graph;
 
+      var view_mode = is_graph ? VIEW_MODE.GRAPH : VIEW_MODE.NODE;
+      const searchValues = queryString.parse(this.props.location.search)
+      if ('view_mode' in searchValues) {
+          view_mode = parseInt(searchValues['view_mode']);
+      }
+
       self.setState({
         plugins_dict: response.data.plugins_dict,
-        view_mode: is_graph ? VIEW_MODE.GRAPH : VIEW_MODE.NODE,
+        view_mode: view_mode,
         is_graph: is_graph,
         is_workflow: response.data.plugins_dict.workflows_dict.hasOwnProperty(response.data.node.kind),
       });
@@ -457,6 +467,17 @@ export default class Editor extends Component {
     });
   }
 
+  handleSetViewMode(view_mode) {
+    this.setState({view_mode: view_mode});
+    const searchValues = queryString.parse(this.props.location.search);
+    searchValues.view_mode = view_mode;
+
+    this.props.history.push({
+        search: '?' + queryString.stringify(searchValues)
+    })
+
+  }
+
   makeControls() {
       let items = [
           {
@@ -481,7 +502,7 @@ export default class Editor extends Component {
                     },
                   ],
                 index: this.state.view_mode,
-                onIndexChange: (view_mode) => this.setState({view_mode: view_mode}),
+                onIndexChange: (view_mode) => this.handleSetViewMode(view_mode),
                 key: 'key' + this.state.view_mode,
               }
           },
