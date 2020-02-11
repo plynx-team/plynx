@@ -4,12 +4,12 @@ from collections import defaultdict
 from plynx.constants import ParameterTypes
 from plynx.db.node import Node, Parameter, Output
 from plynx.db.validation_error import ValidationError
-from plynx.constants import JobReturnStatus, NodeRunningStatus, ValidationTargetType, ValidationCode
+from plynx.constants import JobReturnStatus, NodeRunningStatus, ValidationTargetType, ValidationCode, SpecialNodeId, Collections
 from plynx.utils.common import to_object_id
 from plynx.plugins.executors import BaseExecutor, materialize_executor
 from plynx.db.node_collection_manager import NodeCollectionManager
 
-node_collection_manager = NodeCollectionManager(collection='runs')
+node_collection_manager = NodeCollectionManager(collection=Collections.RUNS)
 
 _GRAPH_ITERATION_SLEEP = 1
 
@@ -49,10 +49,24 @@ class DAG(BaseExecutor):
         self.uncompleted_nodes_count = 0
 
         for node in self.subnodes:
-            # ignore nodes in finished statuses
-            if NodeRunningStatus.is_finished(node.node_running_status):
-                continue
             node_id = node._id
+            if node_id == SpecialNodeId.INPUT:
+                updated_resources_count = 0
+                for output in node.outputs:
+                    for input in self.node.inputs:
+                        if input.name == output.name:
+                            updated_resources_count += 1
+                            if len(input.values) == 1:
+                                output.resource_id = input.values[0].resource_id    # TODO make outputs optional
+                                break
+                            elif len(input.values) > 1:
+                                raise Exception('Too many values to unpack')
+                if updated_resources_count != len(self.node.inputs):
+                    raise Exception('Used {} inputs for {} outputs'.format(updated_resources_count, len(self.node.inputs)))
+
+            # ignore nodes in finished statuses
+            if NodeRunningStatus.is_finished(node.node_running_status) and node_id != SpecialNodeId.OUTPUT:
+                continue
             dependency_index = 0
             for node_input in node.inputs:
                 for input_value in node_input.values:
@@ -66,6 +80,7 @@ class DAG(BaseExecutor):
             self.dependency_index_to_node_ids[dependency_index].add(node_id)
             self.node_id_to_dependency_index[node_id] = dependency_index
 
+
         self.monitoring_node_ids = set()
 
     def finished(self):
@@ -77,7 +92,7 @@ class DAG(BaseExecutor):
                     return False
             # set status to FAILED
             self.node.node_running_status = NodeRunningStatus.FAILED
-            self.node.save(force=True)
+            self.node.save(collection=Collections.RUNS, force=True)
             return True
         return self.node.node_running_status in {NodeRunningStatus.SUCCESS, NodeRunningStatus.FAILED, NodeRunningStatus.CANCELED}
 
@@ -167,7 +182,7 @@ class DAG(BaseExecutor):
         if self.uncompleted_nodes_count == 0 and not NodeRunningStatus.is_failed(self.node.node_running_status):
             self.node.node_running_status = NodeRunningStatus.SUCCESS
 
-        self.node.save(collection='runs')
+        self.node.save(collection=Collections.RUNS)
 
     def _get_node_with_inputs(self, node_id):
         """Get the node and init its inputs, i.e. filling its resource_ids"""
@@ -213,12 +228,14 @@ class DAG(BaseExecutor):
         return node
 
     def execute_node(self, node):
-        node.save(collection='runs')
+        if NodeRunningStatus.is_finished(node.node_running_status):     # NodeRunningStatus.SPECIAL
+            return
+        node.save(collection=Collections.RUNS)
 
         self.monitoring_node_ids.add(node._id)
 
     def run(self):
-        self.node.save(collection='runs')
+        self.node.save(collection=Collections.RUNS)
         while not self.finished():
             new_jobs = self.pop_jobs()
             if len(new_jobs) == 0:
@@ -228,7 +245,21 @@ class DAG(BaseExecutor):
             for node in new_jobs:
                 self.execute_node(node)
 
-        return JobReturnStatus.SUCCESS if NodeRunningStatus.is_succeeded(self.node.node_running_status) else JobReturnStatus.FAILED
+        is_succeeded = NodeRunningStatus.is_succeeded(self.node.node_running_status)
+        if is_succeeded:
+            for node in self.subnodes:
+                if node._id != SpecialNodeId.OUTPUT:
+                    continue
+                updated_resources_count = 0
+                for output in self.node.outputs:
+                    for input in node.inputs:
+                        if input.name == output.name:
+                            output.resource_id = input.values[0].resource_id
+                            updated_resources_count += 1
+                            break
+                if updated_resources_count != len(node.inputs):
+                    raise Exception('Used {} inputs for {} outputs'.format(updated_resources_count, len(node.inputs)))
+        return JobReturnStatus.SUCCESS if is_succeeded else JobReturnStatus.FAILED
 
     def validate(self):
         validation_error = super().validate()

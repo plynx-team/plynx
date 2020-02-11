@@ -10,9 +10,14 @@ from plynx.constants import ParameterTypes
 
 
 def _clone_update_in_place(node, node_clone_policy):
+    if node.node_running_status == NodeRunningStatus.SPECIAL:
+        for output in node.outputs:
+            output.values = []
+        return node
     old_node_id = node._id
     node._id = ObjectId()
     node.successor_node_id = None
+
     if node_clone_policy == NodeClonePolicy.NODE_TO_NODE:
         node.parent_node_id = old_node_id
         node.original_node_id = None

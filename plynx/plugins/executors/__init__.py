@@ -119,7 +119,7 @@ class BaseExecutor:
         # Meaning the node is in the graph. Otherwise souldn't be in validation step
         if self.node.node_status != NodeStatus.CREATED:
             for input in self.node.inputs:
-                if len(input.values) < input.min_count:
+                if len(input.values) < input.min_count and input.max_count > 0:
                     violations.append(
                         ValidationError(
                             target=ValidationTargetType.INPUT,

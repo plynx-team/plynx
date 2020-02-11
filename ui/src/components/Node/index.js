@@ -22,6 +22,7 @@ export default class Node extends Component {
     this.state = {
       loading: true,
       readOnly: true,
+      is_workflow: this.props.is_workflow,
     };
   }
 
@@ -50,14 +51,10 @@ export default class Node extends Component {
   }
 
   handleParameterChanged(name, value) {
-      /*
-    const node = this.state.node;
-    node[name] = value;
-    this.setState(node);
-*/
     this.node[name] = value;
     this.setState({node: this.node});
     this.props.onNodeChange(this.node);
+    document.title = this.node.title + " - Node - PLynx";
   }
 
   render() {
@@ -117,7 +114,8 @@ export default class Node extends Component {
                   key={key}
                   nodeKind={node.kind}
                   onChanged={(value) => this.handleParameterChanged('inputs', value)}
-                  readOnly={this.state.readOnly}
+                  variableSize={!this.props.is_graph}
+                  readOnly={this.state.readOnly || this.state.is_workflow}
                 />
               </div>
             </div>
@@ -147,7 +145,7 @@ export default class Node extends Component {
                   key={key}
                   nodeKind={node.kind}
                   onChanged={(value) => this.handleParameterChanged('outputs', value)}
-                  readOnly={this.state.readOnly}
+                  readOnly={this.state.readOnly || this.state.is_workflow}
                 />
               </div>
             </div>

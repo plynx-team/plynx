@@ -129,7 +129,7 @@ export default class InOutItem extends Component {
           </PluginsConsumer>
         </div>
 
-        {! (this.state.min_count === undefined) &&
+        {(this.props.varName === 'inputs' && this.props.variableSize) &&
           <div className='InOutRow'>
             <div className='InOutCellTitle'>
               Count:

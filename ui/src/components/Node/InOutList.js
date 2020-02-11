@@ -120,6 +120,7 @@ export default class InOutList extends Component {
                             nodeKind={this.props.nodeKind}
                             minCount={item.min_count}
                             maxCount={item.max_count}
+                            variableSize={this.props.variableSize}
                           />
                         }
                         {

@@ -29,6 +29,7 @@ class NodeRunningStatus:
         STATIC,
         SUCCESS,
         RESTORED,
+        SPECIAL,
     }
 
     _FINISHED_STATUSES = _FAILED_STATUSES | _SUCCEEDED_STATUSES

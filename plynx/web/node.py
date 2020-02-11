@@ -110,7 +110,7 @@ def post_node(collection):
     elif action == NodePostAction.APPROVE:
         if node.node_status != NodeStatus.CREATED:
             return make_fail_response('Node status `{}` expected. Found `{}`'.format(NodeStatus.CREATED, node.node_status))
-        validation_error = node.get_validation_error()
+        validation_error = executor_manager.kind_to_executor_class[node.kind](node).validate()
         if validation_error:
             return JSONEncoder().encode({
                 'status': NodePostStatus.VALIDATION_FAILED,
@@ -124,7 +124,7 @@ def post_node(collection):
     elif action == NodePostAction.CREATE_RUN:
         if node.node_status != NodeStatus.CREATED:
             return make_fail_response('Node status `{}` expected. Found `{}`'.format(NodeStatus.CREATED, node.node_status))
-        validation_error = node.get_validation_error()
+        validation_error = executor_manager.kind_to_executor_class[node.kind](node).validate()
         if validation_error:
             return JSONEncoder().encode({
                 'status': NodePostStatus.VALIDATION_FAILED,

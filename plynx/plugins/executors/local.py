@@ -209,7 +209,7 @@ class BaseBash(BaseExecutor):
                 for i, value in enumerate(range(input.min_count)):
                     filename = os.path.join(self.workdir, 'i_{}_{}'.format(i, input.name))
                     resource_merger.append(
-                        plugin_magagers.resource_manager[input.file_types[0]].prepare_input(filename, preview),
+                        plugin_magagers.resource_manager.kind_to_resource_class[input.file_types[0]].prepare_input(filename, preview),
                         input.name,
                         is_list,
                     )
@@ -219,7 +219,7 @@ class BaseBash(BaseExecutor):
                     with open(filename, 'wb') as f:
                         f.write(get_file_stream(value.resource_id).read())
                     resource_merger.append(
-                        plugin_magagers.resource_manager[input.file_types[0]].prepare_input(filename, preview),
+                        plugin_magagers.resource_manager.kind_to_resource_class[input.file_types[0]].prepare_input(filename, preview),
                         input.name,
                         is_list
                     )
@@ -230,7 +230,7 @@ class BaseBash(BaseExecutor):
         for output in self.node.outputs:
             filename = os.path.join(self.workdir, 'o_{}'.format(output.name))
             resource_merger.append(
-                plugin_magagers.resource_manager[output.file_type].prepare_output(filename, preview),
+                plugin_magagers.resource_manager.kind_to_resource_class[output.file_type].prepare_output(filename, preview),
                 output.name,
                 is_list=False
             )
@@ -274,7 +274,7 @@ class BaseBash(BaseExecutor):
             if os.path.exists(filename):
                 matching_outputs = list(filter(lambda o: o.name == key, self.node.outputs))
                 assert len(matching_outputs) == 1, "Found more that 1 output with the same name `{}`".format(key)
-                filename = plugin_magagers.resource_manager[matching_outputs[0].file_type].postprocess_output(filename)
+                filename = plugin_magagers.resource_manager.kind_to_resource_class[matching_outputs[0].file_type].postprocess_output(filename)
                 with open(filename, 'rb') as f:
                     self.node.get_output_by_name(key).resource_id = upload_file_stream(f)
             else:

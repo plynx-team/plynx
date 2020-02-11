@@ -71,6 +71,7 @@ export default class Editor extends Component {
 
   updateNode(node, force) {
       this.node = node;
+      document.title = this.node.title + " - PLynx";
 
       this.setState({
         node: this.node,
@@ -107,6 +108,7 @@ export default class Editor extends Component {
         plugins_dict: response.data.plugins_dict,
         view_mode: is_graph ? VIEW_MODE.GRAPH : VIEW_MODE.NODE,
         is_graph: is_graph,
+        is_workflow: response.data.plugins_dict.workflows_dict.hasOwnProperty(response.data.node.kind),
       });
 
       console.log('node_id:', node_id);
@@ -314,7 +316,6 @@ export default class Editor extends Component {
         return;
     }
 
-    console.log('>>', validationError);
     const children = validationError.children;
     for (let i = 0; i < children.length; ++i) {
       const child = children[i];
@@ -511,15 +512,15 @@ export default class Editor extends Component {
               props: {
                 img: 'play.svg',
                 text: 'Run',
-                enabled: this.state.is_graph && this.state.collection === COLLECTIONS.TEMPLATES,
+                enabled: this.state.is_workflow && this.state.collection === COLLECTIONS.TEMPLATES,
                 func: () => this.handleRun(),
               },
           }, {
               render: makeControlButton,
               props: {
-                img: 'play.svg',
+                img: 'check.svg',
                 text: 'Approve',
-                enabled: !this.state.is_graph && this.state.editable,
+                enabled: !this.state.is_workflow && this.state.editable,
                 func: () => this.handleApprove(),
               },
           }, {
@@ -527,7 +528,7 @@ export default class Editor extends Component {
               props: {
                 img: 'x.svg',
                 text: 'Deprecate',
-                enabled: !this.state.is_graph && !this.state.editable,
+                enabled: !this.state.is_workflow && !this.state.editable,
                 func: () => this.handleDeprecateClick(),
               },
           }, {
@@ -645,6 +646,8 @@ export default class Editor extends Component {
                     ref={a => this.nodeComponent = a}
                     node={this.state.node}
                     plugins_dict={this.state.plugins_dict}
+                    is_workflow={this.state.is_workflow}
+                    is_graph={this.state.is_graph}
                     onNodeChange={(node) => this.handleNodeChange(node)}
                   />
               }

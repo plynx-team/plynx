@@ -587,10 +587,12 @@ ENDPOINT = '` + API_ENDPOINT + `'
         );
         if (node_parameter) {
           node_parameter.value = value;
-      } else if (name === '_DESCRIPTION' || name === '_TITLE') {
+        } else if (name === '_DESCRIPTION' || name === '_TITLE') {
             var inName = name.substring(1, name.length).toLowerCase()
             const block = this.block_lookup[node_id];
             node[inName] = value;
+
+            document.title = this.graph_node.title + " - Graph - PLynx";
             if (block) { // the case of graph itself
                 block[inName] = value;
             } else {
