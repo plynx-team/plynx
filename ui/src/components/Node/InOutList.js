@@ -109,7 +109,6 @@ export default class InOutList extends Component {
                             onRemove={(index) => this.handleRemoveItem(index)}                          // eslint-disable-line no-shadow
                             readOnly={this.state.readOnly}
                             nodeKind={this.props.nodeKind}
-                            variableSize={this.props.variableSize}
                           />
                         }
                         {

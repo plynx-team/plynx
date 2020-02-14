@@ -99,27 +99,52 @@ export default class Editor extends Component {
     const sleepStep = 1000;
 
     const loadNode = (response) => {
-      self.updateNode(response.data.node, true);
+      const searchValues = queryString.parse(this.props.location.search)
+      var node = response.data.node;
+
+      if (searchValues.sub_node_id) {
+          let sub_nodes = null;
+          if (!Array.isArray(searchValues.sub_node_id))
+          {
+              const sub_node_id = searchValues.sub_node_id = [searchValues.sub_node_id]
+          }
+          for (let sub_node_id of searchValues.sub_node_id) {
+              sub_node_id = sub_node_id.replace(/^\$+|\$+$/g, '');
+              for (let i = 0; i < node.parameters.length; ++i) {
+                  if (node.parameters[i].name === '_nodes') {
+                      sub_nodes = node.parameters[i].value.value;
+                      break;
+                  }
+              }
+              for (const sub_node of sub_nodes) {
+                  if (sub_node._id === sub_node_id) {
+                      node = sub_node;
+                      break;
+                  }
+              }
+          }
+      }
+
+      self.updateNode(node, true);
 
       const executor_info = response.data.plugins_dict.executors_info[self.node.kind];
       console.log('plugins_dict', response.data.plugins_dict);
       const is_graph = executor_info.is_graph;
 
       var view_mode = is_graph ? VIEW_MODE.GRAPH : VIEW_MODE.NODE;
-      const searchValues = queryString.parse(this.props.location.search)
       if ('view_mode' in searchValues) {
-          view_mode = parseInt(searchValues['view_mode']);
+          view_mode = Math.max(parseInt(searchValues['view_mode']), is_graph ? 0 : 1);
       }
 
       self.setState({
         plugins_dict: response.data.plugins_dict,
         view_mode: view_mode,
         is_graph: is_graph,
-        is_workflow: response.data.plugins_dict.workflows_dict.hasOwnProperty(response.data.node.kind),
+        is_workflow: response.data.plugins_dict.workflows_dict.hasOwnProperty(node.kind),
       });
 
       console.log('node_id:', node_id);
-      if (!node_id.startsWith(self.node._id)) {
+      if (!node_id.startsWith(self.node._id) && !searchValues.sub_node_id) {
         self.props.history.replace("/" + self.props.collection + "/" + self.node._id + '$');
       }
 

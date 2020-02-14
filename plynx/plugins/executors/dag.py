@@ -145,11 +145,11 @@ class DAG(BaseExecutor):
 
         self._set_node_status(node._id, node.node_running_status)
         # TODO smarter copy
+        dest_node.parameters = node.parameters
         dest_node.logs = node.logs
         dest_node.outputs = node.outputs
         dest_node.cache_url = node.cache_url
 
-        # self.graph.save(force=True)
 
     def _set_node_status(self, node_id, node_running_status):
         node = self.node_id_to_node[node_id]

@@ -109,7 +109,6 @@ export default class InOutItem extends Component {
           </PluginsConsumer>
         </div>
 
-        {(this.props.varName === 'inputs' && this.props.variableSize) &&
         <div className='InOutRow'>
           <div className='InOutCellTitle'>
             Array:
@@ -130,9 +129,8 @@ export default class InOutItem extends Component {
             </div>
           </div>
         </div>
-        }
 
-        {(this.props.varName === 'inputs' && this.props.variableSize && this.state.item.is_array) &&
+        {this.state.item.is_array &&
         <div className='InOutRow'>
           <div className='InOutCellTitle'>
             Min size

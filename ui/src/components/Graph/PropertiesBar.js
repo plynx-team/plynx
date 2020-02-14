@@ -21,6 +21,21 @@ const renderNodeLink = node => {
     return node.title;
 }
 
+const renderLinkRow = (title, href, text) => {
+  return (
+    <div className='ParameterItem'>
+      <div className='ParameterNameCell'>
+          {title}
+      </div>
+      <div className='ParameterValueCell'>
+        <a href={href}>
+          {text}
+        </a>
+      </div>
+    </div>
+  );
+}
+
 export default class PropertiesBar extends Component {
   constructor(props) {
     super(props);
@@ -120,6 +135,24 @@ export default class PropertiesBar extends Component {
   render() {
     const self = this;
 
+    let linksList = [];
+    if (this.state.nodes.length === 1) {
+        const node = this.state.nodes[0];
+        const node_id = node.original_node_id || node.parent_node_id;
+        if (node_id) {
+            linksList.push(renderLinkRow('Original Operation', `/${COLLECTIONS.TEMPLATES}/${node_id}`, node_id));
+        }
+        var url = window.location.href;
+        if (url.indexOf('?') > -1){
+           url += '&'
+        }else{
+           url += '?'
+        }
+        if (node_id) {
+            linksList.push(renderLinkRow('This Operation', `${url}sub_node_id=${node._id}`, node._id));
+        }
+    }
+
     let parametersList = [];
     if (this.state.parameters) {
       parametersList = this.state.parameters.filter(
@@ -159,8 +192,7 @@ export default class PropertiesBar extends Component {
         {
             this.state.nodes.length === 1 &&
             <div className="PropertiesHeader">
-                {'Properties of '}
-                {renderNodeLink(this.state.nodes[0])}
+                {`Properties of ${this.state.nodes[0].title}`}
             </div>
         }
         {
@@ -172,13 +204,11 @@ export default class PropertiesBar extends Component {
               this.props.onFileShow(this.state.nodeId);
             }
           }>
-            <div className="PropertiesHeader">
-              {(this.state.bigTitle ? this.state.bigTitle + ' ' : ' ')}<img src="/icons/external-link.svg" width="12" height="12" alt="^" />
-            </div>
           </div>
         }
 
         <div className='PropertiesBoxRoot'>
+          {linksList.length > 0 && makePropertiesBox('Links', linksList)}
           {parametersList.length > 0 && makePropertiesBox('Parameters', parametersList)}
           {outputsList.length > 0 && makePropertiesBox('Outputs', outputsList)}
           {logsList.length > 0 && makePropertiesBox('Logs', logsList)}

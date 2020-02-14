@@ -173,7 +173,7 @@ class NodeCollectionManager(object):
         if new_node._id == node.original_node_id:
             return node
         new_node.apply_properties(node)
-        new_node.original_node_id = new_node._id
+        new_node.original_node_id = new_node.original_node_id
         new_node.parent_node_id = new_node.successor_node_id = None
         new_node._id = node._id
         return new_node

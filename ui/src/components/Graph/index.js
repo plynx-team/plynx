@@ -611,7 +611,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
     },
   }
 
-  handleDrop(blockObjArg, replaceParentNode) {
+  handleDrop(blockObjArg, replaceOriginalNode) {
     const blockObj = JSON.parse(JSON.stringify(blockObjArg)); // copy
     const node = blockObj.nodeContent;
     const inputs = [];
@@ -620,7 +620,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
 
     let i = 0;
 
-    if (replaceParentNode) {
+    if (replaceOriginalNode) {
       node.original_node_id = node._id;
     }
     node.parent_node_id = null;
@@ -631,16 +631,23 @@ ENDPOINT = '` + API_ENDPOINT + `'
       for (i = 0; i < node.inputs.length; ++i) {
         inputs.push({
           name: node.inputs[i].name,
-          file_type: node.inputs[i].file_type
+          file_type: node.inputs[i].file_type,
+          is_array: node.inputs[i].is_array,
         });
         node.inputs[i].values = []; // clear inputs on paste
+        node.inputs[i].input_references = [];
       }
     }
     for (i = 0; i < node.outputs.length; ++i) {
       outputs.push({
         name: node.outputs[i].name,
-        file_type: node.outputs[i].file_type
+        file_type: node.outputs[i].file_type,
+        is_array: node.outputs[i].is_array,
       });
+      node.outputs[i].values = []; // clear outputs
+    }
+    for (i = 0; i < node.logs.length; ++i) {
+      node.logs[i].values = []; // clear outputs
     }
     for (i = 0; i < node.parameters.length; ++i) {
       if (parameterIsSpecial(node.parameters[i])) {
@@ -650,10 +657,9 @@ ENDPOINT = '` + API_ENDPOINT + `'
     node.x = Math.max(blockObj.mousePos.x - 340, 0);
     node.y = Math.max(blockObj.mousePos.y - 80, 0);
 
-    if (OPERATIONS.indexOf(node.base_node_name) > -1) {
-      node.node_running_status = NODE_RUNNING_STATUS.CREATED;
-      node.cache_url = null;
-    }
+    // Change for files
+    node.node_running_status = NODE_RUNNING_STATUS.CREATED;
+    node.cache_url = null;
 
     this.blocks.push(
       {

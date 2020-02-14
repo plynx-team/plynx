@@ -114,7 +114,6 @@ export default class Node extends Component {
                   key={key}
                   nodeKind={node.kind}
                   onChanged={(value) => this.handleParameterChanged('inputs', value)}
-                  variableSize={!this.props.is_graph}
                   readOnly={this.state.readOnly || this.state.is_workflow}
                 />
               </div>
