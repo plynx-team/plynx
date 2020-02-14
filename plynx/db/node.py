@@ -45,34 +45,52 @@ def _clone_update_in_place(node, node_clone_policy):
 
         for sub_node in sub_nodes.value.value:
             for input in sub_node.inputs:
-                for input_value in input.values:
-                    input_value.node_id = object_id_mapping[ObjectId(input_value.node_id)]
+                input.values = []
+                for input_reference in input.input_references:
+                    input_reference.node_id = object_id_mapping[ObjectId(input_reference.node_id)]
+            for output in sub_node.outputs:
+                output.values = []
+
+            for log in sub_node.logs:
+                log.values = []
 
     for output_or_log in node.outputs + node.logs:
         output_or_log.resource_id = None
     return node
 
 
+RESOURCE_FIELDS = {
+    'name': DBObjectField(
+        type=str,
+        default='',
+        is_list=False,
+        ),
+    'file_type': DBObjectField(
+        type=str,
+        default=FILE_KIND,
+        is_list=False,
+        ),
+    'values': DBObjectField(
+        type=lambda object_dict: object_dict,
+        default=list,
+        is_list=True,
+        ),
+    'is_array': DBObjectField(
+        type=bool,
+        default=False,
+        is_list=False,
+        ),
+    'min_count': DBObjectField(
+        type=int,
+        default=1,
+        is_list=False,
+        ),
+}
+
 class Output(DBObject):
     """Basic Output structure."""
 
-    FIELDS = {
-        'name': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
-        'file_type': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
-        'resource_id': DBObjectField(
-            type=str,
-            default=None,
-            is_list=False,
-            ),
-    }
+    FIELDS = RESOURCE_FIELDS
 
     def __str__(self):
         return 'Output(name="{}")'.format(self.name)
@@ -81,7 +99,7 @@ class Output(DBObject):
         return 'Output({})'.format(str(self.to_dict()))
 
 
-class InputValue(DBObject):
+class InputReference(DBObject):
     """Basic Value of the Input structure."""
 
     FIELDS = {
@@ -95,50 +113,25 @@ class InputValue(DBObject):
             default='',
             is_list=False,
             ),
-        'resource_id': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
     }
 
     def __str__(self):
-        return 'InputValue({}, {})'.format(self.node_id, self.output_id)
+        return 'InputReference({}, {})'.format(self.node_id, self.output_id)
 
     def __repr__(self):
-        return 'InputValue({})'.format(str(self.to_dict()))
+        return 'InputReference({})'.format(str(self.to_dict()))
 
 
 class Input(DBObject):
     """Basic Input structure."""
 
-    FIELDS = {
-        'name': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
-        'file_types': DBObjectField(
-            type=str,
+    FIELDS = dict({
+        'input_references': DBObjectField(
+            type=InputReference,
             default=list,
             is_list=True,
             ),
-        'values': DBObjectField(
-            type=InputValue,
-            default=list,
-            is_list=True,
-            ),
-        'min_count': DBObjectField(
-            type=int,
-            default=1,
-            is_list=False,
-            ),
-        'max_count': DBObjectField(
-            type=int,
-            default=1,
-            is_list=False,
-            ),
-        }
+        }, **RESOURCE_FIELDS)
 
     def __str__(self):
         return 'Input(name="{}")'.format(self.name)
@@ -254,20 +247,27 @@ class Node(DBObject):
         return Output.from_dict({
             'name': name,
             'file_type': FILE_KIND,
-            'resource_id': None,
+            'values': [],
+            'is_array': False,
+            'min_count': 1,
         })
 
     def apply_properties(self, other_node):
         """Apply Properties and Inputs of another Node.
+        This method is used for updating nodes.
 
         Args:
             other_node  (Node):     A node to copy Properties and Inputs from
         """
         for other_input in other_node.inputs:
             for input in self.inputs:
-                if other_input.name == input.name:
-                    if (input.max_count < 0 or input.max_count >= other_input.max_count) and set(input.file_types) >= set(other_input.file_types):
-                        input.values = other_input.values
+                if other_input.name == input.name and \
+                   other_input.file_type == input.file_type and \
+                       ( \
+                            input.is_array or \
+                            (not input.is_array and 1 == len(other_input.input_references)) \
+                       ):
+                    input.input_references = other_input.input_references
                     break
 
         for other_parameter in other_node.parameters:
@@ -344,8 +344,8 @@ class Node(DBObject):
         for node in sub_nodes:
             node_id_to_node[node._id] = node
             for input in node.inputs:
-                for value in input.values:
-                    parent_node_id = ObjectId(value.node_id)
+                for input_reference in input.input_references:
+                    parent_node_id = ObjectId(input_reference.node_id)
                     non_zero_node_ids.add(parent_node_id)
                     children_ids[parent_node_id].add(node._id)
 
@@ -363,8 +363,8 @@ class Node(DBObject):
             node_level = max([node_id_to_level[node_id]] + [node_id_to_level[child_id] + 1 for child_id in children_ids[node_id]])
             node_id_to_level[node_id] = node_level
             for input in node.inputs:
-                for value in input.values:
-                    parent_node_id = ObjectId(value.node_id)
+                for input_reference in input.input_references:
+                    parent_node_id = ObjectId(input_reference.node_id)
                     parent_level = node_id_to_level[parent_node_id]
                     node_id_to_level[parent_node_id] = max(node_level + 1, parent_level)
                     if parent_node_id not in queued_node_ids:
@@ -380,8 +380,8 @@ class Node(DBObject):
                 return 0
             parent_node_ids = set()
             for input in node.inputs:
-                for value in input.values:
-                    parent_node_ids.add(ObjectId(value.node_id))
+                for input_reference in input.input_references:
+                    parent_node_ids.add(ObjectId(input_reference.node_id))
 
             for index, node_id in enumerate(level_to_node_ids[level]):
                 if node_id in parent_node_ids:

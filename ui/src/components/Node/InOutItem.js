@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import Icon from '../Common/Icon';
 import { PluginsConsumer } from '../../contexts';
+
 
 export default class InOutItem extends Component {
   static propTypes = {
@@ -18,14 +20,11 @@ export default class InOutItem extends Component {
 
   constructor(props) {
     super(props);
+    this. item = this.props.item;
     this.state = {
-      name: this.props.name,
-      file_types: this.props.fileTypes,
-      file_type: this.props.fileType,
+      item: this.props.item,
       index: this.props.index,
       readOnly: this.props.readOnly,
-      min_count: this.props.minCount,
-      max_count: this.props.maxCount
     };
 
     this.handleChange = this.handleChange.bind(this);
@@ -37,13 +36,13 @@ export default class InOutItem extends Component {
     }
     const name = event.target.name;
     let value = event.target.value;
-    if (name === 'file_types') {
-      value = [value];
-    }
-    if (name === 'max_count' || name === 'min_count') {
+    if (name === 'is_array') {
+      value = event.target.checked;
+    } else if (name === 'min_count') {
       value = parseInt(value, 10);
     }
-    this.setState({[name]: value});
+    this.item[name] = value;
+    this.setState({item: this.item});
     this.props.onChanged(this.props.index, name, value);
   }
 
@@ -72,7 +71,7 @@ export default class InOutItem extends Component {
           <div className='InOutCellValue'>
             <input type="text" className='InOutValue'
               name='name'
-              value={this.state.name}
+              value={this.state.item.name}
               onChange={this.handleChange}
               readOnly={this.state.readOnly}
             />
@@ -84,80 +83,73 @@ export default class InOutItem extends Component {
           </div>
           <PluginsConsumer>
           { plugins_dict => <div className='InOutCellValue'>
-              {
-                this.props.varName === 'inputs' &&
-                <select className='InOutValue'
-                  name='file_types'
-                  value={this.state.file_types[0]}
-                  onChange={this.handleChange}
-                  readOnly={this.state.readOnly}
-                >
-                {
-                  plugins_dict.operations_dict[this.props.nodeKind].resources.map((description) => <option
-                      value={description.kind}
-                      key={description.kind}
-                      >
-                      {description.title}
-                      </option>
-                  )
-                }
-                </select>
-              }
-              {
-                this.props.varName === 'outputs' &&
-                <select className='InOutValue'
-                  type='text'
-                  name='file_type'
-                  value={this.state.file_type}
-                  onChange={this.handleChange}
-                  readOnly={this.state.readOnly}
-                >
-                {
-                  plugins_dict.operations_dict[this.props.nodeKind].resources.map((description) => <option
-                      value={description.kind}
-                      key={description.kind}
-                      >
-                      {description.title}
-                      </option>
-                  )
-                }
-                </select>
-              }
 
+              <select className='InOutValue'
+                type='text'
+                name='file_type'
+                value={this.state.item.file_type}
+                onChange={this.handleChange}
+                readOnly={this.state.readOnly}
+              >
+              {
+                plugins_dict.operations_dict[this.props.nodeKind].resources.map((description) => <option
+                    value={description.kind}
+                    key={description.kind}
+                    >
+                    {description.title}
+                    </option>
+                )
+              }
+              </select>
+              <Icon
+                type_descriptor={plugins_dict.resources_dict[this.state.item.file_type]}
+              />
             </div>
           }
           </PluginsConsumer>
         </div>
 
         {(this.props.varName === 'inputs' && this.props.variableSize) &&
-          <div className='InOutRow'>
-            <div className='InOutCellTitle'>
-              Count:
-            </div>
-            <div className='InOutCellValue'>
-              <div className='InOutValue'>
-                <div className='CountsBlock'>
-                  <div className='Cell'>min</div>
-                  <input className='CellValue'
-                          type="number"
-                          name="min_count"
-                          onChange={this.handleChange}
-                          value={this.state.min_count}
-                          readOnly={this.state.readOnly}
-                          />
-                  <div className='Cell'>max</div>
-                  <input className='CellValue'
-                          type="number"
-                          name="max_count"
-                          onChange={this.handleChange}
-                          value={this.state.max_count}
-                          readOnly={this.state.readOnly}
-                          />
-                 </div>
-              </div>
-
+        <div className='InOutRow'>
+          <div className='InOutCellTitle'>
+            Array:
+          </div>
+          <div className='InOutCellValue'>
+            <div className='InOutValue'>
+                <input
+                  type="checkbox"
+                  name="is_array"
+                  onChange={this.handleChange}
+                  defaultChecked={this.state.item.is_array}
+                  readOnly={this.state.readOnly}
+                  >
+                </input>
+                <label className="BoolLabel">
+                  {this.state.item.is_array ? 'True' : 'False'}
+                </label>
             </div>
           </div>
+        </div>
+        }
+
+        {(this.props.varName === 'inputs' && this.props.variableSize && this.state.item.is_array) &&
+        <div className='InOutRow'>
+          <div className='InOutCellTitle'>
+            Min size
+          </div>
+          <div className='InOutCellValue'>
+            <div className='InOutValue'>
+                <input className='CellValue'
+                    type="number"
+                    name="min_count"
+                    min="0"
+                    onChange={this.handleChange}
+                    value={this.state.item.min_count}
+                    readOnly={this.state.readOnly}
+                    />
+            </div>
+          </div>
+        </div>
         }
 
       </div>

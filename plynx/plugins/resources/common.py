@@ -120,4 +120,4 @@ class Directory(BaseResource):
         return '<pre>{}</pre>'.format(content_stream)
 
 
-FILE_KIND = '.'.join([File().__class__.__module__, File().__class__.__name__])
+FILE_KIND = 'file'

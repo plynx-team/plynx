@@ -93,33 +93,11 @@ class BaseExecutor:
                     validation_code=ValidationCode.MISSING_PARAMETER
                 ))
 
-        for input in self.node.inputs:
-            if input.min_count < 0:
-                violations.append(
-                    ValidationError(
-                        target=ValidationTargetType.INPUT,
-                        object_id=input.name,
-                        validation_code=ValidationCode.MINIMUM_COUNT_MUST_NOT_BE_NEGATIVE
-                    ))
-            if input.min_count > input.max_count and input.max_count > 0:
-                violations.append(
-                    ValidationError(
-                        target=ValidationTargetType.INPUT,
-                        object_id=input.name,
-                        validation_code=ValidationCode.MAXIMUM_COUNT_MUST_BE_GREATER_THAN_MINIMUM
-                    ))
-            if input.max_count == 0:
-                violations.append(
-                    ValidationError(
-                        target=ValidationTargetType.INPUT,
-                        object_id=input.name,
-                        validation_code=ValidationCode.MAXIMUM_COUNT_MUST_NOT_BE_ZERO
-                    ))
-
         # Meaning the node is in the graph. Otherwise souldn't be in validation step
         if self.node.node_status != NodeStatus.CREATED:
             for input in self.node.inputs:
-                if len(input.values) < input.min_count and input.max_count > 0:
+                min_count = input.min_count if input.is_array else 1
+                if len(input.input_references) < min_count:
                     violations.append(
                         ValidationError(
                             target=ValidationTargetType.INPUT,

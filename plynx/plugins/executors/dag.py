@@ -56,11 +56,7 @@ class DAG(BaseExecutor):
                     for input in self.node.inputs:
                         if input.name == output.name:
                             updated_resources_count += 1
-                            if len(input.values) == 1:
-                                output.resource_id = input.values[0].resource_id    # TODO make outputs optional
-                                break
-                            elif len(input.values) > 1:
-                                raise Exception('Too many values to unpack')
+                            output.values = input.values
                 if updated_resources_count != len(self.node.inputs):
                     raise Exception('Used {} inputs for {} outputs'.format(updated_resources_count, len(self.node.inputs)))
 
@@ -69,8 +65,8 @@ class DAG(BaseExecutor):
                 continue
             dependency_index = 0
             for node_input in node.inputs:
-                for input_value in node_input.values:
-                    dep_node_id = to_object_id(input_value.node_id)
+                for input_reference in node_input.input_references:
+                    dep_node_id = to_object_id(input_reference.node_id)
                     self.node_id_to_dependents[dep_node_id].add(node_id)
                     if not NodeRunningStatus.is_finished(self.node_id_to_node[dep_node_id].node_running_status):
                         dependency_index += 1
@@ -169,8 +165,8 @@ class DAG(BaseExecutor):
 
                 removed_dependencies = 0
                 for node_input in dependent_node.inputs:
-                    for input_value in node_input.values:
-                        if to_object_id(input_value.node_id) == to_object_id(node_id):
+                    for input_reference in node_input.input_references:
+                        if to_object_id(input_reference.node_id) == to_object_id(node_id):
                             removed_dependencies += 1
                 dependency_index = prev_dependency_index - removed_dependencies
 
@@ -188,10 +184,12 @@ class DAG(BaseExecutor):
         """Get the node and init its inputs, i.e. filling its resource_ids"""
         res = self.node_id_to_node[node_id]
         for node_input in res.inputs:
-            for value in node_input.values:
-                value.resource_id = self.node_id_to_node[to_object_id(value.node_id)].get_output_by_name(
-                    value.output_id
-                ).resource_id
+            for input_reference in node_input.input_references:
+                node_input.values.extend(
+                    self.node_id_to_node[to_object_id(input_reference.node_id)].get_output_by_name(
+                        input_reference.output_id
+                    ).values
+                )
         return res
 
     @staticmethod
@@ -254,7 +252,7 @@ class DAG(BaseExecutor):
                 for output in self.node.outputs:
                     for input in node.inputs:
                         if input.name == output.name:
-                            output.resource_id = input.values[0].resource_id
+                            output.values = input.values
                             updated_resources_count += 1
                             break
                 if updated_resources_count != len(node.inputs):

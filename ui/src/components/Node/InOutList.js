@@ -57,22 +57,14 @@ export default class InOutList extends Component {
   handleAddItem() {
     const items = this.state.items;
 
-    if (this.props.varName === 'inputs') {
-      items.push({
-        name: 'file_' + this.counter,
-        file_types: ['file'],
-        values: [],
-        _key: this.counter.toString(),
-        min_count: 1,
-        max_count: 1
-      });
-    } else if (this.props.varName === 'outputs') {
-      items.push({
-        name: 'file_' + this.counter,
-        file_type: 'file',
-        _key: this.counter.toString()
-      });
-    }
+    items.push({
+      name: 'file_' + this.counter,
+      file_type: 'file',
+      values: [],
+      min_count: 1,
+      is_array: false,
+      _key: this.counter.toString()
+    });
 
     ++this.counter;
 
@@ -110,24 +102,20 @@ export default class InOutList extends Component {
                         {
                           this.props.varName === 'inputs' &&
                           <InOutItem
-                            name={item.name}
-                            fileTypes={item.file_types}
+                            item={item}
                             index={index}
                             varName={this.props.varName}
                             onChanged={(index, name, value) => this.handleChanged(index, name, value)}  // eslint-disable-line no-shadow
                             onRemove={(index) => this.handleRemoveItem(index)}                          // eslint-disable-line no-shadow
                             readOnly={this.state.readOnly}
                             nodeKind={this.props.nodeKind}
-                            minCount={item.min_count}
-                            maxCount={item.max_count}
                             variableSize={this.props.variableSize}
                           />
                         }
                         {
                           this.props.varName === 'outputs' &&
                           <InOutItem
-                            name={item.name}
-                            fileType={item.file_type}
+                            item={item}
                             index={index}
                             varName={this.props.varName}
                             onChanged={(index, name, value) => this.handleChanged(index, name, value)}  // eslint-disable-line no-shadow

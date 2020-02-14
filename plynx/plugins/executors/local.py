@@ -21,11 +21,15 @@ _RESOURCE_MERGER_FUNC = lambda: defaultdict(list)
 
 
 class ResourceMerger(object):
-    def __init__(self, mandatory_keys=None):
+    def __init__(self, init_level_0=None, init_level_1=None):
         self._dict = defaultdict(_RESOURCE_MERGER_FUNC)
-        mandatory_keys = mandatory_keys or []
-        for key in mandatory_keys:
+        init_level_0 = init_level_0 or []
+        init_level_1 = init_level_1 or []
+        for key in init_level_0:
             self._dict[key] = _RESOURCE_MERGER_FUNC()
+            for lev_1 in init_level_1:
+                self._dict[key][lev_1] = []
+
 
     def append(self, resource_dict, resource_name, is_list):
         for key, value in resource_dict.items():
@@ -185,48 +189,50 @@ class BaseBash(BaseExecutor):
                 Output.from_dict({
                     'name': 'stderr',
                     'file_type': FILE_KIND,
-                    'resource_id': None,
                 }),
                 Output({
                     'name': 'stdout',
                     'file_type': FILE_KIND,
-                    'resource_id': None,
                 }),
                 Output({
                     'name': 'worker',
                     'file_type': FILE_KIND,
-                    'resource_id': None,
                 }),
             ]
         )
         return node
 
     def _prepare_inputs(self, preview=False):
-        resource_merger = ResourceMerger([NodeResources.INPUT])
+        resource_merger = ResourceMerger(
+            [NodeResources.INPUT],
+            [input.name for input in self.node.inputs if input.is_array],
+        )
         for input in self.node.inputs:
-            is_list = not (input.min_count == 1 and input.max_count == 1)
             if preview:
                 for i, value in enumerate(range(input.min_count)):
                     filename = os.path.join(self.workdir, 'i_{}_{}'.format(i, input.name))
                     resource_merger.append(
-                        plugin_magagers.resource_manager.kind_to_resource_class[input.file_types[0]].prepare_input(filename, preview),
+                        plugin_magagers.resource_manager.kind_to_resource_class[input.file_type].prepare_input(filename, preview),
                         input.name,
-                        is_list,
+                        input.is_array,
                     )
             else:
                 for i, value in enumerate(input.values):
                     filename = os.path.join(self.workdir, 'i_{}_{}'.format(i, input.name))
                     with open(filename, 'wb') as f:
-                        f.write(get_file_stream(value.resource_id).read())
+                        f.write(get_file_stream(value).read())
                     resource_merger.append(
-                        plugin_magagers.resource_manager.kind_to_resource_class[input.file_types[0]].prepare_input(filename, preview),
+                        plugin_magagers.resource_manager.kind_to_resource_class[input.file_type].prepare_input(filename, preview),
                         input.name,
-                        is_list
+                        input.is_array,
                     )
         return resource_merger.get_dict()
 
     def _prepare_outputs(self, preview=False):
-        resource_merger = ResourceMerger([NodeResources.OUTPUT])
+        resource_merger = ResourceMerger(
+            [NodeResources.OUTPUT],
+            [output.name for output in self.node.outputs if output.is_array],
+        )
         for output in self.node.outputs:
             filename = os.path.join(self.workdir, 'o_{}'.format(output.name))
             resource_merger.append(
@@ -271,12 +277,21 @@ class BaseBash(BaseExecutor):
 
     def _postprocess_outputs(self, outputs):
         for key, filename in outputs.items():
+            logging.info('-'*100)
+            logging.info(type(key))
+            logging.info(type(filename))
+            logging.info(key)
+            logging.info(filename)
             if os.path.exists(filename):
+                logging.info('path exists')
                 matching_outputs = list(filter(lambda o: o.name == key, self.node.outputs))
                 assert len(matching_outputs) == 1, "Found more that 1 output with the same name `{}`".format(key)
                 filename = plugin_magagers.resource_manager.kind_to_resource_class[matching_outputs[0].file_type].postprocess_output(filename)
+                logging.info(filename)
                 with open(filename, 'rb') as f:
-                    self.node.get_output_by_name(key).resource_id = upload_file_stream(f)
+                    # resource_id
+                    self.node.get_output_by_name(key).values = [upload_file_stream(f)]
+                    logging.info(self.node.get_output_by_name(key).to_dict())
             else:
                 raise IOError("Output `{}` (filename: `{}`) does not exist".format(key, filename))
 
@@ -307,7 +322,7 @@ class BaseBash(BaseExecutor):
                     with open(filename, 'rb') as f:
                         # resource_id should be None if the file has not been uploaded yet
                         # otherwise assign it
-                        log.resource_id = upload_file_stream(f, log.resource_id)
+                        log.values = [upload_file_stream(f, log.values[0] if len(log.values) > 0 else None)]
 
 
 class BashJinja2(BaseBash):

@@ -54,6 +54,15 @@
 .InOutCellValue {
   float: left;
   padding-right: 5px;
+  display: flex;
+  align-items: center;
+  margin: 2px;
+}
+
+.InOutCellValue > img, .InOutCellValue > svg {
+    width: 17px;
+    height: 17px;
+    margin-left: 3px;
 }
 
 .InOutValue {

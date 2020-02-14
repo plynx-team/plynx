@@ -94,9 +94,6 @@ export default class Editor extends Component {
     const self = this;
     let loading = true;
     const node_id = this.props.match.params.node_id.replace(/\$+$/, '');
-    console.log('params', this.props.match.params);
-    console.log('match', this.props.match);
-    console.log('props', this.props);
     let sleepPeriod = 1000;
     const sleepMaxPeriod = 10000;
     const sleepStep = 1000;
@@ -258,6 +255,7 @@ export default class Editor extends Component {
           self.updateNode(data.node, true)
         } else if (action === ACTION.UPGRADE_NODES) {
           self.updateNode(data.node, true)
+          console.log('new', data.node);
           let message = "";
           if (data.upgraded_nodes_count > 0) {
             message = "Upgraded " + data.upgraded_nodes_count +

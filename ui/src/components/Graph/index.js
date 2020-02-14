@@ -112,25 +112,20 @@ ENDPOINT = '` + API_ENDPOINT + `'
       const node = this.nodes[i];
       if (node._id === SPECIAL_NODE_IDS.INPUT) {
           inputNode = node;
-          node.outputs = this.graph_node.inputs.map(
-              (input) => { return {
-                    name: input.name,
-                    file_type: input.file_types[0],
-                    resource_id: null,
-                }}
-          );
+          node.outputs = this.graph_node.inputs;
       } else if (node._id === SPECIAL_NODE_IDS.OUTPUT) {
-          let prevInputToValues = {}
+          let prevInputToInputReferences = {}
           for (const input of node.inputs) {
-              prevInputToValues[input.name + input.file_types[0]] = input.values;
+              prevInputToInputReferences[input.name + input.file_type] = input.input_references;
           }
           node.inputs = this.graph_node.outputs.map(
               (output) => { return {
                     name: output.name,
-                    file_types: [output.file_type],
-                    values: prevInputToValues[output.name + output.file_type] ? prevInputToValues[output.name + output.file_type] : [],
-                    min_count: 1,
-                    max_count: 1,
+                    file_type: output.file_type,
+                    values: output.values,
+                    input_references: prevInputToInputReferences[output.name + output.file_type] ? prevInputToInputReferences[output.name + output.file_type] : [],
+                    min_count: output.min_count,
+                    is_array: output.is_array,
                 }}
           );
       }
@@ -148,12 +143,13 @@ ENDPOINT = '` + API_ENDPOINT + `'
       for (j = 0; j < node.inputs.length; ++j) {
           blockInputs.push({
             name: node.inputs[j].name,
-            file_types: node.inputs[j].file_types
+            file_type: node.inputs[j].file_type,
+            is_array: node.inputs[j].is_array,
           });
           const inputValueIndexToRemove = [];
-          for (let k = 0; k < node.inputs[j].values.length; ++k) {
-            let from_block = node.inputs[j].values[k].node_id;
-            let from = node.inputs[j].values[k].output_id;
+          for (let k = 0; k < node.inputs[j].input_references.length; ++k) {
+            let from_block = node.inputs[j].input_references[k].node_id;
+            let from = node.inputs[j].input_references[k].output_id;
 
             if (from_block === SPECIAL_NODE_IDS.INPUT && inputNode) {
                 let output = inputNode.outputs.filter((out) => out.name === from);
@@ -170,13 +166,14 @@ ENDPOINT = '` + API_ENDPOINT + `'
               );
           }
           for (let v = inputValueIndexToRemove.length - 1; v >= 0; --v) {
-              node.inputs[j].values.splice(inputValueIndexToRemove[v], 1)
+              node.inputs[j].input_references.splice(inputValueIndexToRemove[v], 1)
           }
       }
       for (j = 0; j < node.outputs.length; ++j) {
         blockOutputs.push({
           name: node.outputs[j].name,
-          file_type: node.outputs[j].file_type
+          file_type: node.outputs[j].file_type,
+          is_array: node.outputs[j].is_array,
         });
       }
 
@@ -283,7 +280,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
       throw new Error("Node input with name '" + from_pin + "' not found");
     }
 
-    if (node_input.max_count > 0 && node_input.values.length >= node_input.max_count) {
+    if (!node_input.is_array && node_input.input_references.length > 0) {
       this.props.showAlert("No more slots for new connections left", 'warning');
       return;
     }
@@ -293,19 +290,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
       return;
     }
 
-    if (from_nid == SPECIAL_NODE_IDS.INPUT) {
-        const graph_node_input = this.graph_node.inputs.find(
-          (node_input_) => {
-            return node_input_.name === from_pin;
-          }
-        );
-        if (graph_node_input.max_count < 0 && node_input.max_count >= 0) {
-            this.props.showAlert(`Graph input ${from_pin} is unlimited, but Operation has a limit of ${node_input.max_count}`, 'warning');
-            return;
-        }
-    }
-
-    if (node_input.values.filter(
+    if (node_input.input_references.filter(
         (a) => a.node_id === from_nid && a.output_id === from_pin).length > 0) {
       this.props.showAlert("Connection already exists", 'warning');
       return;
@@ -318,7 +303,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
       to: to_pin
     });
 
-    node_input.values.push({
+    node_input.input_references.push({
       "node_id": from_nid,
       "output_id": from_pin
     });
@@ -345,7 +330,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
     const input = to_node.inputs.filter((input_) => {
       return input_.name === connector.to;
     })[0];
-    input.values = input.values.filter((value) => {
+    input.input_references = input.input_references.filter((value) => {
       return !(value.output_id === connector.from && value.node_id === connector.from_block);
     });
 
@@ -438,11 +423,11 @@ ENDPOINT = '` + API_ENDPOINT + `'
           console.log(`Index not found for connector ${connector}`);
           continue;
         }
-        if (to_node.inputs[to_index].max_count > 0 && to_node.inputs[to_index].values.length >= to_node.inputs[to_index].max_count) {
+        if (!to_node.inputs[to_index].is_array && to_node.inputs[to_index].input_references.length > 0) {
           continue;
         }
 
-        to_node.inputs[to_index].values.push({
+        to_node.inputs[to_index].input_references.push({
           "node_id": from_node._id,
           "output_id": connector.from,
         });
@@ -471,11 +456,11 @@ ENDPOINT = '` + API_ENDPOINT + `'
     }
     const node = this.node_lookup[nid];
     const output = node.outputs[outputIndex];
-    if (output.resource_id) {
+    if (output.values.length > 0) {
       this.handlePreview({
         title: output.name,
         file_type: output.file_type,
-        resource_id: output.resource_id,
+        resource_id: output.values[0],
         download_name: output.name,
       });
     } else {
@@ -538,37 +523,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
     } else {
       this.propertiesBar.setNodeData(this.graph_node);
     }
-  }
-
-  handleSave() {
-    console.log(this.graph);
-    this.postGraph(this.graph, false, ACTION.SAVE);
-  }
-
-  handleValidate() {
-    console.log(this.graph);
-    this.postGraph(this.graph, false, ACTION.VALIDATE);
-  }
-
-  handleApprove() {
-    console.log(this.graph);
-    this.postGraph(this.graph, true, ACTION.APPROVE);
-  }
-
-  handleRearrange() {
-    this.postGraph(this.graph, false, ACTION.REARRANGE);
-  }
-
-  handleGenerateCode() {
-    this.postGraph(this.graph, false, ACTION.GENERATE_CODE);
-  }
-
-  handleUpgradeNodes() {
-    this.postGraph(this.graph, false, ACTION.UPGRADE_NODES);
-  }
-
-  handleCancel() {
-    this.postGraph(this.graph, false, ACTION.CANCEL);
   }
 
   handleParameterChanged(node_ids, name, value) {
@@ -677,7 +631,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
       for (i = 0; i < node.inputs.length; ++i) {
         inputs.push({
           name: node.inputs[i].name,
-          file_types: node.inputs[i].file_types
+          file_type: node.inputs[i].file_type
         });
         node.inputs[i].values = []; // clear inputs on paste
       }

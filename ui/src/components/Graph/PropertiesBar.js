@@ -95,6 +95,28 @@ export default class PropertiesBar extends Component {
     }
   }
 
+  renderOutputs(outputs) {
+      return outputs.filter(
+        (output) => {
+          return output.values.length > 0;
+        }
+      ).map(
+        (output) => output.values.map(
+            (output_value) => {
+              return <OutputItem
+                graphId={this.state.graphId}
+                resourceName={output.name}
+                resourceId={output_value}
+                nodeId={this.state.nodeId}
+                key={output_value}
+                fileType={output.file_type}
+                onPreview={(previewData) => this.handlePreview(previewData)}
+                />;
+            }
+        )
+      );
+  }
+
   render() {
     const self = this;
 
@@ -116,41 +138,8 @@ export default class PropertiesBar extends Component {
           onParameterChanged={(name, value) => this.handleParameterChanged(name, value)}
           />);
     }
-    const outputsList = this.state.outputs.filter(
-      (output) => {
-        return output.resource_id;
-      }
-    ).map(
-      (output) => {
-        return <OutputItem
-          graphId={self.state.graphId}
-          resourceName={output.name}
-          resourceId={output.resource_id}
-          nodeId={self.state.nodeId}
-          key={output.resource_id}
-          fileType={output.file_type}
-          onPreview={(previewData) => self.handlePreview(previewData)}
-          />;
-      }
-      );
-
-    let logsList = [];
-    if (this.state.logs) {
-      logsList = this.state.logs.filter(
-        (log) => {
-          return log.resource_id;
-        }
-        ).map(
-        (log) => <OutputItem
-          graphId={this.state.graphId}
-          resourceName={log.name}
-          resourceId={log.resource_id}
-          nodeId={this.state.nodeId}
-          key={log.resource_id}
-          fileType={'file'}
-          onPreview={(previewData) => this.handlePreview(previewData)}
-        />);
-    }
+    const outputsList = this.renderOutputs(this.state.outputs);
+    const logsList = this.renderOutputs(this.state.logs);
 
     return (
       <div className="PropertiesBar"

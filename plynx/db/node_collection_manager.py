@@ -170,10 +170,11 @@ class NodeCollectionManager(object):
 
     @staticmethod
     def _transplant_node(node, new_node):
-        if to_object_id(node.parent_node_id) == new_node._id:
+        if new_node._id == node.original_node_id:
             return node
         new_node.apply_properties(node)
         new_node.original_node_id = new_node._id
+        new_node.parent_node_id = new_node.successor_node_id = None
         new_node._id = node._id
         return new_node
 
@@ -194,16 +195,16 @@ class NodeCollectionManager(object):
         new_node_db_mapping = {}
 
         for db_node in db_nodes:
-            original_parent_node_id = db_node['_id']
+            original_node_id = db_node['_id']
             new_db_node = db_node
-            if original_parent_node_id not in new_node_db_mapping:
+            if original_node_id not in new_node_db_mapping:
                 while new_db_node['node_status'] != NodeStatus.READY and 'successor_node_id' in new_db_node and new_db_node['successor_node_id']:
                     n = self.get_db_node(new_db_node['successor_node_id'])
                     if n:
                         new_db_node = n
                     else:
                         break
-                new_node_db_mapping[original_parent_node_id] = new_db_node
+                new_node_db_mapping[original_node_id] = new_db_node
 
         new_nodes = [
             NodeCollectionManager._transplant_node(
@@ -212,7 +213,7 @@ class NodeCollectionManager(object):
             ) for node in sub_nodes]
 
         upgraded_nodes_count = sum(
-            1 for node, new_node in zip(sub_nodes, new_nodes) if node.parent_node_id != new_node.parent_node_id
+            1 for node, new_node in zip(sub_nodes, new_nodes) if node.original_node_id != new_node.original_node_id
         )
 
         node.get_parameter_by_name('_nodes').value.value = new_nodes

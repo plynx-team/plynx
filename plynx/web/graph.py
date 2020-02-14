@@ -1,5 +1,5 @@
 import json
-from plynx.db.node import Node, Parameter, InputValue
+from plynx.db.node import Node, Parameter
 from plynx.db.node_collection_manager import NodeCollectionManager
 from plynx.db.graph import Graph
 from plynx.db.graph_collection_manager import GraphCollectionManager
