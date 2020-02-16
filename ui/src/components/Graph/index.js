@@ -12,6 +12,7 @@ import withDragDropContext from './withDragDropContext';
 import DemoScreen from '../DemoScreen';
 import FileDialog from '../Dialogs/FileDialog';
 import CodeDialog from '../Dialogs/CodeDialog';
+import ParameterSelectionDialog from '../Dialogs/ParameterSelectionDialog';
 import {PluginsProvider} from '../../contexts';
 import {ObjectID} from 'bson';
 import {HotKeys} from 'react-hotkeys';
@@ -62,6 +63,7 @@ class Graph extends Component {
       graphRunningStatus: null,
       previewData: null,
       generatedCode: "",
+      linkParameters: null,
     };
 
     let token = cookie.load('refresh_token');
@@ -99,6 +101,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
     this.block_lookup = {};
     this.connections = [];
     this.blocks = [];
+    var parameterNameToGraphParameter = {};
     const ts = new ObjectID().toString();
     for (let i = 0; i < this.graph_node.parameters.length; ++i) {
         if (this.graph_node.parameters[i].name === '_nodes') {
@@ -107,9 +110,22 @@ ENDPOINT = '` + API_ENDPOINT + `'
         }
     }
 
+    for (var parameter of this.graph_node.parameters) {
+        parameterNameToGraphParameter[parameter.name] = parameter;
+    }
+
     var inputNode = null
     for (let i = 0; i < this.nodes.length; ++i) {
       const node = this.nodes[i];
+
+      // Remove broken references
+      for (var parameter of node.parameters) {
+          if (parameter.reference && (!parameterNameToGraphParameter.hasOwnProperty(parameter.reference) || parameter.parameter_type !== parameterNameToGraphParameter[parameter.reference].parameter_type)) {
+              parameter.reference = null;
+          }
+      }
+
+      // work with input and output
       if (node._id === SPECIAL_NODE_IDS.INPUT) {
           inputNode = node;
           node.outputs = this.graph_node.inputs;
@@ -505,6 +521,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
   handleBlocksSelect(nids) {
     console.log('blocks selected : ' + nids);
 
+    this.selectedNodeIds = nids;
+
     if (nids.length === 1) {
       const nid = nids[0];
       const node = this.node_lookup[nid];
@@ -598,11 +616,77 @@ ENDPOINT = '` + API_ENDPOINT + `'
     });
   }
 
+  handleLinkClick(node_ids, name) {
+    this.link_node_parameters = []
+    var parameter_reference;
+    var parameter_type;
+    for (const node_id of node_ids) {
+        var node;
+        if (node_id in this.node_lookup) {
+            node = this.node_lookup[node_id];
+        } else {
+            throw new Error(`Node ${node_id} not found`);
+        }
+        const node_parameter = node.parameters.find(
+          (param) => {
+            return param.name === name;
+          }
+        );
+        if (!node_parameter) {
+            throw new Error("Parameter not found");
+        }
+
+        parameter_reference = node_parameter.reference
+
+        parameter_type = node_parameter.parameter_type;
+
+        this.link_node_parameters.push(node_parameter);
+    }
+
+    this.link_graph_parameters = [{
+        name: null,
+        parameter_type: "none",
+        value: "0",
+        mutable_type: true,
+        removable: true,
+        publicable: true,
+        widget: "None",
+    }].concat(
+        this.graph_node.parameters.filter((parameter) => parameter.parameter_type === parameter_type)
+    );
+
+    let linkParametersIndex = 0;
+    if (parameter_reference) {
+        linkParametersIndex = this.link_graph_parameters.findIndex((parameter) => parameter.name === parameter_reference)
+    }
+
+    this.setState({
+        linkParameters: this.link_graph_parameters,
+        linkParametersIndex: linkParametersIndex,
+    })
+
+  }
+
+  handleIndexLinkChange (index) {
+    for (var node_parameter of this.link_node_parameters) {
+        node_parameter.reference = this.link_graph_parameters[index].name;
+    }
+    this.handleBlocksSelect(this.selectedNodeIds);
+    this.props.onNodeChange(this.graph_node);
+  }
+
+  handleCloseParameterLinkDialog() {
+    this.setState({
+      linkParameters: null
+    });
+  }
+
   closeAllDialogs() {
     this.handleClosePreview();
     this.handleCloseCodeDialog();
     this.handleCloseGeneratedCodeDialog();
     this.handleCloseFileDialog();
+    this.handleCloseParameterLinkDialog();
   }
 
   keyHandlers = {
@@ -796,6 +880,17 @@ ENDPOINT = '` + API_ENDPOINT + `'
             readOnly
           />
         }
+        {
+            this.state.linkParameters &&
+            <ParameterSelectionDialog
+              title={"Link Graph parameter"}
+              parameters={this.state.linkParameters}
+              index={this.state.linkParametersIndex}
+              onClose={() => this.handleCloseParameterLinkDialog()}
+              onIndexChanged={(index) => this.handleIndexLinkChange(index)}
+              readOnly={!this.state.editable}
+            />
+        }
 
         {/* Visible and flex layout blocks */}
         {this.state.editable && <NodesBar/> }
@@ -835,6 +930,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
                       onPreview={(previewData) => this.handlePreview(previewData)}
                       key={"prop" + this.state.editable}
                       onFileShow={(nid) => this.handleShowFile(nid)}
+                      onLinkClick={(node_ids, name) => this.handleLinkClick(node_ids, name)}
         />
         }
       </PluginsProvider>

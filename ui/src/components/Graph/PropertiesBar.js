@@ -23,7 +23,8 @@ const renderNodeLink = node => {
 
 const renderLinkRow = (title, href, text) => {
   return (
-    <div className='ParameterItem'>
+    <div className='ParameterItem'
+      key={href + text}>
       <div className='ParameterNameCell'>
           {title}
       </div>
@@ -40,6 +41,7 @@ export default class PropertiesBar extends Component {
   constructor(props) {
     super(props);
     this.state = this.getStateDict([props.initialNode]);
+    this.mainNodeId = props.initialNode._id;
   }
 
   getStateDict(nodes) {
@@ -50,7 +52,11 @@ export default class PropertiesBar extends Component {
           for (jj = 0; jj < commonParameters.length; ++jj) {
               let commonParam = commonParameters[jj];
               if (!nodes[ii].parameters.find(param => {
-                  return param.name === commonParam.name && param.parameter_type === commonParam.parameter_type && param.value === commonParam.value
+                  return param.name === commonParam.name && param.parameter_type === commonParam.parameter_type &&
+                    (
+                        (param.reference === null && param.value === commonParam.value) ||
+                        (param.reference && param.reference === commonParam.reference)
+                    )
                   })
               ) {
                   indexesToRemove.push(jj);
@@ -66,6 +72,7 @@ export default class PropertiesBar extends Component {
             widget: 'Description',
             value: nodes[0].description,
             parameter_type: 'str',
+            _link_visibility: false,
           });
       }
       if (allEqual(nodes.map(node => node.title))) {
@@ -74,6 +81,7 @@ export default class PropertiesBar extends Component {
             widget: 'title',
             value: nodes[0].title,
             parameter_type: 'str',
+            _link_visibility: false,
           });
       }
       return {
@@ -102,6 +110,10 @@ export default class PropertiesBar extends Component {
 
   handleParameterChanged(name, value) {
     this.props.onParameterChanged(this.state.nodes.map(node => node._id), name, value);
+  }
+
+  handleLinkClick(name) {
+    this.props.onLinkClick(this.state.nodes.map(node => node._id), name);
   }
 
   handlePreview(previewData) {
@@ -140,7 +152,7 @@ export default class PropertiesBar extends Component {
         const node = this.state.nodes[0];
         const node_id = node.original_node_id || node.parent_node_id;
         if (node_id) {
-            linksList.push(renderLinkRow('Original Operation', `/${COLLECTIONS.TEMPLATES}/${node_id}`, node_id));
+            linksList.push(renderLinkRow('Original', `/${COLLECTIONS.TEMPLATES}/${node_id}`, node_id));
         }
         var url = window.location.href;
         if (url.indexOf('?') > -1){
@@ -163,12 +175,15 @@ export default class PropertiesBar extends Component {
       .map(
         (parameter) => <ParameterItem
           name={parameter.name}
-          alias={parameter.widget}
+          widget={parameter.widget}
           value={parameter.value}
           parameterType={parameter.parameter_type}
-          key={this.state.nodeId + "$" + parameter.name}
+          key={this.state.nodeId + "$" + parameter.name + parameter.reference}
           readOnly={!this.state.editable}
+          _link_visibility={parameter.hasOwnProperty('_link_visibility') ? parameter._link_visibility : (self.mainNodeId === this.state.nodes[0]._id ? false : true)}
+          reference={parameter.reference}
           onParameterChanged={(name, value) => this.handleParameterChanged(name, value)}
+          onLinkClick={(name) => this.handleLinkClick(name)}
           />);
     }
     const outputsList = this.renderOutputs(this.state.outputs);

@@ -26,7 +26,6 @@ export default class NodeProperties extends Component {
     this.state = {
       title: this.props.title,
       description: this.props.description,
-      kind: this.props.kind,
       parentNode: this.props.parentNode,
       nodeStatus: this.props.nodeStatus,
       created: this.props.created,
@@ -54,32 +53,22 @@ export default class NodeProperties extends Component {
     const customPropertiesItems = [
       {
         name: 'title',
-        widget: { alias: 'Title' },
+        widget: 'Title',
         value: this.state.title,
         parameter_type: 'str',
         read_only: this.state.readOnly,
       },
       {
         name: 'description',
-        widget: { alias: 'Description' },
+        widget: 'Description',
         value: this.state.description,
         parameter_type: 'str',
-        read_only: this.state.readOnly,
-      },
-      {
-        name: 'kind',
-        widget: { alias: 'Kind' },
-        value: {
-          index: kindIndex,
-          values: kinds,
-        },
-        parameter_type: 'enum',
         read_only: this.state.readOnly,
       },
     ].map(
       (parameter) => <ParameterItem
         name={parameter.name}
-        alias={parameter.widget.alias}
+        widget={parameter.widget}
         value={parameter.value}
         parameterType={parameter.parameter_type}
         key={parameter.name}
@@ -88,8 +77,14 @@ export default class NodeProperties extends Component {
         />
       );
 
-    const internalPropertiesItems = [
+    const statePropertiesItems = [
       makeKeyValueRow('Node Status', <i>{this.state.nodeStatus}</i>, 'node_status'),
+      makeKeyValueRow('Created', <i>{this.props.created}</i>, 'created'),
+      makeKeyValueRow('Updated', <i>{this.props.updated}</i>, 'updated'),
+    ];
+
+    const inheritancePropertiesItems = [
+      makeKeyValueRow('Kind', this.props.kind, 'kind'),
       makeKeyValueRow(
           'Parent Node',
           this.state.parentNode ? <Link to={`/${COLLECTIONS.TEMPLATES}/${this.state.parentNode}`}>{this.state.parentNode}</Link> : <i>null</i>,
@@ -100,17 +95,18 @@ export default class NodeProperties extends Component {
           this.props.successorNode ? <Link to={`/${COLLECTIONS.TEMPLATES}/${this.state.successorNode}`}>{this.props.successorNode}</Link> : <i>null</i>,
           'successor'
         ),
-      makeKeyValueRow('Created', <i>{this.props.created}</i>, 'created'),
-      makeKeyValueRow('Updated', <i>{this.props.updated}</i>, 'updated'),
     ];
 
     return (
       <div className='NodeProperties'>
         <div className='PropertyCol'>
-          { makePropertiesBox('Custom properties', customPropertiesItems) }
+          { makePropertiesBox('Properties', customPropertiesItems) }
         </div>
         <div className='PropertyCol'>
-          { makePropertiesBox('Internal properties', internalPropertiesItems) }
+          { makePropertiesBox('State properties', statePropertiesItems) }
+        </div>
+        <div className='PropertyCol'>
+          { makePropertiesBox('Inheritance', inheritancePropertiesItems) }
         </div>
       </div>
 

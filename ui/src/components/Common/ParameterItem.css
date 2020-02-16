@@ -8,7 +8,7 @@
 .ParameterItem {
   display: grid;
   width: 100%;
-  grid-template-columns: 40% 59%;
+  grid-template-columns: 40% 1fr;
   margin: 5px 0px;
 }
 
@@ -23,7 +23,18 @@
 .ParameterValueCell {
   overflow: hidden;
   text-overflow: ellipsis;
+  display: grid;
+  grid-template-columns: 1fr 20px;
+}
 
+.ParameterValueCell > .link-button {
+  padding: 0px;
+  height: 18px;
+}
+
+.ParameterValueCell .link-button > .icon {
+  width: 17px;
+  height: 17px;
 }
 
 .ParameterValueCell a {
@@ -37,4 +48,17 @@
 
 .ParameterValueCell > .BoolLabel{
   color: white;
+}
+
+.ParameterValueCell > .reference {
+  font-weight: bold;
+  font-style: italic;
+}
+
+.properties-list .option-block {
+  display: flex;
+}
+
+.option-block > .radio {
+  margin: 5px 0px;
 }

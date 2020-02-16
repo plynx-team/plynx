@@ -48,11 +48,17 @@ def _clone_update_in_place(node, node_clone_policy):
                 input.values = []
                 for input_reference in input.input_references:
                     input_reference.node_id = object_id_mapping[ObjectId(input_reference.node_id)]
+            # TODO STATIC
             for output in sub_node.outputs:
                 output.values = []
 
             for log in sub_node.logs:
                 log.values = []
+
+            for parameter in sub_node.parameters:
+                if not parameter.reference:
+                    continue
+                parameter.value = node.get_parameter_by_name(parameter.reference, throw=True).value
 
     for output_or_log in node.outputs + node.logs:
         output_or_log.resource_id = None
@@ -556,25 +562,6 @@ def _value_is_valid(value, parameter_type):
         return False
 
 
-# TODO remove Widget
-class ParameterWidget(DBObject):
-    """Basic ParameterWidget structure."""
-
-    FIELDS = {
-        'alias': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
-    }
-
-    def __str__(self):
-        return 'ParameterWidget(alias="{}")'.format(self.alias)
-
-    def __repr__(self):
-        return 'ParameterWidget({})'.format(str(self.to_dict()))
-
-
 class Parameter(DBObject):
     """Basic Parameter structure."""
 
@@ -611,6 +598,12 @@ class Parameter(DBObject):
             is_list=False,
             ),
         'widget': DBObjectField(
+            type=str,
+            default=None,
+            is_list=False,
+            ),
+        # Link to global parameter
+        'reference': DBObjectField(
             type=str,
             default=None,
             is_list=False,

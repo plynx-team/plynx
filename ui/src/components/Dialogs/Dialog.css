@@ -5,6 +5,7 @@
   background-color: rgba(0, 0, 0, 0.5);
   z-index: 23000;
   position: fixed;
+  color: white;
 }
 
 .dialog .dialog-rnd {
@@ -14,7 +15,7 @@
 }
 
 .dialog .dialog-window {
-  background-color: #ddd;
+  background-color: #404040;
   border-radius: 4px;
   display: grid;
   grid-template-rows: 30px 1fr;
@@ -22,18 +23,19 @@
 }
 
 .dialog .dialog-window .header {
-  border-bottom: 1px solid #ccc;
+  background-color: #202020;
+  border-bottom: 1px solid #555;
   display: grid;
   grid-template-columns: 20px 1fr;
   font-weight: 600;
   font-size: 13pt;
   font-family: 'Source Sans Pro', sans-serif;
-  color: black;
+  color: white;
   padding: 4px;
 }
 
 .dialog .dialog-window .header .close-button {
-  color: black;
+  color: white;
   padding-left: 4px;
   text-decoration: none;
   cursor: pointer;

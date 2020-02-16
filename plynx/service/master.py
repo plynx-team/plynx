@@ -99,8 +99,7 @@ class Master(object):
 
             try:
                 status = JobReturnStatus.FAILED
-                if not executor.workdir:
-                    executor.workdir = os.path.join('/tmp', str(uuid.uuid1()))
+                executor.workdir = os.path.join('/tmp', str(uuid.uuid1()))
                 executor.init_workdir()
                 status = executor.run()
             except Exception:
