@@ -9,7 +9,7 @@ from plynx.web.common import app, requires_auth, make_fail_response, handle_erro
 from plynx.utils.common import to_object_id, JSONEncoder
 from plynx.constants import NodeStatus, NodeRunningStatus, NodePostAction, NodePostStatus, Collections, NodeClonePolicy, NodeVirtualCollection
 
-PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'hub', 'node_kinds', 'search'}
+PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'hub', 'node_kinds', 'search', 'user_id'}
 PERMITTED_READONLY_POST_ACTIONS = {
     NodePostAction.VALIDATE,
     NodePostAction.PREVIEW_CMD,
@@ -36,41 +36,22 @@ def post_search_nodes(collection):
     query = json.loads(request.data)
     app.logger.debug(request.data)
 
+    query['user_id'] = to_object_id(g.user._id)
+
     virtual_collection = query.pop('virtual_collection', None)
-    if virtual_collection == NodeVirtualCollection.OPERATIONS:
-        query['node_kinds'] = list(operation_manager.kind_to_operation_dict.keys())
-    elif virtual_collection == NodeVirtualCollection.WORKFLOWS:
-        query['node_kinds'] = list(workflow_manager.kind_to_workflow_dict.keys())
 
-    user_id = to_object_id(g.user._id)
     if len(query.keys() - PAGINATION_QUERY_KEYS):
         return make_fail_response('Unknown keys: `{}`'.format(query.keys() - PAGINATION_QUERY_KEYS)), 400
 
-    res = node_collection_managers[collection].get_db_nodes(user_id=user_id, **query)
-
-    return JSONEncoder().encode({
-        'items': res['list'],
-        'total_count': res['metadata'][0]['total'] if res['metadata'] else 0,
-        'plugins_dict': PLUGINS_DICT,
-        'status': 'success'})
-
-
-@app.route('/plynx/api/v0/search_in_hubs', methods=['POST'])
-@handle_errors
-@requires_auth
-def post_search_nodes_():
-    query = json.loads(request.data)
-    app.logger.debug(request.data)
-
-    user_id = to_object_id(g.user._id)
-    if len(query.keys() - PAGINATION_QUERY_KEYS):
-        return make_fail_response('Unknown keys: `{}`'.format(query.keys() - PAGINATION_QUERY_KEYS)), 400
-
-    hub = query.pop('hub')
-
-    query['user_id'] = user_id
-    query = Query(**query)
-    res = hub_manager.kind_to_hub_class[hub].search(query)
+    if collection == 'in_hubs':
+        hub = query.pop('hub')
+        res = hub_manager.kind_to_hub_class[hub].search(Query(**query))
+    else:
+        if virtual_collection == NodeVirtualCollection.OPERATIONS:
+            query['node_kinds'] = list(operation_manager.kind_to_operation_dict.keys())
+        elif virtual_collection == NodeVirtualCollection.WORKFLOWS:
+            query['node_kinds'] = list(workflow_manager.kind_to_workflow_dict.keys())
+        res = node_collection_managers[collection].get_db_nodes(**query)
 
     return JSONEncoder().encode({
         'items': res['list'],
