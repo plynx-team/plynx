@@ -17,12 +17,8 @@ _GRAPH_ITERATION_SLEEP = 1
 class DAG(BaseExecutor):
     """ Main graph scheduler.
 
-    It works with a single db.graph.Graph object.
-    GraphScheduler loads the Graph from DB.
-    It determines Nodes to be executed.
-
     Args:
-        graph (str or Graph)
+        node_dict (dict)
 
     """
     IS_GRAPH = True

@@ -8,19 +8,13 @@ import six
 import traceback
 import uuid
 from collections import namedtuple
-from plynx.constants import JobReturnStatus, NodeRunningStatus, GraphRunningStatus
+from plynx.constants import JobReturnStatus, NodeRunningStatus, Collections
 from plynx.db.node_collection_manager import NodeCollectionManager
 from plynx.db.service_state import MasterState, WorkerState
 from plynx.utils.config import get_master_config
 from plynx.utils.db_connector import check_connection
 from plynx.plugins.executors import materialize_executor
 from plynx.utils.file_handler import upload_file_stream
-
-
-MasterJobDescription = namedtuple('MasterJobDescription', ['graph_id', 'job'])
-
-node_collection_manager = NodeCollectionManager(collection='runs')
-# graph_cancellation_manager = GraphCancellationManager()
 
 
 class Master(object):
@@ -48,20 +42,11 @@ class Master(object):
         * Track worker status and last response.
     """
 
-    # Ctrl-C will cleanly kill all spawned threads
-    daemon_threads = True
-    # much faster rebinding
-    allow_reuse_address = True
-    # Define timeout for scheduler iteration
-    SCHEDULER_TIMEOUT = 1
     # Define sync with database timeout
     SDB_STATUS_UPDATE_TIMEOUT = 1
-    # Threshold to tolerate delays before declaring worker failed
-    MAX_HEARTBEAT_DELAY = 10
-    # Recalculating Workers' statuses timeout
-    WORKER_MONITORING_TIMEOUT = 10
 
     def __init__(self, master_config):
+        self.node_collection_manager = NodeCollectionManager(collection=Collections.RUNS)
         self.kinds = master_config.kinds
         self._stop_event = threading.Event()
         self._job_description_queue = queue.Queue()
@@ -76,12 +61,6 @@ class Master(object):
         # Start new threads
         self._thread_db_status_update = threading.Thread(target=self._run_db_status_update, args=())
         self._thread_db_status_update.start()
-
-        """
-        self._thread_worker_monitoring = threading.Thread(target=self._run_worker_monitoring, args=())
-        self._thread_worker_monitoring.daemon = True    # Daemonize thread
-        self._thread_worker_monitoring.start()
-        """
 
     def serve_forever(self):
         """
@@ -136,7 +115,7 @@ class Master(object):
         """Syncing with the database."""
         try:
             while not self._stop_event.is_set():
-                node = node_collection_manager.pick_node(kinds=self.kinds)
+                node = self.node_collection_manager.pick_node(kinds=self.kinds)
                 if node:
                     logging.info('New node found: {} {} {}'.format(node['_id'], node['node_running_status'], node['title']))
                     executor = materialize_executor(node)
@@ -151,63 +130,6 @@ class Master(object):
             raise
         finally:
             logging.info("Exit {}".format(self._run_db_status_update.__name__))
-
-    def _run_worker_monitoring(self):
-        try:
-            while not self._stop_event.is_set():
-                current_time = time.time()
-                with self._worker_to_info_lock:
-                    dead_worker_ids = [
-                        worker_id
-                        for worker_id, worker_info in self._worker_to_info.items()
-                        if worker_info.last_heartbeat_ts and current_time - worker_info.last_heartbeat_ts > Master.MAX_HEARTBEAT_DELAY
-                    ]
-                for worker_id in dead_worker_ids:
-                    logging.info("Found dead Worker: worker_id=`{}`".format(worker_id))
-                    job_description = self.get_job_description(worker_id)
-                    self._del_worker_info(worker_id)
-                    if not job_description:
-                        continue
-                    with self._graph_schedulers_lock:
-                        scheduler = self._graph_id_to_scheduler.get(job_description.graph_id, None)
-                        if scheduler:
-                            node = job_description.job.node
-                            node.node_running_status = NodeRunningStatus.FAILED
-                            scheduler.update_node(node)
-
-                # Update master state
-                master_state = MasterState()
-                with self._worker_to_info_lock:
-                    for worker_id, worker_info in self._worker_to_info.items():
-                        if worker_info.job_description:
-                            graph_id = worker_info.job_description.graph_id
-                            node = worker_info.job_description.job.node.to_dict()
-                        else:
-                            graph_id, node = None, None
-                        worker_state = WorkerState({
-                            'worker_id': worker_id,
-                            'graph_id': graph_id,
-                            'node': node,
-                            'host': worker_info.host,
-                            'num_finished_jobs': worker_info.num_finished_jobs,
-                        })
-                        master_state.workers.append(worker_state)
-
-                        worker_info.num_finished_jobs = 0
-
-                master_state.save()
-
-                self._stop_event.wait(timeout=Master.WORKER_MONITORING_TIMEOUT)
-        except Exception:
-            self.stop()
-            raise
-        finally:
-            logging.info("Exit {}".format(self._run_worker_monitoring.__name__))
-
-    def _del_worker_info(self, worker_id):
-        with self._worker_to_info_lock:
-            if worker_id in self._worker_to_info:
-                del self._worker_to_info[worker_id]
 
     def _del_job_description(self, worker_id):
         with self._worker_to_info_lock:
@@ -250,14 +172,6 @@ class Master(object):
         else:
             logging.info("Scheduler was not found for worker `{}`".format(worker_id))
         return False
-
-    def track_worker(self, worker_id, host):
-        """Track worker existance and responsiveness."""
-        with self._worker_to_info_lock:
-            worker_info = self._worker_to_info.get(worker_id, None)
-            if worker_info:
-                worker_info.last_heartbeat_ts = time.time()
-                worker_info.host = host
 
     def stop(self):
         """Stop Master."""

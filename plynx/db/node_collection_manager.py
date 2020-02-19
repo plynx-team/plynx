@@ -138,14 +138,14 @@ class NodeCollectionManager(object):
                 sub_node_dict[prop] = id_to_updated_node_dict[sub_node_dict[reference_node_id]][prop]
 
     def get_db_node(self, node_id, user_id=None):
-        """Get dict representation of the Graph.
+        """Get dict representation of the Node.
 
         Args:
             node_id     (ObjectId, str):        Node ID
             user_id     (str, ObjectId, None):  User ID
 
         Return:
-            (dict)  dict representation of the Graph
+            (dict)  dict representation of the Node
         """
         res = get_db_connector()[self.collection].find_one({'_id': to_object_id(node_id)})
         if not res:
@@ -180,7 +180,7 @@ class NodeCollectionManager(object):
     def upgrade_sub_nodes(self, node):
         """Upgrade deprecated Nodes.
 
-        The function does not change the Graph in the database.
+        The function does not change the original graph in the database.
 
         Return:
             (int)   Number of upgraded Nodes

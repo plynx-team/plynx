@@ -4,7 +4,6 @@ from collections import namedtuple
 from plynx import __version__
 from plynx.utils.config import get_config, set_parameter
 from plynx.service.master import run_master
-from plynx.service.worker import run_worker
 from plynx.service.users import run_users
 from plynx.service.cache import run_cache
 from plynx.service.exec import run_exec
@@ -49,11 +48,6 @@ def exec(args):
     run_exec(**args)
 
 
-def worker(args):
-    set_logging_level(args.pop('verbose'))
-    run_worker(**args)
-
-
 class CLIFactory(object):
     ARGS = {
         # Shared
@@ -96,14 +90,6 @@ class CLIFactory(object):
             default=_config.master.kinds,
             action='append',
             levels=['master', 'kinds'],
-            ),
-
-        # Worker
-        'worker_id': Arg(
-            ('--worker-id',),
-            help='Any string identificator',
-            default='',
-            type=str,
             ),
 
         # MongoConfig
@@ -219,11 +205,6 @@ class CLIFactory(object):
             'func': master,
             'help': 'Run Master',
             'args': ('verbose', 'internal_master_host', 'master_port', 'db_host', 'db_port', 'db_user', 'db_password', 'kinds'),
-        }, {
-            'func': worker,
-            'help': 'Run Worker',
-            'args': ('verbose', 'master_host', 'master_port', 'worker_id',
-                     'storage_scheme', 'storage_prefix', 'credential_path'),
         }, {
             'func': backend,
             'help': 'Run backend server',
