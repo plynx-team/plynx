@@ -18,14 +18,14 @@ class NodeCollectionManager(object):
         self.collection = collection
 
     def get_db_nodes(
-        self,
-        status='',
-        node_kinds=None,
-        search='',
-        per_page=20,
-        offset=0,
-        user_id=None,
-        ):
+            self,
+            status='',
+            node_kinds=None,
+            search='',
+            per_page=20,
+            offset=0,
+            user_id=None,
+            ):
         """Get subset of the Nodes.
 
         Args:
@@ -152,7 +152,6 @@ class NodeCollectionManager(object):
             return res
 
         res['_readonly'] = (user_id != to_object_id(res['author']))
-
 
         sub_nodes_dicts = None
         for parameter in res['parameters']:

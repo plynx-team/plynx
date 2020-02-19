@@ -66,7 +66,7 @@ class DBObject(object):
         Args:
             _id     (str, ObjectId):    ID of the object in DB
         """
-        collection = collection or self.__class__.DB_COLLECTION
+        collection = collection or cls.DB_COLLECTION
         obj_dict = getattr(get_db_connector(), collection).find_one({'_id': ObjectId(_id)})
         if not obj_dict:
             raise DBObjectNotFound(

@@ -1,6 +1,5 @@
 import os
 import shutil
-import pydoc
 from abc import abstractmethod
 import plynx.utils.exceptions
 from plynx.db.node import Node, Parameter, ParameterTypes, NodeRunningStatus

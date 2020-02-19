@@ -3,14 +3,11 @@ import sys
 import threading
 import logging
 import queue
-import time
 import six
 import traceback
 import uuid
-from collections import namedtuple
 from plynx.constants import JobReturnStatus, NodeRunningStatus, Collections
 from plynx.db.node_collection_manager import NodeCollectionManager
-from plynx.db.service_state import MasterState, WorkerState
 from plynx.utils.config import get_master_config
 from plynx.utils.db_connector import check_connection
 from plynx.plugins.executors import materialize_executor
@@ -70,12 +67,6 @@ class Master(object):
 
     def execute_job(self, executor):
         try:
-            timeout_parameter = executor.node.get_parameter_by_name('_timeout', throw=False)
-            if timeout_parameter:
-                _node_timeout = int(timeout_parameter.value)
-            else:
-                _node_timeout = None
-
             try:
                 status = JobReturnStatus.FAILED
                 executor.workdir = os.path.join('/tmp', str(uuid.uuid1()))

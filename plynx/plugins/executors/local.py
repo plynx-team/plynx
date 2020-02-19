@@ -7,8 +7,8 @@ import threading
 import jinja2
 from past.builtins import basestring
 from collections import defaultdict
-from plynx.constants import JobReturnStatus, NodeStatus, ParameterTypes
-from plynx.db.node import Node, Parameter, Output
+from plynx.constants import JobReturnStatus, ParameterTypes
+from plynx.db.node import Parameter, Output
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
 from plynx.utils.config import get_worker_config
 import plynx.plugins.managers as plugin_magagers
@@ -17,7 +17,10 @@ from plynx.plugins.executors import BaseExecutor
 from plynx.constants import NodeResources
 
 WORKER_CONFIG = get_worker_config()
-_RESOURCE_MERGER_FUNC = lambda: defaultdict(list)
+
+
+def _RESOURCE_MERGER_FUNC():
+    return defaultdict(list)
 
 
 class ResourceMerger(object):
@@ -29,7 +32,6 @@ class ResourceMerger(object):
             self._dict[key] = _RESOURCE_MERGER_FUNC()
             for lev_1 in init_level_1:
                 self._dict[key][lev_1] = []
-
 
     def append(self, resource_dict, resource_name, is_list):
         for key, value in resource_dict.items():

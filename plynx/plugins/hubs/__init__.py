@@ -1,6 +1,5 @@
 from collections import namedtuple
 from abc import abstractmethod
-from plynx.constants import NodeResources
 
 _QUERY_FIELDS = (
     ('status', ''),

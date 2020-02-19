@@ -1,11 +1,11 @@
 import logging
 import pydoc
-import collections
 from plynx.utils.config import get_plugins
 
 
 def _isinstance_namedtuple(x):
     return isinstance(x, tuple) and getattr(x, '_fields', None) is not None
+
 
 def _as_dict(obj):
     if _isinstance_namedtuple(obj):
@@ -15,6 +15,7 @@ def _as_dict(obj):
     elif isinstance(obj, list):
         return [_as_dict(value) for value in obj]
     return obj
+
 
 class _ResourceManager(object):
     def __init__(self, plugins):

@@ -1,7 +1,6 @@
 import string
 import random
 from plynx.db.user import User
-from plynx.utils.common import ObjectId
 from plynx.utils.config import get_demo_config
 
 
@@ -26,6 +25,8 @@ class DemoUserManager(object):
 
     @staticmethod
     def create_demo_graphs(user):
+        raise NotImplementedError()
+        """
         res = []
         for graph_id in DemoUserManager.demo_config.graph_ids:
             graph = Graph.load(graph_id)
@@ -33,4 +34,5 @@ class DemoUserManager(object):
             graph.author = user._id
             graph.save()
             res.append(graph._id)
-        return res
+        """
+        return []

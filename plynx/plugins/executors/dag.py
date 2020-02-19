@@ -2,7 +2,7 @@ import logging
 import time
 from collections import defaultdict
 from plynx.constants import ParameterTypes
-from plynx.db.node import Node, Parameter, Output
+from plynx.db.node import Node, Parameter
 from plynx.db.validation_error import ValidationError
 from plynx.constants import JobReturnStatus, NodeRunningStatus, ValidationTargetType, ValidationCode, SpecialNodeId, Collections
 from plynx.utils.common import to_object_id
@@ -71,7 +71,6 @@ class DAG(BaseExecutor):
                 self.uncompleted_nodes_count += 1
             self.dependency_index_to_node_ids[dependency_index].add(node_id)
             self.node_id_to_dependency_index[node_id] = dependency_index
-
 
         self.monitoring_node_ids = set()
 
@@ -145,7 +144,6 @@ class DAG(BaseExecutor):
         dest_node.logs = node.logs
         dest_node.outputs = node.outputs
         dest_node.cache_url = node.cache_url
-
 
     def _set_node_status(self, node_id, node_running_status):
         node = self.node_id_to_node[node_id]

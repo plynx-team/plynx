@@ -7,7 +7,7 @@ from plynx.plugins.hubs import Query
 from plynx.plugins.managers import resource_manager, operation_manager, hub_manager, workflow_manager, executor_manager
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 from plynx.utils.common import to_object_id, JSONEncoder
-from plynx.constants import NodeStatus, NodeRunningStatus, NodePostAction, NodePostStatus, Collections, NodeClonePolicy, NodeVirtualCollection
+from plynx.constants import NodeStatus, NodePostAction, NodePostStatus, Collections, NodeClonePolicy, NodeVirtualCollection
 
 PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'hub', 'node_kinds', 'search', 'user_id'}
 PERMITTED_READONLY_POST_ACTIONS = {
@@ -28,6 +28,7 @@ PLUGINS_DICT = {
     'workflows_dict': workflow_manager.kind_to_workflow_dict,
     'executors_info': executor_manager.kind_info,
 }
+
 
 @app.route('/plynx/api/v0/search_<collection>', methods=['POST'])
 @handle_errors

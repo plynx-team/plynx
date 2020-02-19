@@ -1,7 +1,6 @@
 import json
 from flask import request, send_file, g
-# !!! TODO figure out with files
-# from plynx.graph.base_nodes.file import File as FileNodeClass
+# !!! TODO figure out with STATIC
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 from plynx.plugins.resources import PreviewObject
 from plynx.plugins.resources.common import FILE_KIND
@@ -56,7 +55,8 @@ def upload_file():
         return make_fail_response('Unknown file type `{}`'.format(file_type)), 400
 
     resource_id = upload_file_stream(request.files['data'])
-    file = FileNodeClass.get_default()
+    raise NotImplementedError()
+    file = None
     file.author = g.user._id
     file.title = title
     file.description = description

@@ -2,9 +2,8 @@ from past.builtins import basestring
 from collections import defaultdict, deque
 from plynx.constants import Collections, NodeClonePolicy
 from plynx.db.db_object import DBObject, DBObjectField
-from plynx.db.validation_error import ValidationError
 from plynx.utils.common import ObjectId
-from plynx.constants import NodeStatus, NodeRunningStatus, ValidationTargetType, ValidationCode, SpecialNodeId
+from plynx.constants import NodeStatus, NodeRunningStatus, SpecialNodeId
 from plynx.plugins.resources.common import FILE_KIND
 from plynx.constants import ParameterTypes
 
@@ -92,6 +91,7 @@ RESOURCE_FIELDS = {
         is_list=False,
         ),
 }
+
 
 class Output(DBObject):
     """Basic Output structure."""
@@ -268,10 +268,9 @@ class Node(DBObject):
         for other_input in other_node.inputs:
             for input in self.inputs:
                 if other_input.name == input.name and \
-                   other_input.file_type == input.file_type and \
-                       ( \
-                            input.is_array or \
-                            (not input.is_array and 1 == len(other_input.input_references)) \
+                   other_input.file_type == input.file_type and (
+                            input.is_array or
+                            (not input.is_array and 1 == len(other_input.input_references))
                        ):
                     input.input_references = other_input.input_references
                     break
@@ -404,15 +403,14 @@ class Node(DBObject):
 
         # Push Input Node up the level
         if SpecialNodeId.INPUT in node_id_to_level and \
-            (node_id_to_level[SpecialNodeId.INPUT] != max_level or len(level_to_node_ids[max_level]) > 1):
+                (node_id_to_level[SpecialNodeId.INPUT] != max_level or len(level_to_node_ids[max_level]) > 1):
             input_level = node_id_to_level[SpecialNodeId.INPUT]
             level_to_node_ids[input_level] = [node_id for node_id in level_to_node_ids[input_level] if node_id != SpecialNodeId.INPUT]
             max_level += 1
             node_id_to_level[SpecialNodeId.INPUT] = max_level
             level_to_node_ids[max_level] = [SpecialNodeId.INPUT]
 
-
-        for level in range(max_level, - 1, -1):
+        for level in range(max_level, -1, -1):
             level_node_ids = level_to_node_ids[level]
             index_to_node_id = []
             for node_id in level_node_ids:
