@@ -18,15 +18,14 @@ class NodeCollectionManager(object):
         self.collection = collection
 
     def get_db_nodes(
-        self, status='',
+        self,
+        status='',
         node_kinds=None,
-        virtual_collection=None,
         search='',
         per_page=20,
         offset=0,
         user_id=None,
-        is_graph=None,
-        **fields):
+        ):
         """Get subset of the Nodes.
 
         Args:
@@ -54,7 +53,7 @@ class NodeCollectionManager(object):
             and_query['node_status'] = {'$in': status}
         if search_string:
             and_query['$text'] = {'$search': search_string}
-        if 'original_node_id' in  search_parameters:
+        if 'original_node_id' in search_parameters:
             and_query['original_node_id'] = to_object_id(search_parameters['original_node_id'])
         if len(and_query):
             aggregate_list.append({"$match": and_query})

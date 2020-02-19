@@ -115,10 +115,39 @@ plugins:
         - executable
         - directory
         - cloud-storage
+  hubs:
+    - kind: db-hub
+      title: Bash hub
+      icon: feathericons.file
+      cls: plynx.plugins.hubs.collection.CollectionHub
+      args:
+        operations:
+          - basic-bash-jinja2-operation
+        collection: templates
+    - kind: db-hub-python
+      title: Python hub
+      icon: feathericons.play
+      cls: plynx.plugins.hubs.collection.CollectionHub
+      args:
+        operations:
+          - basic-python-node-operation
+        collection: templates
+    - kind: db-hub-comp
+      title: Composite Operations
+      icon: feathericons.folder
+      cls: plynx.plugins.hubs.collection.CollectionHub
+      args:
+        operations:
+          - basic-dag-operation
+        collection: templates
   workflows:
     - kind: basic-dag-workflow
       title: Basic DAG Workflow
       executor: plynx.plugins.executors.dag.DAG
+      hubs:
+        - db-hub
+        - db-hub-python
+        - db-hub-comp
       operations:
         - basic-bash-jinja2-operation
         - basic-python-node-operation

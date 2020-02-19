@@ -1,4 +1,3 @@
-// src/components/About/index.js
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { DragSource } from 'react-dnd';
@@ -22,7 +21,7 @@ const nodeSource = {
   },
 };
 
-class NodeListItem extends Component {
+class HubEntryListItem extends Component {
   static propTypes = {
     connectDragSource: PropTypes.func.isRequired,
     isDragging: PropTypes.bool.isRequired,
@@ -46,4 +45,4 @@ class NodeListItem extends Component {
 export default DragSource(ItemTypes.NODE_ITEM, nodeSource, (connect, monitor) => ({
   connectDragSource: connect.dragSource(),
   isDragging: monitor.isDragging(),
-}))(NodeListItem);
+}))(HubEntryListItem);

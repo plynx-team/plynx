@@ -21,6 +21,7 @@ import Node from '../Node';
 import RunList from '../nodeList/runList';
 import DeprecateDialog from '../Dialogs/DeprecateDialog';
 import TextViewDialog from '../Dialogs/TextViewDialog';
+import { PluginsProvider } from '../../contexts';
 import { makeControlPanel, makeControlToggles, makeControlButton, makeControlSeparator } from '../Common/controlButton';
 import "./style.css";
 
@@ -639,70 +640,72 @@ export default class Editor extends Component {
         <div
           className={`editor-view node-running-status-${node_running_status}`}
         >
-          <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
-          {this.state.loading &&
-            <LoadingScreen
-            ></LoadingScreen>
-          }
-          {
-            this.state.deprecateQuestionDialog &&
-            <DeprecateDialog
-              onClose={() => this.handleCloseDeprecateDialog()}
-              prev_node_id={this.state.node._id}
-              onDeprecate={(node_, action) => this.handleDeprecate(node_, action)}
-              title={"Would you like to deprecate this Operation?"}
-              />
-          }
-          {
-            this.state.deprecateParentDialog &&
-            <DeprecateDialog
-              onClose={() => this.handleCloseDeprecateDialog()}
-              prev_node_id={this.state.node.parent_node_id}
-              new_node_id={this.state.node._id}
-              onDeprecate={(node_, action) => this.handleDeprecate(node_, action)}
-              title={"Would you like to deprecate parent Operation?"}
-              />
-          }
-          {
-            this.state.preview_text &&
-            <TextViewDialog className="TextViewDialog"
-              title='Preview'
-              text={this.state.preview_text}
-              onClose={() => this.setState({preview_text: null})}
-            />
-          }
-          {this.makeControls()}
-          <div className="editor-content">
+          <PluginsProvider value={this.state.plugins_dict}>
+              <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
+              {this.state.loading &&
+                <LoadingScreen
+                ></LoadingScreen>
+              }
               {
-                  this.state.view_mode === VIEW_MODE.GRAPH &&
-                  <Graph
-                    ref={a => this.graphComponent = a}
-                    node={this.state.node}
-                    plugins_dict={this.state.plugins_dict}
-                    onNodeChange={(node) => this.handleNodeChange(node)}
-                    editable={this.state.editable}
-                    showAlert={(message, type) => this.showAlert(message, type)}
+                this.state.deprecateQuestionDialog &&
+                <DeprecateDialog
+                  onClose={() => this.handleCloseDeprecateDialog()}
+                  prev_node_id={this.state.node._id}
+                  onDeprecate={(node_, action) => this.handleDeprecate(node_, action)}
+                  title={"Would you like to deprecate this Operation?"}
                   />
               }
               {
-                  this.state.view_mode === VIEW_MODE.NODE &&
-                  <Node
-                    ref={a => this.nodeComponent = a}
-                    node={this.state.node}
-                    plugins_dict={this.state.plugins_dict}
-                    is_workflow={this.state.is_workflow}
-                    is_graph={this.state.is_graph}
-                    onNodeChange={(node) => this.handleNodeChange(node)}
+                this.state.deprecateParentDialog &&
+                <DeprecateDialog
+                  onClose={() => this.handleCloseDeprecateDialog()}
+                  prev_node_id={this.state.node.parent_node_id}
+                  new_node_id={this.state.node._id}
+                  onDeprecate={(node_, action) => this.handleDeprecate(node_, action)}
+                  title={"Would you like to deprecate parent Operation?"}
                   />
               }
               {
-                  this.state.view_mode === VIEW_MODE.RUNS &&
-                  <RunList
-                    showControlls={false}
-                    search={"original_node_id:" + this.state.node._id}
-                  />
+                this.state.preview_text &&
+                <TextViewDialog className="TextViewDialog"
+                  title='Preview'
+                  text={this.state.preview_text}
+                  onClose={() => this.setState({preview_text: null})}
+                />
               }
-          </div>
+              {this.makeControls()}
+              <div className="editor-content">
+                  {
+                      this.state.view_mode === VIEW_MODE.GRAPH &&
+                      <Graph
+                        ref={a => this.graphComponent = a}
+                        node={this.state.node}
+                        plugins_dict={this.state.plugins_dict}
+                        onNodeChange={(node) => this.handleNodeChange(node)}
+                        editable={this.state.editable}
+                        showAlert={(message, type) => this.showAlert(message, type)}
+                      />
+                  }
+                  {
+                      this.state.view_mode === VIEW_MODE.NODE &&
+                      <Node
+                        ref={a => this.nodeComponent = a}
+                        node={this.state.node}
+                        plugins_dict={this.state.plugins_dict}
+                        is_workflow={this.state.is_workflow}
+                        is_graph={this.state.is_graph}
+                        onNodeChange={(node) => this.handleNodeChange(node)}
+                      />
+                  }
+                  {
+                      this.state.view_mode === VIEW_MODE.RUNS &&
+                      <RunList
+                        showControlls={false}
+                        search={"original_node_id:" + this.state.node._id}
+                      />
+                  }
+              </div>
+          </PluginsProvider>
         </div>
     );
   }

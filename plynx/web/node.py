@@ -3,12 +3,13 @@ import json
 from flask import request, g
 from plynx.db.node import Node
 from plynx.db.node_collection_manager import NodeCollectionManager
-from plynx.plugins.managers import resource_manager, operation_manager, workflow_manager, executor_manager
+from plynx.plugins.hubs import Query
+from plynx.plugins.managers import resource_manager, operation_manager, hub_manager, workflow_manager, executor_manager
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 from plynx.utils.common import to_object_id, JSONEncoder
 from plynx.constants import NodeStatus, NodeRunningStatus, NodePostAction, NodePostStatus, Collections, NodeClonePolicy, NodeVirtualCollection
 
-PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'node_kinds', 'search', 'is_graph'}
+PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'hub', 'node_kinds', 'search'}
 PERMITTED_READONLY_POST_ACTIONS = {
     NodePostAction.VALIDATE,
     NodePostAction.PREVIEW_CMD,
@@ -23,6 +24,7 @@ node_collection_managers = {
 PLUGINS_DICT = {
     'resources_dict': resource_manager.kind_to_resource_dict,
     'operations_dict': operation_manager.kind_to_operation_dict,
+    'hubs_dict': hub_manager.kind_to_hub_dict,
     'workflows_dict': workflow_manager.kind_to_workflow_dict,
     'executors_info': executor_manager.kind_info,
 }
@@ -45,6 +47,30 @@ def post_search_nodes(collection):
         return make_fail_response('Unknown keys: `{}`'.format(query.keys() - PAGINATION_QUERY_KEYS)), 400
 
     res = node_collection_managers[collection].get_db_nodes(user_id=user_id, **query)
+
+    return JSONEncoder().encode({
+        'items': res['list'],
+        'total_count': res['metadata'][0]['total'] if res['metadata'] else 0,
+        'plugins_dict': PLUGINS_DICT,
+        'status': 'success'})
+
+
+@app.route('/plynx/api/v0/search_in_hubs', methods=['POST'])
+@handle_errors
+@requires_auth
+def post_search_nodes_():
+    query = json.loads(request.data)
+    app.logger.debug(request.data)
+
+    user_id = to_object_id(g.user._id)
+    if len(query.keys() - PAGINATION_QUERY_KEYS):
+        return make_fail_response('Unknown keys: `{}`'.format(query.keys() - PAGINATION_QUERY_KEYS)), 400
+
+    hub = query.pop('hub')
+
+    query['user_id'] = user_id
+    query = Query(**query)
+    res = hub_manager.kind_to_hub_class[hub].search(query)
 
     return JSONEncoder().encode({
         'items': res['list'],

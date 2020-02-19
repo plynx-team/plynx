@@ -53,6 +53,17 @@ class _OperationManager(object):
         }
 
 
+class _HubManager(object):
+    def __init__(self, plugins):
+        self.hubs = plugins.hubs
+        self.kind_to_hub_class = {
+            hub.kind: pydoc.locate(hub.cls)(**hub.args) for hub in self.hubs
+        }
+        self.kind_to_hub_dict = {
+            hub.kind: hub._asdict() for hub in self.hubs
+        }
+
+
 class _WorkflowManager(object):
     def __init__(self, plugins):
         self.workflows = plugins.workflows
@@ -65,5 +76,6 @@ _plugins = get_plugins()
 
 resource_manager = _ResourceManager(_plugins)
 operation_manager = _OperationManager(_plugins)
+hub_manager = _HubManager(_plugins)
 workflow_manager = _WorkflowManager(_plugins)
 executor_manager = _ExecutorManager(_plugins)

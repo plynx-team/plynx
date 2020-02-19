@@ -17,8 +17,9 @@ CloudServiceConfig = namedtuple('CloudServiceConfig', 'prefix url_prefix url_pos
 ResourceConfig = namedtuple('ResourceConfig', 'kind title cls icon color')
 DummyOperationConfig = namedtuple('DummyOperationConfig', 'kind executor operations')
 OperationConfig = namedtuple('OperationConfig', 'kind title executor operations resources')
+HubConfig = namedtuple('HubConfig', 'kind title icon cls args')
 WorkflowConfig = namedtuple('WorkflowConfig', 'kind title executor operations')
-PluginsConfig = namedtuple('PluginsConfig', 'resources operations workflows dummy_operations')
+PluginsConfig = namedtuple('PluginsConfig', 'resources operations hubs workflows dummy_operations')
 
 
 Config = namedtuple(
@@ -142,6 +143,16 @@ def get_plugins():
             operations=list(sub_operation_kinds),
             resources=[resource for kind, resource in kind_to_resource.items() if kind in raw_operation['resources']],
         )
+    # hubs
+    hubs = []
+    for raw_hub in _config['plugins']['hubs']:
+        hubs.append(HubConfig(
+            kind=raw_hub['kind'],
+            title=raw_hub['title'],
+            icon=raw_hub['icon'],
+            cls=raw_hub['cls'],
+            args=raw_hub['args'],
+        ))
     # workflows
     workflows = []
     for raw_workflow in _config['plugins']['workflows']:
@@ -158,6 +169,7 @@ def get_plugins():
     return PluginsConfig(
         resources=list(kind_to_resource.values()),
         operations=list(kind_to_operation.values()),
+        hubs=hubs,
         workflows=workflows,
         dummy_operations=[DummyOperationConfig(kind='dummy', executor='plynx.plugins.executors.Dummy', operations=[])]
     )

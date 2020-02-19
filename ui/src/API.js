@@ -81,6 +81,7 @@ plynxApi.createEntity({ name: 'demo' });
 plynxApi.createEntity({ name: 'master_state' });
 plynxApi.createEntity({ name: `search_${COLLECTIONS.TEMPLATES}` });
 plynxApi.createEntity({ name: `search_${COLLECTIONS.RUNS}` });
+plynxApi.createEntity({ name: `search_in_hubs` });
 plynxApi.createEntity({ name: 'search_graphs' });
 
 export const PLynxApi = plynxApi;

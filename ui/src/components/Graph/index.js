@@ -5,7 +5,7 @@ import queryString from 'query-string';
 import ReactNodeGraph from '../3rd_party/react_node_graph';
 import { typesValid } from '../../graphValidation';
 import cookie from 'react-cookies';
-import NodesBar from './NodesBar';
+import HubPanel from './HubPanel';
 import PreviewDialog from '../Dialogs/PreviewDialog';
 import PropertiesBar from './PropertiesBar';
 import withDragDropContext from './withDragDropContext';
@@ -13,7 +13,6 @@ import DemoScreen from '../DemoScreen';
 import FileDialog from '../Dialogs/FileDialog';
 import CodeDialog from '../Dialogs/CodeDialog';
 import ParameterSelectionDialog from '../Dialogs/ParameterSelectionDialog';
-import {PluginsProvider} from '../../contexts';
 import {ObjectID} from 'bson';
 import {HotKeys} from 'react-hotkeys';
 import {
@@ -828,7 +827,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
     <HotKeys className="GraphNode"
              handlers={this.keyHandlers} keyMap={KEY_MAP}
     >
-      <PluginsProvider value={this.props.plugins_dict}>
         { demoPreview &&
           <DemoScreen onApprove={() => this.handleApprove()} onClose={() => {
             cookie.remove('demoPreview', { path: '/' });
@@ -893,7 +891,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
         }
 
         {/* Visible and flex layout blocks */}
-        {this.state.editable && <NodesBar/> }
+        {this.state.editable && <HubPanel/>}
 
         <ReactNodeGraph className="MainGraph"
           ref={(child) => {
@@ -933,7 +931,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
                       onLinkClick={(node_ids, name) => this.handleLinkClick(node_ids, name)}
         />
         }
-      </PluginsProvider>
     </HotKeys>
     );
   }

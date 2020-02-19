@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import {PluginsConsumer} from '../../contexts';
-import { listTextElement } from '../Common/listElements';
+import { listTextElement, renderStatus } from '../Common/listElements';
 import '../controls.css';
 import './items.css';
 
@@ -25,7 +25,7 @@ export function renderNodeItem(hrefPrefix, statusName) {
               </div>
             </div>
 
-            { listTextElement('Status ' + node[statusName], node[statusName]) }
+            { listTextElement(`Status ${node[statusName]}`, renderStatus(node[statusName])) }
             { listTextElement('Id', node._id) }
             <PluginsConsumer>
             {

@@ -6,7 +6,7 @@ import './ParameterItem.css';
 export default class ParameterItem extends Component {
   static propTypes = {
     name: PropTypes.string,
-    alias: PropTypes.string.isRequired,
+    widget: PropTypes.string.isRequired,
     readOnly: PropTypes.bool.isRequired,
     parameterType: PropTypes.string.isRequired,
     onParameterChanged: PropTypes.func.isRequired,

@@ -1,22 +1,22 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import NodeListItem from './NodeListItem';
+import HubEntryListItem from './HubEntryListItem';
 import './style.css';
 
-export default class NodeBarList extends Component {
+export default class HubEntryList extends Component {
   static propTypes = {
     items: PropTypes.array.isRequired,
   }
 
   render() {
     const listItems = this.props.items.map(
-      (node) => <NodeListItem
+      (node) => <HubEntryListItem
         key={node._id}
         nodeContent={node}
         />);
 
     return (
-      <div className="NodeBarList">
+      <div className="hub-entry-list">
         {listItems }
       </div>
     );

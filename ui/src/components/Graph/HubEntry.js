@@ -1,14 +1,50 @@
 import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
+import PropTypes from 'prop-types';
 import { PLynxApi } from '../../API';
-import NodeBarHeader from './NodeBarHeader';
-import NodeBarList from './NodeBarList';
+import HubEntryList from './HubEntryList';
 import ReactPaginate from 'react-paginate';
 import LoadingScreen from '../LoadingScreen';
+import SearchBar from '../Common/SearchBar';
 import { OPERATIONS, COLLECTIONS } from '../../constants';
 import './style.css';
 
-export default class NodesBar extends Component {
+
+class HubEntryHeader extends Component {
+  static propTypes = {
+    search: PropTypes.string.isRequired,
+  }
+
+  constructor(props) {
+    super(props);
+    this.search = props.search;
+    this.initialSearch = props.search;
+  }
+
+  handleSearchUpdate(search) {
+    this.search = search;
+    this.props.onUpdateFilter(search);
+  }
+
+  render() {
+    return (
+      <div className="hub-list-header">
+        <div className="search">
+          <SearchBar
+              onSearchUpdate={(search) => this.handleSearchUpdate(search)}
+              ref={(child) => {
+                this.searchBar = child;
+              }}
+              search={this.search}
+          />
+        </div>
+      </div>
+    );
+  }
+}
+
+
+export default class HubEntry extends Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -77,11 +113,11 @@ export default class NodesBar extends Component {
     /* eslint-disable no-await-in-loop */
     /* eslint-disable no-unmodified-loop-condition */
     while (loading) {
-      await PLynxApi.endpoints[`search_${COLLECTIONS.TEMPLATES}`].create({
+      await PLynxApi.endpoints.search_in_hubs.create({
         offset: self.state.offset,
         per_page: self.perPage,
         status: "READY",
-        //base_node_names: self.state.baseNodeNames,
+        hub: this.props.hub,
         search: this.state.search,
       })
       .then(handleResponse)
@@ -114,10 +150,8 @@ export default class NodesBar extends Component {
     ReactDOM.findDOMNode(this.nodeList).scrollTop = 0;
   };
 
-  handleUpdateFilter(tabName, baseNodeNames, search) {
+  handleUpdateFilter(search) {
     this.setState({
-      selectedTab: tabName,
-      baseNodeNames: baseNodeNames,
       offset: 0,
       search: search,
     }, () => {
@@ -127,17 +161,16 @@ export default class NodesBar extends Component {
 
   render() {
     return (
-      <div className="NodesBar">
+      <div className="hub-list-content">
         {this.state.loading &&
           <LoadingScreen style={{ width: '250px' }}/>
         }
-        <div className="NodesBarInner">
-          <NodeBarHeader
-            selectedTab={this.state.selectedTab}
-            onUpdateFilter={(tabName, baseNodeNames, search) => this.handleUpdateFilter(tabName, baseNodeNames, search)}
+        <div className="hub-list-entry">
+          <HubEntryHeader
             search={this.state.search}
+            onUpdateFilter={(search) => this.handleUpdateFilter(search)}
             />
-          <NodeBarList items={this.state.items}
+          <HubEntryList items={this.state.items}
                         ref={(child) => {
                           this.nodeList = child;
                         }}/>
