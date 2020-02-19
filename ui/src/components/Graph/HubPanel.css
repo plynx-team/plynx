@@ -74,7 +74,6 @@
 .hub-entry-list {
   flex: 1;
   overflow:auto;
-  background: url('dark-circles.png');
   background-color: #404040;
   height: 1px;
 }

@@ -7,8 +7,6 @@ import LogIn from './components/LogIn';
 import Welcome from './components/Welcome';
 import Dashboard from './components/dashboard';
 import NodeRouter from './components/NodeRouter';
-import FileRouter from './components/FileRouter';
-import GraphRouter from './components/GraphRouter';
 import NotFound from './components/NotFound';
 import APIDialog from './components/Dialogs/APIDialog';
 import { COLLECTIONS, VIRTUAL_COLLECTIONS } from './constants';
@@ -75,8 +73,6 @@ class App extends Component {
             <Route path={`/${VIRTUAL_COLLECTIONS.WORKFLOWS}`} component={NodeRouter}/>
             <Route path={`/${COLLECTIONS.TEMPLATES}`} component={NodeRouter}/>
             <Route path={`/${COLLECTIONS.RUNS}`} component={NodeRouter}/>
-            <Route path="/files" component={FileRouter}/>
-            <Route path="/graphs" component={GraphRouter}/>
             <Route exact path="/login" component={LogIn} />
             <Route path="*" component={NotFound} />
           </Switch>

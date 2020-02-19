@@ -69,7 +69,7 @@ export default class Welcome extends Component {
         cookie.save('username', SPECIAL_USERS.DEFAULT, { path: '/' });
         // dispatch({ type: AUTH_USER });
         // window.location.href = CLIENT_ROOT_URL + '/dashboard';
-        window.location = '/graphs';
+        window.location = '/workflows';
       };
     }
 
