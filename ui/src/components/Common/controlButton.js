@@ -9,7 +9,7 @@ export function makeControlButton(props) {
        onClick={(e) => {
          e.preventDefault();
          if (props.enabled !== false) {
-            props.func();
+           props.func();
          }
        }}
        key={props.text}
@@ -20,6 +20,17 @@ export function makeControlButton(props) {
     </div>
   );
 }
+
+makeControlButton.propTypes = {
+  func: PropTypes.func.isRequired,
+  className: PropTypes.string,
+  img: PropTypes.string.isRequired,
+  text: PropTypes.string.isRequired,
+  selected: PropTypes.bool,
+  key: PropTypes.number,
+  enabled: PropTypes.bool.isRequired,
+};
+
 
 // TODO make a single function makeControlButton and makeControlLink
 export function makeControlLink(props) {
@@ -35,76 +46,118 @@ export function makeControlLink(props) {
   );
 }
 
+makeControlLink.propTypes = {
+  href: PropTypes.string.isRequired,
+  key: PropTypes.number,
+  className: PropTypes.string,
+  img: PropTypes.string.isRequired,
+  text: PropTypes.string.isRequired,
+  selected: PropTypes.bool,
+  enabled: PropTypes.bool.isRequired,
+};
+
+
 export function makeControlSeparator(props) {
-    return (
+  return (
         <div
             className='control-separator'
             key={props.key}
         />
-    );
+  );
 }
 
+makeControlSeparator.propTypes = {
+  key: PropTypes.string.isRequired,
+};
+
+
 export function makeControlToggles(props) {
-    return (
+  return (
         <div
             className='control-toggle'
             key={props.key}
         >
             {props.items.map(
                 (item, index) => {
-                    if (index === props.index) {
-                        item["selected"] = true;
+                  const buttonItem = Object.assign({}, item);
+                  if (index === props.index) {
+                    buttonItem["selected"] = true;
+                  }
+                  buttonItem["key"] = index;
+                  buttonItem.func = () => {
+                    if (props.func) {
+                      props.func(item.value);
                     }
-                    item["key"] = index;
-                    item.func = () => {
-                        if (props.func) props.func(item.value);
-                        props.onIndexChange(index);
-                    }
-                    if (index === 0) {
-                        item['className'] = 'first';
-                    }
-                    if (index === props.items.length - 1) {
-                        item['className'] = 'last';
-                    }
+                    props.onIndexChange(index);
+                  };
+                  if (index === 0) {
+                    buttonItem['className'] = 'first';
+                  }
+                  if (index === props.items.length - 1) {
+                    buttonItem['className'] = 'last';
+                  }
 
-                    return makeControlButton(item);
+                  return makeControlButton(buttonItem);
                 }
             )}
         </div>
-    );
+  );
 }
 
+makeControlToggles.propTypes = {
+  key: PropTypes.string.isRequired,
+  items: PropTypes.arrayOf(
+      PropTypes.shape({
+        index: PropTypes.number.isRequired,
+      })
+  ).isRequired,
+  func: PropTypes.func,
+  onIndexChange: PropTypes.func.isRequired,
+  index: PropTypes.number.isRequired,
+};
+
+
 export function makeControlSearchBar(props) {
-    return <SearchBar
+  return <SearchBar
         onSearchUpdate={(search) => props.func(search)}
         search={props.search}
-    />
+    />;
 }
+
+makeControlSearchBar.propTypes = {
+  func: PropTypes.func.isRequired,
+  search: PropTypes.string.isRequired,
+};
 
 
 export function makeControlPanel({props, children_func} = {}) {
-    return (
+  return (
         <div
             className='control-panel'
             key={props.key}
         >
-            { children_func && children_func()  }
+            { children_func && children_func() }
             {
                 props.items.map(
                     (item) => {
-                        return item.render(item.props);
+                      return item.render(item.props);
                     }
                 )
             }
         </div>
-    );
+  );
 }
 
-makeControlButton.propTypes = {
-  func: PropTypes.func.isRequired,
-  className: PropTypes.string,
-  img: PropTypes.string.isRequired,
-  text: PropTypes.string.isRequired,
-  selected: PropTypes.bool,
-  key: PropTypes.number,
+makeControlPanel.propTypes = {
+  props: PropTypes.shape({
+    key: PropTypes.string.isRequired,
+  }),
+  key: PropTypes.string.isRequired,
+  items: PropTypes.arrayOf(
+      PropTypes.shape({
+        render: PropTypes.func.isRequired,
+        props: PropTypes.object.isRequired,
+      })
+  ).isRequired,
+  children_func: PropTypes.func,
 };

@@ -1,7 +1,8 @@
 /* eslint max-lines: 0 */
+/* eslint complexity: 0 */
+
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import queryString from 'query-string';
 import ReactNodeGraph from '../3rd_party/react_node_graph';
 import { typesValid } from '../../graphValidation';
 import cookie from 'react-cookies';
@@ -16,12 +17,9 @@ import ParameterSelectionDialog from '../Dialogs/ParameterSelectionDialog';
 import {ObjectID} from 'bson';
 import {HotKeys} from 'react-hotkeys';
 import {
-  ACTION,
   VALIDATION_CODES,
-  GRAPH_RUNNING_STATUS,
   NODE_RUNNING_STATUS,
   SPECIAL_TYPE_NAMES,
-  OPERATIONS,
   KEY_MAP,
   SPECIAL_NODE_IDS,
 } from '../../constants';
@@ -38,11 +36,10 @@ function parameterIsSpecial(parameter) {
 
 class Graph extends Component {
   static propTypes = {
-    match: PropTypes.shape({
-      params: PropTypes.shape({
-        graph_id: PropTypes.string,
-      }),
-    }),
+    showAlert: PropTypes.func.isRequired,
+    onNodeChange: PropTypes.func.isRequired,
+    node: PropTypes.object.isRequired,
+    editable: PropTypes.bool.isRequired,
   }
 
   constructor(props) {
@@ -89,7 +86,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
   async componentDidMount() {
     // Loading
 
-    this.loadGraphFromJson(this.props.node)
+    this.loadGraphFromJson(this.props.node);
   }
 
   loadGraphFromJson(data) {
@@ -100,54 +97,65 @@ ENDPOINT = '` + API_ENDPOINT + `'
     this.block_lookup = {};
     this.connections = [];
     this.blocks = [];
-    var parameterNameToGraphParameter = {};
+    const parameterNameToGraphParameter = {};
     const ts = new ObjectID().toString();
     for (let i = 0; i < this.graph_node.parameters.length; ++i) {
-        if (this.graph_node.parameters[i].name === '_nodes') {
-            this.nodes = this.graph_node.parameters[i].value.value;
-            break
-        }
+      if (this.graph_node.parameters[i].name === '_nodes') {
+        this.nodes = this.graph_node.parameters[i].value.value;
+        break;
+      }
     }
 
-    for (var parameter of this.graph_node.parameters) {
-        parameterNameToGraphParameter[parameter.name] = parameter;
+    let parameter;
+    for (parameter of this.graph_node.parameters) {
+      parameterNameToGraphParameter[parameter.name] = parameter;
     }
 
-    var inputNode = null
+    let inputNode = null;
     for (let i = 0; i < this.nodes.length; ++i) {
       const node = this.nodes[i];
 
       // Remove broken references
-      for (var parameter of node.parameters) {
-          if (parameter.reference && (!parameterNameToGraphParameter.hasOwnProperty(parameter.reference) || parameter.parameter_type !== parameterNameToGraphParameter[parameter.reference].parameter_type)) {
-              parameter.reference = null;
-          }
+      for (parameter of node.parameters) {
+        if (parameter.reference &&
+            (!parameterNameToGraphParameter.hasOwnProperty(parameter.reference)
+                || parameter.parameter_type !== parameterNameToGraphParameter[parameter.reference].parameter_type
+            )
+        ) {
+          parameter.reference = null;
+        }
       }
 
       // work with input and output
       if (node._id === SPECIAL_NODE_IDS.INPUT) {
-          inputNode = node;
-          node.outputs = this.graph_node.inputs;
+        inputNode = node;
+        node.outputs = this.graph_node.inputs;
       } else if (node._id === SPECIAL_NODE_IDS.OUTPUT) {
-          let prevInputToInputReferences = {}
-          for (const input of node.inputs) {
-              prevInputToInputReferences[input.name + input.file_type] = input.input_references;
-          }
-          node.inputs = this.graph_node.outputs.map(
-              (output) => { return {
-                    name: output.name,
-                    file_type: output.file_type,
-                    values: output.values,
-                    input_references: prevInputToInputReferences[output.name + output.file_type] ? prevInputToInputReferences[output.name + output.file_type] : [],
-                    min_count: output.min_count,
-                    is_array: output.is_array,
-                }}
+        const prevInputToInputReferences = {};
+
+        let jj;
+        for (jj = 0; jj < node.inputs.length; ++jj) {
+          const input = node.inputs[jj];
+          prevInputToInputReferences[input.name + input.file_type] = input.input_references;
+        }
+        node.inputs = this.graph_node.outputs.map(
+              (output) => {
+                return {
+                  name: output.name,
+                  file_type: output.file_type,
+                  values: output.values,
+                  input_references:
+                    prevInputToInputReferences[output.name + output.file_type] ? prevInputToInputReferences[output.name + output.file_type] : [],
+                  min_count: output.min_count,
+                  is_array: output.is_array,
+                };
+              }
           );
       }
       this.node_lookup[node._id] = node;
     }
 
-    let i = 0
+    let i = 0;
     for (i = 0; i < this.nodes.length; ++i) {
       const node = this.nodes[i];
       const blockInputs = [];
@@ -156,33 +164,33 @@ ENDPOINT = '` + API_ENDPOINT + `'
       let j = 0;
 
       for (j = 0; j < node.inputs.length; ++j) {
-          blockInputs.push({
-            name: node.inputs[j].name,
-            file_type: node.inputs[j].file_type,
-            is_array: node.inputs[j].is_array,
-          });
-          const inputValueIndexToRemove = [];
-          for (let k = 0; k < node.inputs[j].input_references.length; ++k) {
-            let from_block = node.inputs[j].input_references[k].node_id;
-            let from = node.inputs[j].input_references[k].output_id;
+        blockInputs.push({
+          name: node.inputs[j].name,
+          file_type: node.inputs[j].file_type,
+          is_array: node.inputs[j].is_array,
+        });
+        const inputValueIndexToRemove = [];
+        for (let k = 0; k < node.inputs[j].input_references.length; ++k) {
+          const from_block = node.inputs[j].input_references[k].node_id;
+          const from = node.inputs[j].input_references[k].output_id;
 
-            if (from_block === SPECIAL_NODE_IDS.INPUT && inputNode) {
-                let output = inputNode.outputs.filter((out) => out.name === from);
-                if (output.length === 0 || !typesValid(output[0], node.inputs[j])) {
-                    inputValueIndexToRemove.push(k);
-                    continue;
-                }
+          if (from_block === SPECIAL_NODE_IDS.INPUT && inputNode) {
+            const output = inputNode.outputs.filter((out) => out.name === from);
+            if (output.length === 0 || !typesValid(output[0], node.inputs[j])) {
+              inputValueIndexToRemove.push(k);
+              continue;
             }
-            this.connections.push({
-              "from_block": from_block,
-              "from": from,
-              "to_block": node._id,
-              "to": node.inputs[j].name}
+          }
+          this.connections.push({
+            "from_block": from_block,
+            "from": from,
+            "to_block": node._id,
+            "to": node.inputs[j].name}
               );
-          }
-          for (let v = inputValueIndexToRemove.length - 1; v >= 0; --v) {
-              node.inputs[j].input_references.splice(inputValueIndexToRemove[v], 1)
-          }
+        }
+        for (let v = inputValueIndexToRemove.length - 1; v >= 0; --v) {
+          node.inputs[j].input_references.splice(inputValueIndexToRemove[v], 1);
+        }
       }
       for (j = 0; j < node.outputs.length; ++j) {
         blockOutputs.push({
@@ -254,7 +262,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
       blocks_lookup_index[block.nid] = i;
     }
 
-    let newNodes = newGraph.parameters.filter((p) => p.name === '_nodes')[0].value.value;
+    const newNodes = newGraph.parameters.filter((p) => p.name === '_nodes')[0].value.value;
 
     for (i = 0; i < newNodes.length; ++i) {
       const node = newNodes[i];
@@ -357,8 +365,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
 
   onRemoveBlock(nid) {
     if (this.node_lookup[nid].node_running_status === NODE_RUNNING_STATUS.SPECIAL) {
-        console.log('Cannot remove special node');
-        return;
+      console.log('Cannot remove special node');
+      return;
     }
     this.nodes.splice(this.nodes.indexOf(node => node._id === nid));
     delete this.node_lookup[nid];
@@ -372,7 +380,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   onCopyBlock(copyList, offset) {
-    const nodes = copyList.nids.map(nid => this.node_lookup[nid]).filter((node) => node && node.node_running_status !== NODE_RUNNING_STATUS.SPECIAL );
+    const nodes = copyList.nids.map(nid => this.node_lookup[nid]).filter((node) => node && node.node_running_status !== NODE_RUNNING_STATUS.SPECIAL);
     const copyObject = {
       nodes: nodes,
       connectors: copyList.connectors,
@@ -543,36 +551,36 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   handleParameterChanged(node_ids, name, value) {
-    for (var ii = 0; ii < node_ids.length; ++ii) {
-        var node_id = node_ids[ii];
-        var node;
-        if (node_id in this.node_lookup) {
-            node = this.node_lookup[node_id];
-        } else {
-            node = this.graph_node;
-        }
-        const node_parameter = node.parameters.find(
+    for (let ii = 0; ii < node_ids.length; ++ii) {
+      const node_id = node_ids[ii];
+      let node;
+      if (node_id in this.node_lookup) {
+        node = this.node_lookup[node_id];
+      } else {
+        node = this.graph_node;
+      }
+      const node_parameter = node.parameters.find(
           (param) => {
             return param.name === name;
           }
         );
-        if (node_parameter) {
-          node_parameter.value = value;
-        } else if (name === '_DESCRIPTION' || name === '_TITLE') {
-            var inName = name.substring(1, name.length).toLowerCase()
-            const block = this.block_lookup[node_id];
-            node[inName] = value;
+      if (node_parameter) {
+        node_parameter.value = value;
+      } else if (name === '_DESCRIPTION' || name === '_TITLE') {
+        const inName = name.substring(1, name.length).toLowerCase();
+        const block = this.block_lookup[node_id];
+        node[inName] = value;
 
-            document.title = this.graph_node.title + " - Graph - PLynx";
-            if (block) { // the case of graph itself
-                block[inName] = value;
-            } else {
-                // using for node, it is hard to update descriptions
-                this.setState({graph: this.graph_node})
-            }
+        document.title = this.graph_node.title + " - Graph - PLynx";
+        if (block) { // the case of graph itself
+          block[inName] = value;
         } else {
-          throw new Error("Parameter not found");
+                // using for node, it is hard to update descriptions
+          this.setState({graph: this.graph_node});
         }
+      } else {
+        throw new Error("Parameter not found");
+      }
     }
     this.props.onNodeChange(this.graph_node);
   }
@@ -616,59 +624,55 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   handleLinkClick(node_ids, name) {
-    this.link_node_parameters = []
-    var parameter_reference;
-    var parameter_type;
-    for (const node_id of node_ids) {
-        var node;
-        if (node_id in this.node_lookup) {
-            node = this.node_lookup[node_id];
-        } else {
-            throw new Error(`Node ${node_id} not found`);
-        }
-        const node_parameter = node.parameters.find(
+    this.link_node_parameters = [];
+    let parameter_reference;
+    let parameter_type;
+    let node_id;
+    for (node_id of node_ids) {
+      const node = this.node_lookup[node_id];
+      const node_parameter = node.parameters.find(
           (param) => {
             return param.name === name;
           }
         );
-        if (!node_parameter) {
-            throw new Error("Parameter not found");
-        }
+      if (!node_parameter) {
+        throw new Error("Parameter not found");
+      }
 
-        parameter_reference = node_parameter.reference
+      parameter_reference = node_parameter.reference;
 
-        parameter_type = node_parameter.parameter_type;
+      parameter_type = node_parameter.parameter_type;
 
-        this.link_node_parameters.push(node_parameter);
+      this.link_node_parameters.push(node_parameter);
     }
 
     this.link_graph_parameters = [{
-        name: null,
-        parameter_type: "none",
-        value: "0",
-        mutable_type: true,
-        removable: true,
-        publicable: true,
-        widget: "None",
+      name: null,
+      parameter_type: "none",
+      value: "0",
+      mutable_type: true,
+      removable: true,
+      publicable: true,
+      widget: "None",
     }].concat(
         this.graph_node.parameters.filter((parameter) => parameter.parameter_type === parameter_type)
     );
 
     let linkParametersIndex = 0;
     if (parameter_reference) {
-        linkParametersIndex = this.link_graph_parameters.findIndex((parameter) => parameter.name === parameter_reference)
+      linkParametersIndex = this.link_graph_parameters.findIndex((parameter) => parameter.name === parameter_reference);
     }
 
     this.setState({
-        linkParameters: this.link_graph_parameters,
-        linkParametersIndex: linkParametersIndex,
-    })
-
+      linkParameters: this.link_graph_parameters,
+      linkParametersIndex: linkParametersIndex,
+    });
   }
 
-  handleIndexLinkChange (index) {
-    for (var node_parameter of this.link_node_parameters) {
-        node_parameter.reference = this.link_graph_parameters[index].name;
+  handleIndexLinkChange(index) {
+    let node_parameter;
+    for (node_parameter of this.link_node_parameters) {
+      node_parameter.reference = this.link_graph_parameters[index].name;
     }
     this.handleBlocksSelect(this.selectedNodeIds);
     this.props.onNodeChange(this.graph_node);
@@ -780,7 +784,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
 
   showValidationError(validationError) {
     for (let ii = 0; ii < validationError.children.length; ++ii) {
-      const child = validationError.children[ii]
+      const child = validationError.children[ii];
       let nodeId = null;
       let node = null;
       switch (child.validation_code) {

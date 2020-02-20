@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import queryString from 'query-string'
+import queryString from 'query-string';
 import AlertContainer from '../3rd_party/react-alert';
 import { PLynxApi } from '../../API';
 import cookie from 'react-cookies';
@@ -40,6 +40,7 @@ export default class Editor extends Component {
   static propTypes = {
     history: PropTypes.object.isRequired,
     location: PropTypes.object.isRequired,
+    collection: PropTypes.string.isRequired,
     match: PropTypes.shape({
       params: PropTypes.shape({
         node_id: PropTypes.string,
@@ -64,7 +65,6 @@ export default class Editor extends Component {
     if (token === 'Not assigned') {
       token = cookie.load('access_token');
     }
-
   }
 
   sleep(ms) {
@@ -72,21 +72,21 @@ export default class Editor extends Component {
   }
 
   updateNode(node, force) {
-      this.node = node;
-      document.title = this.node.title + " - PLynx";
+    this.node = node;
+    document.title = this.node.title + " - PLynx";
 
-      this.setState({
-        node: this.node,
-        editable: this.props.collection === COLLECTIONS.TEMPLATES && this.node.node_status.toUpperCase() === NODE_STATUS.CREATED,
-        collection: this.props.collection,
-      });
-      if (this.graphComponent) {
-          if (force) {
-              this.graphComponent.ref.current.loadGraphFromJson(this.node);
-          } else {
-              this.graphComponent.ref.current.updateGraphFromJson(this.node);
-          }
+    this.setState({
+      node: this.node,
+      editable: this.props.collection === COLLECTIONS.TEMPLATES && this.node.node_status.toUpperCase() === NODE_STATUS.CREATED,
+      collection: this.props.collection,
+    });
+    if (this.graphComponent) {
+      if (force) {
+        this.graphComponent.ref.current.loadGraphFromJson(this.node);
+      } else {
+        this.graphComponent.ref.current.updateGraphFromJson(this.node);
       }
+    }
   }
 
   async componentDidMount() {
@@ -100,30 +100,31 @@ export default class Editor extends Component {
     const sleepStep = 1000;
 
     const loadNode = (response) => {
-      const searchValues = queryString.parse(this.props.location.search)
-      var node = response.data.node;
+      const searchValues = queryString.parse(this.props.location.search);
+      let node = response.data.node;
 
       if (searchValues.sub_node_id) {
-          let sub_nodes = null;
-          if (!Array.isArray(searchValues.sub_node_id))
-          {
-              const sub_node_id = searchValues.sub_node_id = [searchValues.sub_node_id]
+        let sub_nodes = null;
+        if (!Array.isArray(searchValues.sub_node_id)) {
+          searchValues.sub_node_id = [searchValues.sub_node_id];
+        }
+        let sub_node_id;
+        for (sub_node_id of searchValues.sub_node_id) {
+          sub_node_id = sub_node_id.replace(/^\$+|\$+$/g, '');
+          for (let i = 0; i < node.parameters.length; ++i) {
+            if (node.parameters[i].name === '_nodes') {
+              sub_nodes = node.parameters[i].value.value;
+              break;
+            }
           }
-          for (let sub_node_id of searchValues.sub_node_id) {
-              sub_node_id = sub_node_id.replace(/^\$+|\$+$/g, '');
-              for (let i = 0; i < node.parameters.length; ++i) {
-                  if (node.parameters[i].name === '_nodes') {
-                      sub_nodes = node.parameters[i].value.value;
-                      break;
-                  }
-              }
-              for (const sub_node of sub_nodes) {
-                  if (sub_node._id === sub_node_id) {
-                      node = sub_node;
-                      break;
-                  }
-              }
+          let sub_node;
+          for (sub_node of sub_nodes) {
+            if (sub_node._id === sub_node_id) {
+              node = sub_node;
+              break;
+            }
           }
+        }
       }
 
       self.updateNode(node, true);
@@ -132,9 +133,9 @@ export default class Editor extends Component {
       console.log('plugins_dict', response.data.plugins_dict);
       const is_graph = executor_info.is_graph;
 
-      var view_mode = is_graph ? VIEW_MODE.GRAPH : VIEW_MODE.NODE;
+      let view_mode = is_graph ? VIEW_MODE.GRAPH : VIEW_MODE.NODE;
       if ('view_mode' in searchValues) {
-          view_mode = Math.max(parseInt(searchValues['view_mode']), is_graph ? 0 : 1);
+        view_mode = Math.max(parseInt(searchValues['view_mode'], 10), is_graph ? 0 : 1);
       }
 
       self.setState({
@@ -166,9 +167,8 @@ export default class Editor extends Component {
       console.error(error);
       console.error('-----------');
       if (!error.response) {
-          self.setState({error_message: error});
-      }
-      else if (error.response.status === 404) {
+        self.setState({error_message: error});
+      } else if (error.response.status === 404) {
         self.props.history.replace("/not_found");
         window.location.reload(false);
         loading = false;
@@ -217,9 +217,9 @@ export default class Editor extends Component {
     const node_id = self.node._id;
     PLynxApi.endpoints[self.props.collection].getOne({ id: node_id})
     .then((response) => {
-        self.updateNode(response.data.node, false)
+      self.updateNode(response.data.node, false);
 
-        self.initializeUpdate();
+      self.initializeUpdate();
     })
     .catch((error) => {
       console.log(error);
@@ -238,13 +238,13 @@ export default class Editor extends Component {
   }
 
   initializeUpdate() {
-      const node_running_status = this.node.node_running_status.toUpperCase();
-      if (this.props.collection === COLLECTIONS.RUNS && ACTIVE_NODE_RUNNING_STATUSES.has(node_running_status)) {
-        this.timeout = setTimeout(() => this.checkNodeStatus(), 1000);
-      }
+    const node_running_status = this.node.node_running_status.toUpperCase();
+    if (this.props.collection === COLLECTIONS.RUNS && ACTIVE_NODE_RUNNING_STATUSES.has(node_running_status)) {
+      this.timeout = setTimeout(() => this.checkNodeStatus(), 1000);
+    }
   }
 
-  postNode({node, reloadOption, action, retryOnAuth = true}={}) {
+  postNode({node, reloadOption, action, retryOnAuth = true} = {}) {
     /* action might be in {'save', 'validate', 'approve', 'deprecate'}*/
     const self = this;
     self.setState({loading: true});
@@ -275,12 +275,12 @@ export default class Editor extends Component {
           self.showAlert("Saved", 'success');
         } else if (action === ACTION.VALIDATE) {
           self.showAlert("Valid", 'success');
-        } if (action === ACTION.PREVIEW_CMD) {
+        } else if (action === ACTION.PREVIEW_CMD) {
           self.setState({preview_text: data.preview_text});
         } else if (action === ACTION.REARRANGE_NODES) {
-          self.updateNode(data.node, true)
+          self.updateNode(data.node, true);
         } else if (action === ACTION.UPGRADE_NODES) {
-          self.updateNode(data.node, true)
+          self.updateNode(data.node, true);
           console.log('new', data.node);
           let message = "";
           if (data.upgraded_nodes_count > 0) {
@@ -320,13 +320,11 @@ export default class Editor extends Component {
           if (!isSuccessfull) {
             console.error("Could not refresh token");
             self.showAlert('Failed to authenticate', 'failed');
-          } else {
-            if (retryOnAuth) {
+          } else if (retryOnAuth) {
                 // Token updated, try posting again
-                self.postNode({node:node, reloadOption:reloadOption, action:action, retryOnAuth:false})
-            } else {
-                self.showAlert('Failed to save the graph, please try again', 'failed');
-            }
+            self.postNode({node: node, reloadOption: reloadOption, action: action, retryOnAuth: false});
+          } else {
+            self.showAlert('Failed to save the graph, please try again', 'failed');
           }
         });
       } else {
@@ -342,20 +340,17 @@ export default class Editor extends Component {
 
   showValidationError(validationError) {
     if (validationError.target === VALIDATION_TARGET_TYPE.GRAPH) {
-        if (this.graphComponent) {
-            this.graphComponent.ref.current.showValidationError(validationError);
-        } else {
-            this.showAlert('Errors in the graph structure', 'failed');
-        }
-        return;
+      if (this.graphComponent) {
+        this.graphComponent.ref.current.showValidationError(validationError);
+      } else {
+        this.showAlert('Errors in the graph structure', 'failed');
+      }
+      return;
     }
 
     const children = validationError.children;
     for (let i = 0; i < children.length; ++i) {
       const child = children[i];
-      let nodeId = null;
-      let node = null;
-      console.log('?', child);
       switch (child.validation_code) {
         case VALIDATION_CODES.IN_DEPENDENTS:
           this.showValidationError(child);
@@ -376,7 +371,6 @@ export default class Editor extends Component {
           this.showAlert(`${child.validation_code}. Input: '${child.object_id}'`, 'warning');
       }
     }
-
   }
 
   showAlert(message, type) {
@@ -388,87 +382,87 @@ export default class Editor extends Component {
   }
 
   handleNodeChange(node) {
-      this.node = node;
+    this.node = node;
   }
 
   handleSave() {
     console.log('to_save', this.node);
     this.postNode({
-        node: this.node,
-        action: ACTION.SAVE,
-        reloadOption: RELOAD_OPTIONS.NONE,
+      node: this.node,
+      action: ACTION.SAVE,
+      reloadOption: RELOAD_OPTIONS.NONE,
     });
   }
 
   handlePreview() {
-      this.postNode({
-          node: this.node,
-          action: ACTION.PREVIEW_CMD,
-          reloadOption: RELOAD_OPTIONS.NONE,
-      });
+    this.postNode({
+      node: this.node,
+      action: ACTION.PREVIEW_CMD,
+      reloadOption: RELOAD_OPTIONS.NONE,
+    });
   }
 
   handleValidate() {
     this.postNode({
-        node: this.node,
-        action: ACTION.VALIDATE,
-        reloadOption: RELOAD_OPTIONS.NONE,
+      node: this.node,
+      action: ACTION.VALIDATE,
+      reloadOption: RELOAD_OPTIONS.NONE,
     });
   }
 
   handleRun() {
     this.postNode({
-        node: this.node,
-        action: ACTION.CREATE_RUN,
-        reloadOption: RELOAD_OPTIONS.NEW_TAB,
+      node: this.node,
+      action: ACTION.CREATE_RUN,
+      reloadOption: RELOAD_OPTIONS.NEW_TAB,
     });
   }
 
   handleApprove() {
     this.postNode({
-        node: this.node,
-        action: ACTION.APPROVE,
-        reloadOption: RELOAD_OPTIONS.RELOAD,
+      node: this.node,
+      action: ACTION.APPROVE,
+      reloadOption: RELOAD_OPTIONS.RELOAD,
     });
   }
 
   handleRearrange() {
     this.postNode({
-        node: this.node,
-        action: ACTION.REARRANGE_NODES,
-        reloadOption: RELOAD_OPTIONS.NONE,
+      node: this.node,
+      action: ACTION.REARRANGE_NODES,
+      reloadOption: RELOAD_OPTIONS.NONE,
     });
   }
 
   handleGenerateCode() {
     this.postNode({
-        node: this.node,
-        action: ACTION.GENERATE_CODE,
-        reloadOption: RELOAD_OPTIONS.NONE,
+      node: this.node,
+      action: ACTION.GENERATE_CODE,
+      reloadOption: RELOAD_OPTIONS.NONE,
     });
   }
 
   handleUpgradeNodes() {
     this.postNode({
-        node: this.node,
-        action: ACTION.UPGRADE_NODES,
-        reloadOption: RELOAD_OPTIONS.NONE,
+      node: this.node,
+      action: ACTION.UPGRADE_NODES,
+      reloadOption: RELOAD_OPTIONS.NONE,
     });
   }
 
   handleCancel() {
     this.postNode({
-        node: this.node,
-        action: ACTION.CANCEL,
-        reloadOption: RELOAD_OPTIONS.NONE,
+      node: this.node,
+      action: ACTION.CANCEL,
+      reloadOption: RELOAD_OPTIONS.NONE,
     });
   }
 
   handleClone() {
     this.postNode({
-        node: this.node,
-        action: ACTION.CLONE,
-        reloadOption: RELOAD_OPTIONS.OPEN_NEW_LINK,
+      node: this.node,
+      action: ACTION.CLONE,
+      reloadOption: RELOAD_OPTIONS.OPEN_NEW_LINK,
     });
   }
 
@@ -478,9 +472,9 @@ export default class Editor extends Component {
 
   handleDeprecate(node, action) {
     this.postNode({
-        node: node,
-        action: action,
-        reloadOption: RELOAD_OPTIONS.RELOAD,
+      node: node,
+      action: action,
+      reloadOption: RELOAD_OPTIONS.RELOAD,
     });
   }
 
@@ -497,145 +491,144 @@ export default class Editor extends Component {
     searchValues.view_mode = view_mode;
 
     this.props.history.push({
-        search: '?' + queryString.stringify(searchValues)
-    })
-
+      search: '?' + queryString.stringify(searchValues)
+    });
   }
 
   makeControls() {
-      let items = [
-          {
-              render: makeControlToggles,
-              props: {
-                  items: [
-                      {
-                        img: 'grid.svg',
-                        text: 'Graph',
-                        value: VIEW_MODE.GRAPH,
-                        enabled: this.state.is_graph,
-                    },
-                    {
-                      img: 'sliders.svg',
-                      text: 'Properties',
-                      value: VIEW_MODE.NODE,
-                    },
-                    {
-                      img: 'list.svg',
-                      text: 'Runs',
-                      value: VIEW_MODE.RUNS,
-                    },
-                  ],
-                index: this.state.view_mode,
-                onIndexChange: (view_mode) => this.handleSetViewMode(view_mode),
-                key: 'key' + this.state.view_mode,
-              }
-          },
+    const items = [
+      {
+        render: makeControlToggles,
+        props: {
+          items: [
+            {
+              img: 'grid.svg',
+              text: 'Graph',
+              value: VIEW_MODE.GRAPH,
+              enabled: this.state.is_graph,
+            },
+            {
+              img: 'sliders.svg',
+              text: 'Properties',
+              value: VIEW_MODE.NODE,
+            },
+            {
+              img: 'list.svg',
+              text: 'Runs',
+              value: VIEW_MODE.RUNS,
+            },
+          ],
+          index: this.state.view_mode,
+          onIndexChange: (view_mode) => this.handleSetViewMode(view_mode),
+          key: 'key' + this.state.view_mode,
+        }
+      },
 
-          {
-              render: makeControlSeparator,
-              props: {key: 'separator_1'}
-          },
+      {
+        render: makeControlSeparator,
+        props: {key: 'separator_1'}
+      },
 
-          {
-              render: makeControlButton,
-              props: {
-                img: 'save.svg',
-                text: 'Save',
-                enabled: this.state.editable,
-                func: () => this.handleSave(),
-              },
-          }, {
-              render: makeControlButton,
-              props: {
-                img: 'check-square.svg',
-                text: 'Validate',
-                enabled: this.state.editable,
-                func: () => this.handleValidate(),
-              },
-          }, {
-              render: makeControlButton,
-              props: {
-                img: 'play.svg',
-                text: 'Run',
-                enabled: this.state.is_workflow && this.state.collection === COLLECTIONS.TEMPLATES,
-                func: () => this.handleRun(),
-              },
-          }, {
-              render: makeControlButton,
-              props: {
-                img: 'check.svg',
-                text: 'Approve',
-                enabled: !this.state.is_workflow && this.state.editable,
-                func: () => this.handleApprove(),
-              },
-          }, {
-              render: makeControlButton,
-              props: {
-                img: 'x.svg',
-                text: 'Deprecate',
-                enabled: !this.state.is_workflow && !this.state.editable,
-                func: () => this.handleDeprecateClick(),
-              },
-          }, {
-              render: makeControlButton,
-              props: {
-                img: 'copy.svg',
-                text: 'Clone',
-                func: () => this.handleClone(),
-              },
-          },
+      {
+        render: makeControlButton,
+        props: {
+          img: 'save.svg',
+          text: 'Save',
+          enabled: this.state.editable,
+          func: () => this.handleSave(),
+        },
+      }, {
+        render: makeControlButton,
+        props: {
+          img: 'check-square.svg',
+          text: 'Validate',
+          enabled: this.state.editable,
+          func: () => this.handleValidate(),
+        },
+      }, {
+        render: makeControlButton,
+        props: {
+          img: 'play.svg',
+          text: 'Run',
+          enabled: this.state.is_workflow && this.state.collection === COLLECTIONS.TEMPLATES,
+          func: () => this.handleRun(),
+        },
+      }, {
+        render: makeControlButton,
+        props: {
+          img: 'check.svg',
+          text: 'Approve',
+          enabled: !this.state.is_workflow && this.state.editable,
+          func: () => this.handleApprove(),
+        },
+      }, {
+        render: makeControlButton,
+        props: {
+          img: 'x.svg',
+          text: 'Deprecate',
+          enabled: !this.state.is_workflow && !this.state.editable,
+          func: () => this.handleDeprecateClick(),
+        },
+      }, {
+        render: makeControlButton,
+        props: {
+          img: 'copy.svg',
+          text: 'Clone',
+          func: () => this.handleClone(),
+        },
+      },
 
-          {
-              render: makeControlSeparator,
-              props: {key: 'separator_2'}
-          },
+      {
+        render: makeControlSeparator,
+        props: {key: 'separator_2'}
+      },
 
-          {
-              render: makeControlButton,
-              props: {
-                img: 'trending-up.svg',
-                text: 'Upgrade Nodes',
-                enabled: this.state.is_graph && this.state.editable,
-                func: () => this.handleUpgradeNodes(),
-              },
-          }, {
-              render: makeControlButton,
-              props: {
-                img: 'rearrange.svg',
-                text: 'Rearrange nodes',
-                enabled: this.state.is_graph,
-                func: () => this.handleRearrange(),
-              },
-          }, {
-              render: makeControlButton,
-              props: {
-                img: 'preview.svg',
-                text: 'API',
-                enabled: this.state.is_graph,
-                func: () => this.handleGenerateCode(),
-              }
-          }, {
-              render: makeControlButton,
-              props: {
-                img: 'preview.svg',
-                text: 'Preview',
-                enabled: !this.state.is_graph,
-                func: () => this.handlePreview(),
-              },
-          },
-      ];
+      {
+        render: makeControlButton,
+        props: {
+          img: 'trending-up.svg',
+          text: 'Upgrade Nodes',
+          enabled: this.state.is_graph && this.state.editable,
+          func: () => this.handleUpgradeNodes(),
+        },
+      }, {
+        render: makeControlButton,
+        props: {
+          img: 'rearrange.svg',
+          text: 'Rearrange nodes',
+          enabled: this.state.is_graph,
+          func: () => this.handleRearrange(),
+        },
+      }, {
+        render: makeControlButton,
+        props: {
+          img: 'preview.svg',
+          text: 'API',
+          enabled: this.state.is_graph,
+          func: () => this.handleGenerateCode(),
+        }
+      }, {
+        render: makeControlButton,
+        props: {
+          img: 'preview.svg',
+          text: 'Preview',
+          enabled: !this.state.is_graph,
+          func: () => this.handlePreview(),
+        },
+      },
+    ];
 
-      return makeControlPanel(
-          {
-              props: {
-                  items: items,
-                  key: this.state.view_mode + this.state.editable,
-              },
+    return makeControlPanel(
+      {
+        props: {
+          items: items,
+          key: this.state.view_mode + this.state.editable,
+        },
       });
   }
 
   render() {
-    let node_running_status = this.state.node ? this.state.node.node_running_status.toLowerCase(): "";
+    const node_running_status = this.state.node ? this.state.node.node_running_status.toLowerCase() : "";
     return (
         <div
           className={`editor-view node-running-status-${node_running_status}`}

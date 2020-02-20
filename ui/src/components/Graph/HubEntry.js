@@ -6,13 +6,13 @@ import HubEntryList from './HubEntryList';
 import ReactPaginate from 'react-paginate';
 import LoadingScreen from '../LoadingScreen';
 import SearchBar from '../Common/SearchBar';
-import { OPERATIONS, COLLECTIONS } from '../../constants';
 import './style.css';
 
 
 class HubEntryHeader extends Component {
   static propTypes = {
     search: PropTypes.string.isRequired,
+    onUpdateFilter: PropTypes.func.isRequired,
   }
 
   constructor(props) {
@@ -45,14 +45,16 @@ class HubEntryHeader extends Component {
 
 
 export default class HubEntry extends Component {
+  static propTypes = {
+    hub: PropTypes.string.isRequired,
+  }
+
   constructor(props) {
     super(props);
     this.state = {
       items: [],
       loading: true,
       pageCount: 0,
-      selectedTab: 'operations',
-      baseNodeNames: OPERATIONS,
       offset: 0,
       search: "sort:starred ",
     };

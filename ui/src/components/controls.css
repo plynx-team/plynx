@@ -42,7 +42,7 @@
 }
 
 .pagination li {
-    display: inline-block;
+    display: inline-flex;
     border-radius: 2px;
     color: #ddd;
     font-weight: 400;

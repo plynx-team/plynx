@@ -7,9 +7,12 @@ export default class ParameterItem extends Component {
   static propTypes = {
     name: PropTypes.string,
     widget: PropTypes.string.isRequired,
+    reference: PropTypes.string,
     readOnly: PropTypes.bool.isRequired,
     parameterType: PropTypes.string.isRequired,
     onParameterChanged: PropTypes.func.isRequired,
+    onLinkClick: PropTypes.func,
+    _link_visibility: PropTypes.bool,
     value: PropTypes.oneOfType([
       PropTypes.object,
       PropTypes.string,
@@ -22,12 +25,12 @@ export default class ParameterItem extends Component {
   constructor(props) {
     super(props);
     this.state = {
-        name: this.props.name,
-        widget: this.props.widget,
-        value: this.props.value,
-        readOnly: this.props.readOnly,
-        parameterType: this.props.parameterType,
-    }
+      name: this.props.name,
+      widget: this.props.widget,
+      value: this.props.value,
+      readOnly: this.props.readOnly,
+      parameterType: this.props.parameterType,
+    };
 
     this.handleChange = this.handleChange.bind(this);
   }
@@ -49,14 +52,14 @@ export default class ParameterItem extends Component {
           {this.props.widget}
         </div>
         <div className='ParameterValueCell'>
-            {   !this.props.reference &&
+            { !this.props.reference &&
                 renderValueElement({
                   parameterType: this.state.parameterType,
                   value: this.state.value,
                   handleChange: this.handleChange,
                   readOnly: this.state.readOnly,
                   className: 'parameter-value'
-                 }
+                }
                 )
             }
             {
@@ -65,7 +68,9 @@ export default class ParameterItem extends Component {
             {this.props._link_visibility &&
             <div
                 className={'link-button control-button'}
-                onClick={() => {this.handleLinkClick()}}
+                onClick={() => {
+                  this.handleLinkClick();
+                }}
             >
               <img
                 className={'icon'}

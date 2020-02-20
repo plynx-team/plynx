@@ -352,7 +352,6 @@ class ReactBlockGraph extends React.Component {
         }
       }
     } else {  // !this.commandPressed
-
       this.selectedNIDs = nids;
     }
 

@@ -1,5 +1,4 @@
 .hub-panel {
-  --width: 250px;
   height: 100%;
   display: flex;
   flex-direction: row;

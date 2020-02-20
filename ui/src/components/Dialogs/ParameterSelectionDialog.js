@@ -9,6 +9,9 @@ export default class ParameterSelectionDialog extends Component {
     index: PropTypes.number.isRequired,
     title: PropTypes.string.isRequired,
     onClose: PropTypes.func.isRequired,
+    parameters: PropTypes.array.isRequired,
+    readOnly: PropTypes.bool.isRequired,
+    onIndexChanged: PropTypes.func.isRequired,
   }
 
   constructor(props) {
@@ -25,13 +28,13 @@ export default class ParameterSelectionDialog extends Component {
   }
 
   onIndexChanged(e) {
-      if (this.props.readOnly) {
-          console.log('Read only');
-          return;
-      }
-      const index = parseInt(e.currentTarget.value);
-      this.props.onIndexChanged(index);
-      this.setState({index: index});
+    if (this.props.readOnly) {
+      console.log('Read only');
+      return;
+    }
+    const index = parseInt(e.currentTarget.value, 10);
+    this.props.onIndexChanged(index);
+    this.setState({index: index});
   }
 
   render() {
@@ -48,8 +51,7 @@ export default class ParameterSelectionDialog extends Component {
         <div className="properties-list">
           {
               this.state.parameters.map(
-                (parameter, index) =>
-                <div className='option-block'
+                (parameter, index) => <div className='option-block'
                     key={parameter.name}
                 >
                     <div className='radio'>
@@ -67,7 +69,7 @@ export default class ParameterSelectionDialog extends Component {
                       widget={parameter.widget}
                       value={parameter.value}
                       parameterType={parameter.parameter_type}
-                      readOnly={true}
+                      readOnly
                       onParameterChanged={(name, value) => this.handleParameterChanged(name, value)}
                       onLinkClick={(name) => this.handleLinkClick(name)}
                       />

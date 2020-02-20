@@ -9,6 +9,7 @@ export default class BlockOutputListItem extends React.Component {
     item: PropTypes.shape({
       name: PropTypes.string.isRequired,
       file_type: PropTypes.string.isRequired,
+      is_array: PropTypes.bool.isRequired,
     }).isRequired,
     onMouseDown: PropTypes.func.isRequired,
     onClick: PropTypes.func.isRequired,

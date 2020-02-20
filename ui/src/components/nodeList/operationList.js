@@ -8,17 +8,17 @@ import { renderNodeItem, NODE_ITEM_HEADER } from './common';
 
 const renderItem = renderNodeItem(COLLECTIONS.TEMPLATES, 'node_status');
 
-export default class ListPage extends Component {
+export default class OperationListPage extends Component {
   constructor(props) {
     super(props);
     document.title = "Operations - PLynx";
   }
 
   MENU_PANEL_DESCRIPTOR = [
-      {
-          render: makeControlSeparator,
-          props: {key: 'separator_1'}
-      },
+    {
+      render: makeControlSeparator,
+      props: {key: 'separator_1'}
+    },
   ];
 
   render() {

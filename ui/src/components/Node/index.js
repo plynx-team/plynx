@@ -1,15 +1,12 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { PLynxApi } from '../../API';
 import NodeProperties from './NodeProperties';
-import ControlButtons from './ControlButtons';
 import InOutList from './InOutList';
 import ParameterList from './ParameterList';
 import TextViewDialog from '../Dialogs/TextViewDialog';
-import {PluginsProvider, PluginsConsumer} from '../../contexts';
-import { ObjectID } from 'bson';
-import {HotKeys} from 'react-hotkeys';
-import { ACTION, RESPONCE_STATUS, NODE_RUNNING_STATUS, KEY_MAP } from '../../constants';
+import { PluginsProvider, PluginsConsumer } from '../../contexts';
+import { HotKeys } from 'react-hotkeys';
+import { NODE_RUNNING_STATUS, KEY_MAP } from '../../constants';
 
 import './style.css';
 
@@ -37,8 +34,8 @@ export default class Node extends Component {
   }
 
   async componentDidMount() {
-      console.log('componentDidMount');
-    this.loadNodeFromJson(this.props.node)
+    console.log('componentDidMount');
+    this.loadNodeFromJson(this.props.node);
   }
 
   loadNodeFromJson(data) {
@@ -83,8 +80,7 @@ export default class Node extends Component {
           }
           <div className='EditNodeHeader'>
             <PluginsConsumer>
-            { plugins_dict =>
-                <NodeProperties
+            { plugins_dict => <NodeProperties
                   title={node.title}
                   description={node.description}
                   kind={node.kind}
@@ -163,4 +159,8 @@ Node.propTypes = {
     }),
   }),
   history: PropTypes.object,
+  is_workflow: PropTypes.bool.isRequired,
+  node: PropTypes.object.isRequired,    // TODO more detailed
+  onNodeChange: PropTypes.func.isRequired,
+  plugins_dict: PropTypes.object.isRequired,    // TODO more detailed
 };

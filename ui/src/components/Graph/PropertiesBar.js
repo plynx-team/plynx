@@ -4,22 +4,11 @@ import OutputItem from './OutputItem';
 import ParameterItem from '../Common/ParameterItem';
 import makePropertiesBox from '../Common/makePropertiesBox';
 import { COLLECTIONS } from '../../constants';
-import { Link } from 'react-router-dom';
 import './style.css';
 
 
-const allEqual = arr => arr.every( v => v === arr[0] )
+const allEqual = arr => arr.every(v => v === arr[0]);
 
-
-const renderNodeLink = node => {
-    let node_id = node.original_node_id || node.parent_node_id;
-    if (node_id) {
-        return <Link to={`/${COLLECTIONS.TEMPLATES}/${node.original_node_id || node.parent_node_id}`}>
-          {node.title}
-        </Link>;
-    }
-    return node.title;
-}
 
 const renderLinkRow = (title, href, text) => {
   return (
@@ -35,7 +24,7 @@ const renderLinkRow = (title, href, text) => {
       </div>
     </div>
   );
-}
+};
 
 export default class PropertiesBar extends Component {
   constructor(props) {
@@ -45,53 +34,54 @@ export default class PropertiesBar extends Component {
   }
 
   getStateDict(nodes) {
-      var commonParameters = JSON.parse(JSON.stringify(nodes.length > 0 ? nodes[0].parameters : []));
-      var ii, jj;
-      for (ii = 1; ii < nodes.length; ++ii) {
-          var indexesToRemove = [];
-          for (jj = 0; jj < commonParameters.length; ++jj) {
-              let commonParam = commonParameters[jj];
-              if (!nodes[ii].parameters.find(param => {
-                  return param.name === commonParam.name && param.parameter_type === commonParam.parameter_type &&
+    const commonParameters = JSON.parse(JSON.stringify(nodes.length > 0 ? nodes[0].parameters : []));
+    let ii,
+      jj;
+    for (ii = 1; ii < nodes.length; ++ii) {
+      const indexesToRemove = [];
+      for (jj = 0; jj < commonParameters.length; ++jj) {
+        const commonParam = commonParameters[jj];
+        if (!nodes[ii].parameters.find(param => {
+          return param.name === commonParam.name && param.parameter_type === commonParam.parameter_type &&
                     (
                         (param.reference === null && param.value === commonParam.value) ||
                         (param.reference && param.reference === commonParam.reference)
-                    )
-                  })
+                    );
+        })
               ) {
-                  indexesToRemove.push(jj);
-              }
-          }
-          while(indexesToRemove.length) {
-              commonParameters.splice(indexesToRemove.pop(), 1);
-          }
+          indexesToRemove.push(jj);
+        }
       }
-      if (allEqual(nodes.map(node => node.description))) {
-          commonParameters.unshift({
-            name: '_DESCRIPTION',
-            widget: 'Description',
-            value: nodes[0].description,
-            parameter_type: 'str',
-            _link_visibility: false,
-          });
+      while (indexesToRemove.length) {
+        commonParameters.splice(indexesToRemove.pop(), 1);
       }
-      if (allEqual(nodes.map(node => node.title))) {
-          commonParameters.unshift({
-            name: '_TITLE',
-            widget: 'title',
-            value: nodes[0].title,
-            parameter_type: 'str',
-            _link_visibility: false,
-          });
-      }
-      return {
-          nodes: nodes,
-          parameters: commonParameters,
-          outputs: nodes.map(node => node.outputs).flat(1),
-          logs: nodes.map(node => node.logs).flat(1),
-          nodeId: nodes.map(node => node._id).join(),
-          editable: this.props.editable,
-      };
+    }
+    if (allEqual(nodes.map(node => node.description))) {
+      commonParameters.unshift({
+        name: '_DESCRIPTION',
+        widget: 'Description',
+        value: nodes[0].description,
+        parameter_type: 'str',
+        _link_visibility: false,
+      });
+    }
+    if (allEqual(nodes.map(node => node.title))) {
+      commonParameters.unshift({
+        name: '_TITLE',
+        widget: 'title',
+        value: nodes[0].title,
+        parameter_type: 'str',
+        _link_visibility: false,
+      });
+    }
+    return {
+      nodes: nodes,
+      parameters: commonParameters,
+      outputs: nodes.map(node => node.outputs).flat(1),
+      logs: nodes.map(node => node.logs).flat(1),
+      nodeId: nodes.map(node => node._id).join(),
+      editable: this.props.editable,
+    };
   }
 
   // TODO replace it with more general functions
@@ -102,7 +92,7 @@ export default class PropertiesBar extends Component {
   }
 
   setNodeDataArr(nodes) {
-    this.setState(this.getStateDict(nodes))
+    this.setState(this.getStateDict(nodes));
   }
   /* eslint-enable no-param-reassign */
   /* eslint-enable max-params */
@@ -123,7 +113,7 @@ export default class PropertiesBar extends Component {
   }
 
   renderOutputs(outputs) {
-      return outputs.filter(
+    return outputs.filter(
         (output) => {
           return output.values.length > 0;
         }
@@ -147,22 +137,22 @@ export default class PropertiesBar extends Component {
   render() {
     const self = this;
 
-    let linksList = [];
+    const linksList = [];
     if (this.state.nodes.length === 1) {
-        const node = this.state.nodes[0];
-        const node_id = node.original_node_id || node.parent_node_id;
-        if (node_id) {
-            linksList.push(renderLinkRow('Original', `/${COLLECTIONS.TEMPLATES}/${node_id}`, node_id));
-        }
-        var url = window.location.href;
-        if (url.indexOf('?') > -1){
-           url += '&'
-        }else{
-           url += '?'
-        }
-        if (node_id) {
-            linksList.push(renderLinkRow('This Operation', `${url}sub_node_id=${node._id}`, node._id));
-        }
+      const node = this.state.nodes[0];
+      const node_id = node.original_node_id || node.parent_node_id;
+      if (node_id) {
+        linksList.push(renderLinkRow('Original', `/${COLLECTIONS.TEMPLATES}/${node_id}`, node_id));
+      }
+      let url = window.location.href;
+      if (url.indexOf('?') > -1) {
+        url += '&';
+      } else {
+        url += '?';
+      }
+      if (node_id) {
+        linksList.push(renderLinkRow('This Operation', `${url}sub_node_id=${node._id}`, node._id));
+      }
     }
 
     let parametersList = [];
@@ -180,7 +170,7 @@ export default class PropertiesBar extends Component {
           parameterType={parameter.parameter_type}
           key={this.state.nodeId + "$" + parameter.name + parameter.reference}
           readOnly={!this.state.editable}
-          _link_visibility={parameter.hasOwnProperty('_link_visibility') ? parameter._link_visibility : (self.mainNodeId === this.state.nodes[0]._id ? false : true)}
+          _link_visibility={parameter.hasOwnProperty('_link_visibility') ? parameter._link_visibility : (self.mainNodeId !== this.state.nodes[0]._id)}
           reference={parameter.reference}
           onParameterChanged={(name, value) => this.handleParameterChanged(name, value)}
           onLinkClick={(name) => this.handleLinkClick(name)}
@@ -240,4 +230,5 @@ PropertiesBar.propTypes = {
   onFileShow: PropTypes.func,
   onParameterChanged: PropTypes.func,
   onPreview: PropTypes.func,
+  onLinkClick: PropTypes.func.isRequired,
 };

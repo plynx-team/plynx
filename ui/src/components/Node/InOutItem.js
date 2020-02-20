@@ -6,21 +6,18 @@ import { PluginsConsumer } from '../../contexts';
 
 export default class InOutItem extends Component {
   static propTypes = {
-    varName: PropTypes.string,
     index: PropTypes.number,
     readOnly: PropTypes.bool,
-    maxCount: PropTypes.number,
-    minCount: PropTypes.number,
-    fileType: PropTypes.string,
-    fileTypes: PropTypes.array,
     name: PropTypes.string,
     onChanged: PropTypes.func,
     onRemove: PropTypes.func,
+    item: PropTypes.object.isRequired,
+    nodeKind: PropTypes.string.isRequired,
   };
 
   constructor(props) {
     super(props);
-    this. item = this.props.item;
+    this.item = this.props.item;
     this.state = {
       item: this.props.item,
       index: this.props.index,

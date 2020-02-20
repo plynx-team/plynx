@@ -163,22 +163,22 @@ export default class ListPage extends Component {
   }
 
   generateCreateDefs(plugins_info) {
-      if (!plugins_info || !this.props.virtualCollection) {
-          return [];
-      }
-      return Object.values(plugins_info[`${this.props.virtualCollection}_dict`]).map(
+    if (!plugins_info || !this.props.virtualCollection) {
+      return [];
+    }
+    return Object.values(plugins_info[`${this.props.virtualCollection}_dict`]).map(
           (operation) => {
-              return {
-                  render: makeControlLink,
-                  props: {
-                    img: 'plus.svg',
-                    text: operation.title,
-                    href: `/templates/${operation.kind}`,
-                    key: operation.kind
-                  },
-              };
+            return {
+              render: makeControlLink,
+              props: {
+                img: 'plus.svg',
+                text: operation.title,
+                href: `/templates/${operation.kind}`,
+                key: operation.kind
+              },
+            };
           }
-      )
+      );
   }
 
   render() {
@@ -192,18 +192,17 @@ export default class ListPage extends Component {
             <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
             <PluginsConsumer>
             {
-                plugins_info =>
-                    makeControlPanel({
-                        props: {
-                            items: [...this.props.menuPanelDescriptor, ...this.generateCreateDefs(plugins_info)],
-                        },
-                        children_func: () => {
-                            return <SearchBar
+                plugins_info => makeControlPanel({
+                  props: {
+                    items: [...this.props.menuPanelDescriptor, ...this.generateCreateDefs(plugins_info)],
+                  },
+                  children_func: () => {
+                    return <SearchBar
                                     onSearchUpdate={(search) => this.handleSearchUpdate(search)}
                                     search={this.state.search}
-                                    />
-                                }
-                    } )
+                                    />;
+                  }
+                })
             }
             </PluginsConsumer>
             <List

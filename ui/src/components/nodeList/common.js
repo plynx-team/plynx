@@ -1,14 +1,14 @@
-import React, { Component } from 'react';
+import React from 'react';
 import {PluginsConsumer} from '../../contexts';
 import { listTextElement, renderStatus } from '../Common/listElements';
 import '../controls.css';
 import './items.css';
 
 export function renderNodeItem(hrefPrefix, statusName) {
-    return (node) => {
-      return (
+  return (node) => {
+    return (
           <a className='list-item node-list-item'
-            href={'/' + hrefPrefix +'/' + node._id}
+            href={'/' + hrefPrefix + '/' + node._id}
             key={node._id}
             >
             <div className='ItemHeader'>
@@ -40,8 +40,8 @@ export function renderNodeItem(hrefPrefix, statusName) {
             { listTextElement('Created', node.insertion_date) }
             { listTextElement('Updated', node.update_date) }
           </a>
-      );
-    }
+    );
+  };
 }
 
 export const NODE_ITEM_HEADER = [

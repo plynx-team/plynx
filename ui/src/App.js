@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import { Route, Switch, withRouter } from 'react-router-dom';
-import cookie from 'react-cookies';
 import PropTypes from 'prop-types';
 import Header from './components/header';
 import LogIn from './components/LogIn';
@@ -42,7 +41,7 @@ class App extends Component {
         window.location.reload();
       } else if (this.reloadOnChangePath &&
                 prevPathTuple[1] !== pathTuple[1] &&
-                prevPathTuple[2] !== pathTuple[2] ) {
+                prevPathTuple[2] !== pathTuple[2]) {
         // Case /templates/abc -> /runs/abc
         window.location.reload();
       } else {

@@ -4,8 +4,8 @@ import { Link } from 'react-router-dom';
 import Dialog from './Dialog';
 import NodeItem from '../Common/NodeItem';
 import { PLynxApi } from '../../API';
-import { ACTION } from '../../constants';
-import { COLLECTIONS } from '../../constants';
+import { ACTION, COLLECTIONS } from '../../constants';
+
 
 import './DeprecateDialog.css';
 

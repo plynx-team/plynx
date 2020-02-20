@@ -48,7 +48,7 @@ export default class NodeProperties extends Component {
   render() {
     // Find index of base_node_name
     const kinds = Object.keys(this.props.executors_info);
-    const kindIndex = kinds.findIndex(knd => this.props.kind === knd)
+    const kindIndex = kinds.findIndex(knd => this.props.kind === knd);
     console.log(kinds, kindIndex, this.props.kind);
     const customPropertiesItems = [
       {
@@ -116,6 +116,7 @@ export default class NodeProperties extends Component {
 
 NodeProperties.propTypes = {
   title: PropTypes.string,
+  kind: PropTypes.string,
   description: PropTypes.string,
   base_node_name: PropTypes.string,
   parentNode: PropTypes.string,
@@ -125,4 +126,5 @@ NodeProperties.propTypes = {
   updated: PropTypes.string,
   readOnly: PropTypes.bool,
   onParameterChanged: PropTypes.func,
+  executors_info: PropTypes.object.isRequired,      // TODO more detailed
 };
