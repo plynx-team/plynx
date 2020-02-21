@@ -2,12 +2,13 @@ import os
 import sys
 import threading
 import logging
-import queue
 import six
 import traceback
 import uuid
+import socket
 from plynx.constants import JobReturnStatus, NodeRunningStatus, Collections
 from plynx.db.node_collection_manager import NodeCollectionManager
+from plynx.db.worker_state import WorkerState
 from plynx.utils.config import get_master_config
 from plynx.utils.db_connector import check_connection
 from plynx.plugins.executors import materialize_executor
@@ -42,22 +43,26 @@ class Master(object):
     # Define sync with database timeout
     SDB_STATUS_UPDATE_TIMEOUT = 1
 
-    def __init__(self, master_config):
+    # Worker State update timeout
+    WORKER_STATE_UPDATE_TIMEOUT = 1
+
+    def __init__(self, master_config, worker_id):
+        self.worker_id = worker_id if worker_id else str(uuid.uuid1())
         self.node_collection_manager = NodeCollectionManager(collection=Collections.RUNS)
         self.kinds = master_config.kinds
+        self.host = socket.gethostname()
         self._stop_event = threading.Event()
-        self._job_description_queue = queue.Queue()
-        # Mapping of Worker ID to WorkerInfo
-        self._worker_to_info = {}
-        self._worker_to_info_lock = threading.Lock()
 
-        self._graph_id_to_scheduler = {}
-        self._new_graph_schedulers = []
-        self._graph_schedulers_lock = threading.Lock()
+        # Mapping keep track of Worker Status
+        self._run_id_to_run = {}
+        self._run_id_to_run_lock = threading.Lock()
 
         # Start new threads
         self._thread_db_status_update = threading.Thread(target=self._run_db_status_update, args=())
         self._thread_db_status_update.start()
+
+        self._thread_worker_state_update = threading.Thread(target=self._run_worker_state_update, args=())
+        self._thread_worker_state_update.start()
 
     def serve_forever(self):
         """
@@ -101,6 +106,8 @@ class Master(object):
             executor.node.node_running_status = NodeRunningStatus.FAILED
         finally:
             executor.node.save(collection='runs')
+            with self._run_id_to_run_lock:
+                del self._run_id_to_run[executor.node._id]
 
     def _run_db_status_update(self):
         """Syncing with the database."""
@@ -111,6 +118,8 @@ class Master(object):
                     logging.info('New node found: {} {} {}'.format(node['_id'], node['node_running_status'], node['title']))
                     executor = materialize_executor(node)
 
+                    with self._run_id_to_run_lock:
+                        self._run_id_to_run[executor.node._id] = node
                     thread = threading.Thread(target=self.execute_job, args=(executor, ))
                     thread.start()
 
@@ -122,54 +131,32 @@ class Master(object):
         finally:
             logging.info("Exit {}".format(self._run_db_status_update.__name__))
 
-    def _del_job_description(self, worker_id):
-        with self._worker_to_info_lock:
-            worker_info = self._worker_to_info.get(worker_id, None)
-            if worker_info:
-                self._worker_to_info[worker_id].job_description = None
-                worker_info.num_finished_jobs += 1
-                return True
-            return False
-
-    def _get_job_description_from_queue(self):
+    def _run_worker_state_update(self):
+        """Syncing with the database."""
         try:
-            job_description = self._job_description_queue.get_nowait()
-            self._job_description_queue.task_done()
-            return job_description
-        except queue.Empty:
-            return None
-
-    def get_job_description(self, worker_id):
-        with self._worker_to_info_lock:
-            worker_info = self._worker_to_info.get(worker_id, None)
-            if worker_info:
-                return worker_info.job_description
-            return None
-
-    def update_node(self, worker_id, node):
-        """Return True Job is in the queue, else False."""
-        job_description = self.get_job_description(worker_id)
-        if job_description:
-            with self._graph_schedulers_lock:
-                scheduler = self._graph_id_to_scheduler.get(job_description.graph_id, None)
-                if scheduler:
-                    scheduler.update_node(node)
-            if NodeRunningStatus.is_finished(node.node_running_status):
-                self._del_job_description(worker_id)
-
-            # If scheduler was not found, it means the graph was canceled, failed, finished, etc.
-            # if scheduler is None, the graph can't be updated.
-            return scheduler is not None
-        else:
-            logging.info("Scheduler was not found for worker `{}`".format(worker_id))
-        return False
+            while not self._stop_event.is_set():
+                with self._run_id_to_run_lock:
+                    runs = list(self._run_id_to_run.values())
+                worker_state = WorkerState.from_dict({
+                    'worker_id': self.worker_id,
+                    'host': self.host,
+                    'runs': runs,
+                    'kinds': self.kinds,
+                })
+                worker_state.save()
+                self._stop_event.wait(timeout=Master.WORKER_STATE_UPDATE_TIMEOUT)
+        except Exception:
+            self.stop()
+            raise
+        finally:
+            logging.info("Exit {}".format(self._run_worker_state_update.__name__))
 
     def stop(self):
         """Stop Master."""
         self._stop_event.set()
 
 
-def run_master():
+def run_master(worker_id=None):
     """Run master Daemon. It will run in the same thread."""
     # Check connection to the db
     check_connection()
@@ -177,7 +164,7 @@ def run_master():
     logging.info('Init Master')
     master_config = get_master_config()
     logging.info(master_config)
-    master = Master(master_config)
+    master = Master(master_config, worker_id)
 
     # Activate the server; this will keep running until you
     # interrupt the program with Ctrl-C

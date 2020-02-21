@@ -1,6 +1,7 @@
 import React from 'react';
 import {PluginsConsumer} from '../../contexts';
 import { listTextElement, renderStatus } from '../Common/listElements';
+import { utcTimeToLocal } from '../../utils';
 import '../controls.css';
 import './items.css';
 
@@ -37,8 +38,8 @@ export function renderNodeItem(hrefPrefix, statusName) {
             }
             </PluginsConsumer>
             { listTextElement('Author', node._user.length > 0 ? node._user[0].username : 'Unknown') }
-            { listTextElement('Created', node.insertion_date) }
-            { listTextElement('Updated', node.update_date) }
+            { listTextElement('Created', utcTimeToLocal(node.insertion_date)) }
+            { listTextElement('Updated', utcTimeToLocal(node.update_date)) }
           </a>
     );
   };

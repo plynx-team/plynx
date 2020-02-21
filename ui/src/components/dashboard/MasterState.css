@@ -4,5 +4,5 @@
 
 .master-list-item {
   display: grid;
-  grid-template-columns: 200px 350px 250px 250px;
+  grid-template-columns: 200px 350px 250px 250px 250px;
 }

@@ -6,6 +6,10 @@
   box-shadow: 6px 6px 28px -2px rgba(0,0,0,0.4);
   background-color: rgba(0,0,0,.7);
   margin: 3px;
+  font-family: 'Source Sans Pro', sans-serif;
+  line-height: 20px;
+  font-size: 14px;
+  font-weight: 400;
 }
 
 .NodeItem.File {

@@ -99,12 +99,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
     this.blocks = [];
     const parameterNameToGraphParameter = {};
     const ts = new ObjectID().toString();
-    for (let i = 0; i < this.graph_node.parameters.length; ++i) {
-      if (this.graph_node.parameters[i].name === '_nodes') {
-        this.nodes = this.graph_node.parameters[i].value.value;
-        break;
-      }
-    }
+
+    this.nodes = this.graph_node.parameters.find(p => p.name === '_nodes').value.value;
 
     let parameter;
     for (parameter of this.graph_node.parameters) {
@@ -262,7 +258,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
       blocks_lookup_index[block.nid] = i;
     }
 
-    const newNodes = newGraph.parameters.filter((p) => p.name === '_nodes')[0].value.value;
+    const newNodes = newGraph.parameters.find((p) => p.name === '_nodes').value.value;
 
     for (i = 0; i < newNodes.length; ++i) {
       const node = newNodes[i];
@@ -344,15 +340,16 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   onRemoveConnector(connector) {
+    console.log('Remove connector', connector);
     let connections = this.connections;
     connections = connections.filter((connection) => {
       return connection !== connector;
     });
 
     const to_node = this.node_lookup[connector.to_block];
-    const input = to_node.inputs.filter((input_) => {
+    const input = to_node.inputs.find((input_) => {
       return input_.name === connector.to;
-    })[0];
+    });
     input.input_references = input.input_references.filter((value) => {
       return !(value.output_id === connector.from && value.node_id === connector.from_block);
     });
@@ -364,11 +361,17 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   onRemoveBlock(nid) {
+    console.log('Remove block', nid);
     if (this.node_lookup[nid].node_running_status === NODE_RUNNING_STATUS.SPECIAL) {
       console.log('Cannot remove special node');
       return;
     }
-    this.nodes.splice(this.nodes.indexOf(node => node._id === nid));
+
+    this.nodes.splice(
+        this.nodes.map(node => node._id === nid).indexOf(true),     // simply indexOf does not work!
+        1
+    );
+
     delete this.node_lookup[nid];
     this.blocks = this.blocks.filter((block) => {
       return block.nid !== nid;

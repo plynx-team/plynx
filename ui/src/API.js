@@ -77,7 +77,7 @@ plynxApi.createEntity({ name: COLLECTIONS.RUNS });
 plynxApi.createEntity({ name: 'resource' });
 plynxApi.createEntity({ name: 'token' });
 plynxApi.createEntity({ name: 'demo' });
-plynxApi.createEntity({ name: 'master_state' });
+plynxApi.createEntity({ name: 'worker_states' });
 plynxApi.createEntity({ name: `search_${COLLECTIONS.TEMPLATES}` });
 plynxApi.createEntity({ name: `search_${COLLECTIONS.RUNS}` });
 plynxApi.createEntity({ name: `search_in_hubs` });

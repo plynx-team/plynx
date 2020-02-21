@@ -5,3 +5,8 @@ export function storeToClipboard(text) {
 export function loadFromClipboard() {
   return JSON.parse(localStorage.getItem('clipboard'));
 }
+
+export function utcTimeToLocal(text) {
+  const date = new Date(text + 'Z');  // Make date it UTC
+  return date.toString().replace(/GMT.*/g, '');  // RM GMT...
+}

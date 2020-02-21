@@ -20,6 +20,9 @@ class Navigation extends Component {
           <div className="NavigationItems">
             {separator()}
             {this.state.refreshTokenExists &&
+              <NavLink to='/dashboard' className="Item">Dashboard</NavLink>
+            }
+            {this.state.refreshTokenExists &&
               <NavLink to={`/${VIRTUAL_COLLECTIONS.OPERATIONS}`} className="Item">Operations</NavLink>
             }
             {this.state.refreshTokenExists &&

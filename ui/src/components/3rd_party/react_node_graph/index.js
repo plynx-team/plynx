@@ -280,9 +280,7 @@ class ReactBlockGraph extends React.Component {
   }
 
   handleRemoveConnector(connector) {
-    if (this.props.onRemoveConnector) {
-      this.props.onRemoveConnector(connector);
-    }
+    this.props.onRemoveConnector(connector);
   }
 
   handleOutputClick(nid, outputIndex) {
@@ -319,7 +317,6 @@ class ReactBlockGraph extends React.Component {
     }
 
     this.props.onRemoveBlock(nid);
-    console.log(connectors);
   }
 
   handleBlockSelect(nid) {
