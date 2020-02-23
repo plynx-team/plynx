@@ -6,26 +6,24 @@ from collections import namedtuple
 PLYNX_CONFIG_PATH = os.getenv('PLYNX_CONFIG_PATH', 'config.yaml')
 _config = None
 
-MasterConfig = namedtuple('MasterConfig', 'internal_host host port kinds')
-WorkerConfig = namedtuple('WorkerConfig', 'user')
-MongoConfig = namedtuple('MongoConfig', 'user password host port')
-StorageConfig = namedtuple('StorageConfig', 'scheme prefix credential_path')
-AuthConfig = namedtuple('AuthConfig', 'secret_key')
-WebConfig = namedtuple('WebConfig', 'host port endpoint api_endpoint debug')
-DemoConfig = namedtuple('DemoConfig', 'enabled, graph_ids')
-CloudServiceConfig = namedtuple('CloudServiceConfig', 'prefix url_prefix url_postfix')
-ResourceConfig = namedtuple('ResourceConfig', 'kind title cls icon color')
-DummyOperationConfig = namedtuple('DummyOperationConfig', 'kind executor operations')
-OperationConfig = namedtuple('OperationConfig', 'kind title executor operations resources')
-HubConfig = namedtuple('HubConfig', 'kind title icon cls args')
-WorkflowConfig = namedtuple('WorkflowConfig', 'kind title executor operations')
-PluginsConfig = namedtuple('PluginsConfig', 'resources operations hubs workflows dummy_operations')
+WorkerConfig = namedtuple('WorkerConfig', ['kinds'])
+MongoConfig = namedtuple('MongoConfig', ['user', 'password', 'host', 'port'])
+StorageConfig = namedtuple('StorageConfig', ['scheme', 'prefix', 'credential_path'])
+AuthConfig = namedtuple('AuthConfig', ['secret_key'])
+WebConfig = namedtuple('WebConfig', ['host', 'port', 'endpoint', 'api_endpoint', 'debug'])
+DemoConfig = namedtuple('DemoConfig', ['enabled', 'graph_ids'])
+CloudServiceConfig = namedtuple('CloudServiceConfig', ['prefix', 'url_prefix', 'url_postfix'])
+ResourceConfig = namedtuple('ResourceConfig', ['kind', 'title', 'cls', 'icon', 'color'])
+DummyOperationConfig = namedtuple('DummyOperationConfig', ['kind', 'executor', 'operations'])
+OperationConfig = namedtuple('OperationConfig', ['kind', 'title', 'executor', 'operations', 'resources'])
+HubConfig = namedtuple('HubConfig', ['kind', 'title', 'icon', 'cls', 'args'])
+WorkflowConfig = namedtuple('WorkflowConfig', ['kind', 'title', 'executor', 'operations'])
+PluginsConfig = namedtuple('PluginsConfig', ['resources', 'operations', 'hubs', 'workflows', 'dummy_operations'])
 
 
 Config = namedtuple(
     'Config',
     [
-        'master',
         'worker',
         'db',
         'storage',
@@ -48,18 +46,9 @@ def __init__():
         _config = {}
 
 
-def get_master_config():
-    return MasterConfig(
-        internal_host=_config.get('master', {}).get('internal_host', '0.0.0.0'),
-        host=_config.get('master', {}).get('host', '127.0.0.1'),
-        port=int(_config.get('master', {}).get('port', 17011)),
-        kinds=(_config.get('master', {}).get('kinds', [])),
-    )
-
-
 def get_worker_config():
     return WorkerConfig(
-        user=_config.get('worker', {}).get('user', ''),
+        kinds=(_config.get('worker', {}).get('kinds', [])),
     )
 
 
@@ -177,7 +166,6 @@ def get_plugins():
 
 def get_config():
     return Config(
-        master=get_master_config(),
         worker=get_worker_config(),
         db=get_db_config(),
         storage=get_storage_config(),

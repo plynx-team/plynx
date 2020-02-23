@@ -23,7 +23,7 @@ services:
         volumes:
             - ./plynx:/app/plynx
         environment:
-            - PLYNX_MODE=master -e basic-dag-workflow
+            - PLYNX_MODE=worker -e basic-dag-workflow
             - PLYNX_CONFIG=/app/config.yaml
         command: sh /app/watch.sh
 
@@ -37,7 +37,7 @@ services:
             - ./data:/data
             - ./plynx:/app/plynx
         environment:
-            - PLYNX_MODE=master -e basic-bash-jinja2-operation -e basic-python-node-operation -e basic-dag-operation
+            - PLYNX_MODE=worker -e basic-bash-jinja2-operation -e basic-python-node-operation -e basic-dag-operation
             - PLYNX_CONFIG=/app/config.yaml
         command: sh /app/watch.sh
 

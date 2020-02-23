@@ -3,7 +3,7 @@ import argparse
 from collections import namedtuple
 from plynx import __version__
 from plynx.utils.config import get_config, set_parameter
-from plynx.service.master import run_master
+from plynx.service.worker import run_worker
 from plynx.service.users import run_users
 from plynx.service.cache import run_cache
 from plynx.service.exec import run_exec
@@ -30,9 +30,9 @@ def cache(args):
     run_cache(**args)
 
 
-def master(args):
+def worker(args):
     set_logging_level(args.pop('verbose'))
-    run_master(**args)
+    run_worker(**args)
 
 
 def users(args):
@@ -62,34 +62,13 @@ class CLIFactory(object):
             help='Mode',
             type=str),
 
-        # Master
-        'master_host': Arg(
-            ('-H', '--host'),
-            help='Master host',
-            default=_config.master.host,
-            type=str,
-            levels=['master', 'host'],
-            ),
-        'internal_master_host': Arg(
-            ("--internal-master-host",),
-            help="Internal Master host",
-            default=_config.master.internal_host,
-            type=str,
-            levels=['master', 'internal_host'],
-            ),
-        'master_port': Arg(
-            ("-P", "--port"),
-            help="Master port",
-            default=_config.master.port,
-            type=int,
-            levels=['master', 'port'],
-            ),
+        # Worker
         'kinds': Arg(
             ("-e", "--kinds"),
-            help="Master port",
-            default=_config.master.kinds,
+            help="Kinds the worker is subscribed to",
+            default=_config.worker.kinds,
             action='append',
-            levels=['master', 'kinds'],
+            levels=['worker', 'kinds'],
             ),
 
         # MongoConfig
@@ -202,9 +181,9 @@ class CLIFactory(object):
 
     SUBPARSERS = (
         {
-            'func': master,
-            'help': 'Run Master',
-            'args': ('verbose', 'internal_master_host', 'master_port', 'db_host', 'db_port', 'db_user', 'db_password', 'kinds'),
+            'func': worker,
+            'help': 'Run Worker',
+            'args': ('verbose', 'db_host', 'db_port', 'db_user', 'db_password', 'kinds'),
         }, {
             'func': backend,
             'help': 'Run backend server',

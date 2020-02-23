@@ -9,14 +9,14 @@ import socket
 from plynx.constants import JobReturnStatus, NodeRunningStatus, Collections
 from plynx.db.node_collection_manager import NodeCollectionManager
 from plynx.db.worker_state import WorkerState
-from plynx.utils.config import get_master_config
+from plynx.utils.config import get_worker_config
 from plynx.utils.db_connector import check_connection
 from plynx.plugins.executors import materialize_executor
 from plynx.utils.file_handler import upload_file_stream
 
 
-class Master(object):
-    """Master main class.
+class Worker(object):
+    """Worker main class.
 
     Args:
         server_address      (tuple):        Define the server address (host, port).
@@ -24,12 +24,12 @@ class Master(object):
 
     Currently implemented as a TCP server.
 
-    Only a single instance of the Master class in a cluster is allowed.
+    Only a single instance of the Worker class in a cluster is allowed.
 
-    On the high level Master distributes Jobs over all available Workers
+    On the high level Worker distributes Jobs over all available Workers
     and updates statuses of the Graphs in the database.
 
-    Master performs several roles:
+    Worker performs several roles:
         * Pull graphs in status READY from the database.
         * Create Schedulers for each Graph.
         * Populate the queue of the Jobs.
@@ -46,10 +46,10 @@ class Master(object):
     # Worker State update timeout
     WORKER_STATE_UPDATE_TIMEOUT = 1
 
-    def __init__(self, master_config, worker_id):
+    def __init__(self, worker_config, worker_id):
         self.worker_id = worker_id if worker_id else str(uuid.uuid1())
         self.node_collection_manager = NodeCollectionManager(collection=Collections.RUNS)
-        self.kinds = master_config.kinds
+        self.kinds = worker_config.kinds
         self.host = socket.gethostname()
         self._stop_event = threading.Event()
 
@@ -66,7 +66,7 @@ class Master(object):
 
     def serve_forever(self):
         """
-        Run the master.
+        Run the worker.
         """
         self._stop_event.wait()
 
@@ -124,7 +124,7 @@ class Master(object):
                     thread.start()
 
                 else:
-                    self._stop_event.wait(timeout=Master.SDB_STATUS_UPDATE_TIMEOUT)
+                    self._stop_event.wait(timeout=Worker.SDB_STATUS_UPDATE_TIMEOUT)
         except Exception:
             self.stop()
             raise
@@ -144,7 +144,7 @@ class Master(object):
                     'kinds': self.kinds,
                 })
                 worker_state.save()
-                self._stop_event.wait(timeout=Master.WORKER_STATE_UPDATE_TIMEOUT)
+                self._stop_event.wait(timeout=Worker.WORKER_STATE_UPDATE_TIMEOUT)
         except Exception:
             self.stop()
             raise
@@ -152,25 +152,25 @@ class Master(object):
             logging.info("Exit {}".format(self._run_worker_state_update.__name__))
 
     def stop(self):
-        """Stop Master."""
+        """Stop worker."""
         self._stop_event.set()
 
 
-def run_master(worker_id=None):
-    """Run master Daemon. It will run in the same thread."""
+def run_worker(worker_id=None):
+    """Run worker daemon. It will run in the same thread."""
     # Check connection to the db
     check_connection()
 
-    logging.info('Init Master')
-    master_config = get_master_config()
-    logging.info(master_config)
-    master = Master(master_config, worker_id)
+    logging.info('Init Worker')
+    worker_config = get_worker_config()
+    logging.info(worker_config)
+    worker = Worker(worker_config, worker_id)
 
     # Activate the server; this will keep running until you
     # interrupt the program with Ctrl-C
     try:
         logging.info("Start serving")
-        master.serve_forever()
+        worker.serve_forever()
     except KeyboardInterrupt:
-        master.stop()
+        worker.stop()
         sys.exit(0)

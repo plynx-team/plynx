@@ -98,9 +98,6 @@
 
 .control-button:hover {
   background-color: #444;
-  border-radius: 2px;
-  padding: 2px 10px 2px 10px;
-  text-align: center;
 }
 
 .control-button:active {
