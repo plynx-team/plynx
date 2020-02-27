@@ -1,0 +1,37 @@
+[
+    {
+        "_id": "5e506846de9759440e96c86a",
+        "title": "Download",
+        "description": "Download dataset",
+        "kind": "basic-python-node-operation",
+        "parent_node_id": "5e44897e45297ac8b3d93170",
+        "successor_node_id": null,
+        "original_node_id": null,
+        "inputs": [],
+        "outputs": [],
+        "parameters": [],
+        "logs": [],
+        "node_running_status": "READY",
+        "node_status": "CREATED",
+        "cache_url": "",
+        "author": "5d4098b308277a14ef159d01",
+        "starred": false
+    }, {
+        "_id": "5e506846de9759440e96c86b",
+        "title": "Download 2",
+        "description": "Download dataset",
+        "kind": "basic-python-node-operation",
+        "parent_node_id": "5e44897e45297ac8b3d93170",
+        "successor_node_id": null,
+        "original_node_id": null,
+        "inputs": [],
+        "outputs": [],
+        "parameters": [],
+        "logs": [],
+        "node_running_status": "READY",
+        "node_status": "CREATED",
+        "cache_url": "",
+        "author": "5d4098b308277a14ef159d01",
+        "starred": false
+    }
+]

@@ -6,7 +6,7 @@ from plynx.utils.config import get_config, set_parameter
 from plynx.service.worker import run_worker
 from plynx.service.users import run_users
 from plynx.service.cache import run_cache
-from plynx.service.exec import run_exec
+from plynx.service.exec import run_exec     # noqa: E999
 from plynx.web.common import run_backend
 from plynx.utils.logs import set_logging_level
 

@@ -11,11 +11,10 @@ services:
         ports:
             - 27017:27017
         command: mongod --smallfiles --logpath=/dev/null # --quiet
+
     master:
         image: khaxis/plynx:base
         container_name: "master"
-        ports:
-            - 17011:17011
         depends_on:
             - mongodb
         links:
