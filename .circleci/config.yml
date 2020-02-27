@@ -5,27 +5,34 @@ jobs:
     docker:
       - image: circleci/python:3.8
     steps:
-
       - checkout
-
       - run:
           name: install requirements
           command:
             set -x
             pip install --upgrade pip &&
-            pip install google-compute-engine flake8
+            pip install google-compute-engine flake8 pytest
             flake8 --version
-
       - run:
           name: flake8
           command: flake8
-
       - run:
           # note we need to install google-compute-engine due to circleci issue
           name: python package instalation
           command:
             sudo python setup.py install
-
       - run:
           name: Run integration tests
           command: make run_tests
+  build_docker:
+    machine: true
+    steps:
+      - checkout
+      - run:
+          make build
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build
+      - build_docker
