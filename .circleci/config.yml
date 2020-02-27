@@ -2,6 +2,8 @@ version: 2
 jobs:
   build:
     machine: true
+    docker:
+      - image: circleci/python:3.8
     working_directory: ~/plynx
     steps:
 
