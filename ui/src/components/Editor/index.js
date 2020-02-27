@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import Tour from 'reactour';
 import PropTypes from 'prop-types';
 import queryString from 'query-string';
 import AlertContainer from '../3rd_party/react-alert';
@@ -58,6 +59,7 @@ export default class Editor extends Component {
       deprecateQuestionDialog: false,
       deprecateParentDialog: false,
       collection: null,
+      tourSteps: [],
     };
 
     let token = cookie.load('refresh_token');
@@ -495,6 +497,18 @@ export default class Editor extends Component {
     });
   }
 
+  handleTour() {
+    if (this.graphComponent) {
+      this.setState({tourSteps: this.graphComponent.ref.current.tourSteps});
+    }
+    if (this.nodeComponent) {
+      this.setState({tourSteps: this.nodeComponent.tourSteps});
+    }
+    if (this.runsComponent) {
+      this.setState({tourSteps: this.runsComponent.tourSteps});
+    }
+  }
+
   makeControls() {
     const items = [
       {
@@ -551,6 +565,7 @@ export default class Editor extends Component {
           img: 'play.svg',
           text: 'Run',
           enabled: this.state.is_workflow && this.state.collection === COLLECTIONS.TEMPLATES,
+          className: 'run-button',
           func: () => this.handleRun(),
         },
       }, {
@@ -603,17 +618,26 @@ export default class Editor extends Component {
         render: makeControlButton,
         props: {
           img: 'preview.svg',
-          text: 'API',
-          enabled: this.state.is_graph,
-          func: () => this.handleGenerateCode(),
-        }
-      }, {
-        render: makeControlButton,
-        props: {
-          img: 'preview.svg',
           text: 'Preview',
           enabled: !this.state.is_graph,
+          className: 'preview-button',
           func: () => this.handlePreview(),
+        },
+      },
+
+      {
+        render: makeControlSeparator,
+        props: {key: 'separator_3'}
+      },
+
+      {
+        render: makeControlButton,
+        props: {
+          img: 'info.svg',
+          text: 'Show Tour',
+          enabled: true,
+          className: 'demo-button',
+          func: () => this.handleTour(),
         },
       },
     ];
@@ -693,12 +717,23 @@ export default class Editor extends Component {
                   {
                       this.state.view_mode === VIEW_MODE.RUNS &&
                       <RunList
+                        ref={a => this.runsComponent = a}
                         showControlls={false}
                         search={"original_node_id:" + this.state.node._id}
                       />
                   }
               </div>
           </PluginsProvider>
+          <Tour
+              key={this.state.tourSteps}
+              steps={this.state.tourSteps}
+              isOpen={this.state.tourSteps.length > 0}
+              maskSpace={10}
+              rounded={10}
+              onRequestClose={() => {
+                this.setState({tourSteps: []});
+              }}
+          />
         </div>
     );
   }

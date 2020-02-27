@@ -72,6 +72,10 @@
     cursor: pointer;
 }
 
+.control-button.demo-button {
+    font-weight: 600;
+}
+
 .control-button {
   display: inline-flex;
   border-radius: 2px;
@@ -102,10 +106,6 @@
 
 .control-button:active {
   background-color: #62a6f3;
-}
-
-.control-button.demo {
-  padding: 5px;
 }
 
 .control-button.selected {

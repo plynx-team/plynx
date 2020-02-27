@@ -130,7 +130,7 @@ export default class ParameterItem extends Component {
 
   render() {
     return (
-      <div className='ParameterListItem'>
+      <div className={`ParameterListItem parameter-${this.state.name.replace(' ', '_')}`}>
         <div className='ParameterFirstItem'>
           <div className='ParameterRow'>
             <div className='ParameterCellTitle'>

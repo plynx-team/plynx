@@ -24,7 +24,7 @@ import {
   SPECIAL_NODE_IDS,
 } from '../../constants';
 import { API_ENDPOINT } from '../../configConsts';
-import { storeToClipboard, loadFromClipboard } from '../../utils';
+import { storeToClipboard, loadFromClipboard, addStyleToTourSteps } from '../../utils';
 
 import "./gridtile.png";
 import "./node.css";
@@ -33,6 +33,61 @@ import "./style.css";
 function parameterIsSpecial(parameter) {
   return SPECIAL_TYPE_NAMES.indexOf(parameter.parameter_type) > -1 && parameter.widget !== null;
 }
+
+const TOUR_STEPS = [
+  {
+    selector: '',
+    content: 'Welcome to Plynx! This tour will walk you through the main concepts and components of the interface.',
+  },
+  {
+    selector: '.hub-entry-list',
+    content: 'This toolbar contains all the Operations you need to build your workflow. All you need to do is to drag and drop Operations to the editor.',
+  },
+  {
+    selector: '.NodeItem',
+    content: 'Plynx is an open modular platform. Each Operaion represents an executable code or function, business logic, transformation, etc. ' +
+        'They can be defined eigher by users, admins, or imported from public library.',
+  },
+  {
+    selector: '.GraphRoot',
+    content: 'Workflow Editor has a central place in Plynx. ' +
+        'It allows you to easily build new pipelines, improve existing ones or create new experiments with the workflow.',
+  },
+  {
+    selector: '.GraphRoot .node',
+    content: 'Plynx is domain and framework agnostic platform. ' +
+        'Operation can be a python script, API call, model inference function, interaction with other services, etc. ' +
+        'The complexity under the hood does not matter.  What matters is what role it plays in your workflow.',
+  },
+  {
+    selector: '.GraphRoot .connector',
+    content: 'The relations between Operations are defined by the edges. ' +
+        'Depending on the use case, the entire Workflow will be exectuded in multiple independent containers, ' +
+        'compiled to a single executable file for higher performance or converted into Spark or AWS Step Functions workflow.',
+  },
+  {
+    selector: '.PropertiesBar',
+    content: 'This toolbar contains properties of Workflow or Operations. Feel free to customize your Workflows in an intuitive way. ' +
+        'You may change target variable, number of hidden layers, aggregation function, model version, etc.',
+  },
+  {
+    selector: '.ParameterItem',
+    content: 'The Parameters are customizable. Depending on use case, it can be a string, number, enum, list, or even code. ' +
+        'You may also override their values base on global Workflow-level Parameters.',
+  },
+  {
+    selector: '.control-panel',
+    content: 'Control panel contains multiple operations you may find useful such as Workflow validation or upgrating Operaions to new versions.',
+  },
+  {
+    selector: '.control-toggle',
+    content: 'Working with Workflows is not limited by Editor alone. You may define Workflow-level Parameters or monitor running or explore completed Runs.',
+  },
+  {
+    selector: '.run-button',
+    content: 'Don`t forget to try to execute the Workflow to see Plynx in action!',
+  },
+];
 
 class Graph extends Component {
   static propTypes = {
@@ -45,6 +100,7 @@ class Graph extends Component {
   constructor(props) {
     super(props);
     this.graph_node = {};
+    this.tourSteps = addStyleToTourSteps(TOUR_STEPS);
     document.title = "Graph";
 
     this.state = {

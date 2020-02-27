@@ -10,3 +10,18 @@ export function utcTimeToLocal(text) {
   const date = new Date(text + 'Z');  // Make date it UTC
   return date.toString().replace(/GMT.*/g, '');  // RM GMT...
 }
+
+export function addStyleToTourSteps(steps) {
+  return steps.map(
+      (step) => {
+        return {
+          style: {
+            'backgroundColor': '#202020',
+            'color': 'white',
+            'border': '1px solid #12ccc8'
+          },
+          ...step,
+        };
+      }
+  );
+}

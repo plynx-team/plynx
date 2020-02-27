@@ -101,7 +101,8 @@ class Block extends React.Component {
       + ' running-status-' + this.props.nodeRunningStatus.toLowerCase()
       + ' status-' + this.props.nodeStatus.toLowerCase()
       + (this.state.highlight ? ' error-highlight' : '')
-      + (this.state.readonly ? ' readonly' : ' editable');
+      + (this.state.readonly ? ' readonly' : ' editable')
+      + ` node-${this.props.nid}`;
 
     return (
       <div onClick={(e) => {

@@ -13,7 +13,12 @@ export function makeControlButton(props) {
          }
        }}
        key={props.text}
-       className={["control-button", (props.className || ''), (props.selected ? "selected" : ""), (props.enabled !== false ? 'enabled' : 'disabled')].join(" ")}
+       className={[
+         "control-button",
+           (props.className || ''),
+           (props.selected ? "selected" : ""),
+           (props.enabled !== false ? 'enabled' : 'disabled')
+       ].join(" ")}
     >
        <img src={"/icons/" + props.img} alt={props.text}/>
        <div className='control-button-text'>{props.text}</div>
@@ -29,6 +34,7 @@ makeControlButton.propTypes = {
   selected: PropTypes.bool,
   key: PropTypes.number,
   enabled: PropTypes.bool.isRequired,
+  extraClassName: PropTypes.object,
 };
 
 

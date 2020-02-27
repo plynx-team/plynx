@@ -7,13 +7,43 @@ import TextViewDialog from '../Dialogs/TextViewDialog';
 import { PluginsProvider, PluginsConsumer } from '../../contexts';
 import { HotKeys } from 'react-hotkeys';
 import { NODE_RUNNING_STATUS, KEY_MAP } from '../../constants';
+import { addStyleToTourSteps } from '../../utils';
 
 import './style.css';
 
+const TOUR_STEPS = [
+  {
+    selector: '.EditNodeInputs',
+    content: 'Here you can define all of the Inputs of this Operation. The inputs are required by default. ' +
+        'Optionally your Operation can work with an array of Inputs.',
+  },
+  {
+    selector: '.EditNodeInputs .Add',
+    content: 'If the Operation is not in readonly mode, you may add extra Inputs.',
+  },
+  {
+    selector: '.EditNodeParameters',
+    content: 'The difference between Inputs and Parameters is that Parameters don`t define the structure of the Workflow. ' +
+        'In the same time they are very important for Operation`s internal state.',
+  },
+  {
+    selector: '.EditNodeParameters .parameter-_cmd',
+    content: 'One of the most important parameters is _cmd. This is the code that will be executed by Plynx when you Run your Workflow.',
+  },
+  {
+    selector: '.EditNodeOutputs',
+    content: 'Configuration of Outputs is very similar to Inputs. This is what you will use to connect Operations in Workflow Editor.',
+  },
+  {
+    selector: '.preview-button',
+    content: 'If you are not sure what the script would look like when run your Operation in production, please youse Preview button.',
+  },
+];
 
 export default class Node extends Component {
   constructor(props) {
     super(props);
+    this.tourSteps = addStyleToTourSteps(TOUR_STEPS);
     document.title = "Node";
 
     this.state = {
