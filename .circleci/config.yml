@@ -24,7 +24,7 @@ jobs:
           # note we need to install google-compute-engine due to circleci issue
           name: python package instalation
           command:
-            python setup.py install
+            sudo python setup.py install
 
       - run:
           name: Run integration tests
