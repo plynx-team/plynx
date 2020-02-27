@@ -1,6 +1,5 @@
 .DS_Store
 .gitignore.swp
-config.yaml
 data/
 db/.DS_Store
 dist/

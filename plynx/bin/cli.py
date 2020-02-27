@@ -13,7 +13,7 @@ from plynx.utils.logs import set_logging_level
 
 Arg = namedtuple(
     'Arg',
-    ['flags', 'help', 'action', 'default', 'nargs', 'type', 'levels']
+    ['flags', 'help', 'action', 'default', 'nargs', 'type', 'levels', 'required']
 )
 Arg.__new__.__defaults__ = (None, None, None, None, None, None)
 
@@ -176,6 +176,7 @@ class CLIFactory(object):
         'filename': Arg(
             ('-f', '--filename'),
             help='Path to file',
+            required=True,
             type=str),
     }
 

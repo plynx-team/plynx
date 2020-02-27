@@ -11,6 +11,9 @@ build_frontend:
 build: build_backend build_frontend;
 
 run_tests:
+	scripts/run_tests.sh
+
+run_integration_tests:
 	@$(MAKE) -f $(THIS_FILE) build_backend
 	docker-compose -f $(DOCKER_COMPOSE_FILE) up --abort-on-container-exit --scale workers=5 --scale frontend=0
 

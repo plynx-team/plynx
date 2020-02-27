@@ -2,7 +2,6 @@ from subprocess import Popen
 import os
 import signal
 import logging
-import pwd
 import threading
 import jinja2
 from past.builtins import basestring
@@ -79,16 +78,7 @@ class BaseBash(BaseExecutor):
         res = JobReturnStatus.SUCCESS
 
         try:
-            pw_record = None
-            if WORKER_CONFIG.user:
-                pw_record = pwd.getpwnam(WORKER_CONFIG.user)
-
             def pre_exec():
-                if WORKER_CONFIG.user:
-                    user_uid = pw_record.pw_uid
-                    user_gid = pw_record.pw_gid
-                    os.setgid(user_gid)
-                    os.setuid(user_uid)
                 # Restore default signal disposition and invoke setsid
                 for sig in ('SIGPIPE', 'SIGXFZ', 'SIGXFSZ'):
                     if hasattr(signal, sig):
@@ -329,9 +319,9 @@ class BaseBash(BaseExecutor):
 
 class BashJinja2(BaseBash):
     HELP_TEMPLATE = '''# Use templates: {}
-    # For example `{{{{ '{{{{' }}}} param['_timeout'] {{{{ '}}}}' }}}}` or `{{{{ '{{{{' }}}} input['abc'] {{{{ '}}}}' }}}}`
+# For example `{{{{ '{{{{' }}}} param['_timeout'] {{{{ '}}}}' }}}}` or `{{{{ '{{{{' }}}} input['abc'] {{{{ '}}}}' }}}}`
 
-    '''
+'''
 
     def __init__(self, node=None):
         super(BashJinja2, self).__init__(node)

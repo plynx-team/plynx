@@ -14,7 +14,7 @@ RUN apt-get install -y \
     mongo-tools
 
 # Copy config
-ADD ./docker/base/test_config.yaml /app/config.yaml
+ADD ./config.yaml /app/config.yaml
 
 # Copy the current directory contents into the container at /app
 ADD ./wsgi.py /app/wsgi.py
