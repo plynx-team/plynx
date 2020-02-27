@@ -1,2 +1,2 @@
-class NodeNotFound(ModuleNotFoundError):
+class NodeNotFound(ImportError):
     pass

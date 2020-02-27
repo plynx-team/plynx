@@ -24,7 +24,7 @@ ADD ./LICENSE /app
 
 # Copy test data
 ADD ./docker/base/scripts /app/scripts
-ADD ./docker/base/data_00 /app/data_00
+ADD ./docker/base/test_data /app/test_data
 
 # master / worker port
 EXPOSE 17011

@@ -176,7 +176,7 @@ class NodeCollectionManager(object):
         new_node._id = node._id
         return new_node
 
-    def upgrade_sub_nodes(self, node):
+    def upgrade_sub_nodes(self, main_node):
         """Upgrade deprecated Nodes.
 
         The function does not change the original graph in the database.
@@ -185,7 +185,7 @@ class NodeCollectionManager(object):
             (int)   Number of upgraded Nodes
         """
         assert self.collection == Collections.TEMPLATES
-        sub_nodes = node.get_parameter_by_name('_nodes').value.value
+        sub_nodes = main_node.get_parameter_by_name('_nodes').value.value
         node_ids = set(
             [node.original_node_id for node in sub_nodes]
         )
@@ -214,7 +214,7 @@ class NodeCollectionManager(object):
             1 for node, new_node in zip(sub_nodes, new_nodes) if node.original_node_id != new_node.original_node_id
         )
 
-        node.get_parameter_by_name('_nodes').value.value = new_nodes
+        main_node.get_parameter_by_name('_nodes').value.value = new_nodes
         return upgraded_nodes_count
 
     def pick_node(self, kinds):

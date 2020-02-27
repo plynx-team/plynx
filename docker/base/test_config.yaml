@@ -108,6 +108,12 @@ plugins:
         - directory
         - cloud-storage
   hubs:
+    - kind: db-hub-python
+      title: Demo hub
+      icon: feathericons.play
+      cls: plynx.plugins.hubs.static_list.StaticListHub
+      args:
+        filename: /app/test_data/demo_templates.json
     - kind: db-hub
       title: Database hub
       icon: feathericons.database

@@ -10,8 +10,10 @@ jobs:
       - run:
           name: install requirements
           command:
+            set -x
             pip install --upgrade pip &&
             pip install google-compute-engine flake8
+            flake8 --version
 
       - run:
           name: flake8

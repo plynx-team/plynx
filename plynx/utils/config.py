@@ -121,12 +121,12 @@ def get_plugins():
     raw_operations = _config['plugins']['operations']
     unique_operation_kinds = {raw_operation['kind'] for raw_operation in raw_operations}
     for raw_operation in raw_operations:
-        kind = raw_operation['kind']
+        operation_kind = raw_operation['kind']
         sub_operation_kinds = set(raw_operation.get('operations', []))
         if len(sub_operation_kinds - unique_operation_kinds) > 0:
             raise Exception('Unknown operations: `{}`'.format(sub_operation_kinds - unique_operation_kinds))
-        kind_to_operation[kind] = OperationConfig(
-            kind=kind,
+        kind_to_operation[operation_kind] = OperationConfig(
+            kind=operation_kind,
             title=raw_operation['title'],
             executor=raw_operation['executor'],
             operations=list(sub_operation_kinds),
