@@ -163,6 +163,11 @@ export default class Editor extends Component {
       }
 
       loading = false;
+
+      if (cookie.load('showTour')) {
+        setTimeout(() => this.handleTour(), 1000);
+        cookie.remove('showTour', { path: '/' });
+      }
     };
 
     const handleError = (error) => {
@@ -299,9 +304,6 @@ export default class Editor extends Component {
         } else if (action === ACTION.CREATE_RUN) {
           self.showAlert("Created new run with id: " + response.data.run_id, 'success');
           window.open(`/${COLLECTIONS.RUNS}/${response.data.run_id}`, '_blank');
-        }
-        if (cookie.load('demoPreview')) {
-          cookie.remove('demoPreview', { path: '/' });
         }
       } else if (data.status === RESPONCE_STATUS.VALIDATION_FAILED) {
         console.warn(data.message);

@@ -19,7 +19,7 @@ web:
 
 demo:
   enabled: true
-  graph_ids: []
+  kind: basic-dag-workflow
 
 plugins:
   resources:

@@ -3,12 +3,12 @@ import { Route, Switch, withRouter } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import Header from './components/header';
 import LogIn from './components/LogIn';
-import Welcome from './components/Welcome';
+import LogInRedirect from './components/LogInRedirect';
 import Dashboard from './components/dashboard';
 import NodeRouter from './components/NodeRouter';
 import NotFound from './components/NotFound';
 import APIDialog from './components/Dialogs/APIDialog';
-import { COLLECTIONS, VIRTUAL_COLLECTIONS } from './constants';
+import { COLLECTIONS, VIRTUAL_COLLECTIONS, SPECIAL_USERS } from './constants';
 
 import './App.css';
 
@@ -65,8 +65,8 @@ class App extends Component {
         <div className="Content">
           {this.state.showApiDialog && <APIDialog onClose={() => this.handleAPIDialogClose()}/>}
           <Switch>
-            <Route exact path="/" component={Welcome} />
-            <Route exact path="/welcome" component={Welcome} />
+            <Route exact path="/" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEFAULT} />}/>
+            <Route exact path="/demo" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEMO} />}/>
             <Route exact path="/dashboard" component={Dashboard} />
             <Route path={`/${VIRTUAL_COLLECTIONS.OPERATIONS}`} component={NodeRouter}/>
             <Route path={`/${VIRTUAL_COLLECTIONS.WORKFLOWS}`} component={NodeRouter}/>

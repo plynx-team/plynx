@@ -10,7 +10,6 @@ import HubPanel from './HubPanel';
 import PreviewDialog from '../Dialogs/PreviewDialog';
 import PropertiesBar from './PropertiesBar';
 import withDragDropContext from './withDragDropContext';
-import DemoScreen from '../DemoScreen';
 import FileDialog from '../Dialogs/FileDialog';
 import CodeDialog from '../Dialogs/CodeDialog';
 import ParameterSelectionDialog from '../Dialogs/ParameterSelectionDialog';
@@ -884,18 +883,10 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   render() {
-    const demoPreview = !!cookie.load('demoPreview');
-
     return (
     <HotKeys className="GraphNode"
              handlers={this.keyHandlers} keyMap={KEY_MAP}
     >
-        { demoPreview &&
-          <DemoScreen onApprove={() => this.handleApprove()} onClose={() => {
-            cookie.remove('demoPreview', { path: '/' });
-            this.forceUpdate();
-          }} />
-        }
         <div className={'BackgroundLabels ' + (this.state.editable ? 'editable' : 'readonly')}>
           <div className="Title">{this.state.graph.title}</div>
           <div className="Description">&ldquo;{this.state.graph.description}&rdquo;</div>

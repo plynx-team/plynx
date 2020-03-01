@@ -11,7 +11,7 @@ MongoConfig = namedtuple('MongoConfig', ['user', 'password', 'host', 'port'])
 StorageConfig = namedtuple('StorageConfig', ['scheme', 'prefix', 'credential_path'])
 AuthConfig = namedtuple('AuthConfig', ['secret_key'])
 WebConfig = namedtuple('WebConfig', ['host', 'port', 'endpoint', 'api_endpoint', 'debug'])
-DemoConfig = namedtuple('DemoConfig', ['enabled', 'graph_ids'])
+DemoConfig = namedtuple('DemoConfig', ['enabled', 'kind'])
 CloudServiceConfig = namedtuple('CloudServiceConfig', ['prefix', 'url_prefix', 'url_postfix'])
 ResourceConfig = namedtuple('ResourceConfig', ['kind', 'title', 'cls', 'icon', 'color'])
 DummyOperationConfig = namedtuple('DummyOperationConfig', ['kind', 'executor', 'operations'])
@@ -91,7 +91,7 @@ def get_web_config():
 def get_demo_config():
     return DemoConfig(
         enabled=_config.get('demo', {}).get('enabled', False),
-        graph_ids=_config.get('demo', {}).get('graph_ids', []),
+        kind=_config.get('demo', {}).get('kind', None),
     )
 
 
@@ -104,7 +104,6 @@ def get_cloud_service_config():
 
 
 def get_plugins():
-    print(_config['plugins']['resources'])
     # resources
     kind_to_resource = {
         raw_resource['kind']: ResourceConfig(

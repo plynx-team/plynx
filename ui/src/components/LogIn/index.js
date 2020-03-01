@@ -2,7 +2,6 @@ import React, { Component } from 'react';
 import AlertContainer from '../3rd_party/react-alert';
 import { PLynxApi } from '../../API';
 import { ALERT_OPTIONS } from '../../constants';
-import Button from 'react-toolbox/lib/button/Button';
 import cookie from 'react-cookies';
 
 import './style.css';
@@ -76,10 +75,6 @@ export default class LogIn extends Component {
       <div className='Login'>
         <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
         <div className='LoginBlock'>
-          <h1>
-            Login
-          </h1>
-
           <div className='Items'>
             <div className='Item'>
               <div className='NameCell'>
@@ -111,7 +106,9 @@ export default class LogIn extends Component {
             </div>
           </div>
           <div className="buttons">
-            <Button label="Login" className="loginButton" onClick={() => this.handleLogin()}/>
+            <div className="loginButton" onClick={() => this.handleLogin()} href="#">
+            Login
+            </div>
           </div>
         </div>
       </div>

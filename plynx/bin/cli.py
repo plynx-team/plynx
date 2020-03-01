@@ -206,7 +206,7 @@ class CLIFactory(object):
         }, {
             'func': exec,
             'help': "Execute single node",
-            'args': ('verbose', 'filename'),
+            'args': ('verbose', 'filename', 'storage_prefix'),
         },
     )
 

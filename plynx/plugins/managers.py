@@ -1,4 +1,3 @@
-import logging
 import pydoc
 from plynx.utils.config import get_plugins
 
@@ -42,8 +41,6 @@ class _ExecutorManager(object):
                 'children': self.kind_to_children_kinds[kind]
             } for kind, executor_class in self.kind_to_executor_class.items()
         }
-
-        logging.info('Executors info: {}'.format(str(self.kind_info)))
 
 
 class _OperationManager(object):

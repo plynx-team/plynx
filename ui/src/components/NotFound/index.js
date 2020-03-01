@@ -11,11 +11,13 @@ export default class NotFound extends Component {
 
   render() {
     return (
-      <div className='NotFound'>
-        <h1>
-          404 <small>Not Found :(</small>
-        </h1>
-      </div>
+        <div className='login-redirect'>
+          <div className="login-redirect-logo">
+              <div className="error-text">
+                404: not found
+              </div>
+          </div>
+        </div>
     );
   }
 }

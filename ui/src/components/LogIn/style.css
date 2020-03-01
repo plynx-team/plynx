@@ -1,32 +1,36 @@
 .Login {
   width: 100%;
   height: 100%;
+  overflow: hidden;
+  background-color: #111111;
+  border-top: 1px solid #333;
 }
 
 .LoginBlock {
-  background-color: #bbb;
+  background-color: #404040;
+  color: #eee;
   width: 300px;
   margin: 5px;
-  padding: 5px;
+  padding: 15px;
   left: 50%;
+  top: 50%;
   margin-right: -50%;
   position: absolute;
   transform: translate(-50%, -50%);
-  top: 50%;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
-  border: 1px solid #999;
+  border: 1px solid #2557ec;
+  border-radius: 10px;
 }
 
 .Login .Items .Item {
   display: grid;
   width: 100%;
   grid-template-columns: 30% 70%;
+  padding: 5px 0 5px 0;
 }
 
 .Login .Items .Item .NameCell {
   float: left;
   padding-left: 10px;
-  padding: 5px;
 }
 
 .Login .Items .Item .ValueCell {
@@ -39,11 +43,41 @@
 }
 
 .Login .buttons {
+  padding-top: 10px;
   text-align: center;
 }
 
 .Login .loginButton {
-  right: 5px;
+  display: block;
+  margin: 0 auto;
   width: 80px;
-  font-size: 15px;
+  color: white;
+  background-color: #12a772;
+  padding: 2px 10px 2px 10px;
+  text-align: center;
+  cursor: pointer;
+  font-family: 'Source Sans Pro', sans-serif;
+  font-size: 15pt;
+  border-radius: 3px;
+
+  -moz-transition: all .1s ease-in;
+  -o-transition: all .1s ease-in;
+  -webkit-transition: all .1s ease-in;
+  transition: all .1s ease-in;
+
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Safari */
+   -khtml-user-select: none; /* Konqueror HTML */
+     -moz-user-select: none; /* Firefox */
+      -ms-user-select: none; /* Internet Explorer/Edge */
+          user-select: none; /* Non-prefixed version, currently
+                                supported by Chrome and Opera */
+}
+
+.Login .loginButton:hover {
+  background-color: #12ccc8;
+}
+
+.Login .loginButton:active {
+  background-color: #2196F3;
 }
