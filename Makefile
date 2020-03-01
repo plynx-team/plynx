@@ -28,3 +28,7 @@ dev:
 	PLYNX_IMAGES="base ui_dev" sh ./scripts/build_images.sh
 	python -m webbrowser "http://localhost:3001/"
 	docker-compose -f $(DOCKER_COMPOSE_DEV_FILE) up --abort-on-container-exit --scale backend=1
+
+build_package:
+	python setup.py sdist
+	python setup.py bdist_wheel

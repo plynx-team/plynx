@@ -1,6 +1,6 @@
 version: 2
 jobs:
-  build:
+  python_build:
     working_directory: ~/plynx
     docker:
       - image: circleci/python:3.8
@@ -11,19 +11,46 @@ jobs:
           command:
             set -x
             pip install --upgrade pip &&
-            pip install google-compute-engine flake8 pytest
+            pip install google-compute-engine flake8 pytest twine
             flake8 --version
       - run:
+          # run earlier to save time
           name: flake8
           command: flake8
       - run:
           # note we need to install google-compute-engine due to circleci issue
           name: python package instalation
           command:
-            sudo python setup.py install
+            make package
+
+  python_test:
+    working_directory: ~/plynx
+    docker:
+      - image: circleci/python:3.8
+    steps:
       - run:
-          name: Run integration tests
+          name: Run tests
           command: make run_tests
+
+  python_deploy:
+    working_directory: ~/plynx
+    docker:
+      - image: circleci/python:3.8
+    steps:
+      - run:
+          name: init .pypirc
+          command: |
+            echo -e "[pypi]" >> ~/.pypirc
+            echo -e "username = $PYPI_TOKEN" >> ~/.pypirc
+            echo -e "password = # No needed" >> ~/.pypirc
+      - run:
+          name: create packages
+          command: |
+            make package
+      - run:
+          name: upload to pypi
+          command: |
+            twine upload dist/*
   build_docker:
     machine: true
     steps:
@@ -34,5 +61,7 @@ workflows:
   version: 2
   build_and_test:
     jobs:
-      - build
-      - build_docker
+      - python_build
+      - python_test
+        requires:
+          - python_build
