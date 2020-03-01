@@ -69,12 +69,19 @@ def get_nodes(collection, node_link=None):
     # if node_link is a base node
     if node_link in executor_manager.kind_to_executor_class and collection == Collections.TEMPLATES:
         kind = node_link
-        data = executor_manager.kind_to_executor_class[kind].get_default_node(
+        node = executor_manager.kind_to_executor_class[kind].get_default_node(
             is_workflow=kind in workflow_manager.kind_to_workflow_dict
-        ).to_dict()
+        )
+        if isinstance(node, tuple):
+            data = node[0].to_dict()
+            tour_steps = node[1]
+        else:
+            data = node.to_dict()
+            tour_steps = []
         data['kind'] = kind
         return JSONEncoder().encode({
             'node': data,
+            'tour_steps': tour_steps,
             'plugins_dict': PLUGINS_DICT,
             'status': 'success'})
     else:

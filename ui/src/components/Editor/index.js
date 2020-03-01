@@ -24,6 +24,7 @@ import DeprecateDialog from '../Dialogs/DeprecateDialog';
 import TextViewDialog from '../Dialogs/TextViewDialog';
 import { PluginsProvider } from '../../contexts';
 import { makeControlPanel, makeControlToggles, makeControlButton, makeControlSeparator } from '../Common/controlButton';
+import { addStyleToTourSteps } from '../../utils';
 import "./style.css";
 
 
@@ -67,6 +68,8 @@ export default class Editor extends Component {
     if (token === 'Not assigned') {
       token = cookie.load('access_token');
     }
+
+    this.tour_steps = [];
   }
 
   sleep(ms) {
@@ -146,6 +149,8 @@ export default class Editor extends Component {
         is_graph: is_graph,
         is_workflow: response.data.plugins_dict.workflows_dict.hasOwnProperty(node.kind),
       });
+
+      this.tour_steps = addStyleToTourSteps(response.data.tour_steps || []);
 
       console.log('node_id:', node_id);
       if (!node_id.startsWith(self.node._id) && !searchValues.sub_node_id) {
@@ -500,15 +505,23 @@ export default class Editor extends Component {
   }
 
   handleTour() {
+    let tourSteps;
     if (this.graphComponent) {
-      this.setState({tourSteps: this.graphComponent.ref.current.tourSteps});
+      tourSteps = this.graphComponent.ref.current.tourSteps;
+
+      // TODO tour nodeComponent as well
+      if (this.tour_steps.length > 0) {
+        tourSteps = tourSteps.concat(this.tour_steps);
+      }
     }
     if (this.nodeComponent) {
-      this.setState({tourSteps: this.nodeComponent.tourSteps});
+      tourSteps = this.nodeComponent.tourSteps;
     }
     if (this.runsComponent) {
-      this.setState({tourSteps: this.runsComponent.tourSteps});
+      tourSteps = this.runsComponent.tourSteps;
     }
+
+    this.setState({tourSteps: tourSteps});
   }
 
   makeControls() {

@@ -219,7 +219,7 @@ class DAG(BaseExecutor):
         node.title = 'New DAG workflow'
         return node
 
-    def execute_node(self, node):
+    def _execute_node(self, node):
         if NodeRunningStatus.is_finished(node.node_running_status):     # NodeRunningStatus.SPECIAL
             return
         node.save(collection=Collections.RUNS)
@@ -235,7 +235,7 @@ class DAG(BaseExecutor):
                 continue
 
             for node in new_jobs:
-                self.execute_node(node)
+                self._execute_node(node)
 
         is_succeeded = NodeRunningStatus.is_succeeded(self.node.node_running_status)
         if is_succeeded:
@@ -273,9 +273,6 @@ class DAG(BaseExecutor):
             node_violation = materialize_executor(node.to_dict()).validate()
             if node_violation:
                 violations.append(node_violation)
-
-        if len(violations) == 0:
-            return None
 
         if len(violations) == 0:
             return None
