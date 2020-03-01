@@ -100,7 +100,7 @@ export default class ListPage extends Component {
         .then((isSuccessfull) => {
           if (!isSuccessfull) {
             console.error("Could not refresh token");
-            self.props.history.push("/login/");
+            window.location = '/login';
           } else {
             self.showAlert('Updated access token', 'success');
           }

@@ -190,7 +190,7 @@ export default class Editor extends Component {
         .then((isSuccessfull) => {
           if (!isSuccessfull) {
             console.error("Could not refresh token");
-            self.showAlert('Failed to authenticate', 'failed');
+            window.location = '/login';
           } else {
             self.showAlert('Updated access token', 'success');
           }
@@ -242,7 +242,7 @@ export default class Editor extends Component {
             self.timeout = setTimeout(() => self.checkNodeStatus(), 1000);
           } else {
             console.error("Could not refresh token");
-            self.showAlert('Failed to authenticate', 'failed');
+            window.location = '/login';
           }
         });
       }
