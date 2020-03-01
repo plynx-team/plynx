@@ -62,6 +62,6 @@ workflows:
   build_and_test:
     jobs:
       - python_build
-      - python_test
-        requires:
-          - python_build
+      - python_test:
+          requires:
+            - python_build
