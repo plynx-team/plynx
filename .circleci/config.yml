@@ -21,7 +21,7 @@ jobs:
           # note we need to install google-compute-engine due to circleci issue
           name: python package instalation
           command:
-            make package
+            make build_package
 
   python_test:
     working_directory: ~/plynx
@@ -46,7 +46,7 @@ jobs:
       - run:
           name: create packages
           command: |
-            make package
+            make build_package
       - run:
           name: upload to pypi
           command: |
