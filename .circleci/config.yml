@@ -52,6 +52,12 @@ jobs:
     steps:
       - checkout
       - run:
+          name: install requirements
+          command: |
+            set -x
+            pip install --upgrade pip
+            pip install pyyaml
+      - run:
           name: build docker images
           command: make build
 
@@ -63,6 +69,12 @@ jobs:
           name: log in
           command: |
             echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
+      - run:
+          name: install requirements
+          command: |
+            set -x
+            pip install --upgrade pip
+            pip install pyyaml
       - run:
           name: build docker images
           command: make build
