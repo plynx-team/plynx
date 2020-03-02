@@ -29,6 +29,11 @@ jobs:
       - image: circleci/python:3.8
     steps:
       - run:
+          # note we need to install google-compute-engine due to circleci issue
+          name: python package instalation
+          command:
+            make build_package
+      - run:
           name: Run tests
           command: make run_tests
 
