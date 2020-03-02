@@ -54,6 +54,14 @@ jobs:
       - run:
           name: install requirements
           command: |
+            set -x
+            pip install --upgrade pip
+            pip install google-compute-engine flake8 pytest twine
+      - run:
+          # note we need to install google-compute-engine due to circleci issue
+          name: python package instalation
+          command:
+            # make build_package
             sudo python setup.py install
       - run:
           name: build docker images
@@ -70,6 +78,14 @@ jobs:
       - run:
           name: install requirements
           command: |
+            set -x
+            pip install --upgrade pip
+            pip install google-compute-engine flake8 pytest twine
+      - run:
+          # note we need to install google-compute-engine due to circleci issue
+          name: python package instalation
+          command:
+            # make build_package
             sudo python setup.py install
       - run:
           name: build docker images
