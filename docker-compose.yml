@@ -13,7 +13,7 @@ services:
         command: mongod --smallfiles --logpath=/dev/null # --quiet
 
     master:
-        image: khaxis/plynx:base
+        image: plynxteam/backend:latest
         container_name: "master"
         depends_on:
             - mongodb
@@ -24,7 +24,7 @@ services:
         command: plynx worker -vvv -e basic-dag-workflow
 
     workers:
-        image: khaxis/plynx:base
+        image: plynxteam/backend:latest
         depends_on:
             - mongodb
         links:
@@ -34,7 +34,7 @@ services:
         command: plynx worker -vvv -e basic-bash-jinja2-operation -e basic-python-node-operation -e basic-dag-operation
 
     backend:
-        image: khaxis/plynx:base
+        image: plynxteam/backend:latest
         container_name: "backend"
         ports:
             - "5000:5000"
@@ -47,7 +47,7 @@ services:
         command: plynx backend -vvv
 
     test:
-        image: khaxis/plynx:base
+        image: plynxteam/backend:latest
         container_name: "test"
         depends_on:
             - backend
@@ -59,7 +59,7 @@ services:
         command: ./scripts/run_tests.sh
 
     frontend:
-        image: khaxis/plynx:ui
+        image: plynxteam/ui:latest
         container_name: "frontend"
         ports:
             - "3001:80"

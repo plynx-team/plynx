@@ -23,8 +23,8 @@ ADD ./wsgi.py /app/wsgi.py
 ADD ./LICENSE /app
 
 # Copy test data
-ADD ./docker/base/scripts /app/scripts
-ADD ./docker/base/test_data /app/test_data
+ADD ./docker/backend/scripts /app/scripts
+ADD ./docker/backend/test_data /app/test_data
 
 # master / worker port
 EXPOSE 17011
@@ -46,6 +46,6 @@ ADD ./setup.py /tmp/setup.py
 RUN cd /tmp && python setup.py install
 
 # install extra docker requirements
-ADD ./docker/base/requirements.txt /app/requirements.txt
+ADD ./docker/backend/requirements.txt /app/requirements.txt
 RUN pip install -r /app/requirements.txt
 RUN rm /app/requirements.txt
