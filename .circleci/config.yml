@@ -21,7 +21,7 @@ jobs:
           name: python package instalation
           command:
             # make build_package
-            python setup.py install
+            sudo python setup.py install
       - run:
           name: Run tests
           command: make run_tests
@@ -61,4 +61,3 @@ workflows:
           filters:
             branches:
               only: master
-      
