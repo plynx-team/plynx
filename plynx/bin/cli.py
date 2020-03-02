@@ -6,7 +6,7 @@ from plynx.utils.config import get_config, set_parameter
 from plynx.service.worker import run_worker
 from plynx.service.users import run_users
 from plynx.service.cache import run_cache
-from plynx.service.execute import run_exec
+from plynx.service.execute import run_execute
 from plynx.web.common import run_backend
 from plynx.utils.logs import set_logging_level
 
@@ -43,9 +43,9 @@ def version(args):
     print(__version__)
 
 
-def exec(args):
+def execute(args):
     set_logging_level(args.pop('verbose'))
-    run_exec(**args)
+    run_execute(**args)
 
 
 class CLIFactory(object):
@@ -172,7 +172,7 @@ class CLIFactory(object):
             "store_true",
             default=False),
 
-        # Exec
+        # Execute
         'filename': Arg(
             ('-f', '--filename'),
             help='Path to file',
@@ -204,7 +204,7 @@ class CLIFactory(object):
             'help': "Cache cli utils",
             'args': ('verbose', 'mode', 'start_datetime', 'end_datetime', 'yes'),
         }, {
-            'func': exec,
+            'func': execute,
             'help': "Execute single node",
             'args': ('verbose', 'filename', 'storage_prefix'),
         },
