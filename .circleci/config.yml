@@ -54,9 +54,7 @@ jobs:
       - run:
           name: install requirements
           command: |
-            set -x
-            pip install --upgrade pip
-            pip install pyyaml six pymongo future passlib itsdangerous python-dateutil
+            sudo python setup.py install
       - run:
           name: build docker images
           command: make build
@@ -72,9 +70,7 @@ jobs:
       - run:
           name: install requirements
           command: |
-            set -x
-            pip install --upgrade pip
-            pip install pyyaml six pymongo future passlib itsdangerous python-dateutil
+            sudo python setup.py install
       - run:
           name: build docker images
           command: make build
