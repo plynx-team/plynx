@@ -56,7 +56,7 @@ jobs:
           command: |
             set -x
             pip install --upgrade pip
-            pip install pyyaml six
+            pip install pyyaml six pymongo
       - run:
           name: build docker images
           command: make build
@@ -74,7 +74,7 @@ jobs:
           command: |
             set -x
             pip install --upgrade pip
-            pip install pyyaml six
+            pip install pyyaml six pymongo
       - run:
           name: build docker images
           command: make build
