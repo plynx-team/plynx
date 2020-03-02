@@ -1,6 +1,6 @@
 version: 2
 jobs:
-  python_build_test:
+  build:
     working_directory: ~/plynx
     docker:
       - image: circleci/python:3.8
@@ -8,9 +8,9 @@ jobs:
       - checkout
       - run:
           name: install requirements
-          command:
+          command: |
             set -x
-            pip install --upgrade pip &&
+            pip install --upgrade pip
             pip install google-compute-engine flake8 pytest twine
       - run:
           # run earlier to save time
@@ -26,7 +26,7 @@ jobs:
           name: Run tests
           command: make run_tests
 
-  python_deploy:
+  deploy_pypi:
     working_directory: ~/plynx
     docker:
       - image: circleci/python:3.8
@@ -46,18 +46,45 @@ jobs:
           name: upload to pypi
           command: |
             twine upload dist/*
+
   build_docker:
     machine: true
     steps:
       - checkout
       - run:
-          make build
+          name: build docker images
+          command: make build
+
+  deploy_docker:
+    machine: true
+    steps:
+      - checkout
+      - run:
+          name: log in
+          command: |
+            echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
+      - run:
+          name: build docker images
+          command: make build
+      - run:
+          name: deploy images
+          command: |
+            docker images --format "{{.Repository}}" | grep "plynxteam"
 workflows:
   version: 2
   build_and_test:
     jobs:
-      - python_build_test
-      - python_deploy:
+      - build
+      - build_docker
+      - deploy_pypi:
+          requires:
+            - build
+          filters:
+            branches:
+              only: master
+      - deploy_docker:
+          requires:
+            - build_docker
           filters:
             branches:
               only: master
