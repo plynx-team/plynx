@@ -34,7 +34,7 @@ class Navigation extends Component {
             {separator()}
             <a href='https://plynx.readthedocs.io/en/latest/overview.html' className="Item">Docs</a>
             {separator()}
-            <a href='https://github.com/khaxis/plynx' className="Item">Github</a>
+            <a href='https://github.com/plynx-team/plynx' className="Item">Github</a>
             {separator()}
           </div>
       </div>

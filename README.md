@@ -2,9 +2,9 @@
 
 ![Plynx](docs/img/logo-black-font.png?style=centerme)
 
-[![Website shields.io](https://img.shields.io/circleci/project/github/khaxis/plynx.svg)](https://circleci.com/gh/khaxis/plynx)
-[![Website shields.io](https://img.shields.io/github/license/khaxis/plynx.svg)](https://github.com/khaxis/plynx)
-[![Website shields.io](https://img.shields.io/pypi/pyversions/plynx.svg)](https://github.com/khaxis/plynx)
+[![Website shields.io](https://img.shields.io/circleci/project/github/plynx-team/plynx.svg)](https://circleci.com/gh/plynx-team/plynx)
+[![Website shields.io](https://img.shields.io/github/license/plynx-team/plynx.svg)](https://github.com/plynx-team/plynx)
+[![Website shields.io](https://img.shields.io/pypi/pyversions/plynx.svg)](https://github.com/plynx-team/plynx)
 
 
 Website and demo: [plynx.com](https://plynx.com).
@@ -60,7 +60,7 @@ Make sure you install docker first. [Get started with Docker](https://www.docker
 
 **tl;dr**
 ```
-git clone https://github.com/khaxis/plynx.git   # Clone the repo
+git clone https://github.com/plynx-team/plynx.git   # Clone the repo
 
 cd plynx
 
@@ -110,5 +110,5 @@ Plynx config location is can be set in env variable `PLYNX_CONFIG_PATH`. Default
 
 ## External links
 - [PLynx.com](https://plynx.com) demo and main page.
-- [github](https://github.com/khaxis/plynx) page.
+- [github](https://github.com/plynx-team/plynx) page.
 - [Organizing data science experiments with PLynx](https://medium.com/@khaxis/organizing-data-driven-experiments-with-plynx-a3cc3301b981)
