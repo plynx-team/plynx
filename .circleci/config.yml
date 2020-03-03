@@ -33,6 +33,12 @@ jobs:
     steps:
       - checkout
       - run:
+          name: install requirements
+          command: |
+            set -x
+            pip install --upgrade pip
+            pip install twine
+      - run:
           name: init .pypirc
           command: |
             echo -e "[pypi]" >> ~/.pypirc
@@ -77,14 +83,12 @@ workflows:
       - build
       - build_docker
       - deploy_pypi:
-          requires:
-            - build
+          context: plynx-deployment
           filters:
             branches:
               only: master
       - deploy_docker:
-          requires:
-            - build_docker
+          context: plynx-deployment
           filters:
             branches:
               only: master
