@@ -1,4 +1,6 @@
-# PLynx
+# Plynx
+
+![Plynx](docs/img/logo-black-font.png?style=centerme)
 
 [![Website shields.io](https://img.shields.io/circleci/project/github/khaxis/plynx.svg)](https://circleci.com/gh/khaxis/plynx)
 [![Website shields.io](https://img.shields.io/github/license/khaxis/plynx.svg)](https://github.com/khaxis/plynx)
@@ -12,12 +14,6 @@ Docs: [docs](https://plynx.readthedocs.io/en/latest/overview.html).
 PLynx is a domain agnostic platform for managing reproducible experiments and data-oriented workflows.
 
 ## Features
-
-### Scalable architecture
-
-Execution Engine is based on scalable pub/sub model. Each Worker performs their jobs independently from each other and can publish subtasks back to the queue. Executers are plugins themselves and can support multiple scenarios from "compile to binary code" to "deploy and serve" to "run in a cluster using as many distributed workers as possible".
-
-![Scalable architecture](docs/img/plynx-architecture.png?raw=true "Scalable architecture")
 
 ### Workflow Editor
 
@@ -43,6 +39,11 @@ View the results right in the browser.
 
 ![results preview](docs/img/results_preview.png?raw=true "Results preview")
 
+### Scalable architecture
+
+Execution Engine is based on scalable pub/sub model. Each Worker performs their jobs independently from each other and can publish subtasks back to the queue. Executers are plugins themselves and can support multiple scenarios from "compile to binary code" to "deploy and serve" to "run in a cluster using as many distributed workers as possible".
+
+![Scalable architecture](docs/img/plynx-architecture.png?raw=true "Scalable architecture")
 
 ## Requirements
 
