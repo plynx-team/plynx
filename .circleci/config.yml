@@ -80,8 +80,6 @@ workflows:
   version: 2
   build_and_test:
     jobs:
-      - build
-      - build_docker
       - deploy_pypi:
           context: plynx-deployment
       - deploy_docker:
