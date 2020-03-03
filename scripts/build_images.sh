@@ -2,17 +2,13 @@
 
 set -e
 
-PLYNX_IMAGES=${PLYNX_IMAGES:="base backend master worker test ui"}
+PLYNX_IMAGES=${PLYNX_IMAGES:="backend ui ui_dev"}
+
+source ./scripts/version.sh;
+VERSION=$(plynx_version);
+
 
 for IMAGE in ${PLYNX_IMAGES}; do
-  docker build --rm -t khaxis/plynx:${IMAGE} -f docker/${IMAGE}/Dockerfile . ;
+  docker build --rm -t plynxteam/${IMAGE}:${VERSION} -f docker/${IMAGE}/Dockerfile . ;
+  docker tag plynxteam/${IMAGE}:${VERSION} plynxteam/${IMAGE}:latest;
 done
-
-if [ ${TAG_VERSION} ]; then
-  source ./scripts/version.sh;
-  VERSION=$(plynx_version);
-
-  for IMAGE in ${PLYNX_IMAGES}; do
-    docker tag khaxis/plynx:${IMAGE} khaxis/plynx_${VERSION}:${IMAGE};
-  done
-fi

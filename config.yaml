@@ -1,0 +1,138 @@
+mongodb:
+  user:
+  password:
+  host: 'mongodb'
+  port: 27017
+
+storage:
+  scheme: file
+  prefix: /data/resources/
+
+auth:
+  secret_key:
+
+web:
+  host: '0.0.0.0'
+  port: 5000
+  endpoint: http://localhost:3001
+  debug: true
+
+demo:
+  enabled: true
+  kind: basic-dag-workflow
+
+plugins:
+  resources:
+    - kind: file
+      title: File
+      cls: plynx.plugins.resources.common.File
+      icon: feathericons.file
+      color: '#fff'
+    - kind: pdf
+      title: PDF file
+      cls: plynx.plugins.resources.common.PDF
+      icon: plynx.pdf
+    - kind: image
+      title: Image
+      cls: plynx.plugins.resources.common.Image
+      icon: plynx.image
+    - kind: csv
+      title: CSV file
+      cls: plynx.plugins.resources.common.CSV
+      icon: plynx.csv
+    - kind: tsv
+      title: TSV file
+      cls: plynx.plugins.resources.common.TSV
+      icon: plynx.tsv
+    - kind: json
+      title: JSON file
+      cls: plynx.plugins.resources.common.Json
+      icon: plynx.json
+    - kind: executable
+      title: Executable
+      cls: plynx.plugins.resources.common.Executable
+      icon: feathericons.play
+      color: '#fcff57'
+    - kind: directory
+      title: Directory
+      cls: plynx.plugins.resources.common.Directory
+      icon: feathericons.folder
+      color: '#f44'
+    - kind: cloud-storage
+      title: Cloud Storage
+      cls: plynx.plugins.resources.cloud_resources.CloudStorage
+      icon: feathericons.hard-drive
+      color: '#5ed1ff'
+  operations:
+    - kind: basic-bash-jinja2-operation
+      title: Basic BashJinja2
+      executor: plynx.plugins.executors.local.BashJinja2
+      resources:
+        - file
+        - pdf
+        - image
+        - csv
+        - tsv
+        - json
+        - executable
+        - directory
+        - cloud-storage
+    - kind: basic-python-node-operation
+      title: Basic Python
+      executor: plynx.plugins.executors.local.PythonNode
+      resources:
+        - file
+        - pdf
+        - image
+        - csv
+        - tsv
+        - json
+        - executable
+        - directory
+        - cloud-storage
+    - kind: basic-dag-operation
+      title: Composite Operation
+      executor: plynx.plugins.executors.dag.DAG
+      operations:
+        - basic-bash-jinja2-operation
+        - basic-python-node-operation
+        - basic-dag-operation
+      resources:
+        - file
+        - pdf
+        - image
+        - csv
+        - tsv
+        - json
+        - executable
+        - directory
+        - cloud-storage
+  hubs:
+    - kind: db-hub-python
+      title: Demo hub
+      icon: feathericons.play
+      cls: plynx.plugins.hubs.static_list.StaticListHub
+      args:
+        filename: ./test_data/demo_templates.json
+    - kind: db-hub
+      title: Database hub
+      icon: feathericons.database
+      cls: plynx.plugins.hubs.collection.CollectionHub
+      args:
+        operations:
+          - basic-bash-jinja2-operation
+          - basic-python-node-operation
+          - basic-dag-operation
+        collection: templates
+  workflows:
+    - kind: basic-dag-workflow
+      title: Basic DAG Workflow
+      executor: plynx.plugins.executors.dag.DAG
+      hubs:
+        - db-hub
+        - db-hub-python
+        - db-hub-comp
+      operations:
+        - basic-bash-jinja2-operation
+        - basic-python-node-operation
+        - basic-dag-operation

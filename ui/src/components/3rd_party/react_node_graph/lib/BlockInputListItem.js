@@ -8,7 +8,8 @@ export default class BlockInputListItem extends React.Component {
     index: PropTypes.number.isRequired,
     item: PropTypes.shape({
       name: PropTypes.string.isRequired,
-      file_types: PropTypes.array.isRequired,
+      file_type: PropTypes.string.isRequired,
+      is_array: PropTypes.bool.isRequired,
     }).isRequired,
     onMouseUp: PropTypes.func.isRequired,
     resources_dict: PropTypes.object.isRequired,
@@ -27,12 +28,11 @@ export default class BlockInputListItem extends React.Component {
   }
 
   render() {
-    const {name} = this.props.item;
-    const type_descriptor = this.props.resources_dict[this.props.item.file_types[0]];
+    const type_descriptor = this.props.resources_dict[this.props.item.file_type];
 
     return (
       <li
-        className={this.props.item.file_types[0]}
+        className={this.props.item.file_type}
         >
         <div
           onClick={
@@ -42,7 +42,7 @@ export default class BlockInputListItem extends React.Component {
           <Icon
             type_descriptor={type_descriptor}
           />
-          {name}
+          {this.props.item.name + (this.props.item.is_array ? '[...]' : '')}
         </div>
       </li>
     );

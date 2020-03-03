@@ -1,261 +1,176 @@
-import six
-import logging
-import socket
-import uuid
+import os
+import sys
 import threading
+import logging
+import six
 import traceback
-import datetime
-from plynx.service.tcp_utils import send_msg, recv_msg
-from plynx.service.messages import WorkerMessage, RunStatus, WorkerMessageType, MasterMessageType
-from plynx.constants import JobReturnStatus
-from plynx.utils.config import get_master_config
+import uuid
+import socket
+from plynx.constants import JobReturnStatus, NodeRunningStatus, Collections
+from plynx.db.node_collection_manager import NodeCollectionManager
+from plynx.db.worker_state import WorkerState
+from plynx.utils.config import get_worker_config
+from plynx.utils.db_connector import check_connection
+from plynx.plugins.executors import materialize_executor
 from plynx.utils.file_handler import upload_file_stream
 
 
-class RunningPipelineException(Exception):
-    """
-    Internal Exception which indicates incorrect state of the Worker.
-    """
-    pass
-
-
-class Worker:
-    """
-    Worker main class.
-
-    Worker is a service that executes the commands defined by Operations.
+class Worker(object):
+    """Worker main class.
 
     Args:
-        worker_id   (str):  An arbitary ID of the worker. It must be unique accross the cluster. \
-                            If not given or empty, a unique ID will be generated.
-        host        (str):  Host of the Master.
-        port        (int):  Port of the Master.
+        server_address      (tuple):        Define the server address (host, port).
+        RequestHandlerClass (TCP handler):  Class of socketserver.BaseRequestHandler.
 
-    Worker is running in several threads:
-        * Main thread: heartbeat iterations.
-        * _run_worker thread. It executes the jobs and handles states.
+    Currently implemented as a TCP server.
 
+    Only a single instance of the Worker class in a cluster is allowed.
+
+    On the high level Worker distributes Jobs over all available Workers
+    and updates statuses of the Graphs in the database.
+
+    Worker performs several roles:
+        * Pull graphs in status READY from the database.
+        * Create Schedulers for each Graph.
+        * Populate the queue of the Jobs.
+        * Distribute Jobs accross Workers.
+        * Keep track of Job's statuses.
+        * Process CANCEL requests.
+        * Update Graph's statuses.
+        * Track worker status and last response.
     """
 
-    HEARTBEAT_TIMEOUT = 1
-    RUNNER_TIMEOUT = 1
-    NUMBER_OF_ATTEMPTS = 10
+    # Define sync with database timeout
+    SDB_STATUS_UPDATE_TIMEOUT = 1
 
-    def __init__(self, worker_id, host, port):
-        if not worker_id:
-            worker_id = str(uuid.uuid1())
+    # Worker State update timeout
+    WORKER_STATE_UPDATE_TIMEOUT = 1
+
+    def __init__(self, worker_config, worker_id):
+        self.worker_id = worker_id if worker_id else str(uuid.uuid1())
+        self.node_collection_manager = NodeCollectionManager(collection=Collections.RUNS)
+        self.kinds = worker_config.kinds
+        self.host = socket.gethostname()
         self._stop_event = threading.Event()
-        self._job = None
-        self._graph_id = None
-        self._worker_id = worker_id
-        self._host = host
-        self._port = port
-        self._job_killed = False
-        self._started_at = None
-        self._node_timeout = None
-        self._set_run_status(RunStatus.IDLE)
 
-    def serve_forever(self, number_of_attempts=NUMBER_OF_ATTEMPTS):
+        # Mapping keep track of Worker Status
+        self._run_id_to_run = {}
+        self._run_id_to_run_lock = threading.Lock()
+
+        # Start new threads
+        self._thread_db_status_update = threading.Thread(target=self._run_db_status_update, args=())
+        self._thread_db_status_update.start()
+
+        self._thread_worker_state_update = threading.Thread(target=self._run_worker_state_update, args=())
+        self._thread_worker_state_update.start()
+
+    def serve_forever(self):
         """
         Run the worker.
-
-        Args:
-            number_of_attempts  (int): Number of retries if the connection is not established.
-
         """
-        self._run_thread = threading.Thread(target=self._run_worker, args=())
-        self._run_thread.daemon = True   # Daemonize thread
-        self._run_thread.start()
+        self._stop_event.wait()
 
-        # run _heartbeat_iteration()
-        attempt = 0
-        while not self._stop_event.is_set():
-            try:
-                self._upload_logs()
-                self._heartbeat_iteration()
-                self._check_node_timeout()
-                if attempt > 0:
-                    logging.info("Connected")
-                attempt = 0
-            except socket.error:
-                logging.warn("Failed to connect: #{}/{}".format(attempt + 1, number_of_attempts))
-                attempt += 1
-                if attempt == number_of_attempts:
-                    self.stop()
-                    raise
-            self._stop_event.wait(timeout=Worker.HEARTBEAT_TIMEOUT)
-
-    def _heartbeat_iteration(self):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    def execute_job(self, executor):
         try:
-            # Connect to server and send data
-            sock.connect((self._host, self._port))
-            message = WorkerMessage(
-                worker_id=self._worker_id,
-                run_status=self._run_status,
-                message_type=WorkerMessageType.HEARTBEAT,
-                body=self._job if self._run_status != RunStatus.IDLE else None,
-                graph_id=self._graph_id
-            )
-            send_msg(sock, message)
-            master_message = recv_msg(sock)
-            # check status
-            if master_message and master_message.message_type == MasterMessageType.KILL:
-                logging.info("Received KILL message: {}".format(master_message))
-                self._kill()
-        finally:
-            sock.close()
-
-    def _upload_logs(self):
-        if self._run_status == RunStatus.RUNNING:
-            self._job.upload_logs()
-
-    def _check_node_timeout(self):
-        if self._run_status == RunStatus.RUNNING and self._started_at and self._node_timeout:
-            dt = datetime.datetime.now()
-            diff = (dt - self._started_at).total_seconds() / 60
-            if diff > self._node_timeout:
-                self._kill()
-                with open(self._job.logs['worker'], 'a') as f:
-                    f.write('#' * 30 + '\n')
-                    f.write('# killed: timed out after {} minutes\n'.format(diff))
-                    f.write('#' * 30 + '\n')
-
-    def _kill(self):
-        if self._job and not self._job_killed:
-            self._job_killed = True
-            self._job.kill()
-        else:
-            logging.info("Already attempted to KILL")
-
-    def _run_worker(self):
-        while not self._stop_event.is_set():
             try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                try:
-                    if self._run_status == RunStatus.IDLE:
-                        sock.connect((self._host, self._port))
-                        message = WorkerMessage(
-                            worker_id=self._worker_id,
-                            run_status=self._run_status,
-                            message_type=WorkerMessageType.GET_JOB,
-                            body=None,
-                            graph_id=None
-                        )
-                        send_msg(sock, message)
-                        master_message = recv_msg(sock)
-                        logging.debug("Asked for a job; Received mesage: {}".format(master_message))
-                        if master_message and master_message.message_type == MasterMessageType.SET_JOB:
-                            logging.info(
-                                "Got the job: graph_id=`{graph_id}` job_id=`{job_id}`".format(
-                                    graph_id=master_message.graph_id,
-                                    job_id=master_message.job.node._id,
-                                )
-                            )
-                            self._job_killed = False
-                            self._started_at = datetime.datetime.now()
-                            self._job = master_message.job
-                            self._graph_id = master_message.graph_id
-                            self._set_run_status(RunStatus.RUNNING)
-
-                            timeout_parameter = self._job.node.get_parameter_by_name('_timeout', throw=False)
-                            if timeout_parameter:
-                                self._node_timeout = int(timeout_parameter.value)
-                            else:
-                                self._node_timeout = None
-
-                            try:
-                                self._job.init_workdir()
-                                status = self._job.run()
-                            except Exception:
-                                try:
-                                    status = JobReturnStatus.FAILED
-                                    f = six.BytesIO()
-                                    f.write(traceback.format_exc().encode())
-                                    self._job.node.get_log_by_name('worker').resource_id = upload_file_stream(f)
-                                except Exception:
-                                    logging.critical(traceback.format_exc())
-                                    self.stop()
-                            finally:
-                                self._job.clean_up()
-
-                            self._job_killed = True
-                            if status == JobReturnStatus.SUCCESS:
-                                self._set_run_status(RunStatus.SUCCESS)
-                            elif status == JobReturnStatus.FAILED:
-                                self._set_run_status(RunStatus.FAILED)
-                            logging.info(
-                                "Worker(`{worker_id}`) finished with status {status}".format(
-                                    worker_id=self._worker_id,
-                                    status=self._run_status,
-                                )
-                            )
-
-                    elif self._run_status == RunStatus.RUNNING:
-                        raise RunningPipelineException("Not supposed to have this state")
-                    elif self._run_status in [RunStatus.SUCCESS, RunStatus.FAILED]:
-                        sock.connect((self._host, self._port))
-
-                        if self._run_status == RunStatus.SUCCESS:
-                            status = WorkerMessageType.JOB_FINISHED_SUCCESS
-                        elif self._run_status == RunStatus.FAILED:
-                            status = WorkerMessageType.JOB_FINISHED_FAILED
-
-                        message = WorkerMessage(
-                            worker_id=self._worker_id,
-                            run_status=self._run_status,
-                            message_type=status,
-                            body=self._job,
-                            graph_id=self._graph_id
-                        )
-
-                        send_msg(sock, message)
-
-                        master_message = recv_msg(sock)
-
-                        if master_message and master_message.message_type == MasterMessageType.AKNOWLEDGE:
-                            self._set_run_status(RunStatus.IDLE)
-                finally:
-                    sock.close()
-            except socket.error:
-                pass
+                status = JobReturnStatus.FAILED
+                executor.workdir = os.path.join('/tmp', str(uuid.uuid1()))
+                executor.init_workdir()
+                status = executor.run()
             except Exception:
-                self.stop()
-                raise
+                try:
+                    f = six.BytesIO()
+                    f.write(traceback.format_exc().encode())
+                    executor.node.get_log_by_name('worker').resource_id = upload_file_stream(f)
+                    logging.error(traceback.format_exc())
+                except Exception:
+                    logging.critical(traceback.format_exc())
+                    raise
+            finally:
+                executor.clean_up()
 
-            self._stop_event.wait(timeout=Worker.RUNNER_TIMEOUT)
+            self._job_killed = True
+            logging.info('Node {node_id} `{title}` finished with status `{status}`'.format(
+                node_id=executor.node._id,
+                title=executor.node.title,
+                status=status,
+                ))
+            if status == JobReturnStatus.SUCCESS:
+                executor.node.node_running_status = NodeRunningStatus.SUCCESS
+            elif status == JobReturnStatus.FAILED:
+                executor.node.node_running_status = NodeRunningStatus.FAILED
+            else:
+                raise Exception("Unknown return status value: `{}`".format(status))
+        except Exception as e:
+            logging.warning('Execution failed: {}'.format(e))
+            executor.node.node_running_status = NodeRunningStatus.FAILED
+        finally:
+            executor.node.save(collection='runs')
+            with self._run_id_to_run_lock:
+                del self._run_id_to_run[executor.node._id]
 
-        logging.info("Exit {}".format(self._run_worker.__name__))
+    def _run_db_status_update(self):
+        """Syncing with the database."""
+        try:
+            while not self._stop_event.is_set():
+                node = self.node_collection_manager.pick_node(kinds=self.kinds)
+                if node:
+                    logging.info('New node found: {} {} {}'.format(node['_id'], node['node_running_status'], node['title']))
+                    executor = materialize_executor(node)
 
-    def _set_run_status(self, run_status):
-        self._run_status = run_status
-        logging.info(self._run_status)
+                    with self._run_id_to_run_lock:
+                        self._run_id_to_run[executor.node._id] = node
+                    thread = threading.Thread(target=self.execute_job, args=(executor, ))
+                    thread.start()
+
+                else:
+                    self._stop_event.wait(timeout=Worker.SDB_STATUS_UPDATE_TIMEOUT)
+        except Exception:
+            self.stop()
+            raise
+        finally:
+            logging.info("Exit {}".format(self._run_db_status_update.__name__))
+
+    def _run_worker_state_update(self):
+        """Syncing with the database."""
+        try:
+            while not self._stop_event.is_set():
+                with self._run_id_to_run_lock:
+                    runs = list(self._run_id_to_run.values())
+                worker_state = WorkerState.from_dict({
+                    'worker_id': self.worker_id,
+                    'host': self.host,
+                    'runs': runs,
+                    'kinds': self.kinds,
+                })
+                worker_state.save()
+                self._stop_event.wait(timeout=Worker.WORKER_STATE_UPDATE_TIMEOUT)
+        except Exception:
+            self.stop()
+            raise
+        finally:
+            logging.info("Exit {}".format(self._run_worker_state_update.__name__))
 
     def stop(self):
-        """
-        Stop Worker.
-        """
+        """Stop worker."""
         self._stop_event.set()
 
 
 def run_worker(worker_id=None):
-    """
-    Run master Daemon. It will run in the same thread.
+    """Run worker daemon. It will run in the same thread."""
+    # Check connection to the db
+    check_connection()
 
-    Args:
-        worker_id   (str):  Worker ID. It will be generated if empty or not given
-
-    """
-    master_config = get_master_config()
     logging.info('Init Worker')
-    logging.info(master_config)
-    worker = Worker(
-        worker_id=worker_id,
-        host=master_config.host,
-        port=master_config.port,
-    )
+    worker_config = get_worker_config()
+    logging.info(worker_config)
+    worker = Worker(worker_config, worker_id)
 
+    # Activate the server; this will keep running until you
+    # interrupt the program with Ctrl-C
     try:
+        logging.info("Start serving")
         worker.serve_forever()
     except KeyboardInterrupt:
         worker.stop()
+        sys.exit(0)

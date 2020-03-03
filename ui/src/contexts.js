@@ -1,6 +1,6 @@
 import React from "react";
 
-const ResourceContext = React.createContext({});
+const PluginsContext = React.createContext({});
 
-export const ResourceProvider = ResourceContext.Provider;
-export const ResourceConsumer = ResourceContext.Consumer;
+export const PluginsProvider = PluginsContext.Provider;
+export const PluginsConsumer = PluginsContext.Consumer;

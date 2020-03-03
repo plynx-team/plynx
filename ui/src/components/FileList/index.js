@@ -1,15 +1,14 @@
 import React, { Component } from 'react';
 import { PLynxApi } from '../../API';
-import BaseList from '../BaseList';
-import {ResourceConsumer} from '../../contexts';
+import BaseList from '../nodeList/baseList';
+import {PluginsConsumer} from '../../contexts';
 import {HotKeys} from 'react-hotkeys';
 import Icon from '../Common/Icon';
 import FileDialog from '../Dialogs/FileDialog';
 import FileUploadDialog from '../Dialogs/FileUploadDialog';
 import PreviewDialog from '../Dialogs/PreviewDialog';
 import { listTextElement } from '../Common/listElements';
-import { ACTION, RESPONCE_STATUS, KEY_MAP } from '../../constants';
-import '../Common/ListPage.css';
+import { ACTION, RESPONCE_STATUS, KEY_MAP, COLLECTIONS } from '../../constants';
 import '../controls.css';
 import './items.css';
 
@@ -56,18 +55,18 @@ export default class ListPage extends Component {
           </div>
 
           <div className={'Type'}>
-            <ResourceConsumer className={'Type'}>
-            { resources_dict => <div className='Widget'>
+            <PluginsConsumer className={'Type'}>
+            { plugins_dict => <div className='Widget'>
                 <Icon
-                  type_descriptor={resources_dict[file_type]}
+                  type_descriptor={plugins_dict.resources_dict[file_type]}
                   width={"20"}
                   height={"20"}
                 />
 
-                {resources_dict[file_type].alias}
+                {plugins_dict.resources_dict[file_type].alias}
               </div>
             }
-            </ResourceConsumer>
+            </PluginsConsumer>
           </div>
           { listTextElement('Status ' + node.node_status, node.node_status) }
           { listTextElement('Id', node._id) }
@@ -81,7 +80,7 @@ export default class ListPage extends Component {
     /* action might be in {'save', 'validate', 'approve', 'deprecate'}*/
     const self = this;
     self.setState({loading: true});
-    PLynxApi.endpoints.nodes
+    PLynxApi.endpoints[COLLECTIONS.TEMPLATES]
     .create({
       node: file,
       action: action
@@ -187,7 +186,7 @@ export default class ListPage extends Component {
                     </div>
                     }
                 tag="file-list-item"
-                endpoint={PLynxApi.endpoints.search_nodes}
+                endpoint={PLynxApi.endpoints[`search_${COLLECTIONS.TEMPLATES}`]}
                 extraSearch={{base_node_names: ['file']}}
                 header={header}
                 renderItem={(node) => this.renderItem(node)}

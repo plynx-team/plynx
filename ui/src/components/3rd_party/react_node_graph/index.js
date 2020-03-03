@@ -73,7 +73,6 @@ class ReactBlockGraph extends React.Component {
     editable: PropTypes.bool.isRequired,
     graphId: PropTypes.string.isRequired,
     onAllBlocksDeselect: PropTypes.func.isRequired,
-    onBlockDeselect: PropTypes.func.isRequired,
     onBlockMove: PropTypes.func.isRequired,
     onBlockStartMove: PropTypes.func.isRequired,
     onBlocksSelect: PropTypes.func.isRequired,
@@ -157,7 +156,7 @@ class ReactBlockGraph extends React.Component {
   }
 
   onMouseUp() {
-    if (this.state.firstMousePos && !this.state.dragging) {
+    if (this.state.firstMousePos && this.state.mousePos && !this.state.dragging) {
       const blocks = this.state.data.blocks;
       const minX = Math.min(this.state.firstMousePos.x, this.state.mousePos.x);
       const maxX = Math.max(this.state.firstMousePos.x, this.state.mousePos.x);
@@ -281,9 +280,7 @@ class ReactBlockGraph extends React.Component {
   }
 
   handleRemoveConnector(connector) {
-    if (this.props.onRemoveConnector) {
-      this.props.onRemoveConnector(connector);
-    }
+    this.props.onRemoveConnector(connector);
   }
 
   handleOutputClick(nid, outputIndex) {
@@ -320,22 +317,16 @@ class ReactBlockGraph extends React.Component {
     }
 
     this.props.onRemoveBlock(nid);
-    console.log(connectors);
   }
 
   handleBlockSelect(nid) {
     const selectedNIDsIndex = this.selectedNIDs.indexOf(nid);
-    if (selectedNIDsIndex < 0) {
+    if (selectedNIDsIndex < 0 || this.commandPressed) {
       this.selectBlocks([nid]);
     }
   }
 
   deselectAll(changeState) {
-    if (this.selectedNIDs.length > 0 && this.props.onBlockDeselect) {
-      for (let ii = 0; ii < this.selectedNIDs.length; ++ii) {
-        this.props.onBlockDeselect(this.selectedNIDs[ii]);
-      }
-    }
     this.selectedNIDs = [];
     if (changeState) {
       this.setState({
@@ -352,19 +343,12 @@ class ReactBlockGraph extends React.Component {
       for (let ii = 0; ii < nids.length; ++ii) {
         const selectedNIDsIndex = this.selectedNIDs.indexOf(nids[ii]);
         if (selectedNIDsIndex >= 0) {
-          this.props.onBlockDeselect(this.selectedNIDs[selectedNIDsIndex]);
           this.selectedNIDs.splice(selectedNIDsIndex, 1);
         } else {
           this.selectedNIDs.push(nids[ii]);
         }
       }
     } else {  // !this.commandPressed
-      const a = new Set(nids);
-      const b = new Set(this.selectedNIDs);
-
-      const toDeselect = new Set([...a].filter(x => !b.has(x)));
-      toDeselect.forEach((_, nid) => this.props.onBlockDeselect(nid));
-
       this.selectedNIDs = nids;
     }
 
@@ -526,7 +510,7 @@ class ReactBlockGraph extends React.Component {
                       }}
 
                       selected={selectedBlock}
-                      readonly={!this.state.editable}
+                      readonly={!this.state.editable || block.nodeRunningStatus === NODE_RUNNING_STATUS.SPECIAL}
                     />;
           })}
 
@@ -574,7 +558,7 @@ class ReactBlockGraph extends React.Component {
             {newConnector}
 
             {
-              (this.state.firstMousePos && !dragging) &&
+              (this.state.firstMousePos && this.state.mousePos && !dragging) &&
               <rect
                 className="select-rect"
                 width={Math.abs(this.state.firstMousePos.x - this.state.mousePos.x)}

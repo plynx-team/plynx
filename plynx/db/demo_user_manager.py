@@ -1,8 +1,6 @@
 import string
 import random
-from plynx.db.graph import Graph
 from plynx.db.user import User
-from plynx.utils.common import ObjectId
 from plynx.utils.config import get_demo_config
 
 
@@ -24,14 +22,3 @@ class DemoUserManager(object):
         user.hash_password(DemoUserManager._id_generator(size=8))
         user.save()
         return user
-
-    @staticmethod
-    def create_demo_graphs(user):
-        res = []
-        for graph_id in DemoUserManager.demo_config.graph_ids:
-            graph = Graph.load(graph_id)
-            graph._id = ObjectId()
-            graph.author = user._id
-            graph.save()
-            res.append(graph._id)
-        return res

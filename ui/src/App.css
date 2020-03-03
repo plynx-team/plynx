@@ -21,6 +21,7 @@ body{
 .App {
   display: flex;
   height: 100%;
+  font-family: 'Source Sans Pro', sans-serif;
   flex-direction: column;
 }
 
@@ -60,20 +61,18 @@ body{
                                   supported by Chrome and Opera */
 }
 
-.ControlButtons {
-  z-index: 21050;
-  position: fixed;
-  top: 100px;
+.control-panel {
+  background-color: #2b2b2b;
+  padding: 3px;
+  border-top: 1px solid #000;
+  border-bottom: 1px solid #000;
+  display: flex;
 }
 
-.ControlButtons.readonly {
-  left: 10px;
+div:focus {
+  outline: 0;
+  outline: none;
 }
-
-.ControlButtons.editable {
-  left: 260px;
-}
-
 
 /* Mobile dependent */
 

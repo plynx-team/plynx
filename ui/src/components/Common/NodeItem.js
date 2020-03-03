@@ -12,7 +12,7 @@ export default class NodeItem extends Component {
   render() {
     const node = this.props.node;
     return (
-      <div className={'NodeItem' + (node.base_node_name === 'file' ? ' File' : '')}>
+      <div className={`NodeItem node-${node._id}`}>
         <div className='NodeHeader'>
           <div className='NodeTitle'>
             {node.title}

@@ -11,3 +11,10 @@ export function listTextElement(className, text, key) {
       </div>
   );
 }
+
+
+export function renderStatus(status) {
+  return <div className={`status-badge ${status}`}>
+      {status}
+    </div>;
+}

@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import Dialog from './Dialog';
 import { PLynxApi } from '../../API';
-import {ResourceConsumer} from '../../contexts';
+import {PluginsConsumer} from '../../contexts';
 import Icon from '../Common/Icon';
 import { FILE_STATUS, NODE_STATUS } from '../../constants';
 import { API_ENDPOINT } from '../../configConsts';
@@ -18,7 +18,7 @@ export default class FileDialog extends Component {
       description: PropTypes.string.isRequired,
       insertion_date: PropTypes.string,
       node_status: PropTypes.oneOf(Object.values(NODE_STATUS)).isRequired,
-      parent_node: PropTypes.string,
+      original_node_id: PropTypes.string,
       outputs: PropTypes.array.isRequired,
     }),
     hideDeprecate: PropTypes.bool.isRequired,
@@ -78,26 +78,26 @@ export default class FileDialog extends Component {
               </div>
             </div>
 
-            <ResourceConsumer>
-            { resources_dict => <div className={'Type'}>
+            <PluginsConsumer>
+            { plugins_dict => <div className={'Type'}>
                 <div className='Widget'>
                   <Icon
-                    type_descriptor={resources_dict[this.props.fileObj.outputs[0].file_type]}
+                    type_descriptor={plugins_dict.resources_dict[this.props.fileObj.outputs[0].file_type]}
                     width={"20"}
                     height={"20"}
                   />
-                  {resources_dict[this.props.fileObj.outputs[0].file_type].alias}
+                  {plugins_dict.resources_dict[this.props.fileObj.outputs[0].file_type].alias}
                 </div>
               </div>
             }
-            </ResourceConsumer>
+            </PluginsConsumer>
 
           </div>
 
           <div className='Summary'>
             <div className='Item'>
               <div className={'Name'}>Id:</div>
-              <div className={'Id'}>{this.props.fileObj.parent_node || this.props.fileObj._id}</div>
+              <div className={'Id'}>{this.props.fileObj.original_node_id || this.props.fileObj._id}</div>
             </div>
 
             <div className='Item'>

@@ -4,9 +4,9 @@ class ResourcePostStatus:
 
 
 class NodeResources:
-    INPUT = 'input'
-    OUTPUT = 'output'
-    CLOUD_INPUT = 'cloud_input'
-    CLOUD_OUTPUT = 'cloud_output'
-    PARAM = 'param'
-    LOG = 'log'
+    INPUT = 'inputs'
+    OUTPUT = 'outputs'
+    CLOUD_INPUT = 'cloud_inputs'
+    CLOUD_OUTPUT = 'cloud_outputs'
+    PARAM = 'params'
+    LOG = 'logs'

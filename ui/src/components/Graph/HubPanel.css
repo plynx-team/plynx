@@ -1,0 +1,82 @@
+.hub-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  background-color: #2b2b2b;
+  color: #fff;
+  vertical-align: middle;
+
+}
+
+.hub-box {
+  color: #fff;
+}
+
+.hub-box-header {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 5px 0px 3px 5px;
+}
+
+.hub-box-header:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.hub-box-content {
+  color: #fff;
+  background-color: #404040;
+  border: 1px solid #202020;
+  border-radius: 4px;
+}
+
+.hub-panel-tab {
+    writing-mode: tb-rl;
+}
+
+.hub-panel-tab .control-button {
+    padding: 10px 4px 10px 2px;
+    border-top: 0px;
+    border-right: 1px #111 solid;
+}
+
+
+.hub-panel-tab .control-button .hub-tab-title {
+    transform: rotate(180deg);
+    padding-bottom: 5px;
+}
+
+.hub-list-content {
+  width: 250px;
+  height: 100%;
+  display: inline-block;
+  flex-direction: column;
+  background-color: #404040;
+}
+
+.hub-list-entry {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.hub-list-header > .search {
+  margin: 3px 3px 3px 6px;
+}
+
+.hub-list-header .SearchBar {
+    min-width: 230px;
+}
+
+.hub-entry-list {
+  flex: 1;
+  overflow:auto;
+  background-color: #404040;
+  height: 1px;
+}
+
+.NodeItemDnD {
+  cursor: grab;
+}

@@ -1,4 +1,5 @@
 import { API_ENDPOINT } from './configConsts';
+import { COLLECTIONS } from './constants';
 import cookie from 'react-cookies';
 
 const axios = require('axios');
@@ -71,13 +72,14 @@ class API {
 }
 
 const plynxApi = new API({ url: API_ENDPOINT });
-plynxApi.createEntity({ name: 'nodes' });
-plynxApi.createEntity({ name: 'graphs' });
+plynxApi.createEntity({ name: COLLECTIONS.TEMPLATES });
+plynxApi.createEntity({ name: COLLECTIONS.RUNS });
 plynxApi.createEntity({ name: 'resource' });
 plynxApi.createEntity({ name: 'token' });
 plynxApi.createEntity({ name: 'demo' });
-plynxApi.createEntity({ name: 'master_state' });
-plynxApi.createEntity({ name: 'search_nodes' });
-plynxApi.createEntity({ name: 'search_graphs' });
+plynxApi.createEntity({ name: 'worker_states' });
+plynxApi.createEntity({ name: `search_${COLLECTIONS.TEMPLATES}` });
+plynxApi.createEntity({ name: `search_${COLLECTIONS.RUNS}` });
+plynxApi.createEntity({ name: `search_in_hubs` });
 
 export const PLynxApi = plynxApi;

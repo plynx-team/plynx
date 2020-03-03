@@ -40,7 +40,7 @@ export default class ParameterItem extends Component {
       PropTypes.number,
       PropTypes.array,
     ]).isRequired,
-    widget: PropTypes.object,
+    widget: PropTypes.string,
     readOnly: PropTypes.bool,
     mutable_type: PropTypes.bool,
     publicable: PropTypes.bool,
@@ -85,7 +85,7 @@ export default class ParameterItem extends Component {
     if (name === 'widget_checkbox') {
       widget = null;
       if (value) {
-        widget = {alias: this.state.name};
+        widget = this.state.name;
       }
       this.setState({widget: widget },
         () => {
@@ -93,17 +93,16 @@ export default class ParameterItem extends Component {
         });
       return;
     } else if (name === 'widget_alias') {
-      this.setState({widget: {alias: value} },
+      this.setState({widget: value},
         () => {
           this.props.onChanged(this.props.index, 'widget', this.state.widget);
         });
       return;
     } else if (
         name === 'name' &&
-        this.state.widget !== null &&
-        this.state.widget.alias === this.state.name) {
+        this.state.widget === this.state.name) {
       // Feature: change alias together with name if the match
-      widget = {alias: value};
+      widget = value;
       this.setState({widget: widget},
         () => {
           this.props.onChanged(this.props.index, 'widget', widget);
@@ -131,7 +130,7 @@ export default class ParameterItem extends Component {
 
   render() {
     return (
-      <div className='ParameterListItem'>
+      <div className={`ParameterListItem parameter-${this.state.name.replace(' ', '_')}`}>
         <div className='ParameterFirstItem'>
           <div className='ParameterRow'>
             <div className='ParameterCellTitle'>
@@ -192,7 +191,7 @@ export default class ParameterItem extends Component {
                   <input className='ParameterValue'
                     type="text"
                     name='widget_alias'
-                    value={this.state.widget.alias}
+                    value={this.state.widget}
                     onChange={this.handleChange}
                     readOnly={this.state.readOnly}
                   />

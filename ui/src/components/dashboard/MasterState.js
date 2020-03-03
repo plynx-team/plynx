@@ -3,49 +3,57 @@ import PropTypes from 'prop-types';
 import { PLynxApi } from '../../API';
 import { SimpleLoader } from '../LoadingScreen';
 import NodeItem from '../Common/NodeItem';
-import '../Common/List.css';
+import { utcTimeToLocal } from '../../utils';
 import './MasterState.css';
 
 class ListItem extends Component {
   static propTypes = {
-    worker_state: PropTypes.shape({
-      graph_id: PropTypes.string,
+    item: PropTypes.shape({
+      runs: PropTypes.array.isRequired,
       host: PropTypes.string.isRequired,
       worker_id: PropTypes.string.isRequired,
-      node: PropTypes.shape({
-        _id: PropTypes.string.isRequired,
-      }),
+      kinds: PropTypes.array.isRequired,
+      update_date: PropTypes.string.isRequired,
     }).isRequired,
   }
 
   render() {
-    const isBusy = Boolean(this.props.worker_state.node);
+    const isBusy = this.props.item.runs.length > 0;
     return (
-      <a className='list-item master-list-item' href={
-        isBusy ?
-        '/graphs/' + this.props.worker_state.graph_id + '?nid=' + this.props.worker_state.node._id :
-        '#'}>
-        <div className='host'>{this.props.worker_state.host}</div>
-        <div className='worker-id'>{this.props.worker_state.worker_id}</div>
-        <div className='graph'>
-          {isBusy &&
-            this.props.worker_state.graph_id
-          }
-          {!isBusy &&
-            'None'
-          }
-        </div>
-        <div className='running-node'>
-          {isBusy &&
-            <NodeItem
-              node={this.props.worker_state.node}
-            />
-          }
-          {!isBusy &&
-            'Idle'
-          }
-        </div>
-      </a>
+     <div className='list-item master-list-item'>
+       <div className='host'>{this.props.item.host}</div>
+       <div className='worker-id'>{this.props.item.worker_id}</div>
+       <div className='kinds'>
+        {
+            this.props.item.kinds.map(kind => {
+              return <div key={kind}> {kind} </div>;
+            })
+        }
+       </div>
+       <div className='updated-datetime'>
+        {utcTimeToLocal(this.props.item.update_date)}
+       </div>
+       <div className='running-node'>
+        {this.props.item.runs.map(run => (
+            <a
+                href={`/runs/${run._id}`}
+                key={run._id}
+                className="node-link"
+                style={{"text-decoration": "none"}}
+
+            >
+                <NodeItem
+                  node={run}
+                  key={run._id}
+                />
+            </a>
+        ))}
+
+         {!isBusy &&
+           'Idle'
+         }
+       </div>
+     </div>
     );
   }
 }
@@ -54,10 +62,7 @@ export default class MasterState extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      master_state: {
-        'workers': [],
-        'update_date': '-',
-      },
+      workers: [],
       loading: true,
     };
 
@@ -91,17 +96,7 @@ export default class MasterState extends Component {
       const data = response.data;
       console.log(data);
 
-      // Do not change state if master_state is null (not found)
-      if (data.master_state) {
-        // Format date
-        const date = new Date(data.master_state.update_date + 'Z');  // Make date it UTC
-        data.master_state.update_date = date.toString();
-
-        self.setState(
-          {
-            master_state: data.master_state,
-          });
-      }
+      this.setState({workers: data.items});
       loading = false;
     };
 
@@ -122,7 +117,7 @@ export default class MasterState extends Component {
     /* eslint-disable no-await-in-loop */
     /* eslint-disable no-unmodified-loop-condition */
     while (loading) {
-      await PLynxApi.endpoints.master_state.getAll({})
+      await PLynxApi.endpoints.worker_states.getAll({})
       .then(handleResponse)
       .catch(handleError);
       if (loading) {
@@ -144,9 +139,9 @@ export default class MasterState extends Component {
   }
 
   render() {
-    const listItems = this.state.master_state.workers.map(
+    const listItems = this.state.workers.map(
           (worker_state) => <ListItem
-            worker_state={worker_state}
+            item={worker_state}
             key={worker_state.worker_id}
             />);
     return (
@@ -159,16 +154,14 @@ export default class MasterState extends Component {
           <div className='master-list-item list-header'>
             <div className='host'>Host</div>
             <div className='worker-id'>Worker ID</div>
-            <div className='graph'>Graph ID</div>
-            <div className='running-node'>Node</div>
+            <div className='kinds'>Kinds</div>
+            <div className='updated-datetime'>Updated</div>
+            <div className='running-node'>Nodes</div>
           </div>
           {this.state.loading &&
             <SimpleLoader/>
           }
           {listItems.length ? listItems : <b>No items to show</b>}
-        </div>
-        <div className='updated'>
-          Updated: {this.state.master_state.update_date}
         </div>
       </div>
     );

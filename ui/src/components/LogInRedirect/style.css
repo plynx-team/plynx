@@ -1,0 +1,26 @@
+.login-redirect {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #111111;
+  border-top: 1px solid #333;
+}
+
+.login-redirect-logo {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    -ms-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.login-redirect .simple-loader {
+    color: #246398;
+}
+
+.login-redirect .error-text {
+    color: #d81e1e;
+    text-align: center;
+    height: 20px;
+}

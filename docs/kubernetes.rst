@@ -59,7 +59,7 @@ Step 1: Create service account credentials
 
 3. Add roles: *Storage Object Creator* and *Storage Object Viewer*
 
-4. Create *json* key. It will download a file *plynx-\*.json*, i.e. */Users/khaxis/Downloads/plynx-197007-2aeb7faedf34.json*
+4. Create *json* key. It will download a file *plynx-\*.json*, i.e. */Users/username/Downloads/plynx-197007-2aeb7faedf34.json*
 
 5. Create a new bucket
 
@@ -114,7 +114,7 @@ Clone configuration files.
 
 .. code-block:: bash
 
-    git clone https://github.com/khaxis/plynx.git
+    git clone https://github.com/plynx-team/plynx.git
     cd plynx/kubernetes
 
 

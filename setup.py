@@ -76,7 +76,7 @@ setup(
     },
     project_urls={
         'Demo': 'https://plynx.com',
-        'Source': 'https://github.com/khaxis/plynx',
+        'Source': 'https://github.com/plynx-team/plynx',
     },
     # plynx.graph.base_nodes.collection uses reference to __file__
     zip_safe=False,

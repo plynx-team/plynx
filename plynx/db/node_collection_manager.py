@@ -1,19 +1,35 @@
+from pymongo import ReturnDocument
 from past.builtins import basestring
 from collections import OrderedDict
+from plynx.db.node import Node
+from plynx.constants import NodeRunningStatus, Collections, NodeStatus
 from plynx.utils.common import to_object_id, parse_search_string
 from plynx.utils.db_connector import get_db_connector
+
+_PROPERTIES_TO_GET_FROM_SUBS = ['node_running_status', 'logs', 'outputs', 'cache_url']
 
 
 class NodeCollectionManager(object):
     """NodeCollectionManager contains all the operations to work with Nodes in the database."""
 
-    @staticmethod
-    def get_db_nodes(status='', base_node_names=None, search='', per_page=20, offset=0, user_id=None):
+    def __init__(self, collection):
+        super(NodeCollectionManager, self).__init__()
+
+        self.collection = collection
+
+    def get_db_nodes(
+            self,
+            status='',
+            node_kinds=None,
+            search='',
+            per_page=20,
+            offset=0,
+            user_id=None,
+            ):
         """Get subset of the Nodes.
 
         Args:
             status              (str, None):                Node Running Status
-            base_node_names     (str, list of str, None):   Node Running Status
             search              (str, None):                Search pattern
             per_page            (int):                      Number of Nodes per page
             offset              (int):                      Offset
@@ -23,20 +39,22 @@ class NodeCollectionManager(object):
         """
         if status and isinstance(status, basestring):
             status = [status]
-        if base_node_names and isinstance(base_node_names, basestring):
-            base_node_names = [base_node_names]
+        if node_kinds and isinstance(node_kinds, basestring):
+            node_kinds = [node_kinds]
 
         aggregate_list = []
         search_parameters, search_string = parse_search_string(search)
 
         # Match
         and_query = {}
-        if base_node_names:
-            and_query['base_node_name'] = {'$in': base_node_names}
+        if node_kinds:
+            and_query['kind'] = {'$in': node_kinds}
         if status:
             and_query['node_status'] = {'$in': status}
         if search_string:
             and_query['$text'] = {'$search': search_string}
+        if 'original_node_id' in search_parameters:
+            and_query['original_node_id'] = to_object_id(search_parameters['original_node_id'])
         if len(and_query):
             aggregate_list.append({"$match": and_query})
 
@@ -60,6 +78,7 @@ class NodeCollectionManager(object):
         and_query = {}
         if 'author' in search_parameters:
             and_query['_user.username'] = search_parameters['author']
+
         if len(and_query):
             aggregate_list.append({"$match": and_query})
 
@@ -88,16 +107,15 @@ class NodeCollectionManager(object):
             }
         })
 
-        return next(get_db_connector().nodes.aggregate(aggregate_list), None)
+        return next(get_db_connector()[self.collection].aggregate(aggregate_list), None)
 
-    @staticmethod
-    def get_db_nodes_by_ids(ids):
+    def get_db_nodes_by_ids(self, ids, collection=None):
         """Find all the Nodes with a given IDs.
 
         Args:
             ids    (list of ObjectID):  Node Ids
         """
-        db_nodes = get_db_connector().nodes.find({
+        db_nodes = get_db_connector()[collection or self.collection].find({
             '_id': {
                 '$in': list(ids)
             }
@@ -105,18 +123,119 @@ class NodeCollectionManager(object):
 
         return list(db_nodes)
 
-    @staticmethod
-    def get_db_node(node_id, user_id=None):
-        """Get dict representation of the Graph.
+    def _update_sub_nodes_fields(self, sub_nodes_dicts, reference_node_id, target_props, reference_collection=None):
+        if not sub_nodes_dicts:
+            return
+        reference_collection = reference_collection or self.collection
+        id_to_updated_node_dict = {}
+        upd_node_ids = set(map(lambda node_dict: node_dict[reference_node_id], sub_nodes_dicts))
+        for upd_node_dict in self.get_db_nodes_by_ids(upd_node_ids, collection=reference_collection):
+            id_to_updated_node_dict[upd_node_dict['_id']] = upd_node_dict
+        for sub_node_dict in sub_nodes_dicts:
+            if sub_node_dict[reference_node_id] not in id_to_updated_node_dict:
+                continue
+            for prop in target_props:
+                sub_node_dict[prop] = id_to_updated_node_dict[sub_node_dict[reference_node_id]][prop]
+
+    def get_db_node(self, node_id, user_id=None):
+        """Get dict representation of the Node.
 
         Args:
             node_id     (ObjectId, str):        Node ID
             user_id     (str, ObjectId, None):  User ID
 
         Return:
-            (dict)  dict representation of the Graph
+            (dict)  dict representation of the Node
         """
-        res = get_db_connector().nodes.find_one({'_id': to_object_id(node_id)})
-        if res:
-            res['_readonly'] = (user_id != to_object_id(res['author']))
+        res = get_db_connector()[self.collection].find_one({'_id': to_object_id(node_id)})
+        if not res:
+            return res
+
+        res['_readonly'] = (user_id != to_object_id(res['author']))
+
+        sub_nodes_dicts = None
+        for parameter in res['parameters']:
+            if parameter['name'] == '_nodes':
+                sub_nodes_dicts = parameter['value']['value']
+                break
+
+        # TODO join collections using database capabilities
+        if self.collection == Collections.RUNS:
+            self._update_sub_nodes_fields(sub_nodes_dicts, '_id', _PROPERTIES_TO_GET_FROM_SUBS)
+        self._update_sub_nodes_fields(sub_nodes_dicts, 'original_node_id', ['node_status'], reference_collection=Collections.TEMPLATES)
+
         return res
+
+    @staticmethod
+    def _transplant_node(node, new_node):
+        if new_node._id == node.original_node_id:
+            return node
+        new_node.apply_properties(node)
+        new_node.original_node_id = new_node.original_node_id
+        new_node.parent_node_id = new_node.successor_node_id = None
+        new_node._id = node._id
+        return new_node
+
+    def upgrade_sub_nodes(self, main_node):
+        """Upgrade deprecated Nodes.
+
+        The function does not change the original graph in the database.
+
+        Return:
+            (int)   Number of upgraded Nodes
+        """
+        assert self.collection == Collections.TEMPLATES
+        sub_nodes = main_node.get_parameter_by_name('_nodes').value.value
+        node_ids = set(
+            [node.original_node_id for node in sub_nodes]
+        )
+        db_nodes = self.get_db_nodes_by_ids(node_ids)
+        new_node_db_mapping = {}
+
+        for db_node in db_nodes:
+            original_node_id = db_node['_id']
+            new_db_node = db_node
+            if original_node_id not in new_node_db_mapping:
+                while new_db_node['node_status'] != NodeStatus.READY and 'successor_node_id' in new_db_node and new_db_node['successor_node_id']:
+                    n = self.get_db_node(new_db_node['successor_node_id'])
+                    if n:
+                        new_db_node = n
+                    else:
+                        break
+                new_node_db_mapping[original_node_id] = new_db_node
+
+        new_nodes = [
+            NodeCollectionManager._transplant_node(
+                node,
+                Node.from_dict(new_node_db_mapping[to_object_id(node.original_node_id)])
+            ) for node in sub_nodes]
+
+        upgraded_nodes_count = sum(
+            1 for node, new_node in zip(sub_nodes, new_nodes) if node.original_node_id != new_node.original_node_id
+        )
+
+        main_node.get_parameter_by_name('_nodes').value.value = new_nodes
+        return upgraded_nodes_count
+
+    def pick_node(self, kinds):
+        node = get_db_connector()[self.collection].find_one_and_update(
+            {
+                '$and': [
+                    {
+                        'kind': {
+                            '$in': kinds,
+                        }
+                    },
+                    {
+                        'node_running_status': NodeRunningStatus.READY
+                    },
+                ],
+            },
+            {
+                '$set': {
+                    'node_running_status': NodeRunningStatus.RUNNING
+                }
+            },
+            return_document=ReturnDocument.AFTER
+        )
+        return node

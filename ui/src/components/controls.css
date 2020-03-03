@@ -42,9 +42,9 @@
 }
 
 .pagination li {
-    display: inline-block;
+    display: inline-flex;
     border-radius: 2px;
-    color: black;
+    color: #ddd;
     font-weight: 400;
     font-size: 13pt;
     white-space: nowrap;
@@ -55,11 +55,11 @@
 }
 
 .pagination li:hover {
-  background-color: darkgrey;
+  background-color: #555;
 }
 
 .pagination li.active {
-    background-color: #62a6f3;
+    background-color: #3f6da0;
 }
 
 .pagination li.break-me {
@@ -72,6 +72,10 @@
     cursor: pointer;
 }
 
+.control-button.demo-button {
+    font-weight: 600;
+}
+
 .control-button {
   display: inline-flex;
   border-radius: 2px;
@@ -79,11 +83,11 @@
   text-align: center;
   cursor: pointer;
   color: #eee;
-  font-weight: 600;
+  font-weight: 300;
   font-size: 13pt;
   text-decoration: none;
-  background-color: rgba(0, 0, 0, 0.5);
-  border: 1px solid #555;
+  background-color: #2b2b2b;
+  border: 1px solid #111;
   margin: 0px 1px 0px 1px;
 
   -moz-transition: all .1s ease-in;
@@ -98,17 +102,14 @@
 
 .control-button:hover {
   background-color: #444;
-  border-radius: 2px;
-  padding: 2px 10px 2px 10px;
-  text-align: center;
 }
 
 .control-button:active {
   background-color: #62a6f3;
 }
 
-.control-button.demo {
-  padding: 5px;
+.control-button.selected {
+  background-color: #3f6da0;
 }
 
 .control-button.demo:hover {
@@ -123,12 +124,46 @@
   background-color: #62a6f3;
 }
 
+
 .control-button-text {
   padding-left: 5px;
 }
 
 .control-button-text {
   display: none;
+}
+
+.control-separator {
+  margin-right: 20px;
+  display: inline;
+}
+
+.control-toggle {
+  display: inline-flex;
+}
+
+.control-toggle > .control-button {
+  border-radius: 0px;
+  margin: 0px;
+}
+
+.control-button.disabled {
+  display: none;
+}
+
+.control-toggle > .control-button.disabled {
+  display: inline-flex;
+  background-color: #444;
+  cursor: default;
+  color: #777;
+}
+
+.control-toggle > .first {
+  border-radius: 15px 0px 0px 15px;
+}
+
+.control-toggle > .last {
+  border-radius: 0px 15px 15px 0px;
 }
 
 @media (min-width: 1100px) {

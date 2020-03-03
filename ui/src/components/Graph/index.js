@@ -1,37 +1,29 @@
 /* eslint max-lines: 0 */
+/* eslint complexity: 0 */
+
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import queryString from 'query-string';
 import ReactNodeGraph from '../3rd_party/react_node_graph';
-import AlertContainer from '../3rd_party/react-alert';
-import { PLynxApi } from '../../API';
 import { typesValid } from '../../graphValidation';
 import cookie from 'react-cookies';
-import NodesBar from './NodesBar';
+import HubPanel from './HubPanel';
 import PreviewDialog from '../Dialogs/PreviewDialog';
 import PropertiesBar from './PropertiesBar';
-import Controls from './Controls';
 import withDragDropContext from './withDragDropContext';
-import LoadingScreen from '../LoadingScreen';
-import DemoScreen from '../DemoScreen';
 import FileDialog from '../Dialogs/FileDialog';
 import CodeDialog from '../Dialogs/CodeDialog';
-import {ResourceProvider} from '../../contexts';
+import ParameterSelectionDialog from '../Dialogs/ParameterSelectionDialog';
 import {ObjectID} from 'bson';
 import {HotKeys} from 'react-hotkeys';
 import {
-  ACTION,
-  RESPONCE_STATUS,
-  ALERT_OPTIONS,
   VALIDATION_CODES,
-  GRAPH_RUNNING_STATUS,
   NODE_RUNNING_STATUS,
   SPECIAL_TYPE_NAMES,
-  OPERATIONS,
   KEY_MAP,
+  SPECIAL_NODE_IDS,
 } from '../../constants';
 import { API_ENDPOINT } from '../../configConsts';
-import { storeToClipboard, loadFromClipboard } from '../../utils';
+import { storeToClipboard, loadFromClipboard, addStyleToTourSteps } from '../../utils';
 
 import "./gridtile.png";
 import "./node.css";
@@ -41,36 +33,88 @@ function parameterIsSpecial(parameter) {
   return SPECIAL_TYPE_NAMES.indexOf(parameter.parameter_type) > -1 && parameter.widget !== null;
 }
 
+const TOUR_STEPS = [
+  {
+    selector: '',
+    content: 'Welcome to Plynx! This tour will walk you through the main concepts and components of the interface.',
+  },
+  {
+    selector: '.hub-entry-list',
+    content: 'This toolbar contains all the Operations you need to build your workflow. All you need to do is to drag and drop Operations to the editor.',
+  },
+  {
+    selector: '.NodeItem',
+    content: 'Plynx is an open modular platform. Each Operaion represents an executable code or function, business logic, transformation, etc. ' +
+        'They can be defined eigher by users, admins, or imported from public library.',
+  },
+  {
+    selector: '.GraphRoot',
+    content: 'Workflow Editor has a central place in Plynx. ' +
+        'It allows you to easily build new pipelines, improve existing ones or create new experiments with the workflow.',
+  },
+  {
+    selector: '.GraphRoot .node',
+    content: 'Plynx is domain and framework agnostic platform. ' +
+        'Operation can be a python script, API call, model inference function, interaction with other services, etc. ' +
+        'The complexity under the hood does not matter.  What matters is what role it plays in your workflow.',
+  },
+  {
+    selector: '.GraphRoot .connector',
+    content: 'The relations between Operations are defined by the edges. ' +
+        'Depending on the use case, the entire Workflow will be exectuded in multiple independent containers, ' +
+        'compiled to a single executable file for higher performance or converted into Spark or AWS Step Functions workflow.',
+  },
+  {
+    selector: '.PropertiesBar',
+    content: 'This toolbar contains properties of Workflow or Operations. Feel free to customize your Workflows in an intuitive way. ' +
+        'You may change target variable, number of hidden layers, aggregation function, model version, etc.',
+  },
+  {
+    selector: '.ParameterItem',
+    content: 'The Parameters are customizable. Depending on use case, it can be a string, number, enum, list, or even code. ' +
+        'You may also override their values base on global Workflow-level Parameters.',
+  },
+  {
+    selector: '.control-panel',
+    content: 'Control panel contains multiple operations you may find useful such as Workflow validation or upgrating Operaions to new versions.',
+  },
+  {
+    selector: '.control-toggle',
+    content: 'Working with Workflows is not limited by Editor alone. You may define Workflow-level Parameters or monitor running or explore completed Runs.',
+  },
+  {
+    selector: '.run-button',
+    content: 'Don`t forget to try to execute the Workflow to see Plynx in action!',
+  },
+];
+
 class Graph extends Component {
   static propTypes = {
-    history: PropTypes.object.isRequired,
-    location: PropTypes.object.isRequired,
-    match: PropTypes.shape({
-      params: PropTypes.shape({
-        graph_id: PropTypes.string,
-      }),
-    }),
+    showAlert: PropTypes.func.isRequired,
+    onNodeChange: PropTypes.func.isRequired,
+    node: PropTypes.object.isRequired,
+    editable: PropTypes.bool.isRequired,
   }
 
   constructor(props) {
     super(props);
-    this.graph = {};
-    this.node_lookup = {};
-    this.block_lookup = {};
-    this.connections = [];
+    this.graph_node = {};
+    this.tourSteps = addStyleToTourSteps(TOUR_STEPS);
     document.title = "Graph";
 
     this.state = {
       blocks: [],
       connections: [],
+      graph: {},
       graphId: null,
-      editable: false,
+      editable: null,
       loading: true,
       title: "",
       description: "",
       graphRunningStatus: null,
       previewData: null,
       generatedCode: "",
+      linkParameters: null,
     };
 
     let token = cookie.load('refresh_token');
@@ -97,101 +141,113 @@ ENDPOINT = '` + API_ENDPOINT + `'
   async componentDidMount() {
     // Loading
 
-    const self = this;
-    let loading = true;
-    const graph_id = this.props.match.params.graph_id.replace(/\$+$/, '');
-    let sleepPeriod = 1000;
-    const sleepMaxPeriod = 10000;
-    const sleepStep = 1000;
-
-    const loadGraph = (response) => {
-      self.setState({
-        resources_dict: response.data.resources_dict,
-      });
-      self.loadGraphFromJson(response.data.data);
-      console.log(graph_id);
-      if (graph_id === 'new') {
-        self.props.history.replace("/graphs/" + self.graph._id);
-      }
-      loading = false;
-    };
-
-    const handleError = (error) => {
-      console.error(error);
-      console.error('-----------');
-      if (error.response.status === 404) {
-        self.props.history.replace("/not_found");
-        window.location.reload(false);
-        loading = false;
-      }
-      if (error.response.status === 401) {
-        PLynxApi.getAccessToken()
-        .then((isSuccessfull) => {
-          if (!isSuccessfull) {
-            console.error("Could not refresh token");
-            self.showAlert('Failed to authenticate', 'failed');
-          } else {
-            self.showAlert('Updated access token', 'success');
-          }
-        });
-      }
-    };
-
-    /* eslint-disable no-await-in-loop */
-    /* eslint-disable no-unmodified-loop-condition */
-    while (loading) {
-      await PLynxApi.endpoints.graphs.getOne({ id: graph_id})
-      .then(loadGraph)
-      .catch(handleError);
-      if (loading) {
-        await self.sleep(sleepPeriod);
-        sleepPeriod = Math.min(sleepPeriod + sleepStep, sleepMaxPeriod);
-      }
-    }
-    /* eslint-enable no-unmodified-loop-condition */
-    /* eslint-enable no-await-in-loop */
-
-    // Stop loading
-    self.setState({
-      loading: false,
-    });
+    this.loadGraphFromJson(this.props.node);
   }
 
   loadGraphFromJson(data) {
-    this.graph = data;
-    document.title = this.graph.title + " - Graph - PLynx";
-    console.log(this.graph);
+    this.graph_node = data;
+    document.title = this.graph_node.title + " - Graph - PLynx";
+    console.log(this.graph_node);
+    this.node_lookup = {};
+    this.block_lookup = {};
     this.connections = [];
     this.blocks = [];
+    const parameterNameToGraphParameter = {};
     const ts = new ObjectID().toString();
 
-    for (let i = 0; i < this.graph.nodes.length; ++i) {
-      const node = this.graph.nodes[i];
-      const inputs = [];
-      const outputs = [];
+    this.nodes = this.graph_node.parameters.find(p => p.name === '_nodes').value.value;
+
+    let parameter;
+    for (parameter of this.graph_node.parameters) {
+      parameterNameToGraphParameter[parameter.name] = parameter;
+    }
+
+    let inputNode = null;
+    for (let i = 0; i < this.nodes.length; ++i) {
+      const node = this.nodes[i];
+
+      // Remove broken references
+      for (parameter of node.parameters) {
+        if (parameter.reference &&
+            (!parameterNameToGraphParameter.hasOwnProperty(parameter.reference)
+                || parameter.parameter_type !== parameterNameToGraphParameter[parameter.reference].parameter_type
+            )
+        ) {
+          parameter.reference = null;
+        }
+      }
+
+      // work with input and output
+      if (node._id === SPECIAL_NODE_IDS.INPUT) {
+        inputNode = node;
+        node.outputs = this.graph_node.inputs;
+      } else if (node._id === SPECIAL_NODE_IDS.OUTPUT) {
+        const prevInputToInputReferences = {};
+
+        let jj;
+        for (jj = 0; jj < node.inputs.length; ++jj) {
+          const input = node.inputs[jj];
+          prevInputToInputReferences[input.name + input.file_type] = input.input_references;
+        }
+        node.inputs = this.graph_node.outputs.map(
+              (output) => {
+                return {
+                  name: output.name,
+                  file_type: output.file_type,
+                  values: output.values,
+                  input_references:
+                    prevInputToInputReferences[output.name + output.file_type] ? prevInputToInputReferences[output.name + output.file_type] : [],
+                  min_count: output.min_count,
+                  is_array: output.is_array,
+                };
+              }
+          );
+      }
+      this.node_lookup[node._id] = node;
+    }
+
+    let i = 0;
+    for (i = 0; i < this.nodes.length; ++i) {
+      const node = this.nodes[i];
+      const blockInputs = [];
+      const blockOutputs = [];
       const specialParameterNames = [];
       let j = 0;
 
-      if (node.inputs) {
-        for (j = 0; j < node.inputs.length; ++j) {
-          inputs.push({
-            name: node.inputs[j].name,
-            file_types: node.inputs[j].file_types
-          });
-          for (let k = 0; k < node.inputs[j].values.length; ++k) {
-            this.connections.push({
-              "from_block": node.inputs[j].values[k].node_id,
-              "from": node.inputs[j].values[k].output_id,
-              "to_block": node._id,
-              "to": node.inputs[j].name}
-              );
+      for (j = 0; j < node.inputs.length; ++j) {
+        blockInputs.push({
+          name: node.inputs[j].name,
+          file_type: node.inputs[j].file_type,
+          is_array: node.inputs[j].is_array,
+        });
+        const inputValueIndexToRemove = [];
+        for (let k = 0; k < node.inputs[j].input_references.length; ++k) {
+          const from_block = node.inputs[j].input_references[k].node_id;
+          const from = node.inputs[j].input_references[k].output_id;
+
+          if (from_block === SPECIAL_NODE_IDS.INPUT && inputNode) {
+            const output = inputNode.outputs.filter((out) => out.name === from);
+            if (output.length === 0 || !typesValid(output[0], node.inputs[j])) {
+              inputValueIndexToRemove.push(k);
+              continue;
+            }
           }
+          this.connections.push({
+            "from_block": from_block,
+            "from": from,
+            "to_block": node._id,
+            "to": node.inputs[j].name}
+              );
+        }
+        for (let v = inputValueIndexToRemove.length - 1; v >= 0; --v) {
+          node.inputs[j].input_references.splice(inputValueIndexToRemove[v], 1);
         }
       }
       for (j = 0; j < node.outputs.length; ++j) {
-        outputs.push({
+        blockOutputs.push({
           name: node.outputs[j].name,
-          file_type: node.outputs[j].file_type
+          file_type: node.outputs[j].file_type,
+          is_array: node.outputs[j].is_array,
         });
       }
 
@@ -217,39 +273,33 @@ ENDPOINT = '` + API_ENDPOINT + `'
         "y": node.y,
         "fields":
         {
-          "in": inputs,
-          "out": outputs
+          "in": blockInputs,
+          "out": blockOutputs
         },
         "nodeRunningStatus": node.node_running_status,
         "nodeStatus": node.node_status,
         "specialParameterNames": specialParameterNames,
         "_ts": ts,
       });
-      this.node_lookup[node._id] = node;
       this.block_lookup[node._id] = this.blocks[this.blocks.length - 1];
     }
 
+    /*
     const nid = queryString.parse(this.props.location.search).nid;
+    */
+    const nid = null;
 
     this.setState({
       "blocks": this.blocks,
       "connections": this.connections,
-      "graphId": this.graph._id,
-      "editable": this.graph.graph_running_status.toUpperCase() === GRAPH_RUNNING_STATUS.CREATED,
-      "loading": false,
-      "title": this.graph.title,
-      "description": this.graph.description,
-      "graphRunningStatus": this.graph.graph_running_status,
+      "graph": this.graph_node,
+      "editable": this.props.editable,
+
     }, () => {
       if (nid) {
         this.mainGraph.getDecoratedComponentInstance().selectBlocks([nid]);
       }
     });
-
-    const st = this.graph.graph_running_status.toUpperCase();
-    if (st === 'READY' || st === GRAPH_RUNNING_STATUS.RUNNING || st === GRAPH_RUNNING_STATUS.FAILED_WAITING) {
-      this.timeout = setTimeout(() => this.checkGraphStatus(), 1000);
-    }
   }
 
   updateGraphFromJson(newGraph) {
@@ -263,56 +313,22 @@ ENDPOINT = '` + API_ENDPOINT + `'
       blocks_lookup_index[block.nid] = i;
     }
 
-    for (i = 0; i < newGraph.nodes.length; ++i) {
-      const node = this.graph.nodes[i];
+    const newNodes = newGraph.parameters.find((p) => p.name === '_nodes').value.value;
+
+    for (i = 0; i < newNodes.length; ++i) {
+      const node = newNodes[i];
       block = this.blocks[blocks_lookup_index[node._id]];
       block.nodeRunningStatus = node.node_running_status;
       block.nodeStatus = node.node_status;
       block.cacheUrl = node.cache_url;
-      this.node_lookup[node._id] = newGraph.nodes[i];
+      this.node_lookup[node._id] = newNodes[i];
       this.block_lookup[node._id] = block;
     }
 
+    this.graph_node = newGraph;
+
     this.setState({
       "blocks": this.blocks,
-      "loading": false,
-      "graphRunningStatus": newGraph.graph_running_status,
-    });
-
-    const st = this.graph.graph_running_status.toUpperCase();
-    if (st === 'READY' || st === GRAPH_RUNNING_STATUS.RUNNING || st === GRAPH_RUNNING_STATUS.FAILED_WAITING) {
-      this.timeout = setTimeout(() => this.checkGraphStatus(), 1000);
-    }
-
-    this.graph = newGraph;
-  }
-
-  componentWillUnmount() {
-    if (this.timeout) {
-      clearTimeout(this.timeout);
-    }
-  }
-
-  checkGraphStatus() {
-    const self = this;
-    const graph_id = self.graph._id;
-    PLynxApi.endpoints.graphs.getOne({ id: graph_id})
-    .then((response) => {
-      self.updateGraphFromJson(response.data.data);
-    })
-    .catch((error) => {
-      console.log(error);
-      if (error.response.status === 401) {
-        PLynxApi.getAccessToken()
-        .then((isSuccessfull) => {
-          if (isSuccessfull) {
-            self.timeout = setTimeout(() => self.checkGraphStatus(), 1000);
-          } else {
-            console.error("Could not refresh token");
-            self.showAlert('Failed to authenticate', 'failed');
-          }
-        });
-      }
     });
   }
 
@@ -338,19 +354,19 @@ ENDPOINT = '` + API_ENDPOINT + `'
       throw new Error("Node input with name '" + from_pin + "' not found");
     }
 
-    if (node_input.max_count > 0 && node_input.values.length >= node_input.max_count) {
-      this.showAlert("No more slots for new connections left", 'warning');
+    if (!node_input.is_array && node_input.input_references.length > 0) {
+      this.props.showAlert("No more slots for new connections left", 'warning');
       return;
     }
 
     if (!typesValid(node_output, node_input)) {
-      this.showAlert("Incompatible types", 'warning');
+      this.props.showAlert("Incompatible types", 'warning');
       return;
     }
 
-    if (node_input.values.filter(
+    if (node_input.input_references.filter(
         (a) => a.node_id === from_nid && a.output_id === from_pin).length > 0) {
-      this.showAlert("Connection already exists", 'warning');
+      this.props.showAlert("Connection already exists", 'warning');
       return;
     }
 
@@ -361,7 +377,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
       to: to_pin
     });
 
-    node_input.values.push({
+    node_input.input_references.push({
       "node_id": from_nid,
       "output_id": from_pin
     });
@@ -373,43 +389,56 @@ ENDPOINT = '` + API_ENDPOINT + `'
       });
     }
 
-    console.log(this.graph);
-
     this.setState({connections: this.connections});
+
+    this.props.onNodeChange(this.graph_node);
   }
 
   onRemoveConnector(connector) {
+    console.log('Remove connector', connector);
     let connections = this.connections;
     connections = connections.filter((connection) => {
       return connection !== connector;
     });
 
     const to_node = this.node_lookup[connector.to_block];
-    const input = to_node.inputs.filter((input_) => {
+    const input = to_node.inputs.find((input_) => {
       return input_.name === connector.to;
-    })[0];
-    input.values = input.values.filter((value) => {
+    });
+    input.input_references = input.input_references.filter((value) => {
       return !(value.output_id === connector.from && value.node_id === connector.from_block);
     });
 
     this.connections = connections;
     this.setState({connections: connections});
+
+    this.props.onNodeChange(this.graph_node);
   }
 
   onRemoveBlock(nid) {
-    this.graph.nodes = this.graph.nodes.filter((node) => {
-      return node._id !== nid;
-    });
+    console.log('Remove block', nid);
+    if (this.node_lookup[nid].node_running_status === NODE_RUNNING_STATUS.SPECIAL) {
+      console.log('Cannot remove special node');
+      return;
+    }
+
+    this.nodes.splice(
+        this.nodes.map(node => node._id === nid).indexOf(true),     // simply indexOf does not work!
+        1
+    );
+
     delete this.node_lookup[nid];
     this.blocks = this.blocks.filter((block) => {
       return block.nid !== nid;
     });
 
     this.setState({blocks: this.blocks});
+
+    this.props.onNodeChange(this.graph_node);
   }
 
   onCopyBlock(copyList, offset) {
-    const nodes = copyList.nids.map(nid => this.node_lookup[nid]);
+    const nodes = copyList.nids.map(nid => this.node_lookup[nid]).filter((node) => node && node.node_running_status !== NODE_RUNNING_STATUS.SPECIAL);
     const copyObject = {
       nodes: nodes,
       connectors: copyList.connectors,
@@ -455,21 +484,31 @@ ENDPOINT = '` + API_ENDPOINT + `'
       const from_node = this.node_lookup[from_block];
       const to_node = this.node_lookup[to_block];
       if (from_node && to_node) {
-        let index = -1;
-        for (let jj = 0; jj < to_node.inputs.length; ++jj) {
-          if (to_node.inputs[jj].name === connector.to) {
-            index = jj;
+        let from_index = -1;
+        let to_index = -1;
+        let jj;
+        for (jj = 0; jj < from_node.outputs.length; ++jj) {
+          if (from_node.outputs[jj].name === connector.from) {
+            from_index = jj;
             break;
           }
         }
-        if (index < 0) {
-          throw new Error("Index not found for " + connector.to);
+        for (jj = 0; jj < to_node.inputs.length; ++jj) {
+          if (to_node.inputs[jj].name === connector.to) {
+            to_index = jj;
+            break;
+          }
         }
-        if (to_node.inputs[index].max_count > 0 && to_node.inputs[index].values.length >= to_node.inputs[index].max_count) {
+
+        if (to_index < 0 || from_index < 0) {
+          console.log(`Index not found for connector ${connector}`);
+          continue;
+        }
+        if (!to_node.inputs[to_index].is_array && to_node.inputs[to_index].input_references.length > 0) {
           continue;
         }
 
-        to_node.inputs[index].values.push({
+        to_node.inputs[to_index].input_references.push({
           "node_id": from_node._id,
           "output_id": connector.from,
         });
@@ -487,6 +526,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
       nodes: this.nodes,
       connections: this.connections,
     });
+
+    this.props.onNodeChange(this.graph_node);
   }
 
   onOutputClick(nid, outputIndex) {
@@ -496,11 +537,11 @@ ENDPOINT = '` + API_ENDPOINT + `'
     }
     const node = this.node_lookup[nid];
     const output = node.outputs[outputIndex];
-    if (output.resource_id) {
+    if (output.values.length > 0) {
       this.handlePreview({
         title: output.name,
         file_type: output.file_type,
-        resource_id: output.resource_id,
+        resource_id: output.values[0],
         download_name: output.name,
       });
     } else {
@@ -538,26 +579,20 @@ ENDPOINT = '` + API_ENDPOINT + `'
     const node = this.node_lookup[nid];
     node.x = pos.x;
     node.y = pos.y;
+
+    this.props.onNodeChange(this.graph_node);
   }
 
   handleBlocksSelect(nids) {
     console.log('blocks selected : ' + nids);
 
+    this.selectedNodeIds = nids;
+
     if (nids.length === 1) {
       const nid = nids[0];
       const node = this.node_lookup[nid];
       if (node) {
-        this.propertiesBar.setNodeData(
-          this.graph._id,
-          node._id,
-          node.base_node_name,
-          node.title,
-          node.description,
-          node.parameters,
-          node.outputs,
-          node.logs,
-          node.parent_node,
-        );
+        this.propertiesBar.setNodeData(node);
 
         if (this.block_lookup[nid].highlight) {
           this.block_lookup[nid].highlight = false;
@@ -567,145 +602,45 @@ ENDPOINT = '` + API_ENDPOINT + `'
         }
       }
     } else if (nids.length > 1) {
-      this.propertiesBar.clearData();
+      this.propertiesBar.setNodeDataArr(nids.map((nid) => this.node_lookup[nid]));
     } else {
-      this.handleAllBlocksDeselect();
+      this.propertiesBar.setNodeData(this.graph_node);
     }
   }
 
-  handleBlockDeselect(nid) {
-    console.log('block deselected : ' + nid);
-
-    if (this.block_lookup[nid].highlight) {
-      this.block_lookup[nid].highlight = false;
-      this.setState({
-        "blocks": this.blocks
-      });
-    }
-    // var node = this.node_lookup[nid];
-    // this.propertiesBar.clearData();
-  }
-
-  handleAllBlocksDeselect() {
-    console.log("Graph properties");
-    this.propertiesBar.setGraphData(
-      this.graph._id,
-      "Graph",
-      [
-        {
-          name: 'title',
-          parameter_type: "str",
-          value: this.state.title,
-          widget: {
-            alias: "Title"
-          }
-        },
-        {
-          name: 'description',
-          parameter_type: "str",
-          value: this.state.description,
-          widget: {
-            alias: "Description"
-          }
-        }
-      ]
-    );
-  }
-
-  handleSave() {
-    console.log(this.graph);
-    this.postGraph(this.graph, false, ACTION.SAVE);
-  }
-
-  handleValidate() {
-    console.log(this.graph);
-    this.postGraph(this.graph, false, ACTION.VALIDATE);
-  }
-
-  handleApprove() {
-    console.log(this.graph);
-    this.postGraph(this.graph, true, ACTION.APPROVE);
-  }
-
-  handleRearrange() {
-    this.postGraph(this.graph, false, ACTION.REARRANGE);
-  }
-
-  handleGenerateCode() {
-    this.postGraph(this.graph, false, ACTION.GENERATE_CODE);
-  }
-
-  handleUpgradeNodes() {
-    this.postGraph(this.graph, false, ACTION.UPGRADE_NODES);
-  }
-
-  handleClone() {
-    this.graph.graph_running_status = GRAPH_RUNNING_STATUS.CREATED;
-    this.graph._id = new ObjectID().toString();
-    let j = 0;
-    for (let i = 0; i < this.graph.nodes.length; ++i) {
-      const node = this.graph.nodes[i];
-      if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
-        node.node_running_status = NODE_RUNNING_STATUS.CREATED;
+  handleParameterChanged(node_ids, name, value) {
+    for (let ii = 0; ii < node_ids.length; ++ii) {
+      const node_id = node_ids[ii];
+      let node;
+      if (node_id in this.node_lookup) {
+        node = this.node_lookup[node_id];
+      } else {
+        node = this.graph_node;
       }
-      if (node.inputs) {
-        for (j = 0; j < node.inputs.length; ++j) {
-          const input_values = node.inputs[j].values;
-          for (let k = 0; k < input_values.length; ++k) {
-            input_values[k].resource_id = null;
-          }
-        }
-      }
-      if (node.logs) {
-        for (j = 0; j < node.logs.length; ++j) {
-          node.logs[j].resource_id = null;
-        }
-      }
-      if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
-        for (j = 0; j < node.outputs.length; ++j) {
-          node.outputs[j].resource_id = null;
-        }
-      }
-      node.cache_url = null;
-    }
-    this.setState({
-      editable: true,
-      graphId: this.graph._id,
-      graphRunningStatus: this.graph.graph_running_status,
-    });
-    this.loadGraphFromJson(this.graph);
-    this.props.history.push("/graphs/" + this.graph._id + '$');
-  }
-
-  handleCancel() {
-    this.postGraph(this.graph, false, ACTION.CANCEL);
-  }
-
-  handleParameterChanged(nodeId, name, value) {
-    if (nodeId) {
-      const node = this.node_lookup[nodeId];
       const node_parameter = node.parameters.find(
-        (node_input) => {
-          return node_input.name === name;
-        }
-      );
+          (param) => {
+            return param.name === name;
+          }
+        );
       if (node_parameter) {
         node_parameter.value = value;
-      } else if (name === '_DESCRIPTION') {
-        const block = this.block_lookup[nodeId];
-        node.description = value;
-        block.description = value;
+      } else if (name === '_DESCRIPTION' || name === '_TITLE') {
+        const inName = name.substring(1, name.length).toLowerCase();
+        const block = this.block_lookup[node_id];
+        node[inName] = value;
 
-        this.setState({
-          blocks: this.blocks
-        });
+        document.title = this.graph_node.title + " - Graph - PLynx";
+        if (block) { // the case of graph itself
+          block[inName] = value;
+        } else {
+                // using for node, it is hard to update descriptions
+          this.setState({graph: this.graph_node});
+        }
       } else {
         throw new Error("Parameter not found");
       }
-    } else {
-      this.setState({[name]: value});
-      this.graph[name] = value;
     }
+    this.props.onNodeChange(this.graph_node);
   }
 
   handlePreview(previewData) {
@@ -746,11 +681,73 @@ ENDPOINT = '` + API_ENDPOINT + `'
     });
   }
 
+  handleLinkClick(node_ids, name) {
+    this.link_node_parameters = [];
+    let parameter_reference;
+    let parameter_type;
+    let node_id;
+    for (node_id of node_ids) {
+      const node = this.node_lookup[node_id];
+      const node_parameter = node.parameters.find(
+          (param) => {
+            return param.name === name;
+          }
+        );
+      if (!node_parameter) {
+        throw new Error("Parameter not found");
+      }
+
+      parameter_reference = node_parameter.reference;
+
+      parameter_type = node_parameter.parameter_type;
+
+      this.link_node_parameters.push(node_parameter);
+    }
+
+    this.link_graph_parameters = [{
+      name: null,
+      parameter_type: "none",
+      value: "0",
+      mutable_type: true,
+      removable: true,
+      publicable: true,
+      widget: "None",
+    }].concat(
+        this.graph_node.parameters.filter((parameter) => parameter.parameter_type === parameter_type)
+    );
+
+    let linkParametersIndex = 0;
+    if (parameter_reference) {
+      linkParametersIndex = this.link_graph_parameters.findIndex((parameter) => parameter.name === parameter_reference);
+    }
+
+    this.setState({
+      linkParameters: this.link_graph_parameters,
+      linkParametersIndex: linkParametersIndex,
+    });
+  }
+
+  handleIndexLinkChange(index) {
+    let node_parameter;
+    for (node_parameter of this.link_node_parameters) {
+      node_parameter.reference = this.link_graph_parameters[index].name;
+    }
+    this.handleBlocksSelect(this.selectedNodeIds);
+    this.props.onNodeChange(this.graph_node);
+  }
+
+  handleCloseParameterLinkDialog() {
+    this.setState({
+      linkParameters: null
+    });
+  }
+
   closeAllDialogs() {
     this.handleClosePreview();
     this.handleCloseCodeDialog();
     this.handleCloseGeneratedCodeDialog();
     this.handleCloseFileDialog();
+    this.handleCloseParameterLinkDialog();
   }
 
   keyHandlers = {
@@ -759,7 +756,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
     },
   }
 
-  handleDrop(blockObjArg, replaceParentNode) {
+  handleDrop(blockObjArg, replaceOriginalNode) {
     const blockObj = JSON.parse(JSON.stringify(blockObjArg)); // copy
     const node = blockObj.nodeContent;
     const inputs = [];
@@ -768,25 +765,34 @@ ENDPOINT = '` + API_ENDPOINT + `'
 
     let i = 0;
 
-    if (replaceParentNode) {
-      node.parent_node = node._id;
+    if (replaceOriginalNode) {
+      node.original_node_id = node._id;
     }
+    node.parent_node_id = null;
+    node.successor_node_id = null;
     node._id = new ObjectID().toString();
 
     if (node.inputs) {
       for (i = 0; i < node.inputs.length; ++i) {
         inputs.push({
           name: node.inputs[i].name,
-          file_types: node.inputs[i].file_types
+          file_type: node.inputs[i].file_type,
+          is_array: node.inputs[i].is_array,
         });
         node.inputs[i].values = []; // clear inputs on paste
+        node.inputs[i].input_references = [];
       }
     }
     for (i = 0; i < node.outputs.length; ++i) {
       outputs.push({
         name: node.outputs[i].name,
-        file_type: node.outputs[i].file_type
+        file_type: node.outputs[i].file_type,
+        is_array: node.outputs[i].is_array,
       });
+      node.outputs[i].values = []; // clear outputs
+    }
+    for (i = 0; i < node.logs.length; ++i) {
+      node.logs[i].values = []; // clear outputs
     }
     for (i = 0; i < node.parameters.length; ++i) {
       if (parameterIsSpecial(node.parameters[i])) {
@@ -796,10 +802,9 @@ ENDPOINT = '` + API_ENDPOINT + `'
     node.x = Math.max(blockObj.mousePos.x - 340, 0);
     node.y = Math.max(blockObj.mousePos.y - 80, 0);
 
-    if (OPERATIONS.indexOf(node.base_node_name) > -1) {
-      node.node_running_status = NODE_RUNNING_STATUS.CREATED;
-      node.cache_url = null;
-    }
+    // Change for files
+    node.node_running_status = NODE_RUNNING_STATUS.CREATED;
+    node.cache_url = null;
 
     this.blocks.push(
       {
@@ -822,7 +827,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
     this.node_lookup[node._id] = node;
     this.block_lookup[node._id] = this.blocks[this.blocks.length - 1];
 
-    this.graph.nodes.push(node);
+    this.nodes.push(node);
     console.log("node", node);
 
     this.setState({
@@ -830,90 +835,14 @@ ENDPOINT = '` + API_ENDPOINT + `'
       connections: this.connections,
     });
 
+    this.props.onNodeChange(this.graph_node);
+
     return node._id;
   }
 
-  postGraph(graph, reloadOnSuccess, action) {
-    /* action might be in {'save', 'validate', 'approve', 'deprecate'}*/
-    const self = this;
-    self.setState({loading: true});
-    PLynxApi.endpoints.graphs
-    .create({
-      graph: graph,
-      actions: [action]
-    })
-    .then((response) => {
-      const data = response.data;
-      console.log(data);
-      self.setState({loading: false});
-      if (data.status === RESPONCE_STATUS.SUCCESS) {
-        if (reloadOnSuccess) {
-          window.location.reload();
-        }
-        if (action === ACTION.SAVE) {
-          self.showAlert("Saved", 'success');
-        } else if (action === ACTION.VALIDATE) {
-          self.showAlert("Valid", 'success');
-        } else if (action === ACTION.REARRANGE) {
-          self.loadGraphFromJson(data.graph);
-        } else if (action === ACTION.UPGRADE_NODES) {
-          self.loadGraphFromJson(data.graph);
-          let message = "";
-          if (data.upgraded_nodes_count > 0) {
-            message = "Upgraded " + data.upgraded_nodes_count +
-              (data.upgraded_nodes_count > 1 ? " Nodes" : " Node");
-          } else {
-            message = "No Nodes upgraded";
-          }
-          self.showAlert(message, 'success');
-        } else if (action === ACTION.GENERATE_CODE) {
-          self.setState({
-            generatedCode: data.code
-          });
-        } else {
-          self.showAlert("Success", 'success');
-        }
-        if (cookie.load('demoPreview')) {
-          cookie.remove('demoPreview', { path: '/' });
-        }
-      } else if (data.status === RESPONCE_STATUS.VALIDATION_FAILED) {
-        console.warn(data.message);
-        // TODO smarter traverse
-        self.showValidationError(data.validation_error);
-
-        self.showAlert(data.message, 'failed');
-      } else {
-        console.warn(data.message);
-        self.showAlert(data.message, 'failed');
-      }
-    })
-    .catch((error) => {
-      console.log(error);
-      if (error.response.status === 401) {
-        PLynxApi.getAccessToken()
-        .then((isSuccessfull) => {
-          if (!isSuccessfull) {
-            console.error("Could not refresh token");
-            self.showAlert('Failed to authenticate', 'failed');
-          } else {
-            self.showAlert('Failed to save the graph, please try again', 'failed');
-          }
-        });
-      } else {
-        try {
-          self.showAlert(error.response.data.message, 'failed');
-        } catch {
-          self.showAlert('Unknown error', 'failed');
-        }
-      }
-      self.setState({loading: false});
-    });
-  }
-
   showValidationError(validationError) {
-    const children = validationError.children;
-    for (let i = 0; i < children.length; ++i) {
-      const child = children[i];
+    for (let ii = 0; ii < validationError.children.length; ++ii) {
+      const child = validationError.children[ii];
       let nodeId = null;
       let node = null;
       switch (child.validation_code) {
@@ -929,7 +858,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
             "blocks": this.blocks
           });
 
-          this.showAlert("Deprecated Node found: `" + node.title + "`", 'warning');
+          this.props.showAlert("Deprecated Node found: `" + node.title + "`", 'warning');
           break;
         case VALIDATION_CODES.MISSING_INPUT:
           nodeId = validationError.object_id;
@@ -940,46 +869,27 @@ ENDPOINT = '` + API_ENDPOINT + `'
             "blocks": this.blocks
           });
 
-          this.showAlert("Missing input `" + child.object_id + "` in node `" + node.title + "`", 'warning');
+          this.props.showAlert("Missing input `" + child.object_id + "` in node `" + node.title + "`", 'warning');
           break;
         case VALIDATION_CODES.MISSING_PARAMETER:
-          this.showAlert("Missing parameter `" + child.object_id + "`", 'warning');
+          this.props.showAlert("Missing parameter `" + child.object_id + "`", 'warning');
+          break;
+        case VALIDATION_CODES.EMPTY_GRAPH:
+          this.props.showAlert("The graph is empty", 'warning');
           break;
         default:
       }
     }
   }
 
-  showAlert(message, type) {
-    this.msg.show(message, {
-      time: 5000,
-      type: 'error',
-      icon: <img src={"/alerts/" + type + ".svg"} width="32" height="32" alt="alert"/>
-    });
-  }
-
   render() {
-    const demoPreview = !!cookie.load('demoPreview');
-
     return (
     <HotKeys className="GraphNode"
              handlers={this.keyHandlers} keyMap={KEY_MAP}
     >
-      <ResourceProvider value={this.state.resources_dict}>
-        <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
-        { demoPreview &&
-          <DemoScreen onApprove={() => this.handleApprove()} onClose={() => {
-            cookie.remove('demoPreview', { path: '/' });
-            this.forceUpdate();
-          }} />
-        }
-        {this.state.loading &&
-          <LoadingScreen
-          ></LoadingScreen>
-        }
         <div className={'BackgroundLabels ' + (this.state.editable ? 'editable' : 'readonly')}>
-          <div className="Title">{this.state.title}</div>
-          <div className="Description">&ldquo;{this.state.description}&rdquo;</div>
+          <div className="Title">{this.state.graph.title}</div>
+          <div className="Description">&ldquo;{this.state.graph.description}&rdquo;</div>
         </div>
         {this.state.fileObj &&
           <FileDialog
@@ -990,18 +900,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
             onPreview={(previewData) => this.handlePreview(previewData)}
             />
         }
-        <Controls className="ControlButtons"
-                  readonly={!this.state.editable}
-                  graphRunningStatus={this.state.graphRunningStatus}
-                  onSave={() => this.handleSave()}
-                  onValidate={() => this.handleValidate()}
-                  onApprove={() => this.handleApprove()}
-                  onRearrange={() => this.handleRearrange()}
-                  onGenerateCode={() => this.handleGenerateCode()}
-                  onUpgradeNodes={() => this.handleUpgradeNodes()}
-                  onClone={() => this.handleClone()}
-                  onCancel={() => this.handleCancel()}
-        />
         {
           (this.state.previewData) &&
           <PreviewDialog className="PreviewDialog"
@@ -1034,9 +932,20 @@ ENDPOINT = '` + API_ENDPOINT + `'
             readOnly
           />
         }
+        {
+            this.state.linkParameters &&
+            <ParameterSelectionDialog
+              title={"Link Graph parameter"}
+              parameters={this.state.linkParameters}
+              index={this.state.linkParametersIndex}
+              onClose={() => this.handleCloseParameterLinkDialog()}
+              onIndexChanged={(index) => this.handleIndexLinkChange(index)}
+              readOnly={!this.state.editable}
+            />
+        }
 
         {/* Visible and flex layout blocks */}
-        {this.state.editable && <NodesBar/> }
+        {this.state.editable && <HubPanel/>}
 
         <ReactNodeGraph className="MainGraph"
           ref={(child) => {
@@ -1056,29 +965,26 @@ ENDPOINT = '` + API_ENDPOINT + `'
           onBlocksSelect={(nids) => {
             this.handleBlocksSelect(nids);
           }}
-          onBlockDeselect={(nid) => {
-            this.handleBlockDeselect(nid);
-          }}
           onDrop={(nodeObj) => this.handleDrop(nodeObj, true)}
-          onAllBlocksDeselect={() => this.handleAllBlocksDeselect()}
+          onAllBlocksDeselect={() => this.handleBlocksSelect([])}
           onSavePressed={() => this.handleSave()}
-          key={'graph' + this.state.graphId + this.state.loading}
+          key={'graph' + this.state.editable}
         />
 
+        { this.state.editable !== null &&
         <PropertiesBar className="PropertiesBar"
                       ref={(child) => {
                         this.propertiesBar = child;
                       }}
-                      onParameterChanged={(nodeId, name, value) => this.handleParameterChanged(nodeId, name, value)}
+                      onParameterChanged={(node_ids, name, value) => this.handleParameterChanged(node_ids, name, value)}
                       editable={this.state.editable}
+                      initialNode={this.graph_node}
                       onPreview={(previewData) => this.handlePreview(previewData)}
-                      graphId={this.graph._id}
-                      graphTitle={this.state.title}
-                      graphDescription={this.state.description}
-                      key={"prop" + this.state.graphId + this.state.loading}
+                      key={"prop" + this.state.editable}
                       onFileShow={(nid) => this.handleShowFile(nid)}
+                      onLinkClick={(node_ids, name) => this.handleLinkClick(node_ids, name)}
         />
-      </ResourceProvider>
+        }
     </HotKeys>
     );
   }

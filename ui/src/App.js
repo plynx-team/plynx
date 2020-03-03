@@ -1,17 +1,14 @@
 import React, { Component } from 'react';
 import { Route, Switch, withRouter } from 'react-router-dom';
-import cookie from 'react-cookies';
 import PropTypes from 'prop-types';
 import Header from './components/header';
 import LogIn from './components/LogIn';
-import Welcome from './components/Welcome';
+import LogInRedirect from './components/LogInRedirect';
 import Dashboard from './components/dashboard';
 import NodeRouter from './components/NodeRouter';
-import FileRouter from './components/FileRouter';
-import GraphRouter from './components/GraphRouter';
 import NotFound from './components/NotFound';
-import FeedbackButton from './components/FeedbackButton';
 import APIDialog from './components/Dialogs/APIDialog';
+import { COLLECTIONS, VIRTUAL_COLLECTIONS, SPECIAL_USERS } from './constants';
 
 import './App.css';
 
@@ -42,6 +39,11 @@ class App extends Component {
                  pathTuple[2] !== '' &&
                  prevPathTuple[2] !== 'new') {
         window.location.reload();
+      } else if (this.reloadOnChangePath &&
+                prevPathTuple[1] !== pathTuple[1] &&
+                prevPathTuple[2] !== pathTuple[2]) {
+        // Case /templates/abc -> /runs/abc
+        window.location.reload();
       } else {
         this.reloadOnChangePath = true;
       }
@@ -60,18 +62,16 @@ class App extends Component {
     return (
       <div className="App">
         <Header onAPIDialogClick={() => this.handleAPIDialogClick()}/>
-        {cookie.load('username') &&
-          <FeedbackButton/>
-        }
         <div className="Content">
           {this.state.showApiDialog && <APIDialog onClose={() => this.handleAPIDialogClose()}/>}
           <Switch>
-            <Route exact path="/" component={Welcome} />
-            <Route exact path="/welcome" component={Welcome} />
+            <Route exact path="/" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEFAULT} />}/>
+            <Route exact path="/demo" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEMO} />}/>
             <Route exact path="/dashboard" component={Dashboard} />
-            <Route path="/nodes" component={NodeRouter}/>
-            <Route path="/files" component={FileRouter}/>
-            <Route path="/graphs" component={GraphRouter}/>
+            <Route path={`/${VIRTUAL_COLLECTIONS.OPERATIONS}`} component={NodeRouter}/>
+            <Route path={`/${VIRTUAL_COLLECTIONS.WORKFLOWS}`} component={NodeRouter}/>
+            <Route path={`/${COLLECTIONS.TEMPLATES}`} component={NodeRouter}/>
+            <Route path={`/${COLLECTIONS.RUNS}`} component={NodeRouter}/>
             <Route exact path="/login" component={LogIn} />
             <Route path="*" component={NotFound} />
           </Switch>

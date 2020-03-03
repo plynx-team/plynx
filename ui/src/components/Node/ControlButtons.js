@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { NODE_STATUS } from '../../constants';
-import makeControlButton from '../Common/controlButton';
+import { makeControlButton } from '../Common/controlButton';
 
 export default class ControlButtons extends Component {
   constructor(props) {

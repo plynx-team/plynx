@@ -60,25 +60,27 @@ class DBObject(object):
             setattr(self, field_name, value)
 
     @classmethod
-    def load(cls, _id):
+    def load(cls, _id, collection=None):
         """Load object from db.
 
         Args:
             _id     (str, ObjectId):    ID of the object in DB
         """
-        obj_dict = getattr(get_db_connector(), cls.DB_COLLECTION).find_one({'_id': ObjectId(_id)})
+        collection = collection or cls.DB_COLLECTION
+        obj_dict = getattr(get_db_connector(), collection).find_one({'_id': ObjectId(_id)})
         if not obj_dict:
             raise DBObjectNotFound(
                 'Object `{_id}` not found in `{collection}` collection'.format(
                     _id=_id,
-                    collection=cls.DB_COLLECTION,
+                    collection=collection,
                 )
             )
         return cls.from_dict(obj_dict)
 
-    def save(self, force=False):
+    def save(self, force=False, collection=None):
         """Save Object in the database"""
-        if not self.__class__.DB_COLLECTION:
+        collection = collection or self.__class__.DB_COLLECTION
+        if not collection:
             raise ClassNotSavable(
                 "Class `{}` is not savable.".format(
                     self.__class__.__name__
@@ -92,7 +94,7 @@ class DBObject(object):
         obj_dict = self.to_dict()
         obj_dict["update_date"] = now
 
-        getattr(get_db_connector(), self.__class__.DB_COLLECTION).find_one_and_update(
+        getattr(get_db_connector(), collection).find_one_and_update(
             {'_id': obj_dict['_id']},
             {
                 "$setOnInsert": {"insertion_date": now},

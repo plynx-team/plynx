@@ -1,8 +1,8 @@
 export function typesValid(output, input) {
-  if (input.file_types.indexOf(output.file_type) >= 0) {
+  if (input.file_type === output.file_type) {
     return true;
   }
-  if (input.file_types.indexOf('file') >= 0) {
+  if (input === 'file') {
     return true;
   }
   return false;

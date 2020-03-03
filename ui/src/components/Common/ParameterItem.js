@@ -5,11 +5,14 @@ import './ParameterItem.css';
 
 export default class ParameterItem extends Component {
   static propTypes = {
-    name: PropTypes.string.isRequired,
-    alias: PropTypes.string.isRequired,
+    name: PropTypes.string,
+    widget: PropTypes.string.isRequired,
+    reference: PropTypes.string,
     readOnly: PropTypes.bool.isRequired,
     parameterType: PropTypes.string.isRequired,
     onParameterChanged: PropTypes.func.isRequired,
+    onLinkClick: PropTypes.func,
+    _link_visibility: PropTypes.bool,
     value: PropTypes.oneOfType([
       PropTypes.object,
       PropTypes.string,
@@ -23,10 +26,10 @@ export default class ParameterItem extends Component {
     super(props);
     this.state = {
       name: this.props.name,
-      alias: this.props.alias,
+      widget: this.props.widget,
       value: this.props.value,
       readOnly: this.props.readOnly,
-      parameterType: this.props.parameterType
+      parameterType: this.props.parameterType,
     };
 
     this.handleChange = this.handleChange.bind(this);
@@ -38,20 +41,47 @@ export default class ParameterItem extends Component {
     this.props.onParameterChanged(this.props.name, value);
   }
 
+  handleLinkClick() {
+    this.props.onLinkClick(this.props.name);
+  }
+
   render() {
     return (
       <div className='ParameterItem'>
         <div className='ParameterNameCell'>
-          {this.state.alias}
+          {this.props.widget}
         </div>
-        {renderValueElement({
-          parameterType: this.state.parameterType,
-          value: this.state.value,
-          handleChange: this.handleChange,
-          readOnly: this.state.readOnly,
-          className: 'ParameterValueCell'
-        }
-        )}
+        <div className='ParameterValueCell'>
+            { !this.props.reference &&
+                renderValueElement({
+                  parameterType: this.state.parameterType,
+                  value: this.state.value,
+                  handleChange: this.handleChange,
+                  readOnly: this.state.readOnly,
+                  className: 'parameter-value'
+                }
+                )
+            }
+            {
+                this.props.reference && <div className='reference'>{this.props.reference}</div>
+            }
+            {this.props._link_visibility &&
+            <div
+                className={'link-button control-button'}
+                onClick={() => {
+                  this.handleLinkClick();
+                }}
+            >
+              <img
+                className={'icon'}
+                src={"/icons/link-2.svg"}
+                alt="link"
+                />
+            </div>
+            }
+        </div>
+
+
       </div>
     );
   }

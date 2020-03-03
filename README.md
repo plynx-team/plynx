@@ -1,8 +1,10 @@
-# PLynx
+# Plynx
 
-[![Website shields.io](https://img.shields.io/circleci/project/github/khaxis/plynx.svg)](https://circleci.com/gh/khaxis/plynx)
-[![Website shields.io](https://img.shields.io/github/license/khaxis/plynx.svg)](https://github.com/khaxis/plynx)
-[![Website shields.io](https://img.shields.io/pypi/pyversions/plynx.svg)](https://github.com/khaxis/plynx)
+![Plynx](docs/img/logo-black-font.png?style=centerme)
+
+[![Website shields.io](https://img.shields.io/circleci/project/github/plynx-team/plynx.svg)](https://circleci.com/gh/plynx-team/plynx)
+[![Website shields.io](https://img.shields.io/github/license/plynx-team/plynx.svg)](https://github.com/plynx-team/plynx)
+[![Website shields.io](https://img.shields.io/pypi/pyversions/plynx.svg)](https://github.com/plynx-team/plynx)
 
 
 Website and demo: [plynx.com](https://plynx.com).
@@ -13,13 +15,7 @@ PLynx is a domain agnostic platform for managing reproducible experiments and da
 
 ## Features
 
-### Distributed computation
-
-All of the computation is distributed across multiple workers. You can conduct multiple experiments simultaneously. Intermediate results will be stored in the cloud and reused. No need to start your experiment from scratch.
-
-![Distributed computation](ui/public/architecture.png?raw=true "Distributed computation")
-
-### Graph Editor
+### Workflow Editor
 
 Interactive User Interface. You can clone successful experiment and reuse it or create one from scratch. PLynx manages history of the experiments and they can be reproduced.
 
@@ -43,27 +39,28 @@ View the results right in the browser.
 
 ![results preview](docs/img/results_preview.png?raw=true "Results preview")
 
+### Scalable architecture
+
+Execution Engine is based on scalable pub/sub model. Each Worker performs their jobs independently from each other and can publish subtasks back to the queue. Executers are plugins themselves and can support multiple scenarios from "compile to binary code" to "deploy and serve" to "run in a cluster using as many distributed workers as possible".
+
+![Scalable architecture](docs/img/plynx-architecture.png?raw=true "Scalable architecture")
 
 ## Requirements
 
-PLynx is a modular framework. Backend and Master, Worker and command line tool are written in `python`.
+Plugins work on python3. User Interface is based on `React`. PLynx is using `MongoDB` as a primary metadata storage. In order to meet diverse data storage requirements, its own storage plugins to store the artifacts. It supports multiple data storages such as `AWS S3`, `Google Cloud Storage` and traditional filesystems.
 
-User Interface is based on `React` framework.
-
-PLynx is using `MongoDB` as a primary metadata storage. In order to meet diverse data storage requirements, PLynx is using `boto` library as an abstractions. It supports multiple data storages such as `AWS S3`, `Google Cloud Storage` and traditional filesystems.
-
-In order to reduce complexity we recommend to install `docker` framework.
+In order to reduce complexity we recommend to install `docker` and run `make` command to start local cluster.
 
 
 ## Get started
 
 ### Usage
 
-Make sure you install docker. [Get started with Docker](https://www.docker.com/get-started)
+Make sure you install docker first. [Get started with Docker](https://www.docker.com/get-started)
 
 **tl;dr**
 ```
-git clone https://github.com/khaxis/plynx.git   # Clone the repo
+git clone https://github.com/plynx-team/plynx.git   # Clone the repo
 
 cd plynx
 
@@ -77,8 +74,7 @@ By default it will start the following services:
  * MongoDB instance
  * PLynx User Interface
  * Backend
- * Master
- * Several workers (5 by default)
+ * Several workers
 
 Run `make down` to stop the services.
 
@@ -90,182 +86,29 @@ Run `make down` to stop the services.
 - `make down` - shut down services.
 - `make dev` - run developer version of PLynx.
 
-## PLynx API
-
-Web User Interface is not the only way to create Graphs. Some of the experiments are easier to create using PLynx API:
-
-```
-#!/usr/bin/env python
-# “WDBC: compare regressors” example
-from collections import namedtuple
-from plynx import Operation, File, Graph, Client
-
-# define the training parameters
-TrainDescriptor = namedtuple('TrainDescriptor', ['method', 'parameters'])
-train_descriptors = [
-    TrainDescriptor(method='GradientBoostingRegressor', parameters='100'),
-    TrainDescriptor(method='MLPRegressor', parameters='100 10'),
-    TrainDescriptor(method='MLPRegressor', parameters='100 8'),
-    TrainDescriptor(method='MLPRegressor', parameters='80 10')
-]
-
-##########################################
-# Build Plynx elements
-##########################################
-
-# Operation is a metaclass that declares the interface to an existing operation
-# in the Plynx database
-Split = Operation(
-    id='5ae6b0123136050000d8711a',
-    title='Split Train Test',
-    inputs=['sample.py', 'data'],
-    params=['rate', 'seed'],
-    outputs=['train', 'test']
-)
-
-TrainRegression = Operation(
-    id='5ae6b023d26111000027a613',
-    title='Train regression',
-    inputs=['train.py', 'data'],
-    params=['regressor', 'hidden-layer-sizes'],
-    outputs=['model']
-)
-
-Predict = Operation(
-    id='5ae6b02f0164d80000afd938',
-    title='Predict',
-    inputs=['predict.py', 'data', 'model'],
-    outputs=['prediction']
-)
-
-Compare = Operation(
-    id='5aeaa49c16b8b50000abca48',
-    title='Compare regressors',
-    inputs=['build_roc.py', 'predictions'],
-    outputs=['plot.png']
-)
-
-# define Files
-wdbc_dataset = File(id='5ad42a2cfad58d1cc6c9f7b5')
-sample_py = File(id='5ad42da1fad58d1cc6c9f7c4')
-train_py = File(id='5aeaa42bfad58d7d05d632db')
-predict_py = File(id='5aeaa455fad58d7d05d632e0')
-build_plot_py = File(id='5aeaa483fad58d7d05d632e5')
-
-
-##########################################
-# Build pipeline
-##########################################
-
-# first split the dataset
-split_block = Split(
-    sample.py=sample_py.outputs.out,
-    data=wdbc_dataset.outputs.out,
-    rate=0.7
-)
-
-# run training algorithms with specified parameters
-predictions = []
-for descriptor in train_descriptors:
-    train = TrainRegression(
-        train_py=train_py.outputs.out
-        data=split_block.outputs.train,
-        regressor=descriptor.method,
-        hidden_layer_sizes=descriptor.parameters
-    )
-
-    predict = Predict(
-        predict_py=predict_py.outputs.out,
-        data=split_block.outputs.test,
-        model=train.outputs.model
-    )
-
-    predictions.append(predict.outputs.prediction)
-
-# join 'predictions' in the report file
-compare_models = Compare(
-    build_roc_py=build_plot_py.outputs.out,
-    predictions=predictions
-)
-
-# build the Graph
-graph = Graph(
-    Client(),
-    title='WDBC: compare regressors',
-    description='Wisconsin Diagnostic Breast Cancer',
-    targets=[compare_models]
-)
-
-##########################################
-# Run pipeline
-##########################################
-
-# Approve the Graph and wait until it finishes
-graph.approve().wait()
-
-```
 
 ### Config
 
-All of the parameters can be set in command line when the services are called. For example:
+Most of the parameters can be set in command line when the services are called. For example:
 ```
-$ plynx master --help
-usage: plynx master [-h] [-v] [--internal-master-host INTERNAL_MASTER_HOST]
-                    [-P PORT] [--db-host DB_HOST] [--db-port DB_PORT]
-                    [--db-user DB_USER] [--db-password DB_PASSWORD]
+$ plynx exec --help
+usage: -c exec [-h] [-v] -f FILENAME [--storage-prefix STORAGE_PREFIX]
 
 optional arguments:
   -h, --help            show this help message and exit
   -v, --verbose         Set logging output more verbose
-  --internal-master-host INTERNAL_MASTER_HOST
-                        Internal Master host
-  -P PORT, --port PORT  Master port
-  --db-host DB_HOST     Database host
-  --db-port DB_PORT     Database port
-  --db-user DB_USER     Database username
-  --db-password DB_PASSWORD
-                        Database password
+  -f FILENAME, --filename FILENAME
+                        Path to file
+  --storage-prefix STORAGE_PREFIX
+                        Storage prefix
 ```
 
-Yet it is almost always more convenient to store the config in a separate file.
+But we recommend to store the config in a separate file.
 
-PLynx config is located at Env variable `PLYNX_CONFIG_PATH`. If the variable is not defined, PLynx will use a file `config.yaml` in the local directory.
+Plynx config location is can be set in env variable `PLYNX_CONFIG_PATH`. Default value is `./config.yaml`.
 
-Here is an example of a `config.yaml`:
-```
-mongodb:
-  user:
-  password:
-  host: 'mongodb'
-  port: 27017
-
-master:
-  internal_host: '0.0.0.0'
-  host: 'master'
-  port: 17011
-
-worker:
-  user:
-
-storage:
-  scheme: file
-  prefix: /data/resources/
-
-auth:
-  secret_key: SECRET_KEY
-
-web:
-  host: '0.0.0.0'
-  port: 5000
-  endpoint: http://localhost:3001
-  debug: true
-
-demo:
-  graph_ids: []
-
-```
 
 ## External links
 - [PLynx.com](https://plynx.com) demo and main page.
-- [github](https://github.com/khaxis/plynx) page.
-- [Medium article](https://medium.com/@khaxis/organizing-data-driven-experiments-with-plynx-a3cc3301b981)
+- [github](https://github.com/plynx-team/plynx) page.
+- [Organizing data science experiments with PLynx](https://medium.com/@khaxis/organizing-data-driven-experiments-with-plynx-a3cc3301b981)

@@ -1,16 +1,17 @@
 .SearchBar {
-  border: 1px solid black;
-  display: block;
+  border: 1px solid #202020;
+  border-radius: 2px;
+  display: inline-flex;
   grid-template-columns: auto auto;
-  background-color: #fff;
+  background-color: #2b2b2b;
+  min-width: 500px;
 }
 
 .SearchBar > .Bar {
   border: 0px;
-  font-size: 12pt;
-  padding-left: 20px;
+  font-size: 13pt;
+  padding-left: 30px;
   background: url(/icons/search.svg) no-repeat scroll 2px 2px;
-  background-size: 16px 16px;
   width: 100%;
-  color: #000;
+  color: #fff;
 }

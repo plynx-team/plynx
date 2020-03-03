@@ -2,37 +2,28 @@ import logging
 import yaml
 import os
 from collections import namedtuple
-from pydoc import locate
 
 PLYNX_CONFIG_PATH = os.getenv('PLYNX_CONFIG_PATH', 'config.yaml')
 _config = None
 
-MasterConfig = namedtuple('MasterConfig', 'internal_host host port')
-WorkerConfig = namedtuple('WorkerConfig', 'user')
-MongoConfig = namedtuple('MongoConfig', 'user password host port')
-StorageConfig = namedtuple('StorageConfig', 'scheme prefix credential_path')
-AuthConfig = namedtuple('AuthConfig', 'secret_key')
-WebConfig = namedtuple('WebConfig', 'host port endpoint api_endpoint debug')
-DemoConfig = namedtuple('DemoConfig', 'enabled, graph_ids')
-CloudServiceConfig = namedtuple('CloudServiceConfig', 'prefix url_prefix url_postfix')
-PluginsConfig = namedtuple('PluginsConfig', 'resources')
+WorkerConfig = namedtuple('WorkerConfig', ['kinds'])
+MongoConfig = namedtuple('MongoConfig', ['user', 'password', 'host', 'port'])
+StorageConfig = namedtuple('StorageConfig', ['scheme', 'prefix', 'credential_path'])
+AuthConfig = namedtuple('AuthConfig', ['secret_key'])
+WebConfig = namedtuple('WebConfig', ['host', 'port', 'endpoint', 'api_endpoint', 'debug'])
+DemoConfig = namedtuple('DemoConfig', ['enabled', 'kind'])
+CloudServiceConfig = namedtuple('CloudServiceConfig', ['prefix', 'url_prefix', 'url_postfix'])
+ResourceConfig = namedtuple('ResourceConfig', ['kind', 'title', 'cls', 'icon', 'color'])
+DummyOperationConfig = namedtuple('DummyOperationConfig', ['kind', 'executor', 'operations'])
+OperationConfig = namedtuple('OperationConfig', ['kind', 'title', 'executor', 'operations', 'resources'])
+HubConfig = namedtuple('HubConfig', ['kind', 'title', 'icon', 'cls', 'args'])
+WorkflowConfig = namedtuple('WorkflowConfig', ['kind', 'title', 'executor', 'operations'])
+PluginsConfig = namedtuple('PluginsConfig', ['resources', 'operations', 'hubs', 'workflows', 'dummy_operations'])
 
-DEFAULT_PLUGIN_RESOURCES = [
-    'plynx.plugins.resources.File',
-    'plynx.plugins.resources.PDF',
-    'plynx.plugins.resources.Image',
-    'plynx.plugins.resources.CSV',
-    'plynx.plugins.resources.TSV',
-    'plynx.plugins.resources.Json',
-    'plynx.plugins.resources.Executable',
-    'plynx.plugins.resources.Directory',
-    'plynx.plugins.cloud_resources.CloudStorage',
-]
 
 Config = namedtuple(
     'Config',
     [
-        'master',
         'worker',
         'db',
         'storage',
@@ -55,17 +46,9 @@ def __init__():
         _config = {}
 
 
-def get_master_config():
-    return MasterConfig(
-        internal_host=_config.get('master', {}).get('internal_host', '0.0.0.0'),
-        host=_config.get('master', {}).get('host', '127.0.0.1'),
-        port=int(_config.get('master', {}).get('port', 17011)),
-    )
-
-
 def get_worker_config():
     return WorkerConfig(
-        user=_config.get('worker', {}).get('user', ''),
+        kinds=(_config.get('worker', {}).get('kinds', [])),
     )
 
 
@@ -108,7 +91,7 @@ def get_web_config():
 def get_demo_config():
     return DemoConfig(
         enabled=_config.get('demo', {}).get('enabled', False),
-        graph_ids=_config.get('demo', {}).get('graph_ids', []),
+        kind=_config.get('demo', {}).get('kind', None),
     )
 
 
@@ -121,18 +104,67 @@ def get_cloud_service_config():
 
 
 def get_plugins():
-    resources = [
-        locate(class_path)
-        for class_path in _config.get('plugins', {}).get('resources', DEFAULT_PLUGIN_RESOURCES)
-    ]
+    # resources
+    kind_to_resource = {
+        raw_resource['kind']: ResourceConfig(
+            kind=raw_resource['kind'],
+            title=raw_resource['title'],
+            cls=raw_resource['cls'],
+            icon=raw_resource['icon'],
+            color=raw_resource.get('color', ''),
+        )
+        for raw_resource in _config['plugins']['resources']
+    }
+    # operations
+    kind_to_operation = {}
+    raw_operations = _config['plugins']['operations']
+    unique_operation_kinds = {raw_operation['kind'] for raw_operation in raw_operations}
+    for raw_operation in raw_operations:
+        operation_kind = raw_operation['kind']
+        sub_operation_kinds = set(raw_operation.get('operations', []))
+        if len(sub_operation_kinds - unique_operation_kinds) > 0:
+            raise Exception('Unknown operations: `{}`'.format(sub_operation_kinds - unique_operation_kinds))
+        kind_to_operation[operation_kind] = OperationConfig(
+            kind=operation_kind,
+            title=raw_operation['title'],
+            executor=raw_operation['executor'],
+            operations=list(sub_operation_kinds),
+            resources=[resource for kind, resource in kind_to_resource.items() if kind in raw_operation['resources']],
+        )
+    # hubs
+    hubs = []
+    for raw_hub in _config['plugins']['hubs']:
+        hubs.append(HubConfig(
+            kind=raw_hub['kind'],
+            title=raw_hub['title'],
+            icon=raw_hub['icon'],
+            cls=raw_hub['cls'],
+            args=raw_hub['args'],
+        ))
+    # workflows
+    workflows = []
+    for raw_workflow in _config['plugins']['workflows']:
+        sub_operation_kinds = set(raw_workflow.get('operations', []))
+        if len(sub_operation_kinds - unique_operation_kinds) > 0:
+            raise Exception('Unknown operations: `{}`'.format(sub_operation_kinds - unique_operation_kinds))
+        workflows.append(WorkflowConfig(
+            kind=raw_workflow['kind'],
+            title=raw_workflow['title'],
+            executor=raw_workflow['executor'],
+            operations=list(sub_operation_kinds),
+        ))
+
     return PluginsConfig(
-        resources=resources,
+        resources=list(kind_to_resource.values()),
+        operations=list(kind_to_operation.values()),
+        hubs=hubs,
+        workflows=workflows,
+        dummy_operations=[DummyOperationConfig(kind='dummy', executor='plynx.plugins.executors.Dummy', operations=[])]
     )
 
 
 def get_config():
     return Config(
-        master=get_master_config(),
         worker=get_worker_config(),
         db=get_db_config(),
         storage=get_storage_config(),

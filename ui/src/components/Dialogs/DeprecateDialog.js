@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 import Dialog from './Dialog';
 import NodeItem from '../Common/NodeItem';
 import { PLynxApi } from '../../API';
-import { ACTION } from '../../constants';
+import { ACTION, COLLECTIONS } from '../../constants';
+
 
 import './DeprecateDialog.css';
 
@@ -62,9 +63,9 @@ export default class DeprecateDialog extends Component {
   updateNode(node_id, destination, retryCount = 3) {
     console.log("update_node");
     const self = this;
-    PLynxApi.endpoints.nodes.getOne({ id: node_id})
+    PLynxApi.endpoints[COLLECTIONS.TEMPLATES].getOne({ id: node_id})
     .then((response) => {
-      const node = response.data.data;
+      const node = response.data.node;
       self.setState({[destination]: node});
       self.setState({[destination + '_id']: node._id});
       self.setState({[destination + '_loading']: false});
@@ -94,7 +95,7 @@ export default class DeprecateDialog extends Component {
     const node = this.state.prev_node;
     const new_node = this.state.new_node;
     if (new_node) {
-      node.successor_node = new_node._id;
+      node.successor_node_id = new_node._id;
     }
     if (mode === 'optionally') {
       this.props.onDeprecate(node, ACTION.DEPRECATE);
@@ -152,7 +153,7 @@ export default class DeprecateDialog extends Component {
                 <div>
                   Id:
                 </div>
-                <Link to={'/nodes/' + this.state.prev_node_id}>
+                <Link to={`/${COLLECTIONS.TEMPLATES}/` + this.state.prev_node_id}>
                     {this.state.prev_node_id}<img src="/icons/external-link.svg" width="12" height="12" alt="link" />
                     </Link>
               </div>

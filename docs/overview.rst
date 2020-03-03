@@ -32,7 +32,7 @@ Open source
 -------------------------
 
 PLynx is licensed under Apache 2.0.
-Source code is available at `Github <https://github.com/khaxis/plynx>`_.
+Source code is available at `Github <https://github.com/plynx-team/plynx>`_.
 
 
 Other links

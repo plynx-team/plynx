@@ -1,32 +1,55 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import AlertContainer from '../3rd_party/react-alert';
-import { PLynxApi } from '../../API';
 import NodeProperties from './NodeProperties';
-import ControlButtons from './ControlButtons';
 import InOutList from './InOutList';
 import ParameterList from './ParameterList';
-import DeprecateDialog from '../Dialogs/DeprecateDialog';
 import TextViewDialog from '../Dialogs/TextViewDialog';
-import LoadingScreen from '../LoadingScreen';
-import {ResourceProvider} from '../../contexts';
-import { ObjectID } from 'bson';
-import {HotKeys} from 'react-hotkeys';
-import { ACTION, RESPONCE_STATUS, ALERT_OPTIONS, NODE_RUNNING_STATUS, KEY_MAP } from '../../constants';
+import { PluginsProvider, PluginsConsumer } from '../../contexts';
+import { HotKeys } from 'react-hotkeys';
+import { NODE_RUNNING_STATUS, KEY_MAP } from '../../constants';
+import { addStyleToTourSteps } from '../../utils';
 
 import './style.css';
 
+const TOUR_STEPS = [
+  {
+    selector: '.EditNodeInputs',
+    content: 'Here you can define all of the Inputs of this Operation. The inputs are required by default. ' +
+        'Optionally your Operation can work with an array of Inputs.',
+  },
+  {
+    selector: '.EditNodeInputs .Add',
+    content: 'If the Operation is not in readonly mode, you may add extra Inputs.',
+  },
+  {
+    selector: '.EditNodeParameters',
+    content: 'The difference between Inputs and Parameters is that Parameters don`t define the structure of the Workflow. ' +
+        'In the same time they are very important for Operation`s internal state.',
+  },
+  {
+    selector: '.EditNodeParameters .parameter-_cmd',
+    content: 'One of the most important parameters is _cmd. This is the code that will be executed by Plynx when you Run your Workflow.',
+  },
+  {
+    selector: '.EditNodeOutputs',
+    content: 'Configuration of Outputs is very similar to Inputs. This is what you will use to connect Operations in Workflow Editor.',
+  },
+  {
+    selector: '.preview-button',
+    content: 'If you are not sure what the script would look like when run your Operation in production, please youse Preview button.',
+  },
+];
 
 export default class Node extends Component {
   constructor(props) {
     super(props);
+    this.tourSteps = addStyleToTourSteps(TOUR_STEPS);
     document.title = "Node";
 
     this.state = {
       loading: true,
       readOnly: true,
-      deprecateQuestionDialog: false,
-      deprecateParentDialog: false
+      is_workflow: this.props.is_workflow,
     };
   }
 
@@ -41,219 +64,24 @@ export default class Node extends Component {
   }
 
   async componentDidMount() {
-    // Loading
-
-    const self = this;
-    let loading = true;
-    const node_id = this.props.match.params.node_id.replace(/\$+$/, '');
-    let sleepPeriod = 1000;
-    const sleepMaxPeriod = 10000;
-    const sleepStep = 1000;
-
-    const processResponse = (response) => {
-      self.setState({
-        resources_dict: response.data.resources_dict,
-      });
-      const node = response.data.data;
-      self.loadNodeFromJson(node);
-      if (node_id === 'new') {
-        self.props.history.replace("/nodes/" + node._id);
-      }
-      loading = false;
-    };
-
-    const processError = (error) => {
-      console.error(error);
-      if (error.response.status === 404) {
-        self.props.history.replace("/not_found");
-        window.location.reload(false);
-        loading = false;
-      } else if (error.response.status === 401) {
-        PLynxApi.getAccessToken()
-            .then((isSuccessfull) => {
-              if (!isSuccessfull) {
-                console.error("Could not refresh token");
-                self.showAlert('Failed to authenticate', 'failed');
-              } else {
-                self.showAlert('Updated access token', 'success');
-              }
-            });
-      } else {
-        self.showAlert(error.response.message, 'failed');
-      }
-    };
-
-    /* eslint-disable no-await-in-loop */
-    /* eslint-disable no-unmodified-loop-condition */
-    while (loading) {
-      await PLynxApi.endpoints.nodes.getOne({ id: node_id === 'new' ? 'bash_jinja2' : node_id})
-      .then(processResponse)
-      .catch(processError);
-      if (loading) {
-        await self.sleep(sleepPeriod);
-        sleepPeriod = Math.min(sleepPeriod + sleepStep, sleepMaxPeriod);
-      }
-    }
-    /* eslint-enable no-unmodified-loop-condition */
-    /* eslint-enable no-await-in-loop */
-
-    // Stop loading
-    self.setState({
-      loading: false,
-    });
+    console.log('componentDidMount');
+    this.loadNodeFromJson(this.props.node);
   }
 
   loadNodeFromJson(data) {
     console.log("loadNodeFromJson", data);
-    this.setState({node: data});
+    this.node = data;
+    this.setState({node: this.node});
     document.title = data.title + " - Node - PLynx";
     const node_status = data.node_status;
     this.setState({readOnly: node_status !== NODE_RUNNING_STATUS.CREATED});
-
-    const first_time_approved_node_id = window.sessionStorage.getItem('first_time_approved_state');
-    if (first_time_approved_node_id === data._id) {
-      this.setState({deprecateParentDialog: true});
-    }
-    if (first_time_approved_node_id) {
-      window.sessionStorage.removeItem('first_time_approved_state');
-    }
   }
 
   handleParameterChanged(name, value) {
-    const node = this.state.node;
-    node[name] = value;
-    this.setState(node);
-  }
-
-  handleSave() {
-    console.log(this.state.node);
-    this.postNode(this.state.node, false, ACTION.SAVE);
-  }
-
-  handlePreview() {
-    console.log(this.state.node);
-    this.postNode(this.state.node, false, ACTION.PREVIEW_CMD);
-  }
-
-  handleSaveApprove() {
-    this.postNode(this.state.node, true, ACTION.APPROVE);
-  }
-
-  handleClone() {
-    const node = this.state.node;
-    node.node_status = NODE_RUNNING_STATUS.CREATED;
-    node.parent_node = node._id;
-    if (node.successor_node) {
-      delete node.successor_node;
-    }
-    node._id = new ObjectID().toString();
-
-    this.loadNodeFromJson(node);
-    this.props.history.push("/nodes/" + node._id + '$');
-  }
-
-  handleSuccessApprove() {
-    const node = this.state.node;
-    if (node && node.parent_node) {
-      this.setState({deprecateQuestionDialog: true});
-    }
-  }
-
-  handleCloseDeprecateDialog() {
-    this.setState({
-      deprecateQuestionDialog: false,
-      deprecateParentDialog: false
-    });
-  }
-
-  handleClosePreview() {
-    this.setState({preview_text: null});
-  }
-
-  closeAllDialogs() {
-    this.handleCloseDeprecateDialog();
-    this.handleClosePreview();
-  }
-
-  handleDeprecateClick() {
-    this.setState({deprecateQuestionDialog: true});
-  }
-
-  handleDeprecate(node, action) {
-    this.postNode(node, true, action);
-  }
-
-  postNode(node, reloadOnSuccess, action, successCallback = null) {
-    /* action might be in {'save', 'validate', 'approve', 'deprecate'}*/
-    const self = this;
-    self.setState({loading: true});
-    PLynxApi.endpoints.nodes
-    .create({
-      node: node,
-      action: action
-    })
-    .then((response) => {
-      const data = response.data;
-      console.log(data);
-      self.setState({loading: false});
-      if (data.status === RESPONCE_STATUS.SUCCESS) {
-        if (successCallback) {
-          successCallback();
-        }
-        if (reloadOnSuccess) {
-          if (action === ACTION.APPROVE && node.parent_node) {
-            window.sessionStorage.setItem('first_time_approved_state', node._id);
-          }
-          window.location.reload();
-        }
-        if (action === ACTION.PREVIEW_CMD) {
-          self.setState({preview_text: data.preview_text});
-        } else if (action === ACTION.SAVE) {
-          self.showAlert("Saved", 'success');
-        }
-      } else if (data.status === RESPONCE_STATUS.VALIDATION_FAILED) {
-        console.warn(data.message);
-        // TODO smarter traverse
-        const validationErrors = data.validation_error.children;
-        for (let i = 0; i < validationErrors.length; ++i) {
-          const validationError = validationErrors[i];
-          self.showAlert(validationError.validation_code + ': ' + validationError.object_id, 'warning');
-        }
-
-        self.showAlert(data.message, 'failed');
-      } else {
-        console.warn(data.message);
-        self.showAlert(data.message, 'failed');
-      }
-    })
-    .catch((error) => {
-      if (error.response.status === 401) {
-        PLynxApi.getAccessToken()
-        .then((isSuccessfull) => {
-          if (!isSuccessfull) {
-            console.error("Could not refresh token");
-            self.showAlert('Failed to authenticate', 'failed');
-          } else {
-            self.showAlert('Failed to save the graph, please try again', 'failed');
-          }
-        });
-      } else {
-        try {
-          self.showAlert(error.response.data.message, 'failed');
-        } catch {
-          self.showAlert('Unknown error', 'failed');
-        }
-      }
-      self.setState({loading: false});
-    });
-  }
-
-  showAlert(message, type) {
-    this.msg.show(message, {
-      time: 5000,
-      type: 'error',
-      icon: <img src={"/alerts/" + type + ".svg"} width="32" height="32" alt={type} />
-    });
+    this.node[name] = value;
+    this.setState({node: this.node});
+    this.props.onNodeChange(this.node);
+    document.title = this.node.title + " - Node - PLynx";
   }
 
   render() {
@@ -271,31 +99,7 @@ export default class Node extends Component {
       <HotKeys className='EditNodeMain'
                handlers={this.keyHandlers} keyMap={KEY_MAP}
       >
-        <ResourceProvider value={this.state.resources_dict}>
-          <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
-          {this.state.loading &&
-            <LoadingScreen
-            ></LoadingScreen>
-          }
-          {
-            this.state.deprecateQuestionDialog &&
-            <DeprecateDialog
-              onClose={() => this.handleCloseDeprecateDialog()}
-              prev_node_id={node._id}
-              onDeprecate={(node_, action) => this.handleDeprecate(node_, action)}
-              title={"Would you like to deprecate this Operation?"}
-              />
-          }
-          {
-            this.state.deprecateParentDialog &&
-            <DeprecateDialog
-              onClose={() => this.handleCloseDeprecateDialog()}
-              prev_node_id={node.parent_node}
-              new_node_id={node._id}
-              onDeprecate={(node_, action) => this.handleDeprecate(node_, action)}
-              title={"Would you like to deprecate parent Operation?"}
-              />
-          }
+        <PluginsProvider value={this.props.plugins_dict}>
           {
             this.state.preview_text &&
             <TextViewDialog className="TextViewDialog"
@@ -305,30 +109,23 @@ export default class Node extends Component {
             />
           }
           <div className='EditNodeHeader'>
-            <NodeProperties
-              title={node.title}
-              description={node.description}
-              base_node_name={node.base_node_name}
-              parentNode={node.parent_node}
-              successorNode={node.successor_node}
-              nodeStatus={node.node_status}
-              created={node.insertion_date}
-              updated={node.update_date}
-              onParameterChanged={(name, value) => this.handleParameterChanged(name, value)}
-              readOnly={this.state.readOnly}
-              key={key}
-            />
-            <ControlButtons
-              onSave={() => this.handleSave()}
-              onSaveApprove={() => this.handleSaveApprove()}
-              onClone={() => this.handleClone()}
-              onDeprecate={() => this.handleDeprecateClick()}
-              onPreview={() => this.handlePreview()}
-              readOnly={this.state.readOnly}
-              nodeStatus={node.node_status}
-              hideDeprecate={node._readonly}
-              key={"controls_" + key}
-            />
+            <PluginsConsumer>
+            { plugins_dict => <NodeProperties
+                  title={node.title}
+                  description={node.description}
+                  kind={node.kind}
+                  parentNode={node.parent_node_id}
+                  successorNode={node.successor_node_id}
+                  nodeStatus={node.node_status}
+                  created={node.insertion_date}
+                  updated={node.update_date}
+                  onParameterChanged={(name, value) => this.handleParameterChanged(name, value)}
+                  readOnly={this.state.readOnly}
+                  executors_info={plugins_dict.executors_info}
+                  key={key}
+                 />
+             }
+            </PluginsConsumer>
           </div>
           <div className='EditNodeComponents'>
 
@@ -341,8 +138,9 @@ export default class Node extends Component {
                   varName='inputs'
                   items={node.inputs}
                   key={key}
+                  nodeKind={node.kind}
                   onChanged={(value) => this.handleParameterChanged('inputs', value)}
-                  readOnly={this.state.readOnly}
+                  readOnly={this.state.readOnly || this.state.is_workflow}
                 />
               </div>
             </div>
@@ -370,14 +168,15 @@ export default class Node extends Component {
                   varName='outputs'
                   items={node.outputs}
                   key={key}
+                  nodeKind={node.kind}
                   onChanged={(value) => this.handleParameterChanged('outputs', value)}
-                  readOnly={this.state.readOnly}
+                  readOnly={this.state.readOnly || this.state.is_workflow}
                 />
               </div>
             </div>
 
           </div>
-        </ResourceProvider>
+        </PluginsProvider>
       </HotKeys>
     );
   }
@@ -390,4 +189,8 @@ Node.propTypes = {
     }),
   }),
   history: PropTypes.object,
+  is_workflow: PropTypes.bool.isRequired,
+  node: PropTypes.object.isRequired,    // TODO more detailed
+  onNodeChange: PropTypes.func.isRequired,
+  plugins_dict: PropTypes.object.isRequired,    // TODO more detailed
 };

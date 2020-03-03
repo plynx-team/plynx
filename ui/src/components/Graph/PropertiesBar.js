@@ -3,97 +3,107 @@ import PropTypes from 'prop-types';
 import OutputItem from './OutputItem';
 import ParameterItem from '../Common/ParameterItem';
 import makePropertiesBox from '../Common/makePropertiesBox';
-import { Link } from 'react-router-dom';
+import { COLLECTIONS } from '../../constants';
 import './style.css';
 
+
+const allEqual = arr => arr.every(v => v === arr[0]);
+
+
+const renderLinkRow = (title, href, text) => {
+  return (
+    <div className='ParameterItem'
+      key={href + text}>
+      <div className='ParameterNameCell'>
+          {title}
+      </div>
+      <div className='ParameterValueCell'>
+        <a href={href}>
+          {text}
+        </a>
+      </div>
+    </div>
+  );
+};
 
 export default class PropertiesBar extends Component {
   constructor(props) {
     super(props);
-    this.state = {
-      graphId: props.graphId,
-      nodeId: null,
-      bigTitle: "Graph",
-      parameters: [
-        {
-          name: 'title',
-          parameter_type: "str",
-          value: props.graphTitle,
-          widget: {
-            alias: "Title"
-          }
-        },
-        {
-          name: 'description',
-          parameter_type: "str",
-          value: props.graphDescription,
-          widget: {
-            alias: "Description"
-          }
-        }
-      ],
-      outputs: [],
-      logs: [],
-      editable: true
-    };
+    this.state = this.getStateDict([props.initialNode]);
+    this.mainNodeId = props.initialNode._id;
+  }
 
-    if ('editable' in props) {
-      this.state.editable = props.editable;
+  getStateDict(nodes) {
+    const commonParameters = JSON.parse(JSON.stringify(nodes.length > 0 ? nodes[0].parameters : []));
+    let ii,
+      jj;
+    for (ii = 1; ii < nodes.length; ++ii) {
+      const indexesToRemove = [];
+      for (jj = 0; jj < commonParameters.length; ++jj) {
+        const commonParam = commonParameters[jj];
+        if (!nodes[ii].parameters.find(param => {
+          return param.name === commonParam.name && param.parameter_type === commonParam.parameter_type &&
+                    (
+                        (param.reference === null && param.value === commonParam.value) ||
+                        (param.reference && param.reference === commonParam.reference)
+                    );
+        })
+              ) {
+          indexesToRemove.push(jj);
+        }
+      }
+      while (indexesToRemove.length) {
+        commonParameters.splice(indexesToRemove.pop(), 1);
+      }
     }
+    if (allEqual(nodes.map(node => node.description))) {
+      commonParameters.unshift({
+        name: '_DESCRIPTION',
+        widget: 'Description',
+        value: nodes[0].description,
+        parameter_type: 'str',
+        _link_visibility: false,
+      });
+    }
+    if (allEqual(nodes.map(node => node.title))) {
+      commonParameters.unshift({
+        name: '_TITLE',
+        widget: 'title',
+        value: nodes[0].title,
+        parameter_type: 'str',
+        _link_visibility: false,
+      });
+    }
+    return {
+      nodes: nodes,
+      parameters: commonParameters,
+      outputs: nodes.map(node => node.outputs).flat(1),
+      logs: nodes.map(node => node.logs).flat(1),
+      nodeId: nodes.map(node => node._id).join(),
+      editable: this.props.editable,
+    };
   }
 
   // TODO replace it with more general functions
   /* eslint-disable max-params */
   /* eslint-disable no-param-reassign */
-  setNodeData(graphId, nodeId, base_node_name, bigTitle, bigDescription, parameters, outputs, logs, parent_node) {
-    parameters = parameters.slice(0);
-    parameters.unshift({
-      name: '_DESCRIPTION',
-      widget: {
-        alias: 'Description',
-      },
-      value: bigDescription,
-      parameter_type: 'str',
-    });
-    this.setState(
-      {
-        graphId: graphId,
-        nodeId: nodeId,
-        bigTitle: bigTitle,
-        parameters: parameters,
-        outputs: outputs,
-        logs: logs,
-        parent_node: parent_node,
-        base_node_name: base_node_name
-      }
-    );
+  setNodeData(node) {
+    this.setNodeDataArr([node]);
+  }
+
+  setNodeDataArr(nodes) {
+    this.setState(this.getStateDict(nodes));
   }
   /* eslint-enable no-param-reassign */
   /* eslint-enable max-params */
 
-  setGraphData(graphId, bigTitle, parameters) {
-    this.setState(
-      {
-        graphId: graphId,
-        nodeId: null,
-        bigTitle: bigTitle,
-        parameters: parameters,
-        outputs: [],
-        logs: []
-      }
-    );
-  }
-
-  clearData() {
-    this.setState({
-      nodeId: "",
-      title: "",
-      parameters: []
-    });
-  }
 
   handleParameterChanged(name, value) {
-    this.props.onParameterChanged(this.state.nodeId, name, value);
+    this.props.onParameterChanged(this.state.nodes.map(node => node._id), name, value);
+  }
+
+  handleLinkClick(name) {
+    this.props.onLinkClick(this.state.nodes.map(node => node._id), name);
   }
 
   handlePreview(previewData) {
@@ -102,8 +112,49 @@ export default class PropertiesBar extends Component {
     }
   }
 
+  renderOutputs(outputs) {
+    return outputs.filter(
+        (output) => {
+          return output.values.length > 0;
+        }
+      ).map(
+        (output) => output.values.map(
+            (output_value) => {
+              return <OutputItem
+                graphId={this.state.graphId}
+                resourceName={output.name}
+                resourceId={output_value}
+                nodeId={this.state.nodeId}
+                key={output_value}
+                fileType={output.file_type}
+                onPreview={(previewData) => this.handlePreview(previewData)}
+                />;
+            }
+        )
+      );
+  }
+
   render() {
     const self = this;
+
+    const linksList = [];
+    if (this.state.nodes.length === 1) {
+      const node = this.state.nodes[0];
+      const node_id = node.original_node_id || node.parent_node_id;
+      if (node_id) {
+        linksList.push(renderLinkRow('Original', `/${COLLECTIONS.TEMPLATES}/${node_id}`, node_id));
+      }
+      let url = window.location.href;
+      if (url.indexOf('?') > -1) {
+        url += '&';
+      } else {
+        url += '?';
+      }
+      if (node_id) {
+        linksList.push(renderLinkRow('This Operation', `${url}sub_node_id=${node._id}`, node._id));
+      }
+    }
+
     let parametersList = [];
     if (this.state.parameters) {
       parametersList = this.state.parameters.filter(
@@ -114,49 +165,19 @@ export default class PropertiesBar extends Component {
       .map(
         (parameter) => <ParameterItem
           name={parameter.name}
-          alias={parameter.widget.alias}
+          widget={parameter.widget}
           value={parameter.value}
           parameterType={parameter.parameter_type}
-          key={this.state.nodeId + "$" + parameter.name}
+          key={this.state.nodeId + "$" + parameter.name + parameter.reference}
           readOnly={!this.state.editable}
+          _link_visibility={parameter.hasOwnProperty('_link_visibility') ? parameter._link_visibility : (self.mainNodeId !== this.state.nodes[0]._id)}
+          reference={parameter.reference}
           onParameterChanged={(name, value) => this.handleParameterChanged(name, value)}
+          onLinkClick={(name) => this.handleLinkClick(name)}
           />);
     }
-    const outputsList = this.state.outputs.filter(
-      (output) => {
-        return output.resource_id !== null;
-      }
-    ).map(
-      (output) => {
-        return <OutputItem
-          graphId={self.state.graphId}
-          resourceName={output.name}
-          resourceId={output.resource_id}
-          nodeId={self.state.nodeId}
-          key={self.state.nodeId + "$" + output.name}
-          fileType={output.file_type}
-          onPreview={(previewData) => self.handlePreview(previewData)}
-          />;
-      }
-      );
-
-    let logsList = [];
-    if (this.state.logs) {
-      logsList = this.state.logs.filter(
-        (log) => {
-          return log.resource_id;
-        }
-        ).map(
-        (log) => <OutputItem
-          graphId={this.state.graphId}
-          resourceName={log.name}
-          resourceId={log.resource_id}
-          nodeId={this.state.nodeId}
-          key={this.state.nodeId + '$' + log.name}
-          fileType={'file'}
-          onPreview={(previewData) => this.handlePreview(previewData)}
-        />);
-    }
+    const outputsList = this.renderOutputs(this.state.outputs);
+    const logsList = this.renderOutputs(this.state.logs);
 
     return (
       <div className="PropertiesBar"
@@ -168,16 +189,16 @@ export default class PropertiesBar extends Component {
         }}
         >
         {
-          !this.state.nodeId &&
-          <div className="PropertiesHeader">{(this.state.bigTitle ? this.state.bigTitle + ' ' : ' ') + 'Properties'}</div>
+            this.state.nodes.length > 1 &&
+            <div className="PropertiesHeader">
+                {'Properties of ' + this.state.nodes.length + ' nodes'}
+            </div>
         }
         {
-          (this.state.nodeId && this.state.base_node_name !== 'file') &&
-          <Link to={'/nodes/' + this.state.parent_node}>
+            this.state.nodes.length === 1 &&
             <div className="PropertiesHeader">
-              {(this.state.bigTitle ? this.state.bigTitle + ' ' : ' ')}<img src="/icons/external-link.svg" width="12" height="12" alt="^" />
+                {`Properties of ${this.state.nodes[0].title}`}
             </div>
-          </Link>
         }
         {
           (this.state.nodeId && this.state.base_node_name === 'file') &&
@@ -188,16 +209,14 @@ export default class PropertiesBar extends Component {
               this.props.onFileShow(this.state.nodeId);
             }
           }>
-            <div className="PropertiesHeader">
-              {(this.state.bigTitle ? this.state.bigTitle + ' ' : ' ')}<img src="/icons/external-link.svg" width="12" height="12" alt="^" />
-            </div>
           </div>
         }
 
         <div className='PropertiesBoxRoot'>
+          {linksList.length > 0 && makePropertiesBox('Links', linksList)}
           {parametersList.length > 0 && makePropertiesBox('Parameters', parametersList)}
-          {!this.state.editable && outputsList.length > 0 && makePropertiesBox('Outputs', outputsList)}
-          {!this.state.editable && logsList.length > 0 && makePropertiesBox('Logs', logsList)}
+          {outputsList.length > 0 && makePropertiesBox('Outputs', outputsList)}
+          {logsList.length > 0 && makePropertiesBox('Logs', logsList)}
         </div>
 
       </div>
@@ -207,10 +226,9 @@ export default class PropertiesBar extends Component {
 
 PropertiesBar.propTypes = {
   editable: PropTypes.bool,
-  graphDescription: PropTypes.string,
-  graphId: PropTypes.string,
-  graphTitle: PropTypes.string,
+  initialNode: PropTypes.object,
   onFileShow: PropTypes.func,
   onParameterChanged: PropTypes.func,
   onPreview: PropTypes.func,
+  onLinkClick: PropTypes.func.isRequired,
 };

@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import Dialog from './Dialog';
 import { PLynxApi } from '../../API';
 import LoadingScreen from '../LoadingScreen';
-import {ResourceConsumer} from '../../contexts';
+import {PluginsConsumer} from '../../contexts';
 import Icon from '../Common/Icon';
 import { NODE_STATUS, RESPONCE_STATUS, NODE_RUNNING_STATUS } from '../../constants';
 
@@ -130,8 +130,8 @@ export default class FileUploadDialog extends Component {
           <LoadingScreen />
         </div>
       }
-      <ResourceConsumer>
-      { resources_dict => <div className='FileUploadDialogBody selectable'>
+      <PluginsConsumer>
+      { plugins_dict => <div className='FileUploadDialogBody selectable'>
           <div className='MainBlock'>
 
             <div className='TitleDescription'>
@@ -146,11 +146,11 @@ export default class FileUploadDialog extends Component {
             <div className={'Type'}>
               <div className='Widget'>
                 <Icon
-                  type_descriptor={resources_dict[this.state.file_type]}
+                  type_descriptor={plugins_dict.resources_dict[this.state.file_type]}
                   width={"20"}
                   height={"20"}
                 />
-                {resources_dict[this.state.file_type].alias}
+                {plugins_dict.resources_dict[this.state.file_type].alias}
               </div>
             </div>
           </div>
@@ -183,7 +183,7 @@ export default class FileUploadDialog extends Component {
                 onChange={(e) => this.handleChange(e)}
               >
               {
-                Object.values(resources_dict).map((description) => <option
+                Object.values(plugins_dict.resources_dict).map((description) => <option
                     value={description.name}
                     key={description.name}
                     >
@@ -230,7 +230,7 @@ export default class FileUploadDialog extends Component {
           </div>
         </div>
         }
-        </ResourceConsumer>
+        </PluginsConsumer>
       </Dialog>
     );
   }

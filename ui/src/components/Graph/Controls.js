@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { GRAPH_RUNNING_STATUS } from '../../constants';
-import makeControlButton from '../Common/controlButton';
+import { makeControlButton } from '../Common/controlButton';
 import './OutputItem.css';
 
 
@@ -25,33 +25,6 @@ export default class Controls extends Component {
       <div className={this.props.className + ' ' + (this.props.readonly ? 'readonly' : 'editable')}>
         {!this.props.readonly &&
           makeControlButton({
-            img: 'save.svg',
-            text: 'Save',
-            func: () => {
-              this.props.onSave();
-            },
-          })
-        }
-        {!this.props.readonly &&
-          makeControlButton({
-            img: 'check-square.svg',
-            text: 'Validate',
-            func: () => {
-              this.props.onValidate();
-            },
-          })
-        }
-        {!this.props.readonly &&
-          makeControlButton({
-            img: 'play.svg',
-            text: 'Run',
-            func: () => {
-              this.props.onApprove();
-            },
-          })
-        }
-        {!this.props.readonly &&
-          makeControlButton({
             img: 'trending-up.svg',
             text: 'Upgrade Nodes',
             func: () => {
@@ -64,20 +37,6 @@ export default class Controls extends Component {
           text: 'Rearrange nodes',
           func: () => {
             this.props.onRearrange();
-          },
-        })}
-        {makeControlButton({
-          img: 'preview.svg',
-          text: 'API',
-          func: () => {
-            this.props.onGenerateCode();
-          },
-        })}
-        {makeControlButton({
-          img: 'copy.svg',
-          text: 'Clone',
-          func: () => {
-            this.props.onClone();
           },
         })}
         {(this.props.graphRunningStatus === GRAPH_RUNNING_STATUS.RUNNING || this.props.graphRunningStatus === GRAPH_RUNNING_STATUS.FAILED_WAITING) &&

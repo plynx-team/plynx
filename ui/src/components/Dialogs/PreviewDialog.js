@@ -70,11 +70,11 @@ export default class PreviewDialog extends Component {
   previewMessage(resource_id) {
     return (
       <div className="note">
-         {'Please note it is preview and might not the entire file. You can download the entire file here:'}
+         {'This is a preview and might not the entire file. You can download the entire file here:'}
          <div className="preview-download-link" onClick={() => {
            this.download(resource_id);
          }}>
-           <img src="/icons/download_dark.svg" alt="download" /> {resource_id}
+           <img src="/icons/download.svg" alt="download" /> {resource_id}
          </div>
       </div>
     );

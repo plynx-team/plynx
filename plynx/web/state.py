@@ -1,16 +1,16 @@
-from plynx.db.service_state import get_master_state
+from plynx.db.worker_state import get_worker_states
 from plynx.utils.common import JSONEncoder
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 
 
-@app.route('/plynx/api/v0/master_state', methods=['GET'])
+@app.route('/plynx/api/v0/worker_states', methods=['GET', 'POST'])
 @handle_errors
 @requires_auth
-def master_state():
+def worker_states():
     try:
         return JSONEncoder().encode({
             'status': 'success',
-            'master_state': get_master_state()
+            'items': get_worker_states()
         })
     except Exception as e:
         app.logger.error(e)

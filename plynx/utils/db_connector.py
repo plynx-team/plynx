@@ -7,23 +7,21 @@ _db = None
 
 
 def init_indexes():
-    existing_collections = _db.collection_names()
+    _db[Collections.WORKER_STATE].create_index('insertion_date', expireAfterSeconds=5)
 
-    if Collections.MASTER_STATE not in existing_collections:
-        _db.create_collection(Collections.MASTER_STATE, capped=True, size=16777216, max=1)
-
-    _db[Collections.GRAPHS].create_index('insertion_date')
-    _db[Collections.GRAPHS].create_index('update_date')
-    _db[Collections.GRAPHS].create_index([('title', pymongo.TEXT), ('description', pymongo.TEXT)])
+    _db[Collections.RUNS].create_index('insertion_date')
 
     _db[Collections.NODE_CACHE].create_index('key', unique=True)
 
-    _db[Collections.NODES].create_index('insertion_date')
-    _db[Collections.NODES].create_index([
+    _db[Collections.TEMPLATES].create_index('insertion_date')
+    _db[Collections.TEMPLATES].create_index([
         ('starred', pymongo.DESCENDING),
         ('insertion_date', pymongo.DESCENDING)
     ])
-    _db[Collections.NODES].create_index([('title', pymongo.TEXT), ('description', pymongo.TEXT)])
+    _db[Collections.TEMPLATES].create_index([('title', pymongo.TEXT), ('description', pymongo.TEXT)])
+
+    _db[Collections.RUNS].create_index('insertion_date')
+    _db[Collections.RUNS].create_index([('title', pymongo.TEXT), ('description', pymongo.TEXT)])
 
     _db[Collections.USERS].create_index('username', unique=True)
 
