@@ -184,7 +184,8 @@ class CLIFactory(object):
         {
             'func': worker,
             'help': 'Run Worker',
-            'args': ('verbose', 'db_host', 'db_port', 'db_user', 'db_password', 'kinds'),
+            'args': ('verbose', 'db_host', 'db_port', 'db_user', 'db_password', 'kinds',
+                     'storage_scheme', 'storage_prefix', 'credential_path'),
         }, {
             'func': backend,
             'help': 'Run backend server',
