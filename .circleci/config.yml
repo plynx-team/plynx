@@ -84,11 +84,5 @@ workflows:
       - build_docker
       - deploy_pypi:
           context: plynx-deployment
-          filters:
-            branches:
-              only: master
       - deploy_docker:
           context: plynx-deployment
-          filters:
-            branches:
-              only: master
