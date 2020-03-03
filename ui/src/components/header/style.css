@@ -108,7 +108,7 @@
 /* Mobile dependent */
 
 .Header .logo {
-  top: 20px;
+  top: 8px;
   left: 50%;
   margin-left: -200px;
   position: absolute;
@@ -117,7 +117,7 @@
 
 .Header > .logo > .icon {
   vertical-align: middle;
-  height: 40px;
+  height: 60px;
 }
 
 .Header .menu-button-sl {
@@ -188,12 +188,13 @@
 
   .Header .logo {
     top: 4px;
-    left: 10px;
+    left: 14px;
     margin-left: 0;
+    padding: 0 20px 0 20px;
   }
 
   .Header > .logo > .icon {
-    height: 20px;
+    height: 34px;
   }
 
   .Header .NavigationItems {

@@ -108,7 +108,7 @@ export default class LogInRedirect extends Component {
       <div className='login-redirect'>
         <div className="login-redirect-logo">
             <img
-                src="/plynx-logo.png"
+                src="/big-logo.png"
                 alt="plynx"
             />
             <SimpleLoader />
