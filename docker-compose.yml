@@ -33,9 +33,9 @@ services:
             - ./data:/data
         command: plynx worker -vvv -e basic-bash-jinja2-operation -e basic-python-node-operation -e basic-dag-operation
 
-    backend:
+    api:
         image: plynxteam/backend:latest
-        container_name: "backend"
+        container_name: "api"
         ports:
             - "5000:5000"
         depends_on:
@@ -44,18 +44,18 @@ services:
             - mongodb
         volumes:
             - ./data:/data
-        command: plynx backend -vvv
+        command: plynx api -vvv
 
     test:
         image: plynxteam/backend:latest
         container_name: "test"
         depends_on:
-            - backend
+            - api
         links:
-            - backend
+            - api
             - mongodb
         environment:
-            - PLYNX_ENDPOINT=http://backend:5000/plynx/api/v0
+            - PLYNX_ENDPOINT=http://api:5000/plynx/api/v0
         command: ./scripts/run_tests.sh
 
     frontend:
@@ -64,6 +64,6 @@ services:
         ports:
             - "3001:80"
         depends_on:
-            - backend
+            - api
         links:
-            - backend
+            - api

@@ -7,7 +7,7 @@ from plynx.service.worker import run_worker
 from plynx.service.users import run_users
 from plynx.service.cache import run_cache
 from plynx.service.execute import run_execute
-from plynx.web.common import run_backend
+from plynx.web.common import run_api
 from plynx.utils.logs import set_logging_level
 
 
@@ -20,9 +20,9 @@ Arg.__new__.__defaults__ = (None, None, None, None, None, None)
 _config = get_config()
 
 
-def backend(args):
+def api(args):
     set_logging_level(args.pop('verbose'))
-    run_backend(**args)
+    run_api(**args)
 
 
 def cache(args):
@@ -186,8 +186,8 @@ class CLIFactory(object):
             'help': 'Run Worker',
             'args': ('verbose', 'db_host', 'db_port', 'db_user', 'db_password', 'kinds'),
         }, {
-            'func': backend,
-            'help': 'Run backend server',
+            'func': api,
+            'help': 'Run api server',
             'args': ('verbose', 'secret_key', 'endpoint',
                      'db_host', 'db_port', 'db_user', 'db_password',
                      'storage_scheme', 'storage_prefix', 'credential_path'),
