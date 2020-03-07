@@ -10,6 +10,7 @@ import './style.css';
 export default class LogInRedirect extends Component {
   static propTypes = {
     specialUser: PropTypes.string.isRequired,
+    maxTry: PropTypes.number.isRequired,
   }
 
   constructor(props) {
@@ -37,7 +38,7 @@ export default class LogInRedirect extends Component {
     let sleepPeriod = 1000;
     const sleepMaxPeriod = 10000;
     const sleepStep = 1000;
-    let maxTry = 3;
+    let maxTry = self.props.maxTry;
 
     self.setState({
       loading: true,
@@ -96,11 +97,6 @@ export default class LogInRedirect extends Component {
     }
     /* eslint-enable no-unmodified-loop-condition */
     /* eslint-enable no-await-in-loop */
-  }
-
-  handleDemo() {
-    console.log("Demo");
-    this.loginUser(SPECIAL_USERS.DEMO);
   }
 
   render() {
