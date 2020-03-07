@@ -1,0 +1,8 @@
+.master-state > .list {
+  max-height: 500px;
+}
+
+.master-list-item {
+  display: grid;
+  grid-template-columns: 200px 350px 250px 250px 250px;
+}

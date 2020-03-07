@@ -1,10 +1,10 @@
 import React, { Component } from 'react';
 import { Route, Switch, withRouter } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import Header from './components/header';
+import Header from './components/Header';
 import LogIn from './components/LogIn';
 import LogInRedirect from './components/LogInRedirect';
-import Dashboard from './components/dashboard';
+import Dashboard from './components/Dashboard';
 import NodeRouter from './components/NodeRouter';
 import NotFound from './components/NotFound';
 import APIDialog from './components/Dialogs/APIDialog';
