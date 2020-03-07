@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { separator } from './common';
 import cookie from 'react-cookies';
 
 import './style.css';
@@ -34,20 +33,11 @@ export default class UserButton extends Component {
     return (
       <div className="UserButton">
         {this.state.refreshTokenExists &&
-          <div className="api-button">
-            {separator()}
-            <div className="button" onClick={() => this.props.onAPIDialogClick()}>
-              API
-            </div>
-          </div>
-        }
-        {this.state.refreshTokenExists &&
           <div className="inner-user-button">
-            {separator()}
             <div className="username">
               {this.state.username}
             </div>
-            {separator()}
+            -
             <div className="action" onClick={() => this.handleLogOut()}>
               LogOut
             </div>
