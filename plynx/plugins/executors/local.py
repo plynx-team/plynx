@@ -12,7 +12,7 @@ from plynx.utils.file_handler import get_file_stream, upload_file_stream
 from plynx.utils.config import get_worker_config
 import plynx.plugins.managers as plugin_magagers
 from plynx.plugins.resources.common import FILE_KIND
-from plynx.plugins.executors import BaseExecutor
+import plynx.base.executor
 from plynx.constants import NodeResources
 
 WORKER_CONFIG = get_worker_config()
@@ -64,7 +64,7 @@ class ResourceMerger(object):
         return self._dict
 
 
-class BaseBash(BaseExecutor):
+class BaseBash(plynx.base.executor.BaseExecutor):
     logs_lock = threading.Lock()
 
     def __init__(self, node=None):

@@ -1,8 +1,8 @@
-from plynx.plugins.hubs import BaseHub
+from plynx.base import hub
 from plynx.db.node_collection_manager import NodeCollectionManager
 
 
-class CollectionHub(BaseHub):
+class CollectionHub(hub.BaseHub):
     def __init__(self, collection, operations):
         super(CollectionHub, self).__init__()
 

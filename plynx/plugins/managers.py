@@ -1,3 +1,4 @@
+import logging
 import pydoc
 from plynx.utils.config import get_plugins
 
@@ -33,14 +34,17 @@ class _ExecutorManager(object):
         self.kind_to_children_kinds = {}
         for o_or_w in plugins.workflows + plugins.operations + plugins.dummy_operations:
             self.kind_to_executor_class[o_or_w.kind] = pydoc.locate(o_or_w.executor)
+            if not self.kind_to_executor_class[o_or_w.kind]:
+                raise Exception('Executor `{}` not found'.format(o_or_w.executor))
             self.kind_to_children_kinds[o_or_w.kind] = o_or_w.operations
 
-        self.kind_info = {
-            kind: {
+        self.kind_info = {}
+        for kind, executor_class in self.kind_to_executor_class.items():
+            logging.warning("Initializing executor `{}`, class `{}`".format(kind))
+            self.kind_info[kind] = {
                 'is_graph': executor_class.IS_GRAPH,
                 'children': self.kind_to_children_kinds[kind]
-            } for kind, executor_class in self.kind_to_executor_class.items()
-        }
+            }
 
 
 class _OperationManager(object):

@@ -1,13 +1,13 @@
 import json
 from plynx.db.node import Node
-from plynx.base import hub
+from plynx.plugins.hubs import BaseHub
 from plynx.utils.common import parse_search_string
 
 
-class StaticListHub(hub.BaseHub):
-    def __init__(self, filename):
-        super(StaticListHub, self).__init__()
-
+class RemoteListHub(BaseHub):
+    def __init__(self, endpoint):
+        super(RemoteListHub, self).__init__()
+        return
         self.list_of_nodes = []
 
         with open(filename) as f:

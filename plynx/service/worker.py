@@ -11,7 +11,7 @@ from plynx.db.node_collection_manager import NodeCollectionManager
 from plynx.db.worker_state import WorkerState
 from plynx.utils.config import get_worker_config
 from plynx.utils.db_connector import check_connection
-from plynx.plugins.executors import materialize_executor
+import plynx.utils.executor
 from plynx.utils.file_handler import upload_file_stream
 
 
@@ -116,7 +116,7 @@ class Worker(object):
                 node = self.node_collection_manager.pick_node(kinds=self.kinds)
                 if node:
                     logging.info('New node found: {} {} {}'.format(node['_id'], node['node_running_status'], node['title']))
-                    executor = materialize_executor(node)
+                    executor = plynx.utils.executor.materialize_executor(node)
 
                     with self._run_id_to_run_lock:
                         self._run_id_to_run[executor.node._id] = node

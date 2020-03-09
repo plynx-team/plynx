@@ -2,14 +2,14 @@ import os
 import json
 import uuid
 from plynx.constants import NodeResources
-from plynx.plugins.resources import BaseResource
+from plynx.base import resource
 from plynx.utils.config import get_cloud_service_config
 
 
 CLOUD_SERVICE_CONFIG = get_cloud_service_config()
 
 
-class CloudStorage(BaseResource):
+class CloudStorage(resource.BaseResource):
     @staticmethod
     def prepare_input(filename, preview):
         if preview:

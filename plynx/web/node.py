@@ -3,7 +3,7 @@ import json
 from flask import request, g
 from plynx.db.node import Node
 from plynx.db.node_collection_manager import NodeCollectionManager
-from plynx.plugins.hubs import Query
+import plynx.base.hub
 from plynx.plugins.managers import resource_manager, operation_manager, hub_manager, workflow_manager, executor_manager
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 from plynx.utils.common import to_object_id, JSONEncoder
@@ -46,7 +46,7 @@ def post_search_nodes(collection):
 
     if collection == 'in_hubs':
         hub = query.pop('hub')
-        res = hub_manager.kind_to_hub_class[hub].search(Query(**query))
+        res = hub_manager.kind_to_hub_class[hub].search(plynx.base.hub.Query(**query))
     else:
         if virtual_collection == NodeVirtualCollection.OPERATIONS:
             query['node_kinds'] = list(operation_manager.kind_to_operation_dict.keys())

@@ -6,7 +6,8 @@ from plynx.db.node import Node, Parameter
 from plynx.db.validation_error import ValidationError
 from plynx.constants import JobReturnStatus, NodeRunningStatus, ValidationTargetType, ValidationCode, SpecialNodeId, Collections
 from plynx.utils.common import to_object_id
-from plynx.plugins.executors import BaseExecutor, materialize_executor
+import plynx.base.executor
+import plynx.utils.executor
 from plynx.db.node_collection_manager import NodeCollectionManager
 
 node_collection_manager = NodeCollectionManager(collection=Collections.RUNS)
@@ -14,7 +15,7 @@ node_collection_manager = NodeCollectionManager(collection=Collections.RUNS)
 _GRAPH_ITERATION_SLEEP = 1
 
 
-class DAG(BaseExecutor):
+class DAG(plynx.base.executor.BaseExecutor):
     """ Main graph scheduler.
 
     Args:
@@ -270,7 +271,7 @@ class DAG(BaseExecutor):
                 ))
 
         for node in sub_nodes:
-            node_violation = materialize_executor(node.to_dict()).validate()
+            node_violation = plynx.utils.executor.materialize_executor(node.to_dict()).validate()
             if node_violation:
                 violations.append(node_violation)
 

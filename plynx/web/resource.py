@@ -2,7 +2,7 @@ import json
 from flask import request, send_file, g
 # !!! TODO figure out with STATIC
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
-from plynx.plugins.resources import PreviewObject
+import plynx.base.resource
 from plynx.plugins.resources.common import FILE_KIND
 from plynx.plugins.managers import resource_manager
 from plynx.utils.common import JSONEncoder
@@ -22,7 +22,7 @@ def get_resource(resource_id):
         return make_fail_response('In preview mode `file_type` must be specified'), 400
     fp = get_file_stream(resource_id, preview=preview, file_type=file_type)
     if preview:
-        preview_object = PreviewObject(
+        preview_object = plynx.base.resource.PreviewObject(
             fp=fp,
             resource_id=resource_id,
         )
