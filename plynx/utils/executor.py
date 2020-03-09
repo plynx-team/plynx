@@ -1,5 +1,6 @@
 import plynx.db.node
 import plynx.utils.exceptions
+import plynx.utils.plugin_manager
 
 
 def materialize_executor(node_dict):
@@ -12,10 +13,8 @@ def materialize_executor(node_dict):
     Returns:
     Node: Derived from plynx.nodes.base.Node class
     """
-    # TODO don't use late import
-    from plynx.plugins.managers import executor_manager
     kind = node_dict['kind']
-    cls = executor_manager.kind_to_executor_class.get(kind)
+    cls = plynx.utils.plugin_manager.get_executor_manager().kind_to_executor_class.get(kind)
     if not cls:
         raise plynx.utils.exceptions.NodeNotFound(
             'Node kind `{}` not found'.format(kind)

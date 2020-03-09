@@ -10,7 +10,7 @@ from plynx.constants import JobReturnStatus, ParameterTypes
 from plynx.db.node import Parameter, Output
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
 from plynx.utils.config import get_worker_config
-import plynx.plugins.managers as plugin_magagers
+import plynx.utils.plugin_manager
 from plynx.plugins.resources.common import FILE_KIND
 import plynx.base.executor
 from plynx.constants import NodeResources
@@ -73,6 +73,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
         self.logs_sizes = {}
         self.final_logs_uploaded = False
         self.logs = {}
+        self._resource_manager = plynx.utils.plugin_manager.get_resource_manager()
 
     def exec_script(self, script_location, command='bash'):
         res = JobReturnStatus.SUCCESS
@@ -204,7 +205,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
                 for i, value in enumerate(range(input.min_count)):
                     filename = os.path.join(self.workdir, 'i_{}_{}'.format(i, input.name))
                     resource_merger.append(
-                        plugin_magagers.resource_manager.kind_to_resource_class[input.file_type].prepare_input(filename, preview),
+                        self._resource_manager.kind_to_resource_class[input.file_type].prepare_input(filename, preview),
                         input.name,
                         input.is_array,
                     )
@@ -214,7 +215,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
                     with open(filename, 'wb') as f:
                         f.write(get_file_stream(value).read())
                     resource_merger.append(
-                        plugin_magagers.resource_manager.kind_to_resource_class[input.file_type].prepare_input(filename, preview),
+                        self._resource_manager.kind_to_resource_class[input.file_type].prepare_input(filename, preview),
                         input.name,
                         input.is_array,
                     )
@@ -228,7 +229,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
         for output in self.node.outputs:
             filename = os.path.join(self.workdir, 'o_{}'.format(output.name))
             resource_merger.append(
-                plugin_magagers.resource_manager.kind_to_resource_class[output.file_type].prepare_output(filename, preview),
+                self._resource_manager.kind_to_resource_class[output.file_type].prepare_output(filename, preview),
                 output.name,
                 is_list=False
             )
@@ -278,7 +279,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
                 logging.info('path exists')
                 matching_outputs = list(filter(lambda o: o.name == key, self.node.outputs))
                 assert len(matching_outputs) == 1, "Found more that 1 output with the same name `{}`".format(key)
-                filename = plugin_magagers.resource_manager.kind_to_resource_class[matching_outputs[0].file_type].postprocess_output(filename)
+                filename = self._resource_manager.kind_to_resource_class[matching_outputs[0].file_type].postprocess_output(filename)
                 logging.info(filename)
                 with open(filename, 'rb') as f:
                     # resource_id

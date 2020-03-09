@@ -4,7 +4,7 @@ from flask import request, g
 from plynx.db.node import Node
 from plynx.db.node_collection_manager import NodeCollectionManager
 import plynx.base.hub
-from plynx.plugins.managers import resource_manager, operation_manager, hub_manager, workflow_manager, executor_manager
+import plynx.utils.plugin_manager
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 from plynx.utils.common import to_object_id, JSONEncoder
 from plynx.constants import NodeStatus, NodePostAction, NodePostStatus, Collections, NodeClonePolicy, NodeVirtualCollection
@@ -20,6 +20,12 @@ node_collection_managers = {
     collection: NodeCollectionManager(collection=collection)
     for collection in [Collections.TEMPLATES, Collections.RUNS]
 }
+
+resource_manager = plynx.utils.plugin_manager.get_resource_manager()
+operation_manager = plynx.utils.plugin_manager.get_operation_manager()
+hub_manager = plynx.utils.plugin_manager.get_hub_manager()
+workflow_manager = plynx.utils.plugin_manager.get_workflow_manager()
+executor_manager = plynx.utils.plugin_manager.get_executor_manager()
 
 PLUGINS_DICT = {
     'resources_dict': resource_manager.kind_to_resource_dict,
