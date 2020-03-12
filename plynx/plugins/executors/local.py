@@ -252,7 +252,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
         for parameter in self.node.parameters:
             value = None
             if parameter.parameter_type == ParameterTypes.ENUM:
-                index = max(0, min(len(parameter.value.values) - 1, parameter.value.index))
+                index = max(0, min(len(parameter.value.values) - 1, int(parameter.value.index)))
                 value = parameter.value.values[index]
             elif parameter.parameter_type in [ParameterTypes.LIST_STR, ParameterTypes.LIST_INT]:
                 if parameter.parameter_type == ParameterTypes.LIST_INT:
