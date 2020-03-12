@@ -41,7 +41,7 @@ export default class Header extends Component {
 
     return (
       <div className="Header" onMouseUp={() => this.onMouseUp()}>
-        <Link to='/' className="logo"><img src='/logo.png' className='icon' alt='PLynx'/></Link>
+        <a href='https://plynx.com' className="logo"><img src='/logo.png' className='icon' alt='PLynx'/></a>
         <div className={'menu-sl' + (showMenu ? "-show" : "-hide")} id='menu-sl'>
           <Navigation showMenu={showMenu}/>
         </div>
