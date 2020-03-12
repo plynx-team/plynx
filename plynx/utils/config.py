@@ -159,7 +159,7 @@ def get_plugins():
         operations=list(kind_to_operation.values()),
         hubs=hubs,
         workflows=workflows,
-        dummy_operations=[DummyOperationConfig(kind='dummy', executor='plynx.plugins.executors.Dummy', operations=[])]
+        dummy_operations=[DummyOperationConfig(kind='dummy', executor='plynx.base.executor.Dummy', operations=[])]
     )
 
 

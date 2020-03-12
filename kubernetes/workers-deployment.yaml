@@ -23,20 +23,26 @@ spec:
         secret:
           secretName: gs-key
       containers:
-      - image: khaxis/plynx:base
+      - image: plynxteam/backend:latest
         name: worker
         command:
           - plynx
           - worker
-          - "--host"
-          - master
-          - "--port"
-          - "17011"
           - "-vvvv"
           - "--storage-scheme"
           - $(STORAGE_SCHEME)
           - "--storage-prefix"
           - $(STORAGE_PREFIX)
+          - "--db-host"
+          - mongo
+          - "-e"
+          - "basic-bash-jinja2-operation"
+          - "-e"
+          - "basic-python-node-operation"
+          - "-e"
+          - "basic-dag-operation"
+          - "-e"
+          - "basic-dag-workflow"
         imagePullPolicy: Always
         volumeMounts:
         - name: google-cloud-key

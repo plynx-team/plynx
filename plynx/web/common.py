@@ -110,7 +110,7 @@ def handle_errors(f):
     return decorated
 
 
-def run_backend():
+def run_api():
     global _config
     _config = get_config()
 

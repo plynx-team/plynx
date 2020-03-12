@@ -713,7 +713,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
       publicable: true,
       widget: "None",
     }].concat(
-        this.graph_node.parameters.filter((parameter) => parameter.parameter_type === parameter_type)
+        this.graph_node.parameters.filter((parameter) => parameter.parameter_type === parameter_type && parameter.widget)
     );
 
     let linkParametersIndex = 0;

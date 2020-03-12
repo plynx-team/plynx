@@ -3,18 +3,18 @@ import stat
 import json
 import zipfile
 from plynx.constants import NodeResources
-from plynx.plugins.resources import BaseResource
+from plynx.base import resource
 from plynx.utils.common import zipdir
 from plynx.utils.config import get_web_config
 
 WEB_CONFIG = get_web_config()
 
 
-class File(BaseResource):
+class File(resource.BaseResource):
     pass
 
 
-class PDF(BaseResource):
+class PDF(resource.BaseResource):
     @classmethod
     def preview(cls, preview_object):
         return '<iframe src="{}" title="preview" type="application/pdf" width="100%"/>'.format(
@@ -24,7 +24,7 @@ class PDF(BaseResource):
         )
 
 
-class Image(BaseResource):
+class Image(resource.BaseResource):
     @classmethod
     def preview(cls, preview_object):
         return '<img src="{}" width="100%" alt="preview" />'.format(
@@ -34,7 +34,7 @@ class Image(BaseResource):
         )
 
 
-class _BaseSeparated(BaseResource):
+class _BaseSeparated(resource.BaseResource):
     SEPARATOR = None
     _ROW_CLASSES = ['even', 'odd']
     _NUM_ROW_CLASSES = len(_ROW_CLASSES)
@@ -61,7 +61,7 @@ class TSV(_BaseSeparated):
     SEPARATOR = '\t'
 
 
-class Json(BaseResource):
+class Json(resource.BaseResource):
     @classmethod
     def preview(cls, preview_object):
         if preview_object.fp.getbuffer().nbytes > 1024 ** 2:
@@ -74,7 +74,7 @@ class Json(BaseResource):
             return 'Failed to parse json: {}'.format(e)
 
 
-class Executable(BaseResource):
+class Executable(resource.BaseResource):
     @staticmethod
     def prepare_input(filename, preview):
         # `chmod +x` to the executable file
@@ -85,7 +85,7 @@ class Executable(BaseResource):
         return {NodeResources.INPUT: filename}
 
 
-class Directory(BaseResource):
+class Directory(resource.BaseResource):
     @staticmethod
     def prepare_input(filename, preview):
         # extract zip file

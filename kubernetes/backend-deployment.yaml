@@ -26,7 +26,7 @@ spec:
         secret:
           secretName: secret-key
       containers:
-      - image: khaxis/plynx:base
+      - image: plynxteam/backend:latest
         name: backend
         command:
           - plynx

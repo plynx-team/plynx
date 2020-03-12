@@ -1,10 +1,10 @@
 import json
 from plynx.db.node import Node
-from plynx.plugins.hubs import BaseHub
+from plynx.base import hub
 from plynx.utils.common import parse_search_string
 
 
-class StaticListHub(BaseHub):
+class StaticListHub(hub.BaseHub):
     def __init__(self, filename):
         super(StaticListHub, self).__init__()
 

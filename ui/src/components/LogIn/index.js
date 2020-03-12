@@ -52,7 +52,7 @@ export default class LogIn extends Component {
       cookie.save('access_token', response.data.access_token, { path: '/' });
       cookie.save('refresh_token', response.data.refresh_token, { path: '/' });
       cookie.save('username', username, { path: '/' });
-      window.location = '/graphs';
+      window.location = '/workflows';
     })
     .catch((error) => {
       this.showAlert('Failed authenticate user', 'failed');

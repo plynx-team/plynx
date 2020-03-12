@@ -1,9 +1,9 @@
 import React, { Component } from 'react';
 import { Route, Switch } from 'react-router-dom';
 import Editor from './Editor';
-import OperationList from './nodeList/operationList';
-import WorkflowList from './nodeList/workflowList';
-import RunList from './nodeList/runList';
+import OperationList from './NodeList/operationList';
+import WorkflowList from './NodeList/workflowList';
+import RunList from './NodeList/runList';
 import NotFound from './NotFound';
 import { COLLECTIONS, VIRTUAL_COLLECTIONS } from '../constants';
 

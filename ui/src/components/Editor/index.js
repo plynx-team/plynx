@@ -19,7 +19,7 @@ import {
 } from '../../constants';
 import Graph from '../Graph';
 import Node from '../Node';
-import RunList from '../nodeList/runList';
+import RunList from '../NodeList/runList';
 import DeprecateDialog from '../Dialogs/DeprecateDialog';
 import TextViewDialog from '../Dialogs/TextViewDialog';
 import { PluginsProvider } from '../../contexts';

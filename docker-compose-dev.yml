@@ -40,9 +40,9 @@ services:
             - PLYNX_CONFIG=/app/config.yaml
         command: sh /app/watch.sh
 
-    backend:
+    api:
         image: plynxteam/backend
-        container_name: "backend"
+        container_name: "api"
         ports:
             - "5000:5000"
         depends_on:
@@ -53,7 +53,7 @@ services:
             - ./data:/data
             - ./plynx:/app/plynx
         environment:
-            - PLYNX_MODE=backend
+            - PLYNX_MODE=api
             - PLYNX_CONFIG=/app/config.yaml
         command: sh /app/watch.sh
 
@@ -63,8 +63,8 @@ services:
         ports:
             - "3001:3000"
         depends_on:
-            - backend
+            - api
         links:
-            - backend
+            - api
         volumes:
             - ./ui:/app
