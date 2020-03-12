@@ -26,27 +26,6 @@ jobs:
           name: Run tests
           command: make run_tests
 
-  deploy_pypi:
-    working_directory: ~/plynx
-    docker:
-      - image: circleci/python:3.8
-    steps:
-      - checkout
-      - run:
-          name: init .pypirc
-          command: |
-            echo -e "[pypi]" >> ~/.pypirc
-            echo -e "username = $PYPI_TOKEN" >> ~/.pypirc
-            echo -e "password = # No needed" >> ~/.pypirc
-      - run:
-          name: create packages
-          command: |
-            make build_package
-      - run:
-          name: upload to pypi
-          command: |
-            twine upload dist/*
-
   build_docker:
     machine: true
     steps:
@@ -55,36 +34,9 @@ jobs:
           name: build docker images
           command: make build
 
-  deploy_docker:
-    machine: true
-    steps:
-      - checkout
-      - run:
-          name: log in
-          command: |
-            echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
-      - run:
-          name: build docker images
-          command: make build
-      - run:
-          name: deploy images
-          command: |
-            docker images --format "{{.Repository}}" | grep "plynxteam"
 workflows:
   version: 2
   build_and_test:
     jobs:
       - build
       - build_docker
-      - deploy_pypi:
-          requires:
-            - build
-          filters:
-            branches:
-              only: master
-      - deploy_docker:
-          requires:
-            - build_docker
-          filters:
-            branches:
-              only: master
