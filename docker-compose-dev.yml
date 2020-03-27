@@ -68,3 +68,5 @@ services:
             - api
         volumes:
             - ./ui:/app
+        tty: true
+        command: npm start
