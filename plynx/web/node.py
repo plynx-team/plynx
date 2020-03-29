@@ -14,6 +14,7 @@ PERMITTED_READONLY_POST_ACTIONS = {
     NodePostAction.VALIDATE,
     NodePostAction.PREVIEW_CMD,
     NodePostAction.CLONE,
+    NodePostAction.REARRANGE_NODES,
 }
 
 node_collection_managers = {

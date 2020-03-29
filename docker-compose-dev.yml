@@ -57,6 +57,18 @@ services:
             - PLYNX_CONFIG=/app/config.yaml
         command: sh /app/watch.sh
 
+    test:
+        image: plynxteam/backend
+        container_name: "test"
+        depends_on:
+            - mongodb
+        links:
+            - mongodb
+        volumes:
+            - ./data:/data
+            - ./plynx:/app/plynx
+        command: /app/tests/run_tests.sh
+
     frontend:
         image: plynxteam/ui_dev:latest
         container_name: "frontend"
