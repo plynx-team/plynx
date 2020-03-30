@@ -344,8 +344,8 @@ class BashJinja2(BaseBash):
         resources = inputs
         resources.update(outputs)
         cmd_string = cmd_template.render(
-            param=parameters,
-            log=logs,
+            params=parameters,
+            logs=logs,
             **resources
         )
         if preview:

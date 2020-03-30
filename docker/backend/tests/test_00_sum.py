@@ -38,7 +38,7 @@ def create_seq_operation(num):
     )
 
     cmd_param = node.get_parameter_by_name('_cmd', throw=True)
-    cmd_param.value.value = 'seq {{{{ param.N }}}} > {{{{ outputs.{0} }}}}\n'.format(SEQ_OUTPUT)
+    cmd_param.value.value = 'seq {{{{ params.N }}}} > {{{{ outputs.{0} }}}}\n'.format(SEQ_OUTPUT)
 
     return node
 
@@ -75,7 +75,7 @@ def create_grep_operation(input_reference, template):
     )
 
     cmd_param = node.get_parameter_by_name('_cmd', throw=True)
-    cmd_param.value.value = 'cat {{{{ inputs.{0} }}}} | grep {{{{ param.template }}}} > {{{{ outputs.{1} }}}}\n'.format(
+    cmd_param.value.value = 'cat {{{{ inputs.{0} }}}} | grep {{{{ params.template }}}} > {{{{ outputs.{1} }}}}\n'.format(
         GREP_INPUT,
         GREP_OUTPUT
     )

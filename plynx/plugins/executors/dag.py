@@ -84,7 +84,6 @@ class DAG(plynx.base.executor.BaseExecutor):
                     return False
             # set status to FAILED
             self.node.node_running_status = NodeRunningStatus.FAILED
-            self.node.save(collection=Collections.RUNS, force=True)
             return True
         return self.node.node_running_status in {NodeRunningStatus.SUCCESS, NodeRunningStatus.FAILED, NodeRunningStatus.CANCELED}
 
@@ -173,8 +172,6 @@ class DAG(plynx.base.executor.BaseExecutor):
         if self.uncompleted_nodes_count == 0 and not NodeRunningStatus.is_failed(self.node.node_running_status):
             self.node.node_running_status = NodeRunningStatus.SUCCESS
 
-        self.node.save(collection=Collections.RUNS)
-
     def _get_node_with_inputs(self, node_id):
         """Get the node and init its inputs, i.e. filling its resource_ids"""
         res = self.node_id_to_node[node_id]
@@ -228,7 +225,6 @@ class DAG(plynx.base.executor.BaseExecutor):
         self.monitoring_node_ids.add(node._id)
 
     def run(self):
-        self.node.save(collection=Collections.RUNS)
         while not self.finished():
             new_jobs = self.pop_jobs()
             if len(new_jobs) == 0:
