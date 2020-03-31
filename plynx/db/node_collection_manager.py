@@ -182,7 +182,7 @@ class NodeCollectionManager(object):
         The function does not change the original graph in the database.
 
         Return:
-            (int)   Number of upgraded Nodes
+            (int):  Number of upgraded Nodes
         """
         assert self.collection == Collections.TEMPLATES
         sub_nodes = main_node.get_parameter_by_name('_nodes').value.value
@@ -227,7 +227,12 @@ class NodeCollectionManager(object):
                         }
                     },
                     {
-                        'node_running_status': NodeRunningStatus.READY
+                        'node_running_status': {
+                            '$in': [
+                                NodeRunningStatus.READY,
+                                NodeRunningStatus.IN_QUEUE,
+                            ]
+                        }
                     },
                 ],
             },

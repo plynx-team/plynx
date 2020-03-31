@@ -13,6 +13,11 @@ from plynx.db.node_collection_manager import NodeCollectionManager
 node_collection_manager = NodeCollectionManager(collection=Collections.RUNS)
 
 _GRAPH_ITERATION_SLEEP = 1
+_WAIT_STATUS_BEFORE_FAILED = {
+    NodeRunningStatus.RUNNING,
+    NodeRunningStatus.IN_QUEUE,
+    NodeRunningStatus.FAILED_WAITING,
+}
 
 
 class DAG(plynx.base.executor.BaseExecutor):
@@ -80,7 +85,7 @@ class DAG(plynx.base.executor.BaseExecutor):
             # wait for the rest of the running jobs to finish
             # check running status of each of the nodes
             for node in self.subnodes:
-                if node.node_running_status == NodeRunningStatus.RUNNING:
+                if node.node_running_status in _WAIT_STATUS_BEFORE_FAILED:
                     return False
             # set status to FAILED
             self.node.node_running_status = NodeRunningStatus.FAILED
@@ -90,8 +95,7 @@ class DAG(plynx.base.executor.BaseExecutor):
     def pop_jobs(self):
         """Get a set of nodes with satisfied dependencies"""
         res = []
-        if NodeRunningStatus.is_failed(self.node.node_running_status):
-            return res
+        logging.info("Pop jobs")
 
         for running_node_dict in node_collection_manager.get_db_nodes_by_ids(self.monitoring_node_ids):
             # check status
@@ -100,9 +104,24 @@ class DAG(plynx.base.executor.BaseExecutor):
                 self.update_node(node)
                 self.monitoring_node_ids.remove(node._id)
 
+        if NodeRunningStatus.is_failed(self.node.node_running_status):
+            logging.info("Job in DAG failed, pop_jobs returns []")
+            return res
+
         cached_nodes = []
         for node_id in self.dependency_index_to_node_ids[0]:
-            node = self._get_node_with_inputs(node_id).copy()
+            """Get the node and init its inputs, i.e. filling its resource_ids"""
+            orig_node = self.node_id_to_node[node_id]
+            for node_input in orig_node.inputs:
+                for input_reference in node_input.input_references:
+                    node_input.values.extend(
+                        self.node_id_to_node[to_object_id(input_reference.node_id)].get_output_by_name(
+                            input_reference.output_id
+                        ).values
+                    )
+            orig_node.node_running_status = NodeRunningStatus.IN_QUEUE
+            node = orig_node.copy()
+
             if DAG._cacheable(node) and False:  # !!! _cacheable is broken
                 try:
                     cache = self.node_cache_manager.get(node, self.graph.author)
@@ -149,10 +168,12 @@ class DAG(plynx.base.executor.BaseExecutor):
         node = self.node_id_to_node[node_id]
         node.node_running_status = node_running_status
 
+        logging.info("Node running status {} {}".format(node_running_status, node.title))
+
         if node_running_status == NodeRunningStatus.FAILED:
             self.node.node_running_status = NodeRunningStatus.FAILED_WAITING
 
-        if node_running_status in {NodeRunningStatus.SUCCESS, NodeRunningStatus.FAILED, NodeRunningStatus.RESTORED}:
+        if node_running_status in {NodeRunningStatus.SUCCESS, NodeRunningStatus.RESTORED}:
             for dependent_node_id in self.node_id_to_dependents[node_id]:
                 dependent_node = self.node_id_to_node[dependent_node_id]
                 prev_dependency_index = self.node_id_to_dependency_index[dependent_node_id]
@@ -171,18 +192,6 @@ class DAG(plynx.base.executor.BaseExecutor):
 
         if self.uncompleted_nodes_count == 0 and not NodeRunningStatus.is_failed(self.node.node_running_status):
             self.node.node_running_status = NodeRunningStatus.SUCCESS
-
-    def _get_node_with_inputs(self, node_id):
-        """Get the node and init its inputs, i.e. filling its resource_ids"""
-        res = self.node_id_to_node[node_id]
-        for node_input in res.inputs:
-            for input_reference in node_input.input_references:
-                node_input.values.extend(
-                    self.node_id_to_node[to_object_id(input_reference.node_id)].get_output_by_name(
-                        input_reference.output_id
-                    ).values
-                )
-        return res
 
     @staticmethod
     def _cacheable(node):

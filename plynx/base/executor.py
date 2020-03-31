@@ -17,14 +17,37 @@ class BaseExecutor:
 
     @abstractmethod
     def run(self):
+        """Main execution function.
+
+        - Workdir has been initialized.
+        - Inputs are not preprocessed.
+        - Outputs shoul be manually postprocessed.
+        - It is OK to raise an exception in this function.
+
+        Returns:
+            enum: plynx.constants.JobReturnStatus
+        """
         pass
 
     @abstractmethod
     def status(self):
+        """No currently used.
+        """
         pass
 
     @abstractmethod
     def kill(self):
+        """Force to kill the process.
+
+        The reason can be the fact it was working too long or parent exectuter canceled it.
+        """
+        pass
+
+    def tick(self):
+        """Function that is regularly called by a Worker.
+
+        The function is running in a separate thread and does not block execution of `run()`.
+        """
         pass
 
     @classmethod

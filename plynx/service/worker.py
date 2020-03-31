@@ -15,6 +15,36 @@ import plynx.utils.executor
 from plynx.utils.file_handler import upload_file_stream
 
 
+class TickThread(object):
+    """
+    This class is a Context Manager wrapper.
+    It calls method `tick()` of the executor with a given interval
+    """
+
+    TICK_TIMEOUT = 1
+
+    def __init__(self, executor):
+        self.executor = executor
+        self._tick_thread = threading.Thread(target=self.call_executor_tick, args=())
+        self._stop_event = threading.Event()
+
+    def __enter__(self):
+        """
+        Currently no meaning of returned class
+        """
+        self._tick_thread.start()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self._stop_event.set()
+        pass
+
+    def call_executor_tick(self):
+        while not self._stop_event.is_set():
+            self._stop_event.wait(timeout=TickThread.TICK_TIMEOUT)
+            self.executor.tick()
+
+
 class Worker(object):
     """Worker main class.
 
@@ -76,7 +106,8 @@ class Worker(object):
                 status = JobReturnStatus.FAILED
                 executor.workdir = os.path.join('/tmp', str(uuid.uuid1()))
                 executor.init_workdir()
-                status = executor.run()
+                with TickThread(executor):
+                    status = executor.run()
             except Exception:
                 try:
                     f = six.BytesIO()
@@ -84,6 +115,7 @@ class Worker(object):
                     executor.node.get_log_by_name('worker').resource_id = upload_file_stream(f)
                     logging.error(traceback.format_exc())
                 except Exception:
+                    # This case of `except` has happened before due to I/O failure
                     logging.critical(traceback.format_exc())
                     raise
             finally:
@@ -105,7 +137,7 @@ class Worker(object):
             logging.warning('Execution failed: {}'.format(e))
             executor.node.node_running_status = NodeRunningStatus.FAILED
         finally:
-            executor.node.save(collection='runs')
+            executor.node.save(collection=Collections.RUNS)
             with self._run_id_to_run_lock:
                 del self._run_id_to_run[executor.node._id]
 
