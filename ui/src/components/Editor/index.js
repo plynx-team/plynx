@@ -63,6 +63,7 @@ export default class Editor extends Component {
       deprecateParentDialog: false,
       collection: null,
       tourSteps: [],
+      activeStatus: false,
     };
 
     let token = cookie.load('refresh_token');
@@ -86,6 +87,7 @@ export default class Editor extends Component {
       node: this.node,
       editable: this.props.collection === COLLECTIONS.TEMPLATES && this.node.node_status.toUpperCase() === NODE_STATUS.CREATED,
       collection: this.props.collection,
+      activeStatus: ACTIVE_NODE_RUNNING_STATUSES.has(this.node.node_running_status),
     });
     if (this.graphComponent) {
       if (force) {
@@ -607,6 +609,14 @@ export default class Editor extends Component {
           img: 'copy.svg',
           text: 'Clone',
           func: () => this.handleClone(),
+        },
+      }, {
+        render: makeControlButton,
+        props: {
+          img: 'x.svg',
+          text: 'Cancel',
+          enabled: this.state.activeStatus,
+          func: () => this.handleCancel(),
         },
       },
 

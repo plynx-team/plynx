@@ -6,7 +6,7 @@ import threading
 import jinja2
 from past.builtins import basestring
 from collections import defaultdict
-from plynx.constants import JobReturnStatus, ParameterTypes, Collections
+from plynx.constants import JobReturnStatus, ParameterTypes
 from plynx.db.node import Parameter, Output
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
 from plynx.utils.config import get_worker_config
@@ -117,17 +117,19 @@ class BaseBash(plynx.base.executor.BaseExecutor):
         return res
 
     def kill(self):
-        if hasattr(self, 'sp') and self.sp:
-            logging.info('Sending SIGTERM signal to bash process group')
-            try:
-                os.killpg(os.getpgid(self.sp.pid), signal.SIGTERM)
-                logging.info('Killed {}'.format(self.sp.pid))
-            except OSError as e:
-                logging.error('Error: {}'.format(e))
+        if not hasattr(self, 'sp') or not self.sp:
+            return
 
-    def tick(self):
+        logging.info('Sending SIGTERM signal to bash process group')
+        try:
+            os.killpg(os.getpgid(self.sp.pid), signal.SIGTERM)
+            logging.info('Killed {}'.format(self.sp.pid))
+        except OSError as e:
+            logging.error('Error: {}'.format(e))
+
+    def is_updated(self):
         logging.info('Tick')
-        self.upload_logs(final=False)
+        return self.upload_logs(final=False)
 
     # Hack: do not pickle file
     def __getstate__(self):
@@ -302,11 +304,11 @@ class BaseBash(plynx.base.executor.BaseExecutor):
         raise TypeError("Process returned non-zero value")
 
     def upload_logs(self, final=False):
+        is_dirty = False
         with self.logs_lock:
             if self.final_logs_uploaded:
-                return
+                return is_dirty
             self.final_logs_uploaded = final
-            is_dirty = False
             for key, filename in self.logs.items():
                 if key not in self.logs_sizes:
                     # the logs have not been initialized yet
@@ -319,9 +321,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
                         # resource_id should be None if the file has not been uploaded yet
                         # otherwise assign it
                         log.values = [upload_file_stream(f, log.values[0] if len(log.values) > 0 else None)]
-            if is_dirty and not self.final_logs_uploaded:
-                # Save logs whe operation is running
-                self.node.save(collection=Collections.RUNS)
+        return is_dirty
 
 
 class BashJinja2(BaseBash):

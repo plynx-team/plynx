@@ -43,12 +43,15 @@ class BaseExecutor:
         """
         pass
 
-    def tick(self):
+    def is_updated(self):
         """Function that is regularly called by a Worker.
 
         The function is running in a separate thread and does not block execution of `run()`.
+
+        Returns:
+            (bool):     True if worker needs to update DB else False
         """
-        pass
+        return False
 
     @classmethod
     def get_default_node(cls, is_workflow):
