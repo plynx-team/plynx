@@ -73,6 +73,7 @@ export default class Editor extends Component {
     }
 
     this.tour_steps = [];
+    console.log(global.appVersion);
   }
 
   sleep(ms) {
