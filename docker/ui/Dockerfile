@@ -4,11 +4,12 @@ FROM node:13.11-alpine
 WORKDIR /app
 
 # Copy files
-ADD ./ui/README.md          /app
-ADD ./ui/package-lock.json  /app
-ADD ./ui/package.json       /app
-ADD ./ui/public             /app/public
-ADD ./ui/src                /app/src
+ADD ./ui/README.md                  /app
+ADD ./ui/generate-build-version.js  /app
+ADD ./ui/package-lock.json          /app
+ADD ./ui/package.json               /app
+ADD ./ui/public                     /app/public
+ADD ./ui/src                        /app/src
 
 # Copy licence
 ADD ./LICENSE /app
