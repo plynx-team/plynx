@@ -1,6 +1,6 @@
 version: 2
 jobs:
-  build:
+  build_package:
     working_directory: ~/plynx
     docker:
       - image: circleci/python:3.8
@@ -22,9 +22,6 @@ jobs:
           command:
             # make build_package
             sudo python setup.py install
-      - run:
-          name: Run tests
-          command: make run_tests
 
   build_docker:
     machine: true
@@ -33,10 +30,13 @@ jobs:
       - run:
           name: build docker images
           command: make build
+      - run:
+          name: Run tests
+          command: make run_tests
 
 workflows:
   version: 2
   build_and_test:
     jobs:
-      - build
+      - build_package
       - build_docker

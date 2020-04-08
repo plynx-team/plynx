@@ -37,6 +37,8 @@ export const VIEW_MODE = Object.freeze({
 
 
 const FIRST_TIME_APPROVED_STATE = 'first_time_approved_state';
+const UPDATE_TIMEOUT = 1000;
+
 
 export default class Editor extends Component {
   static propTypes = {
@@ -61,6 +63,7 @@ export default class Editor extends Component {
       deprecateParentDialog: false,
       collection: null,
       tourSteps: [],
+      activeStatus: false,
     };
 
     let token = cookie.load('refresh_token');
@@ -70,6 +73,7 @@ export default class Editor extends Component {
     }
 
     this.tour_steps = [];
+    console.log(global.appVersion);
   }
 
   sleep(ms) {
@@ -84,6 +88,7 @@ export default class Editor extends Component {
       node: this.node,
       editable: this.props.collection === COLLECTIONS.TEMPLATES && this.node.node_status.toUpperCase() === NODE_STATUS.CREATED,
       collection: this.props.collection,
+      activeStatus: ACTIVE_NODE_RUNNING_STATUSES.has(this.node.node_running_status),
     });
     if (this.graphComponent) {
       if (force) {
@@ -239,7 +244,7 @@ export default class Editor extends Component {
         PLynxApi.getAccessToken()
         .then((isSuccessfull) => {
           if (isSuccessfull) {
-            self.timeout = setTimeout(() => self.checkNodeStatus(), 1000);
+            self.timeout = setTimeout(() => self.checkNodeStatus(), UPDATE_TIMEOUT);
           } else {
             console.error("Could not refresh token");
             window.location = '/login';
@@ -252,7 +257,7 @@ export default class Editor extends Component {
   initializeUpdate() {
     const node_running_status = this.node.node_running_status.toUpperCase();
     if (this.props.collection === COLLECTIONS.RUNS && ACTIVE_NODE_RUNNING_STATUSES.has(node_running_status)) {
-      this.timeout = setTimeout(() => this.checkNodeStatus(), 1000);
+      this.timeout = setTimeout(() => this.checkNodeStatus(), UPDATE_TIMEOUT);
     }
   }
 
@@ -605,6 +610,14 @@ export default class Editor extends Component {
           img: 'copy.svg',
           text: 'Clone',
           func: () => this.handleClone(),
+        },
+      }, {
+        render: makeControlButton,
+        props: {
+          img: 'x.svg',
+          text: 'Cancel',
+          enabled: this.state.activeStatus,
+          func: () => this.handleCancel(),
         },
       },
 

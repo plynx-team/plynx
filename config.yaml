@@ -108,12 +108,6 @@ plugins:
         - directory
         - cloud-storage
   hubs:
-    - kind: db-hub-python
-      title: Demo hub
-      icon: feathericons.play
-      cls: plynx.plugins.hubs.static_list.StaticListHub
-      args:
-        filename: ./test_data/demo_templates.json
     - kind: db-hub
       title: Database hub
       icon: feathericons.database
@@ -130,8 +124,6 @@ plugins:
       executor: plynx.plugins.executors.dag.DAG
       hubs:
         - db-hub
-        - db-hub-python
-        - db-hub-comp
       operations:
         - basic-bash-jinja2-operation
         - basic-python-node-operation

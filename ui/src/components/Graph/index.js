@@ -303,7 +303,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   updateGraphFromJson(newGraph) {
-    console.log("update");
+    console.log("update", newGraph.node_running_status);
     let i = 0;
     let block = null;
 

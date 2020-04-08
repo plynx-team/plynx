@@ -17,15 +17,41 @@ class BaseExecutor:
 
     @abstractmethod
     def run(self):
+        """Main execution function.
+
+        - Workdir has been initialized.
+        - Inputs are not preprocessed.
+        - Outputs shoul be manually postprocessed.
+        - It is OK to raise an exception in this function.
+
+        Returns:
+            enum: plynx.constants.JobReturnStatus
+        """
         pass
 
     @abstractmethod
     def status(self):
+        """No currently used.
+        """
         pass
 
     @abstractmethod
     def kill(self):
+        """Force to kill the process.
+
+        The reason can be the fact it was working too long or parent exectuter canceled it.
+        """
         pass
+
+    def is_updated(self):
+        """Function that is regularly called by a Worker.
+
+        The function is running in a separate thread and does not block execution of `run()`.
+
+        Returns:
+            (bool):     True if worker needs to update DB else False
+        """
+        return False
 
     @classmethod
     def get_default_node(cls, is_workflow):

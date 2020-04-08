@@ -7,12 +7,44 @@ import traceback
 import uuid
 import socket
 from plynx.constants import JobReturnStatus, NodeRunningStatus, Collections
-from plynx.db.node_collection_manager import NodeCollectionManager
+import plynx.db.node_collection_manager
+import plynx.db.run_cancellation_manager
 from plynx.db.worker_state import WorkerState
 from plynx.utils.config import get_worker_config
 from plynx.utils.db_connector import check_connection
 import plynx.utils.executor
 from plynx.utils.file_handler import upload_file_stream
+
+
+class TickThread(object):
+    """
+    This class is a Context Manager wrapper.
+    It calls method `tick()` of the executor with a given interval
+    """
+
+    TICK_TIMEOUT = 1
+
+    def __init__(self, executor):
+        self.executor = executor
+        self._tick_thread = threading.Thread(target=self.call_executor_tick, args=())
+        self._stop_event = threading.Event()
+
+    def __enter__(self):
+        """
+        Currently no meaning of returned class
+        """
+        self._tick_thread.start()
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self._stop_event.set()
+
+    def call_executor_tick(self):
+        while not self._stop_event.is_set():
+            self._stop_event.wait(timeout=TickThread.TICK_TIMEOUT)
+            if self.executor.is_updated():
+                # Save logs whe operation is running
+                self.executor.node.save(collection=Collections.RUNS)
 
 
 class Worker(object):
@@ -48,14 +80,15 @@ class Worker(object):
 
     def __init__(self, worker_config, worker_id):
         self.worker_id = worker_id if worker_id else str(uuid.uuid1())
-        self.node_collection_manager = NodeCollectionManager(collection=Collections.RUNS)
+        self.node_collection_manager = plynx.db.node_collection_manager.NodeCollectionManager(collection=Collections.RUNS)
+        self.run_cancellation_manager = plynx.db.run_cancellation_manager.RunCancellationManager()
         self.kinds = worker_config.kinds
         self.host = socket.gethostname()
         self._stop_event = threading.Event()
 
         # Mapping keep track of Worker Status
-        self._run_id_to_run = {}
-        self._run_id_to_run_lock = threading.Lock()
+        self._run_id_to_executor = {}
+        self._run_id_to_executor_lock = threading.Lock()
 
         # Start new threads
         self._thread_db_status_update = threading.Thread(target=self._run_db_status_update, args=())
@@ -63,6 +96,8 @@ class Worker(object):
 
         self._thread_worker_state_update = threading.Thread(target=self._run_worker_state_update, args=())
         self._thread_worker_state_update.start()
+
+        self._killed_run_ids = set()
 
     def serve_forever(self):
         """
@@ -76,7 +111,8 @@ class Worker(object):
                 status = JobReturnStatus.FAILED
                 executor.workdir = os.path.join('/tmp', str(uuid.uuid1()))
                 executor.init_workdir()
-                status = executor.run()
+                with TickThread(executor):
+                    status = executor.run()
             except Exception:
                 try:
                     f = six.BytesIO()
@@ -84,12 +120,12 @@ class Worker(object):
                     executor.node.get_log_by_name('worker').resource_id = upload_file_stream(f)
                     logging.error(traceback.format_exc())
                 except Exception:
+                    # This case of `except` has happened before due to I/O failure
                     logging.critical(traceback.format_exc())
                     raise
             finally:
                 executor.clean_up()
 
-            self._job_killed = True
             logging.info('Node {node_id} `{title}` finished with status `{status}`'.format(
                 node_id=executor.node._id,
                 title=executor.node.title,
@@ -97,6 +133,9 @@ class Worker(object):
                 ))
             if status == JobReturnStatus.SUCCESS:
                 executor.node.node_running_status = NodeRunningStatus.SUCCESS
+            elif executor.node._id in self._killed_run_ids:
+                self._killed_run_ids.remove(executor.node._id)
+                executor.node.node_running_status = NodeRunningStatus.CANCELED
             elif status == JobReturnStatus.FAILED:
                 executor.node.node_running_status = NodeRunningStatus.FAILED
             else:
@@ -105,9 +144,9 @@ class Worker(object):
             logging.warning('Execution failed: {}'.format(e))
             executor.node.node_running_status = NodeRunningStatus.FAILED
         finally:
-            executor.node.save(collection='runs')
-            with self._run_id_to_run_lock:
-                del self._run_id_to_run[executor.node._id]
+            executor.node.save(collection=Collections.RUNS)
+            with self._run_id_to_executor_lock:
+                del self._run_id_to_executor[executor.node._id]
 
     def _run_db_status_update(self):
         """Syncing with the database."""
@@ -118,8 +157,8 @@ class Worker(object):
                     logging.info('New node found: {} {} {}'.format(node['_id'], node['node_running_status'], node['title']))
                     executor = plynx.utils.executor.materialize_executor(node)
 
-                    with self._run_id_to_run_lock:
-                        self._run_id_to_run[executor.node._id] = node
+                    with self._run_id_to_executor_lock:
+                        self._run_id_to_executor[executor.node._id] = executor
                     thread = threading.Thread(target=self.execute_job, args=(executor, ))
                     thread.start()
 
@@ -135,8 +174,17 @@ class Worker(object):
         """Syncing with the database."""
         try:
             while not self._stop_event.is_set():
-                with self._run_id_to_run_lock:
-                    runs = list(self._run_id_to_run.values())
+                # TODO move CANCEL to a separate thread
+                run_cancellations = list(self.run_cancellation_manager.get_run_cancellations())
+                run_cancellation_ids = set(map(lambda rc: rc.run_id, run_cancellations)) & set(self._run_id_to_executor.keys())
+                for run_id in run_cancellation_ids:
+                    self._killed_run_ids.add(run_id)
+                    self._run_id_to_executor[run_id].kill()
+
+                runs = []
+                with self._run_id_to_executor_lock:
+                    for executor in self._run_id_to_executor.values():
+                        runs.append(executor.node.to_dict())
                 worker_state = WorkerState.from_dict({
                     'worker_id': self.worker_id,
                     'host': self.host,

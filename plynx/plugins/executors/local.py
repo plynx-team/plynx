@@ -65,7 +65,6 @@ class ResourceMerger(object):
 
 
 class BaseBash(plynx.base.executor.BaseExecutor):
-    logs_lock = threading.Lock()
 
     def __init__(self, node=None):
         super(BaseBash, self).__init__(node)
@@ -73,6 +72,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
         self.logs_sizes = {}
         self.final_logs_uploaded = False
         self.logs = {}
+        self.logs_lock = threading.Lock()
         self._resource_manager = plynx.utils.plugin_manager.get_resource_manager()
 
     def exec_script(self, script_location, command='bash'):
@@ -117,16 +117,23 @@ class BaseBash(plynx.base.executor.BaseExecutor):
         return res
 
     def kill(self):
-        if hasattr(self, 'sp') and self.sp:
-            logging.info('Sending SIGTERM signal to bash process group')
-            try:
-                os.killpg(os.getpgid(self.sp.pid), signal.SIGTERM)
-                logging.info('Killed {}'.format(self.sp.pid))
-            except OSError as e:
-                logging.error('Error: {}'.format(e))
+        if not hasattr(self, 'sp') or not self.sp:
+            return
+
+        logging.info('Sending SIGTERM signal to bash process group')
+        try:
+            os.killpg(os.getpgid(self.sp.pid), signal.SIGTERM)
+            logging.info('Killed {}'.format(self.sp.pid))
+        except OSError as e:
+            logging.error('Error: {}'.format(e))
+
+    def is_updated(self):
+        logging.info('Tick')
+        return self.upload_logs(final=False)
 
     # Hack: do not pickle file
     def __getstate__(self):
+        logging.critical('Run into `__getstate__`! Look ad `logs_lock` variable')
         d = dict(self.__dict__)
         if 'sp' in d:
             del d['sp']
@@ -236,7 +243,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
         return resource_merger.get_dict()
 
     def _prepare_logs(self):
-        with BaseBash.logs_lock:
+        with self.logs_lock:
             self.logs = {}
             for log in self.node.logs:
                 filename = os.path.join(self.workdir, 'l_{}'.format(log.name))
@@ -270,11 +277,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
 
     def _postprocess_outputs(self, outputs):
         for key, filename in outputs.items():
-            logging.info('-'*100)
-            logging.info(type(key))
-            logging.info(type(filename))
-            logging.info(key)
-            logging.info(filename)
+            logging.info("Uploading output `{}` - `{}`".format(key, filename))
             if os.path.exists(filename):
                 logging.info('path exists')
                 matching_outputs = list(filter(lambda o: o.name == key, self.node.outputs))
@@ -301,21 +304,24 @@ class BaseBash(plynx.base.executor.BaseExecutor):
         raise TypeError("Process returned non-zero value")
 
     def upload_logs(self, final=False):
-        with BaseBash.logs_lock:
+        is_dirty = False
+        with self.logs_lock:
             if self.final_logs_uploaded:
-                return
+                return is_dirty
             self.final_logs_uploaded = final
             for key, filename in self.logs.items():
                 if key not in self.logs_sizes:
-                    # the logs have not been initialized yey
+                    # the logs have not been initialized yet
                     continue
                 if os.path.exists(filename) and os.stat(filename).st_size != self.logs_sizes[key]:
+                    is_dirty = True
                     log = self.node.get_log_by_name(key)
                     self.logs_sizes[key] = os.stat(filename).st_size
                     with open(filename, 'rb') as f:
                         # resource_id should be None if the file has not been uploaded yet
                         # otherwise assign it
                         log.values = [upload_file_stream(f, log.values[0] if len(log.values) > 0 else None)]
+        return is_dirty
 
 
 class BashJinja2(BaseBash):
@@ -344,8 +350,8 @@ class BashJinja2(BaseBash):
         resources = inputs
         resources.update(outputs)
         cmd_string = cmd_template.render(
-            param=parameters,
-            log=logs,
+            params=parameters,
+            logs=logs,
             **resources
         )
         if preview:
@@ -419,6 +425,7 @@ class PythonNode(BaseBash):
         return res
 
     def status(self):
+        """Temp"""
         pass
 
     @classmethod

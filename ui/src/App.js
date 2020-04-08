@@ -7,7 +7,7 @@ import LogInRedirect from './components/LogInRedirect';
 import Dashboard from './components/Dashboard';
 import NodeRouter from './components/NodeRouter';
 import NotFound from './components/NotFound';
-import APIDialog from './components/Dialogs/APIDialog';
+import CacheBuster from './CacheBuster';
 import { COLLECTIONS, VIRTUAL_COLLECTIONS, SPECIAL_USERS } from './constants';
 
 import './App.css';
@@ -50,33 +50,36 @@ class App extends Component {
     }
   }
 
-  handleAPIDialogClick() {
-    this.setState({showApiDialog: true});
-  }
-
-  handleAPIDialogClose() {
-    this.setState({showApiDialog: false});
-  }
-
   render() {
     return (
-      <div className="App">
-        <Header onAPIDialogClick={() => this.handleAPIDialogClick()}/>
-        <div className="Content">
-          {this.state.showApiDialog && <APIDialog onClose={() => this.handleAPIDialogClose()}/>}
-          <Switch>
-            <Route exact path="/" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEFAULT} maxTry={6} />}/>
-            <Route exact path="/demo" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEMO} maxTry={3} />}/>
-            <Route exact path="/dashboard" component={Dashboard} />
-            <Route path={`/${VIRTUAL_COLLECTIONS.OPERATIONS}`} component={NodeRouter}/>
-            <Route path={`/${VIRTUAL_COLLECTIONS.WORKFLOWS}`} component={NodeRouter}/>
-            <Route path={`/${COLLECTIONS.TEMPLATES}`} component={NodeRouter}/>
-            <Route path={`/${COLLECTIONS.RUNS}`} component={NodeRouter}/>
-            <Route exact path="/login" component={LogIn} />
-            <Route path="*" component={NotFound} />
-          </Switch>
-        </div>
-      </div>
+      <CacheBuster>
+        {({ loading, isLatestVersion, refreshCacheAndReload }) => {
+          if (loading) return null;
+          if (!loading && !isLatestVersion) {
+            // You can decide how and when you want to force reload
+            refreshCacheAndReload();
+          }
+
+          return (
+            <div className="App">
+              <Header/>
+              <div className="Content">
+                <Switch>
+                  <Route exact path="/" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEFAULT} maxTry={6} />}/>
+                  <Route exact path="/demo" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEMO} maxTry={3} />}/>
+                  <Route exact path="/dashboard" component={Dashboard} />
+                  <Route path={`/${VIRTUAL_COLLECTIONS.OPERATIONS}`} component={NodeRouter}/>
+                  <Route path={`/${VIRTUAL_COLLECTIONS.WORKFLOWS}`} component={NodeRouter}/>
+                  <Route path={`/${COLLECTIONS.TEMPLATES}`} component={NodeRouter}/>
+                  <Route path={`/${COLLECTIONS.RUNS}`} component={NodeRouter}/>
+                  <Route exact path="/login" component={LogIn} />
+                  <Route path="*" component={NotFound} />
+                </Switch>
+              </div>
+            </div>
+          );
+        }}
+      </CacheBuster>
     );
   }
 }

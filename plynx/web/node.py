@@ -2,7 +2,8 @@ from __future__ import absolute_import
 import json
 from flask import request, g
 from plynx.db.node import Node
-from plynx.db.node_collection_manager import NodeCollectionManager
+import plynx.db.node_collection_manager
+import plynx.db.run_cancellation_manager
 import plynx.base.hub
 import plynx.utils.plugin_manager
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
@@ -14,12 +15,14 @@ PERMITTED_READONLY_POST_ACTIONS = {
     NodePostAction.VALIDATE,
     NodePostAction.PREVIEW_CMD,
     NodePostAction.CLONE,
+    NodePostAction.REARRANGE_NODES,
 }
 
 node_collection_managers = {
-    collection: NodeCollectionManager(collection=collection)
+    collection: plynx.db.node_collection_manager.NodeCollectionManager(collection=collection)
     for collection in [Collections.TEMPLATES, Collections.RUNS]
 }
+run_cancellation_manager = plynx.db.run_cancellation_manager.RunCancellationManager()
 
 resource_manager = plynx.utils.plugin_manager.get_resource_manager()
 operation_manager = plynx.utils.plugin_manager.get_operation_manager()
@@ -231,7 +234,7 @@ def post_node(collection):
             }
         ))
     elif action == NodePostAction.CANCEL:
-        raise NotImplementedError()
+        run_cancellation_manager.cancel_run(node._id)
     elif action == NodePostAction.GENERATE_CODE:
         raise NotImplementedError()
     else:

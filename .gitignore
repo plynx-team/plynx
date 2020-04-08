@@ -1,5 +1,7 @@
+.coverage
 .DS_Store
 .gitignore.swp
+build
 data/
 db/.DS_Store
 dist/

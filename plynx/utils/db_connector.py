@@ -25,6 +25,9 @@ def init_indexes():
 
     _db[Collections.USERS].create_index('username', unique=True)
 
+    _db[Collections.RUN_CANCELLATIONS].create_index('insertion_date', expireAfterSeconds=60)
+    _db[Collections.RUN_CANCELLATIONS].create_index('run_id')
+
 
 def get_db_connector():
     global _db

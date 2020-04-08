@@ -1,6 +1,4 @@
-FROM node:12.4.0-alpine
+FROM node:13.11-alpine
 
 # Set the working directory to /app
 WORKDIR /app
-
-ENTRYPOINT npm start

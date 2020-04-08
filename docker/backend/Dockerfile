@@ -23,8 +23,7 @@ ADD ./wsgi.py /app/wsgi.py
 ADD ./LICENSE /app
 
 # Copy test data
-ADD ./docker/backend/scripts /app/scripts
-ADD ./docker/backend/test_data /app/test_data
+ADD ./docker/backend/tests /app/tests
 
 # master / worker port
 EXPOSE 17011

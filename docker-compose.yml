@@ -46,18 +46,6 @@ services:
             - ./data:/data
         command: plynx api -vvv
 
-    test:
-        image: plynxteam/backend:latest
-        container_name: "test"
-        depends_on:
-            - api
-        links:
-            - api
-            - mongodb
-        environment:
-            - PLYNX_ENDPOINT=http://api:5000/plynx/api/v0
-        command: ./scripts/run_tests.sh
-
     frontend:
         image: plynxteam/ui:latest
         container_name: "frontend"
