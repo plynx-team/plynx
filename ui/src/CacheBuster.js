@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import packageJson from '../package.json';
 
 global.appVersion = packageJson.version;
@@ -67,5 +68,5 @@ export default class CacheBuster extends React.Component {
 
 
 CacheBuster.propTypes = {
-    children: React.PropTypes.node.isRequired,
+    children: PropTypes.node.isRequired,
 };
