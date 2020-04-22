@@ -32,18 +32,27 @@ class _ExecutorManager(object):
     def __init__(self, plugins):
         self.kind_to_executor_class = {}
         self.kind_to_children_kinds = {}
+        self.kind_to_icon = {}
+        self.kind_to_color = {}
+        self.kind_to_title = {}
         for o_or_w in plugins.workflows + plugins.operations + plugins.dummy_operations:
             self.kind_to_executor_class[o_or_w.kind] = pydoc.locate(o_or_w.executor)
             if not self.kind_to_executor_class[o_or_w.kind]:
                 raise Exception('Executor `{}` not found'.format(o_or_w.executor))
             self.kind_to_children_kinds[o_or_w.kind] = o_or_w.operations
+            self.kind_to_icon[o_or_w.kind] = o_or_w.icon
+            self.kind_to_color[o_or_w.kind] = o_or_w.color
+            self.kind_to_title[o_or_w.kind] = o_or_w.title
 
         self.kind_info = {}
         for kind, executor_class in self.kind_to_executor_class.items():
             logging.warning("Initializing executor `{}`".format(kind))
             self.kind_info[kind] = {
                 'is_graph': executor_class.IS_GRAPH,
-                'children': self.kind_to_children_kinds[kind]
+                'children': self.kind_to_children_kinds[kind],
+                'title': self.kind_to_title[kind],
+                'icon': self.kind_to_icon[kind],
+                'color': self.kind_to_color[kind],
             }
 
 

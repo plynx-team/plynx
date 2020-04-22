@@ -6,20 +6,31 @@ import ParameterList from './ParameterList';
 import {PluginsConsumer} from '../../../../contexts';
 import { NODE_STATUS, NODE_RUNNING_STATUS } from '../../../../constants';
 
+import Icon from '../../../Common/Icon';
+
 const Draggable = require('react-draggable');
 
 
 class Block extends React.Component {
   static propTypes = {
-    title: PropTypes.string.isRequired,
-    description: PropTypes.string.isRequired,
-    cacheUrl: PropTypes.string.isRequired,
+    node: PropTypes.shape({
+      _id: PropTypes.string.isRequired,
+      title: PropTypes.string.isRequired,
+      kind: PropTypes.string.isRequired,
+      cache_url: PropTypes.string,
+      node_running_status: PropTypes.oneOf(Object.values(NODE_RUNNING_STATUS)).isRequired,
+      inputs: PropTypes.array.isRequired,
+      outputs: PropTypes.array.isRequired,
+      node_status: PropTypes.oneOf(Object.values(NODE_STATUS)).isRequired,
+      x: PropTypes.number.isRequired,
+      y: PropTypes.number.isRequired,
+    }),
+
     highlight: PropTypes.bool.isRequired,
     index: PropTypes.number.isRequired,
-    inputs: PropTypes.array.isRequired,
-    nid: PropTypes.string.isRequired,
-    nodeRunningStatus: PropTypes.oneOf(Object.values(NODE_RUNNING_STATUS)).isRequired,
-    nodeStatus: PropTypes.oneOf(Object.values(NODE_STATUS)).isRequired,
+    readonly: PropTypes.bool.isRequired,
+    selected: PropTypes.bool.isRequired,
+
     onBlockMove: PropTypes.func.isRequired,
     onBlockRemove: PropTypes.func.isRequired,
     onBlockSelect: PropTypes.func.isRequired,
@@ -29,14 +40,6 @@ class Block extends React.Component {
     onOutputClick: PropTypes.func.isRequired,
     onSpecialParameterClick: PropTypes.func.isRequired,
     onStartConnector: PropTypes.func.isRequired,
-    outputs: PropTypes.array.isRequired,
-    pos: PropTypes.shape({
-      x: PropTypes.number.isRequired,
-      y: PropTypes.number.isRequired,
-    }).isRequired,
-    readonly: PropTypes.bool.isRequired,
-    selected: PropTypes.bool.isRequired,
-    specialParameterNames: PropTypes.array.isRequired,
   }
 
   constructor(props) {
@@ -45,20 +48,20 @@ class Block extends React.Component {
       selected: props.selected,
       readonly: props.readonly,
       highlight: props.highlight,
-      cacheUrl: props.cacheUrl
+      cache_url: props.cache_url // eslint-disable-line
     };
   }
 
   handleDragStart(event, ui) {
-    this.props.onBlockStart(this.props.nid, ui);
+    this.props.onBlockStart(this.props.node._id, ui);
   }
 
   handleDragStop() {
-    this.props.onBlockStop(this.props.nid);
+    this.props.onBlockStop(this.props.node._id);
   }
 
   handleDrag(event, ui) {
-    this.props.onBlockMove(this.props.index, this.props.nid, ui);
+    this.props.onBlockMove(this.props.index, this.props.node._id, ui);
   }
 
   shouldComponentUpdate(nextProps, nextState) {
@@ -66,51 +69,54 @@ class Block extends React.Component {
   }
 
   onStartConnector(index) {
-    this.props.onStartConnector(this.props.nid, index);
+    this.props.onStartConnector(this.props.node._id, index);
   }
 
   onOutputClick(index) {
-    this.props.onOutputClick(this.props.nid, index);
+    this.props.onOutputClick(this.props.node._id, index);
   }
 
   onSpecialParameterClick(index) {
-    this.props.onSpecialParameterClick(this.props.nid, index);
+    this.props.onSpecialParameterClick(this.props.node._id, index);
   }
 
   onCompleteConnector(index) {
-    this.props.onCompleteConnector(this.props.nid, index);
+    this.props.onCompleteConnector(this.props.node._id, index);
   }
 
   handleClick(e) {
     e.stopPropagation();
     if (this.props.onBlockSelect) {
-      this.props.onBlockSelect(this.props.nid);
+      this.props.onBlockSelect(this.props.node._id);
     }
   }
 
   handleRemove(e) {
     e.preventDefault();
     e.stopPropagation();
-    this.props.onBlockRemove(this.props.nid);
+    this.props.onBlockRemove(this.props.node._id);
   }
 
   render() {
-    let blockClass = '';
-    blockClass =
-      'node' + (this.state.selected ? ' selected' : '')
-      + ' running-status-' + this.props.nodeRunningStatus.toLowerCase()
-      + ' status-' + this.props.nodeStatus.toLowerCase()
-      + (this.state.highlight ? ' error-highlight' : '')
-      + (this.state.readonly ? ' readonly' : ' editable')
-      + ` node-${this.props.nid}`;
+    const blockClass = [
+      'node',
+      this.state.selected ? 'selected' : '',
+      `running-status-${this.props.node.node_running_status.toLowerCase()}`,
+      `status-${this.props.node.node_status.toLowerCase()}`,
+        (this.state.highlight ? 'error-highlight' : ''),
+        (this.state.readonly ? 'readonly' : 'editable'),
+      `node-${this.props.node._id}`,
+    ].join(' ');
 
     return (
-      <div onClick={(e) => {
-        this.handleClick(e);
-      }} style={{position: 'relative'}}>
+      <PluginsConsumer>
+      {
+        plugins_dict => <div onClick={(e) => {
+          this.handleClick(e);
+        }} style={{position: 'relative'}}>
         <Draggable
-          defaultPosition={{x: this.props.pos.x, y: this.props.pos.y}}
-          handle=".node-header,.node-title,.node-content"
+          defaultPosition={{x: this.props.node.x, y: this.props.node.y}}
+          handle=".node-header,.node-header-title,.node-content"
           onStart={(event, ui) => this.handleDragStart(event, ui)}
           onStop={() => this.handleDragStop()}
           onDrag={(event, ui) => this.handleDrag(event, ui)}
@@ -118,7 +124,15 @@ class Block extends React.Component {
           >
         <section className={blockClass} style={{zIndex: 10000}} >
             <header className="node-header">
-              <span className="node-title">{this.props.title}</span>
+              <span className="node-header-title">
+                  <Icon
+                    type_descriptor={plugins_dict.executors_info[this.props.node.kind]}
+                    className="operation-icon"
+                  />
+                  <div className="operation-title-text">
+                    {plugins_dict.executors_info[this.props.node.kind].title}
+                  </div>
+              </span>
               {
                 !this.state.readonly &&
                 <div
@@ -129,8 +143,8 @@ class Block extends React.Component {
                 </div>
               }
               {
-                this.state.cacheUrl &&
-                <a href={this.state.cacheUrl}
+                this.state.cache_url &&
+                <a href={this.state.cache_url}
                   className={'remove'}
                 >
                   <img
@@ -142,33 +156,32 @@ class Block extends React.Component {
                 </a>
               }
             </header>
-            <div className="node-description">&ldquo;{this.props.description}&rdquo;</div>
-            <PluginsConsumer>
-            {
-              plugins_dict => <div className="node-content" onClick={(e) => {
-                this.handleClick(e);
-              }}>
+            <div className="node-title">{this.props.node.title}</div>
+            <div className="node-content" onClick={(e) => {
+              this.handleClick(e);
+            }}>
                 <BlockInputList
-                              items={this.props.inputs}
+                              items={this.props.node.inputs}
                               onCompleteConnector={(index) => this.onCompleteConnector(index)}
                               resources_dict={plugins_dict.resources_dict}
                               />
                 <BlockOuputList
-                              items={this.props.outputs}
+                              items={this.props.node.outputs}
                               onStartConnector={(index) => this.onStartConnector(index)}
                               onClick={(index) => this.onOutputClick(index)}
                               resources_dict={plugins_dict.resources_dict}
                               />
 
-              </div>
-            }
-            </PluginsConsumer>
+            </div>
             <ParameterList
-                          items={this.props.specialParameterNames}
-                          onClick={(index) => this.onSpecialParameterClick(index)} />
+                items={[]}
+                onClick={(index) => this.onSpecialParameterClick(index)}
+            />
         </section>
         </Draggable>
       </div>
+      }
+      </PluginsConsumer>
     );
   }
 }

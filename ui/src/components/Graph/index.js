@@ -103,7 +103,7 @@ class Graph extends Component {
     document.title = "Graph";
 
     this.state = {
-      blocks: [],
+      nodes: [],
       connections: [],
       graph: {},
       graphId: null,
@@ -149,9 +149,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
     document.title = this.graph_node.title + " - Graph - PLynx";
     console.log(this.graph_node);
     this.node_lookup = {};
-    this.block_lookup = {};
     this.connections = [];
-    this.blocks = [];
     const parameterNameToGraphParameter = {};
     const ts = new ObjectID().toString();
 
@@ -165,6 +163,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
     let inputNode = null;
     for (let i = 0; i < this.nodes.length; ++i) {
       const node = this.nodes[i];
+      node._ts = ts;
 
       // Remove broken references
       for (parameter of node.parameters) {
@@ -263,25 +262,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
       if (!node.hasOwnProperty("y")) {
         node.y = Math.floor(Math.random() * 400) + 1;
       }
-
-      this.blocks.push({
-        "nid": node._id,
-        "title": node.title,
-        "description": node.description,
-        "cacheUrl": node.cache_url,
-        "x": node.x,
-        "y": node.y,
-        "fields":
-        {
-          "in": blockInputs,
-          "out": blockOutputs
-        },
-        "nodeRunningStatus": node.node_running_status,
-        "nodeStatus": node.node_status,
-        "specialParameterNames": specialParameterNames,
-        "_ts": ts,
-      });
-      this.block_lookup[node._id] = this.blocks[this.blocks.length - 1];
     }
 
     /*
@@ -290,10 +270,10 @@ ENDPOINT = '` + API_ENDPOINT + `'
     const nid = null;
 
     this.setState({
-      "blocks": this.blocks,
-      "connections": this.connections,
-      "graph": this.graph_node,
-      "editable": this.props.editable,
+      nodes: this.nodes,
+      connections: this.connections,
+      graph: this.graph_node,
+      editable: this.props.editable,
 
     }, () => {
       if (nid) {
@@ -305,30 +285,17 @@ ENDPOINT = '` + API_ENDPOINT + `'
   updateGraphFromJson(newGraph) {
     console.log("update", newGraph.node_running_status);
     let i = 0;
-    let block = null;
-
-    const blocks_lookup_index = {};
-    for (i = 0; i < this.blocks.length; ++i) {
-      block = this.blocks[i];
-      blocks_lookup_index[block.nid] = i;
-    }
 
     const newNodes = newGraph.parameters.find((p) => p.name === '_nodes').value.value;
 
     for (i = 0; i < newNodes.length; ++i) {
-      const node = newNodes[i];
-      block = this.blocks[blocks_lookup_index[node._id]];
-      block.nodeRunningStatus = node.node_running_status;
-      block.nodeStatus = node.node_status;
-      block.cacheUrl = node.cache_url;
-      this.node_lookup[node._id] = newNodes[i];
-      this.block_lookup[node._id] = block;
+      this.node_lookup[newNodes[i]._id] = newNodes[i];
     }
 
     this.graph_node = newGraph;
 
     this.setState({
-      "blocks": this.blocks,
+      nodes: newNodes,
     });
   }
 
@@ -382,10 +349,10 @@ ENDPOINT = '` + API_ENDPOINT + `'
       "output_id": from_pin
     });
 
-    if (this.block_lookup[to_nid].highlight) {
-      this.block_lookup[to_nid].highlight = false;
+    if (this.node_lookup[to_nid]._highlight) {
+      this.node_lookup[to_nid]._highlight = false;
       this.setState({
-        "blocks": this.blocks
+        nodes: this.nodes,
       });
     }
 
@@ -428,11 +395,10 @@ ENDPOINT = '` + API_ENDPOINT + `'
     );
 
     delete this.node_lookup[nid];
-    this.blocks = this.blocks.filter((block) => {
-      return block.nid !== nid;
-    });
 
-    this.setState({blocks: this.blocks});
+    this.setState({
+      nodes: this.nodes,
+    });
 
     this.props.onNodeChange(this.graph_node);
   }
@@ -594,10 +560,10 @@ ENDPOINT = '` + API_ENDPOINT + `'
       if (node) {
         this.propertiesBar.setNodeData(node);
 
-        if (this.block_lookup[nid].highlight) {
-          this.block_lookup[nid].highlight = false;
+        if (this.node_lookup[nid]._highlight) {
+          this.node_lookup[nid]._highlight = false;
           this.setState({
-            "blocks": this.blocks
+            nodes: this.nodes,
           });
         }
       }
@@ -626,14 +592,14 @@ ENDPOINT = '` + API_ENDPOINT + `'
         node_parameter.value = value;
       } else if (name === '_DESCRIPTION' || name === '_TITLE') {
         const inName = name.substring(1, name.length).toLowerCase();
-        const block = this.block_lookup[node_id];
+        const block = this.node_lookup[node_id];
         node[inName] = value;
 
         document.title = this.graph_node.title + " - Graph - PLynx";
         if (block) { // the case of graph itself
           block[inName] = value;
         } else {
-                // using for node, it is hard to update descriptions
+          // using for node, it is hard to update descriptions
           this.setState({graph: this.graph_node});
         }
       } else {
@@ -806,32 +772,13 @@ ENDPOINT = '` + API_ENDPOINT + `'
     node.node_running_status = NODE_RUNNING_STATUS.CREATED;
     node.cache_url = null;
 
-    this.blocks.push(
-      {
-        "nid": node._id,
-        "title": node.title,
-        "description": node.description,
-        "cacheUrl": node.cache_url,
-        "x": node.x,
-        "y": node.y,
-        "fields":
-        {
-          "in": inputs,
-          "out": outputs
-        },
-        "nodeRunningStatus": node.node_running_status,
-        "nodeStatus": node.node_status,
-        "specialParameterNames": specialParameterNames,
-      });
-
     this.node_lookup[node._id] = node;
-    this.block_lookup[node._id] = this.blocks[this.blocks.length - 1];
 
     this.nodes.push(node);
     console.log("node", node);
 
     this.setState({
-      blocks: this.blocks,
+      nodes: this.nodes,
       connections: this.connections,
     });
 
@@ -853,9 +800,9 @@ ENDPOINT = '` + API_ENDPOINT + `'
           nodeId = validationError.object_id;
           node = this.node_lookup[nodeId];
 
-          this.block_lookup[nodeId].highlight = true;
+          this.node_lookup[nodeId]._highlight = true;
           this.setState({
-            "blocks": this.blocks
+            nodes: this.nodes,
           });
 
           this.props.showAlert("Deprecated Node found: `" + node.title + "`", 'warning');
@@ -864,9 +811,9 @@ ENDPOINT = '` + API_ENDPOINT + `'
           nodeId = validationError.object_id;
           node = this.node_lookup[nodeId];
 
-          this.block_lookup[nodeId].highlight = true;
+          this.node_lookup[nodeId]._highlight = true;
           this.setState({
-            "blocks": this.blocks
+            nodes: this.nodes,
           });
 
           this.props.showAlert("Missing input `" + child.object_id + "` in node `" + node.title + "`", 'warning');

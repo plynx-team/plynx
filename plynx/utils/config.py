@@ -14,10 +14,10 @@ WebConfig = namedtuple('WebConfig', ['host', 'port', 'endpoint', 'api_endpoint',
 DemoConfig = namedtuple('DemoConfig', ['enabled', 'kind'])
 CloudServiceConfig = namedtuple('CloudServiceConfig', ['prefix', 'url_prefix', 'url_postfix'])
 ResourceConfig = namedtuple('ResourceConfig', ['kind', 'title', 'cls', 'icon', 'color'])
-DummyOperationConfig = namedtuple('DummyOperationConfig', ['kind', 'executor', 'operations'])
-OperationConfig = namedtuple('OperationConfig', ['kind', 'title', 'executor', 'operations', 'resources'])
+DummyOperationConfig = namedtuple('DummyOperationConfig', ['title', 'kind', 'executor', 'operations', 'icon', 'color'])
+OperationConfig = namedtuple('OperationConfig', ['kind', 'title', 'executor', 'operations', 'resources', 'icon', 'color'])
 HubConfig = namedtuple('HubConfig', ['kind', 'title', 'icon', 'cls', 'args'])
-WorkflowConfig = namedtuple('WorkflowConfig', ['kind', 'title', 'executor', 'operations'])
+WorkflowConfig = namedtuple('WorkflowConfig', ['kind', 'title', 'executor', 'operations', 'icon', 'color'])
 PluginsConfig = namedtuple('PluginsConfig', ['resources', 'operations', 'hubs', 'workflows', 'dummy_operations'])
 
 
@@ -128,6 +128,8 @@ def get_plugins():
             kind=operation_kind,
             title=raw_operation['title'],
             executor=raw_operation['executor'],
+            icon=raw_operation['icon'],
+            color=raw_operation['color'],
             operations=list(sub_operation_kinds),
             resources=[resource for kind, resource in kind_to_resource.items() if kind in raw_operation['resources']],
         )
@@ -152,6 +154,8 @@ def get_plugins():
             title=raw_workflow['title'],
             executor=raw_workflow['executor'],
             operations=list(sub_operation_kinds),
+            icon='feathericons.grid',
+            color='#5ed1ff',
         ))
 
     return PluginsConfig(
@@ -159,7 +163,16 @@ def get_plugins():
         operations=list(kind_to_operation.values()),
         hubs=hubs,
         workflows=workflows,
-        dummy_operations=[DummyOperationConfig(kind='dummy', executor='plynx.base.executor.Dummy', operations=[])]
+        dummy_operations=[
+            DummyOperationConfig(
+                title='',
+                kind='dummy',
+                executor='plynx.base.executor.Dummy',
+                operations=[],
+                icon='feathericons.grid',
+                color='#5ed1ff',
+                )
+        ]
     )
 
 

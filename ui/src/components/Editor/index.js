@@ -189,8 +189,7 @@ export default class Editor extends Component {
         self.props.history.replace("/not_found");
         window.location.reload(false);
         loading = false;
-      }
-      if (error.response.status === 401) {
+      } else if (error.response.status === 401) {
         PLynxApi.getAccessToken()
         .then((isSuccessfull) => {
           if (!isSuccessfull) {

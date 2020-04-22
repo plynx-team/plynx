@@ -123,16 +123,18 @@ class ReactBlockGraph extends React.Component {
   }
 
   componentWillReceiveProps(nextProps) {
-    this.setState({data: nextProps.data});
+    this.setState({
+      data: nextProps.data,
+    });
   }
 
   recalcSize() {
-    const blocks = this.state.data.blocks;
+    const nodes = this.state.data.nodes;
     let width = STEP * 10;
     let height = STEP * 8;
-    for (let ii = 0; ii < blocks.length; ++ii) {
-      width = Math.max(width, blocks[ii].x + 500);
-      height = Math.max(height, blocks[ii].y + 500);
+    for (let ii = 0; ii < nodes.length; ++ii) {
+      width = Math.max(width, nodes[ii].x + 500);
+      height = Math.max(height, nodes[ii].y + 500);
     }
     this.width = (Math.floor(width / STEP) * STEP) + 2;
     this.height = (Math.floor(height / STEP) * STEP) + 2;
@@ -157,17 +159,17 @@ class ReactBlockGraph extends React.Component {
 
   onMouseUp() {
     if (this.state.firstMousePos && this.state.mousePos && !this.state.dragging) {
-      const blocks = this.state.data.blocks;
+      const nodes = this.state.data.nodes;
       const minX = Math.min(this.state.firstMousePos.x, this.state.mousePos.x);
       const maxX = Math.max(this.state.firstMousePos.x, this.state.mousePos.x);
       const minY = Math.min(this.state.firstMousePos.y, this.state.mousePos.y);
       const maxY = Math.max(this.state.firstMousePos.y, this.state.mousePos.y);
       const nidsToSelect = [];
-      for (let ii = 0; ii < blocks.length; ++ii) {
-        const blockExtraHeight = ITEM_HEIGHT * Math.max(blocks[ii].fields.in.length, blocks[ii].fields.out.length);
-        if (minX < blocks[ii].x + 180 && blocks[ii].x < maxX &&
-            minY < blocks[ii].y + COMMON_HEIGHT + blockExtraHeight && blocks[ii].y < maxY) {
-          nidsToSelect.push(blocks[ii].nid);
+      for (let ii = 0; ii < nodes.length; ++ii) {
+        const blockExtraHeight = ITEM_HEIGHT * Math.max(nodes[ii].inputs.length, nodes[ii].outputs.length);
+        if (minX < nodes[ii].x + 180 && nodes[ii].x < maxX &&
+            minY < nodes[ii].y + COMMON_HEIGHT + blockExtraHeight && nodes[ii].y < maxY) {
+          nidsToSelect.push(nodes[ii]._id);
         }
       }
 
@@ -218,13 +220,13 @@ class ReactBlockGraph extends React.Component {
     this.preventDrawingBox = false;
     const d = this.state.data;
     const selectedNIDs = new Set(this.selectedNIDs);
-    for (let ii = 0; ii < d.blocks.length; ++ii) {
-      if (selectedNIDs.has(d.blocks[ii].nid) || (this.moveOnlyCurrentBlock && d.blocks[ii].nid === nid)) {
+    for (let ii = 0; ii < d.nodes.length; ++ii) {
+      if (selectedNIDs.has(d.nodes[ii]._id) || (this.moveOnlyCurrentBlock && d.nodes[ii]._id === nid)) {
         const blockPos = {
-          x: d.blocks[ii].x,
-          y: d.blocks[ii].y,
+          x: d.nodes[ii].x,
+          y: d.nodes[ii].y,
         };
-        this.props.onBlockMove(d.blocks[ii].nid, blockPos);
+        this.props.onBlockMove(d.nodes[ii]._id, blockPos);
       }
     }
   }
@@ -233,25 +235,25 @@ class ReactBlockGraph extends React.Component {
     const d = this.state.data;
 
     // For some reason, we need to treat dragged object differently from selected
-    d.blocks[index].x = pos.x;
-    d.blocks[index].y = pos.y;
+    d.nodes[index].x = pos.x;
+    d.nodes[index].y = pos.y;
 
     if (!this.moveOnlyCurrentBlock) {
       const dx = pos.x - this.initialPos.x;
       const dy = pos.y - this.initialPos.y;
       const ts = new ObjectID().toString();
       let idx;
-      for (let ii = 0; ii < d.blocks.length; ++ii) {
+      for (let ii = 0; ii < d.nodes.length; ++ii) {
         if (ii === index) {
           continue;
         }
-        idx = this.selectedNIDs.indexOf(d.blocks[ii].nid);
+        idx = this.selectedNIDs.indexOf(d.nodes[ii]._id);
         if (idx < 0) {
           continue;
         }
-        d.blocks[ii].x += dx;
-        d.blocks[ii].y += dy;
-        d.blocks[ii]._ts = ts;
+        d.nodes[ii].x += dx;
+        d.nodes[ii].y += dy;
+        d.nodes[ii]._ts = ts;   // TODO remove ts?
       }
     }
     this.initialPos = pos;
@@ -268,13 +270,13 @@ class ReactBlockGraph extends React.Component {
 
   handleCompleteConnector(nid, inputIndex) {
     if (this.state.dragging) {
-      const blocks = this.state.data.blocks;
-      const fromBlock = this.getBlockbyId(blocks, this.state.source[0]);
-      const fromPinName = fromBlock.fields.out[this.state.source[1]].name;
-      const toBlock = this.getBlockbyId(blocks, nid);
-      const toPinName = toBlock.fields.in[inputIndex].name;
+      const nodes = this.state.data.nodes;
+      const fromBlock = this.getBlockbyId(nodes, this.state.source[0]);
+      const fromPinName = fromBlock.outputs[this.state.source[1]].name;
+      const toBlock = this.getBlockbyId(nodes, nid);
+      const toPinName = toBlock.inputs[inputIndex].name;
 
-      this.props.onNewConnector(fromBlock.nid, fromPinName, toBlock.nid, toPinName);
+      this.props.onNewConnector(fromBlock._id, fromPinName, toBlock._id, toPinName);
     }
     this.setState({dragging: false});
   }
@@ -284,8 +286,8 @@ class ReactBlockGraph extends React.Component {
   }
 
   handleOutputClick(nid, outputIndex) {
-    const blocks = this.state.data.blocks;
-    const block = this.getBlockbyId(blocks, nid);
+    const nodes = this.state.data.nodes;
+    const block = this.getBlockbyId(nodes, nid);
     if (block.nodeRunningStatus !== NODE_RUNNING_STATUS.STATIC && this.state.editable) {
       return;
     }
@@ -374,13 +376,13 @@ class ReactBlockGraph extends React.Component {
   }
 
   // TODO wth?
-  getBlockbyId(blocks, nid) {
+  getBlockbyId(nodes, nid) {
     let reval = 0;
 
     // eslint-disable-next-line no-unused-vars
-    for (const block of blocks) {
-      if (block.nid === nid) {
-        return blocks[reval];
+    for (const block of nodes) {
+      if (block._id === nid) {
+        return nodes[reval];
       } else {
         reval++;
       }
@@ -389,7 +391,7 @@ class ReactBlockGraph extends React.Component {
   }
 
   render() {
-    const blocks = this.state.data.blocks;
+    const nodes = this.state.data.nodes;
     const connectors = this.state.data.connections;
     const { mousePos, dragging, selectedNIDs, graphId, selectedConnector } = this.state;
     const { connectDropTarget } = this.props;
@@ -400,8 +402,8 @@ class ReactBlockGraph extends React.Component {
     if (dragging) {
       const block_id = this.state.source[0];
       const out_index = this.state.source[1];
-      const sourceBlock = this.getBlockbyId(blocks, block_id);
-      const out_name = sourceBlock.fields.out[this.state.source[1]].name;
+      const sourceBlock = this.getBlockbyId(nodes, block_id);
+      const out_name = sourceBlock.outputs[this.state.source[1]].name;
       const connectorStart = computeOutOffsetByIndex(sourceBlock.x, sourceBlock.y, out_index);
       const connectorEnd = {x: this.state.mousePos.x, y: this.state.mousePos.y};
 
@@ -464,32 +466,21 @@ class ReactBlockGraph extends React.Component {
       <div className={'GraphRoot' + (this.state.editable ? ' editable' : ' readonly')}
         onMouseDown={(e) => this.onMouseDown(e)}>
         <HotKeys handlers={keyHandlers} keyMap={KEY_MAP}>
-          {blocks.map((block) => {
-            const selectedBlock = selectedNIDs.indexOf(block.nid) > -1;
+          {nodes.map((block) => {
+            const selectedBlock = selectedNIDs.indexOf(block._id) > -1;
             return <Block
                       index={i++}
-                      nid={block.nid}
-                      title={block.title}
-                      description={block.description}
-                      inputs={block.fields.in}
-                      outputs={block.fields.out}
-                      pos={{x: block.x, y: block.y}}
+                      node={block}
                       highlight={block.highlight || false}
-                      cacheUrl={block.cacheUrl || ''}
                       key={graphId +
-                        block.nid +
+                        block._id +
                         (selectedBlock ? '1' : '0') +
-                        (block.nodeRunningStatus ? block.nodeRunningStatus : "static") +
+                        (block.node_running_status ? block.node_running_status : "static") +
                         block.highlight +
                         block._ts +
-                        (block.cacheUrl ? 'c' : 'r') +
+                        (block.cache_url ? 'c' : 'r') +
                         block.description
                       }
-                      nodeRunningStatus={block.nodeRunningStatus ? block.nodeRunningStatus : 'static'}
-                      nodeStatus={block.nodeStatus}
-
-                      specialParameterNames={block.specialParameterNames}
-
                       onBlockStart={(nid, pos) => this.handleBlockStart(nid, pos)}
                       onBlockStop={(nid, pos) => this.handleBlockStop(nid, pos)}
                       onBlockMove={(index, nid, pos) => this.handleBlockMove(index, nid, pos)}
@@ -510,7 +501,7 @@ class ReactBlockGraph extends React.Component {
                       }}
 
                       selected={selectedBlock}
-                      readonly={!this.state.editable || block.nodeRunningStatus === NODE_RUNNING_STATUS.SPECIAL}
+                      readonly={!this.state.editable || block.node_running_status === NODE_RUNNING_STATUS.SPECIAL}
                     />;
           })}
 
@@ -527,11 +518,11 @@ class ReactBlockGraph extends React.Component {
                 }
                 ).map(
                   connector => {
-                    const fromBlock = this.getBlockbyId(blocks, connector.from_block);
-                    const toBlock = this.getBlockbyId(blocks, connector.to_block);
+                    const fromBlock = this.getBlockbyId(nodes, connector.from_block);
+                    const toBlock = this.getBlockbyId(nodes, connector.to_block);
 
-                    const splinestart = computeOutOffsetByIndex(fromBlock.x, fromBlock.y, this.computePinIndexfromLabel(fromBlock.fields.out, connector.from));
-                    const splineend = computeInOffsetByIndex(toBlock.x, toBlock.y, this.computePinIndexfromLabel(toBlock.fields.in, connector.to));
+                    const splinestart = computeOutOffsetByIndex(fromBlock.x, fromBlock.y, this.computePinIndexfromLabel(fromBlock.outputs, connector.from));
+                    const splineend = computeInOffsetByIndex(toBlock.x, toBlock.y, this.computePinIndexfromLabel(toBlock.inputs, connector.to));
 
                     return <Spline
                       start={splinestart}

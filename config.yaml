@@ -67,6 +67,8 @@ plugins:
     - kind: basic-bash-jinja2-operation
       title: Basic BashJinja2
       executor: plynx.plugins.executors.local.BashJinja2
+      icon: feathericons.terminal
+      color: '#0f0'
       resources:
         - file
         - pdf
@@ -80,6 +82,8 @@ plugins:
     - kind: basic-python-node-operation
       title: Basic Python
       executor: plynx.plugins.executors.local.PythonNode
+      icon: plynx.python-logo-notext
+      color: ''
       resources:
         - file
         - pdf
@@ -93,6 +97,8 @@ plugins:
     - kind: basic-dag-operation
       title: Composite Operation
       executor: plynx.plugins.executors.dag.DAG
+      icon: feathericons.grid
+      color: '#5ed1ff'
       operations:
         - basic-bash-jinja2-operation
         - basic-python-node-operation

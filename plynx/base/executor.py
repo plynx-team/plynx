@@ -75,14 +75,14 @@ class BaseExecutor:
                         Node.from_dict({
                             '_id': SpecialNodeId.INPUT,
                             'title': 'Input',
-                            'description': 'Operation inputs',
+                            'kind': 'dummy',
                             'node_running_status': NodeRunningStatus.SPECIAL,
                             'node_status': NodeStatus.READY,
                         }),
                         Node.from_dict({
                             '_id': SpecialNodeId.OUTPUT,
                             'title': 'Output',
-                            'description': 'Operation outputs',
+                            'kind': 'dummy',
                             'node_running_status': NodeRunningStatus.SPECIAL,
                             'node_status': NodeStatus.READY,
                         }),
