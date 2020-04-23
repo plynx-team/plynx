@@ -2,7 +2,9 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { DragSource } from 'react-dnd';
 import ItemTypes from '../../DragAndDropsItemTypes';
-import NodeItem from '../Common/NodeItem';
+import Icon from '../Common/Icon';
+import {PluginsConsumer} from '../../contexts';
+
 
 const nodeSource = {
   beginDrag(props) {
@@ -21,7 +23,7 @@ const nodeSource = {
   },
 };
 
-class HubEntryListItem extends Component {
+class HubEntryListNode extends Component {
   static propTypes = {
     connectDragSource: PropTypes.func.isRequired,
     isDragging: PropTypes.bool.isRequired,
@@ -34,9 +36,19 @@ class HubEntryListItem extends Component {
 
     return connectDragSource(
       <div className={'NodeItemDnD'}>
-        <NodeItem
-          node={nodeContent}
-        />
+        <PluginsConsumer>
+        {
+            plugins_dict => <div className="hub-item hub-item-node">
+              <Icon
+                type_descriptor={plugins_dict.executors_info[nodeContent.kind]}
+                className="hub-item-icon"
+              />
+              <div className="hub-item-node-text">
+                {nodeContent.title}
+              </div>
+            </div>
+        }
+        </PluginsConsumer>
       </div>
     );
   }
@@ -45,4 +57,4 @@ class HubEntryListItem extends Component {
 export default DragSource(ItemTypes.NODE_ITEM, nodeSource, (connect, monitor) => ({
   connectDragSource: connect.dragSource(),
   isDragging: monitor.isDragging(),
-}))(HubEntryListItem);
+}))(HubEntryListNode);
