@@ -70,6 +70,7 @@ class App extends Component {
                   <Route exact path="/dashboard" component={Dashboard} />
                   <Route path={`/${VIRTUAL_COLLECTIONS.OPERATIONS}`} component={NodeRouter}/>
                   <Route path={`/${VIRTUAL_COLLECTIONS.WORKFLOWS}`} component={NodeRouter}/>
+                  <Route path={`/${COLLECTIONS.GROUPS}`} component={NodeRouter}/>
                   <Route path={`/${COLLECTIONS.TEMPLATES}`} component={NodeRouter}/>
                   <Route path={`/${COLLECTIONS.RUNS}`} component={NodeRouter}/>
                   <Route exact path="/login" component={LogIn} />

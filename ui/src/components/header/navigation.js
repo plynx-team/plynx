@@ -26,6 +26,9 @@ class Navigation extends Component {
               <NavLink to={`/${VIRTUAL_COLLECTIONS.OPERATIONS}`} className="Item">Operations</NavLink>
             }
             {this.state.refreshTokenExists &&
+              <NavLink to={`/${VIRTUAL_COLLECTIONS.GROUPS}`} className="Item">Groups</NavLink>
+            }
+            {this.state.refreshTokenExists &&
               <NavLink to={`/${VIRTUAL_COLLECTIONS.WORKFLOWS}`} className="Item">Workflows</NavLink>
             }
             {this.state.refreshTokenExists &&

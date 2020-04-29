@@ -106,7 +106,7 @@ class DAG(plynx.base.executor.BaseExecutor):
         res = []
         logging.info("Pop jobs")
 
-        for running_node_dict in node_collection_manager.get_db_nodes_by_ids(self.monitoring_node_ids):
+        for running_node_dict in node_collection_manager.get_db_objects_by_ids(self.monitoring_node_ids):
             # check status
             if NodeRunningStatus.is_finished(running_node_dict['node_running_status']):
                 node = Node.from_dict(running_node_dict)

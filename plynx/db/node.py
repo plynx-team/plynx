@@ -155,6 +155,11 @@ class Node(DBObject):
             default=ObjectId,
             is_list=False,
             ),
+        '_type': DBObjectField(
+            type=str,
+            default='Node',
+            is_list=False,
+            ),
         'title': DBObjectField(
             type=str,
             default='Title',

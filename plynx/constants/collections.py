@@ -1,7 +1,8 @@
 class Collections:
-    WORKER_STATE = 'worker_state'
+    GROUPS = 'groups'
     NODE_CACHE = 'node_cache'
-    TEMPLATES = 'templates'
-    RUNS = 'runs'
     RUN_CANCELLATIONS = 'run_cancellations'
+    RUNS = 'runs'
+    TEMPLATES = 'templates'
     USERS = 'users'
+    WORKER_STATE = 'worker_state'

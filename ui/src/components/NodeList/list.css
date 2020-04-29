@@ -70,25 +70,6 @@
   background-color: #3f6da0;
 }
 
-.list-item .ItemHeader {
-  display: inline-grid;
-  grid-template-columns: 1fr 40px;
-}
-
-.list-item .TitleDescription {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.list-item .TitleDescription .Title {
-  font-weight: 400;
-  font-size: 15pt;
-  padding-left: 3px;
-  padding-top: 10px;
-  text-overflow: inherit;
-  overflow: inherit;
-}
-
 .list-item .star-hidden {
   display: none;
 }
