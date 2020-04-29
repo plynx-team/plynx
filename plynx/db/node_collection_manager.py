@@ -149,6 +149,8 @@ class NodeCollectionManager(object):
             (dict)  dict representation of the Object
         """
         res = self.get_db_object(node_id, user_id)
+        if not res:
+            return res
 
         sub_nodes_dicts = None
         for parameter in res['parameters']:
