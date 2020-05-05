@@ -11,6 +11,7 @@ Content
     overview
     start
     concepts
+    plugins
     rest
     internal
     kubernetes

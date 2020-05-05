@@ -20,7 +20,7 @@ export default class HubEntryList extends Component {
   render() {
     const listItems = this.props.items.map(
       (entry) => {
-        if (entry.kind === '_GROUP') {
+        if (entry._type === 'Group') {
             return <HubEntryListGroup
                 key={entry._id}
                 group={entry}
@@ -62,7 +62,7 @@ class HubEntryListGroup extends Component {
     return (
       <div className="hub-entry-group noselect">
         <div className="hub-item hub-entry-group-title" onClick={() => this.setState({open: !this.state.open})}>
-          <i class={arrowClass}></i>
+          <i className={arrowClass}></i>
           <Icon
             type_descriptor={{icon: 'feathericons.folder', color: "#fff"}}
             className="hub-item-icon"

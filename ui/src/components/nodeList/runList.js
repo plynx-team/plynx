@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { PLynxApi } from '../../API';
 import BaseList from './baseList';
 import { makeControlSeparator } from '../Common/controlButton';
 import { COLLECTIONS } from '../../constants';
@@ -45,10 +44,10 @@ export default class RunListPage extends Component {
             <BaseList
                 menuPanelDescriptor={this.MENU_PANEL_DESCRIPTOR}
                 tag="node-list-item"
-                endpoint={PLynxApi.endpoints[`search_${COLLECTIONS.RUNS}`]}
                 header={NODE_ITEM_HEADER}
                 search={this.props.search}
                 renderItem={renderItem}
+                collection={COLLECTIONS.RUNS}
             >
             </BaseList>
         </div>

@@ -30,7 +30,7 @@ class Group(DBObject):
         # Kind, such as plynx.plugins.executors.local.BashJinja2. Derived from from plynx.plugins.executors.BaseExecutor class.
         'kind': DBObjectField(
             type=str,
-            default='_GROUP',
+            default='',
             is_list=False,
             ),
         'items': DBObjectField(

@@ -37,17 +37,23 @@ Multiple ideas might fail before you find the promising one.
 PLynx makes it easy to create new experiments based on existing graphs and try them simultaneously and reproduce results if needed.
 
 
-.. _plynx-concepts-node:
+.. _plynx-concepts-operation:
 
-Node
+Operation
 ===========================
 
-While graphs describe how to run an experiment, nodes determine what actually gets done.
+While graphs describe how to run an experiment, operations determine what actually gets done.
 
-Node is a building block of the graphs. PLynx is using two types of the nodes: *Files* and *Operations*.
+Operation is a building block of the graphs.
+They describe a single executable task in a workflow.
+Operations are usually (recommended) atomic, meaning they share only input and output resources with any other operations.
 
-- *File* is a node in the graph. It serves as a reference to a static resource. It can be a static dataset or config file that different graphs might share.
-- *Operation* describes a single executable task in a workflow. Operations are usually (recommended) atomic, meaning they share only input and output resources with any other operations.
+PLynx is using multiple types of Operations that can be customized by plugins.
+Here are some of them.
+
+- *Python Operation* executes code in python.
+- *BashJinja2 Operation* uses jinja2 templates to execute bash script.
+- *Composite Operation* consists of multiple other operations. It can be considered as a sub-graph.
 
 The graph will make sure that operations run in the correct certain order; other than those dependencies, operations generally run independently.
 In fact, they may run on two completely different machines.
@@ -107,28 +113,28 @@ The script that defines `Git - checkout directory` operation can be found in a s
 
     # clone repo
     export DIRECTORY=directory
-    git clone {{ param['repo'] }} $DIRECTORY
+    git clone {{ params['repo'] }} $DIRECTORY
     cd $DIRECTORY
 
     # reset to custom commit hash
-    git reset --hard {{ param['commit'] }}
+    git reset --hard {{ params['commit'] }}
 
     # build using custom build command
-    cp -r . {{ output.dir }}
+    cp -r . {{ outputs.dir }}
 
 
 Before executing the script, PLynx worker will prepare inputs: it will download and preprocess inputs and create empty outputs.
 The worker will create an empty directory.
 The path to this directory is not known in advance: in order to avoid race condition on the filesystem each process will be working with temporary path.
-You can find the exact path using ``{{ input.* }}`` or ``{{ output.* }}`` placeholders.
-In *git* example you it would be ``{{ output.dir }}``.
+You can find the exact path using ``{{ inputs.* }}`` or ``{{ outputs.* }}`` placeholders.
+In *git* example you it would be ``{{ outputs.dir }}``.
 
 
 .. image:: ./img/plynx-concepts-split.png
     :width: 700
 
 Similarly operation can be defined in python.
-Instead of *jinja2* templates use python variables ``input``, ``output``, and ``param``.
+Instead of *jinja2* templates use python variables ``inputs``, ``outputs``, and ``params``.
 
 
 .. code-block:: python
@@ -149,9 +155,9 @@ Instead of *jinja2* templates use python variables ``input``, ``output``, and ``
 
 
     split(
-        inputs=input['data.csv'],
-        output_a=output['a.csv'],
-        output_b=output['b.csv'],
-        seed=int(param['seed']),
-        sample_rate=float(param['rate']),
+        inputs=inputs['data.csv'],
+        output_a=outputs['a.csv'],
+        output_b=outputs['b.csv'],
+        seed=int(params['seed']),
+        sample_rate=float(params['rate']),
     )

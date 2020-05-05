@@ -65,7 +65,7 @@ plugins:
       color: '#5ed1ff'
   operations:
     - kind: basic-bash-jinja2-operation
-      title: Basic BashJinja2
+      title: BashJinja2 Operation
       executor: plynx.plugins.executors.local.BashJinja2
       icon: feathericons.terminal
       color: '#0f0'
@@ -80,7 +80,7 @@ plugins:
         - directory
         - cloud-storage
     - kind: basic-python-node-operation
-      title: Basic Python
+      title: Python Operation
       executor: plynx.plugins.executors.local.PythonNode
       icon: plynx.python-logo-notext
       color: ''
@@ -114,6 +114,12 @@ plugins:
         - directory
         - cloud-storage
   hubs:
+    - kind: group-hub
+      title: Group hub
+      icon: feathericons.layers
+      cls: plynx.plugins.hubs.static_list.StaticListHub
+      args:
+        filename: /app/plynx/static_templates.py
     - kind: db-hub
       title: Database hub
       icon: feathericons.database
@@ -129,6 +135,7 @@ plugins:
       title: Basic DAG Workflow
       executor: plynx.plugins.executors.dag.DAG
       hubs:
+        - group-hub
         - db-hub
       operations:
         - basic-bash-jinja2-operation

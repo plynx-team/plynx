@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import { PLynxApi } from '../../API';
 import BaseList from './baseList';
 import { makeControlSeparator } from '../Common/controlButton';
 import { COLLECTIONS, VIRTUAL_COLLECTIONS } from '../../constants';
@@ -27,11 +26,11 @@ export default class OperationListPage extends Component {
             <BaseList
                 menuPanelDescriptor={this.MENU_PANEL_DESCRIPTOR}
                 tag="node-list-item"
-                endpoint={PLynxApi.endpoints[`search_${COLLECTIONS.TEMPLATES}`]}
                 extraSearch={{virtual_collection: VIRTUAL_COLLECTIONS.OPERATIONS}}
                 header={NODE_ITEM_HEADER}
                 renderItem={renderItem}
                 virtualCollection={VIRTUAL_COLLECTIONS.OPERATIONS}
+                collection={COLLECTIONS.TEMPLATES}
             >
             </BaseList>
         </div>

@@ -9,7 +9,7 @@ import plynx.base.hub
 import plynx.utils.plugin_manager
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 from plynx.utils.common import to_object_id, JSONEncoder
-from plynx.constants import NodeStatus, NodePostAction, NodePostStatus, Collections, NodeClonePolicy, NodeVirtualCollection, GROUP_KIND
+from plynx.constants import NodeStatus, NodePostAction, NodePostStatus, Collections, NodeClonePolicy, NodeVirtualCollection
 
 PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'hub', 'node_kinds', 'search', 'user_id'}
 PERMITTED_READONLY_POST_ACTIONS = {
@@ -94,10 +94,12 @@ def get_nodes(collection, node_link=None):
             'tour_steps': tour_steps,
             'plugins_dict': PLUGINS_DICT,
             'status': 'success'})
-    elif node_link == GROUP_KIND:
+    elif node_link in workflow_manager.kind_to_workflow_dict and collection == Collections.GROUPS:
         # TODO move group to a separate class
+        group_dict = Group().to_dict()
+        group_dict['kind'] = node_link
         return JSONEncoder().encode({
-            'group': Group().to_dict(),
+            'group': group_dict,
             'plugins_dict': PLUGINS_DICT,
             'status': 'success'})
     else:
@@ -262,4 +264,29 @@ def post_node(collection):
         {
             'status': NodePostStatus.SUCCESS,
             'message': 'Node(_id=`{}`) successfully updated'.format(str(node._id))
+        })
+
+
+@app.route('/plynx/api/v0/groups', methods=['POST'])
+@handle_errors
+@requires_auth
+def post_group():
+    app.logger.debug(request.data)
+
+    data = json.loads(request.data)
+
+    group = Group.from_dict(data['group'])
+    group.author = g.user._id
+    db_group = node_collection_managers[Collections.GROUPS].get_db_object(group._id, g.user._id)
+    action = data['action']
+    if db_group and db_group['_readonly'] and action not in PERMITTED_READONLY_POST_ACTIONS:
+        return make_fail_response('Permission denied'), 403
+
+    if action == NodePostAction.SAVE:
+        group.save(force=True)
+
+    return JSONEncoder().encode(
+        {
+            'status': NodePostStatus.SUCCESS,
+            'message': 'Group(_id=`{}`) successfully updated'.format(str(group._id))
         })

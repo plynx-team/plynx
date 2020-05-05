@@ -892,7 +892,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
         }
 
         {/* Visible and flex layout blocks */}
-        {this.state.editable && <HubPanel/>}
+        {this.state.editable && <HubPanel kind={this.state.graph.kind} />}
 
         <ReactNodeGraph className="MainGraph"
           ref={(child) => {

@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { Route, Switch } from 'react-router-dom';
 import Editor from './Editor';
+import Group from './Group';
 import OperationList from './NodeList/operationList';
 import WorkflowList from './NodeList/workflowList';
 import RunList from './NodeList/runList';
@@ -20,7 +21,7 @@ export default class NodeRouter extends Component {
           <Route exact path={`/${VIRTUAL_COLLECTIONS.GROUPS}`} render={(props) => <GroupList {...props} showControlls />}/>
           <Route path={`/${COLLECTIONS.TEMPLATES}/:node_id`} render={(props) => <Editor {...props} collection={COLLECTIONS.TEMPLATES} />} />
           <Route path={`/${COLLECTIONS.RUNS}/:node_id`} render={(props) => <Editor {...props} collection={COLLECTIONS.RUNS} />} />
-          <Route path={`/${COLLECTIONS.GROUPS}/:group_id`} render={(props) => <Editor {...props} collection={COLLECTIONS.GROUPS} />} />
+          <Route path={`/${COLLECTIONS.GROUPS}/:group_id`} render={(props) => <Group {...props} collection={COLLECTIONS.GROUPS} />} />
           <Route path="*" component={NotFound} />
         </Switch>
       </div>

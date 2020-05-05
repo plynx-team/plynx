@@ -4,6 +4,19 @@ from plynx.base import hub
 from plynx.utils.common import parse_search_string
 
 
+def _enhance_list_item(raw_item):
+    if raw_item['_type'] == 'Group':
+        # TODO proper checking
+        items = []
+        for raw_subitem in raw_item['items']:
+            items.append(_enhance_list_item(raw_subitem))
+        raw_item['items'] = items
+        return raw_item
+    # check if the node is valid
+    node = Node.from_dict(raw_item)
+    return node.to_dict()
+
+
 class StaticListHub(hub.BaseHub):
     def __init__(self, filename):
         super(StaticListHub, self).__init__()
@@ -12,10 +25,9 @@ class StaticListHub(hub.BaseHub):
 
         with open(filename) as f:
             data_list = json.load(f)
-            for raw_node in data_list:
-                # check if the node is valid
-                node = Node.from_dict(raw_node)
-                self.list_of_nodes.append(node.to_dict())
+            for raw_item in data_list:
+                self.list_of_nodes.append(_enhance_list_item(raw_item))
+        print(self.list_of_nodes)
 
     def search(self, query):
         # TODO use search_parameters

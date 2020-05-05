@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
-import { PLynxApi } from '../../API';
 import BaseList from './baseList';
-import { makeControlSeparator, makeControlLink } from '../Common/controlButton';
+import { makeControlSeparator } from '../Common/controlButton';
 import { COLLECTIONS, VIRTUAL_COLLECTIONS } from '../../constants';
 import { renderGroupItem, GROUP_ITEM_HEADER } from './common';
 
@@ -19,15 +18,6 @@ export default class GroupListPage extends Component {
       render: makeControlSeparator,
       props: {key: 'separator_1'}
     },
-    {
-      render: makeControlLink,
-      props: {
-          img: 'plus.svg',
-          text: 'Create new Group',
-          href: `/groups/_GROUP`,
-          key: 'new group'
-        },
-    },
   ];
 
   render() {
@@ -36,10 +26,10 @@ export default class GroupListPage extends Component {
             <BaseList
                 menuPanelDescriptor={this.MENU_PANEL_DESCRIPTOR}
                 tag="node-list-item"
-                endpoint={PLynxApi.endpoints[`search_${COLLECTIONS.GROUPS}`]}
                 header={GROUP_ITEM_HEADER}
                 renderItem={renderItem}
-
+                virtualCollection={VIRTUAL_COLLECTIONS.WORKFLOWS}
+                collection={COLLECTIONS.GROUPS}
             >
             </BaseList>
         </div>
