@@ -39,7 +39,7 @@ class BaseExecutor:
     def kill(self):
         """Force to kill the process.
 
-        The reason can be the fact it was working too long or parent exectuter canceled it.
+        The reason can be the fact it was working too long or parent executor canceled it.
         """
         pass
 

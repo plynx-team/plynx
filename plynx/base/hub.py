@@ -21,5 +21,5 @@ class BaseHub(object):
         pass
 
     @abstractmethod
-    def search(self):
+    def search(self, query):
         pass

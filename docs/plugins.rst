@@ -11,6 +11,18 @@ Using PLynx plugins can be a way for companies to customize their PLynx installa
 
 Plugins can be used as an easy way to write, share and activate new sets of features.
 
+There’s also a need for a set of more complex applications to interact with different flavors of data and backend infrastructure.
+Essentially PLynx is a graph editor with computational backend provided by plugins and configuration.
+
+Examples:
+
+- Inputs and Outputs might have explicitly different types. They can be simple files or references to S3 / Big Query table / HDFS path etc.
+- Users have an option to customize pre or post-processing as well as preview options.
+- Operations can be execute commands in multiple languages or in custom environments.
+- Some applications require executing Operations one by one, others transform DAGs into AWS Step functions or Argo utilizing 3rd party backend.
+- Catalog and categorization of Operations can be supported bu Hubs.
+- ...
+
 
 .. _plynx-plugins-executors:
 
@@ -19,7 +31,57 @@ Executors
 
 Executors are the mechanism by which job instances get run.
 
-Airflow has support for various executors. Current used is determined by the executor option in the core section of the configuration file.
+PLynx has support for various executors.
+Some of them execute a single job such as python or bash script.
+Others are working with DAG structure.
+
+PLynx can be customized by additional executors.
+
+
+.. code-block:: python
+
+    import plynx.base.executor
+
+
+    class CustomExecutor(plynx.base.executor.BaseExecutor):
+        """ Custom Executor.
+
+        Args:
+            node_dict (dict)
+
+        """
+
+        def __init__(self, node_dict):
+            super(DAG, self).__init__(node_dict)
+
+            # Initialization
+
+        @classmethod
+        def get_default_node(cls, is_workflow):
+            """
+            You may modify a node by additional parameters.
+            """
+            node = super().get_default_node(is_workflow)
+
+            # customize your default node here
+
+            return node
+
+        def run(self):
+            """
+            Worker will execute this function.
+            """
+
+        def kill(self):
+            """
+            Worker will call this function if parent executor or a user canceled the process.
+            """
+
+        def validate(self):
+            """
+            Validate Node.
+            """
+
 
 
 .. _plynx-plugins-resources:
@@ -27,7 +89,55 @@ Airflow has support for various executors. Current used is determined by the exe
 Resources
 ===========================
 
+PLynx explicitly define artifacts: Inputs, Outputs, and Logs.
+The mechanism to handle custom artifacts is supported by Resource plugins.
 
+.. code-block:: python
+
+    import plynx.base.resource
+
+
+    class CustomResource(plynx.base.resource.BaseResource):
+        @staticmethod
+        def prepare_input(filename, preview):
+            """
+            Prepare resource before execution.
+            """
+            if preview:
+                return {NodeResources.INPUT: filename}
+            # Customize preprocessing here
+            return {NodeResources.INPUT: filename}
+
+        @staticmethod
+        def prepare_output(filename, preview):
+            """
+            Prepare output resource before execution.
+
+            For example create a directory or an empty file.
+            """
+            if preview:
+                return {NodeResources.OUTPUT: filename}
+            # Customize preprocessing here
+            return {NodeResources.OUTPUT: filename}
+
+        @staticmethod
+        def postprocess_output(filename):
+            """
+            Process output after execution.
+
+            For example compress a file or compute extra statistics.
+            """
+            return filename
+
+        @classmethod
+        def preview(cls, preview_object):
+            """
+            Redefine preview function.
+
+            For example display text content or <img>
+            """
+
+            return '<pre>{}</pre>'.format(content)
 
 
 .. _plynx-plugins-hubs:
@@ -35,160 +145,21 @@ Resources
 Hubs
 ===========================
 
-
-
-
-
-.. _plynx-concepts-graph:
-
-Graph
-===========================
-
-In Plynx, each experiment is represented as Directed Acyclic Graph or simply Graph – a collection of all the nodes you want to run, organized in a way that reflects their relationships and dependencies.
-
-For example, a simple graph could consist of three operations: A, B, and C.
-It could say that A has to run successfully and produce a resource before B can run, because B depends on it. But C can run anytime.
-In other words graph describes how you want to carry out your workflow.
-
-.. image:: ./img/plynx-concepts-graph.png
-    :width: 700
-
-Notice that we haven’t said anything about what we actually want to do!
-A, B, and C could be anything:
-
-- A prepares data for B to analyze while C sends an email.
-- A monitors your location so B can open your garage door while C turns on your house lights.
-
-The important thing is that the graph isn’t concerned with what its constituent nodes do; its job is to make sure that whatever they do happens in the right order.
-
-Unlike existing solutions (such as Apache Airflow), PLynx makes no assumption about the structure of its graphs.
-Each graph can be created dynamically using UI or APIs.
-In data science it is common to try new features or ideas with custom layout.
-Multiple ideas might fail before you find the promising one.
-PLynx makes it easy to create new experiments based on existing graphs and try them simultaneously and reproduce results if needed.
-
-
-.. _plynx-concepts-operation:
-
-Operation
-===========================
-
-While graphs describe how to run an experiment, operations determine what actually gets done.
-
-Operation is a building block of the graphs.
-They describe a single executable task in a workflow.
-Operations are usually (recommended) atomic, meaning they share only input and output resources with any other operations.
-
-PLynx is using multiple types of Operations that can be customized by plugins.
-Here are some of them.
-
-- *Python Operation* executes code in python.
-- *BashJinja2 Operation* uses jinja2 templates to execute bash script.
-- *Composite Operation* consists of multiple other operations. It can be considered as a sub-graph.
-
-The graph will make sure that operations run in the correct certain order; other than those dependencies, operations generally run independently.
-In fact, they may run on two completely different machines.
-
-This is a subtle but very important point: in general, operation should be atomic.
-If there is an intermediate resource an Operator can produce which can be used by other consumer, such as transformed data or subset, you should consider splitting the operation.
-It encourages users to create their workflows in a more modular and parameterized way reusing existing solutions.
-This way they don’t reinvent existing solutions multiple times and can use advantages of cached results and distributed computation.
-
-.. image:: ./img/plynx-concepts-graph-real.png
-    :width: 700
-
-The graph above is a part of a machine learning pipeline.
-PLynx will execute operations in the order defined by the graph.
-In the example above, `Train` operation requires two `Resources`: `repo` and `data.csv`.
-As soon as these resources are available, PLynx worker will pick this job up and execute it.
-In this sense PLynx is very similar to `Makefiles`.
-
-
-Resource preparation and execution is defined by internal PLynx class called ``BaseNode``.
-Currently it includes the following ones:
-
-.. _plynx-concepts-base_node_name:
-
-+------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| `base_node_name` | Description                                                                                                                                                      |
-+==================+==================================================================================================================================================================+
-| ``file``         | It is a dummy BaseNode. The File gets never executed. Instead of that it has a single output called `out` which is known before execution.                       |
-+------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| ``bash_jinja2``  | It executes a custom bash command. Users specify external resources and parameters with Jinja2 templating language. See examples :ref:`plynx-concepts-examples`. |
-+------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-| ``python``       | Custom python script will be specified by this ``BaseNode``. See examples :ref:`plynx-concepts-examples`.                                                        |
-+------------------+------------------------------------------------------------------------------------------------------------------------------------------------------------------+
-
-
-.. _plynx-concepts-examples:
-
-Creating operations
-===========================
-
-**Users are responsible for defining operations.**
-Say we have a git repository where we keep scripts for each step for machine learning pipeline.
-`Git - checkout directory` is an operation defined by a user.
-Given a link to a repository and commit hash the operation clones the repository and creates a new resource in PLynx.
-The resource is called ``dir`` and has a type `Directory`.
-The directory might contain multiple scripts and can be reused by other operations.
-
-
-.. image:: ./img/plynx-concepts-git.png
-    :width: 700
-
-The script that defines `Git - checkout directory` operation can be found in a system parameter ``cmd``:
-
-.. code-block:: bash
-
-    set -e
-
-    # clone repo
-    export DIRECTORY=directory
-    git clone {{ param['repo'] }} $DIRECTORY
-    cd $DIRECTORY
-
-    # reset to custom commit hash
-    git reset --hard {{ param['commit'] }}
-
-    # build using custom build command
-    cp -r . {{ output.dir }}
-
-
-Before executing the script, PLynx worker will prepare inputs: it will download and preprocess inputs and create empty outputs.
-The worker will create an empty directory.
-The path to this directory is not known in advance: in order to avoid race condition on the filesystem each process will be working with temporary path.
-You can find the exact path using ``{{ input.* }}`` or ``{{ output.* }}`` placeholders.
-In *git* example you it would be ``{{ output.dir }}``.
-
-
-.. image:: ./img/plynx-concepts-split.png
-    :width: 700
-
-Similarly operation can be defined in python.
-Instead of *jinja2* templates use python variables ``input``, ``output``, and ``param``.
+Hubs let users to organize Operations in the editor and use additional sources.
 
 
 .. code-block:: python
 
-    import random
+    import plynx.base.hub
 
 
-    def split(inputs, output_a, output_b, sample_rate, seed):
-        random.seed(seed)
-        with open(output_a, 'w') as fa, open(output_b, 'w') as fb:
-            for input_filename in inputs:
-                with open(input_filename, 'r') as fi:
-                    for line in fi:
-                        if random.random() < sample_rate:
-                            fa.write(line)
-                        else:
-                            fb.write(line)
+    class CustomHub(plynx.base.hub.BaseHub):
+        def __init__(self, **argv):
+            super(CollectionHub, self).__init__()
 
+            # use arguments to customize the hub
 
-    split(
-        inputs=input['data.csv'],
-        output_a=output['a.csv'],
-        output_b=output['b.csv'],
-        seed=int(param['seed']),
-        sample_rate=float(param['rate']),
-    )
+        def search(self, query):
+            """
+            Customize search.
+            """
