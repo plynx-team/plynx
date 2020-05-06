@@ -1,3 +1,7 @@
+.. warning::
+
+   Internal data structures are outdated. Please contact us for details.
+
 
 .. _plynx-internal:
 
