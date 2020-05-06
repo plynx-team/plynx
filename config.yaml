@@ -99,10 +99,9 @@ plugins:
       executor: plynx.plugins.executors.dag.DAG
       icon: feathericons.grid
       color: '#5ed1ff'
-      operations:
-        - basic-bash-jinja2-operation
-        - basic-python-node-operation
-        - basic-dag-operation
+      hubs:
+        - group-hub
+        - db-hub
       resources:
         - file
         - pdf

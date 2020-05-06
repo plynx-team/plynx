@@ -58,7 +58,7 @@ export default class HubEntry extends Component {
       offset: 0,
       search: "sort:starred ",
     };
-    this.perPage = 20;
+    this.perPage = 30;
 
     this.loadNodes();
   }

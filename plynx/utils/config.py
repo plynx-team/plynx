@@ -15,7 +15,7 @@ DemoConfig = namedtuple('DemoConfig', ['enabled', 'kind'])
 CloudServiceConfig = namedtuple('CloudServiceConfig', ['prefix', 'url_prefix', 'url_postfix'])
 ResourceConfig = namedtuple('ResourceConfig', ['kind', 'title', 'cls', 'icon', 'color'])
 DummyOperationConfig = namedtuple('DummyOperationConfig', ['title', 'kind', 'executor', 'operations', 'icon', 'color'])
-OperationConfig = namedtuple('OperationConfig', ['kind', 'title', 'executor', 'operations', 'resources', 'icon', 'color'])
+OperationConfig = namedtuple('OperationConfig', ['kind', 'title', 'executor', 'hubs', 'resources', 'icon', 'color'])
 HubConfig = namedtuple('HubConfig', ['kind', 'title', 'icon', 'cls', 'args'])
 WorkflowConfig = namedtuple('WorkflowConfig', ['kind', 'title', 'executor', 'operations', 'hubs', 'icon', 'color'])
 PluginsConfig = namedtuple('PluginsConfig', ['resources', 'operations', 'hubs', 'workflows', 'dummy_operations'])
@@ -130,7 +130,7 @@ def get_plugins():
             executor=raw_operation['executor'],
             icon=raw_operation['icon'],
             color=raw_operation['color'],
-            operations=list(sub_operation_kinds),
+            hubs=raw_operation.get('hubs', []),
             resources=[resource for kind, resource in kind_to_resource.items() if kind in raw_operation['resources']],
         )
     # hubs

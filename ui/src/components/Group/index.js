@@ -40,7 +40,7 @@ const FIRST_TIME_APPROVED_STATE = 'first_time_approved_state';
 const UPDATE_TIMEOUT = 1000;
 
 
-export default class Editor extends Component {
+export default class Group extends Component {
   static propTypes = {
     history: PropTypes.object.isRequired,
     location: PropTypes.object.isRequired,

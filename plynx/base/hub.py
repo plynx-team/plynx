@@ -4,7 +4,7 @@ from abc import abstractmethod
 _QUERY_FIELDS = (
     ('status', ''),
     ('search', ''),
-    ('per_page', 20),
+    ('per_page', 30),
     ('offset', 0),
     ('user_id', None),
 )

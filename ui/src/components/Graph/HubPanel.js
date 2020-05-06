@@ -23,7 +23,7 @@ export default class HubPanel extends Component {
       <PluginsConsumer>
         { plugins_dict => <div className="hub-panel">
             <div className="hub-panel-tab control-toggle">
-                {plugins_dict.workflows_dict[this.props.kind].hubs.map(hub_kind => plugins_dict.hubs_dict[hub_kind]).map((hub, index) => (
+                {{...plugins_dict.workflows_dict, ...plugins_dict.operations_dict}[this.props.kind].hubs.map(hub_kind => plugins_dict.hubs_dict[hub_kind]).map((hub, index) => (
                     <div
                         className={`control-button ${index === this.state.index ? 'selected' : ''}`}
                         onClick={() => {
