@@ -11,6 +11,7 @@ Content
     overview
     start
     concepts
+    configuration
     plugins
     rest
     internal
