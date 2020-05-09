@@ -16,5 +16,6 @@ Content
     rest
     internal
     kubernetes
+    faq
     license
     _api/index
