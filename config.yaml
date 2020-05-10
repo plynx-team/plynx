@@ -136,7 +136,3 @@ plugins:
       hubs:
         - group-hub
         - db-hub
-      operations:
-        - basic-bash-jinja2-operation
-        - basic-python-node-operation
-        - basic-dag-operation
