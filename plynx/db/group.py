@@ -1,11 +1,6 @@
-from past.builtins import basestring
-from collections import defaultdict, deque
-from plynx.constants import Collections, NodeClonePolicy
+from plynx.constants import Collections
 from plynx.db.db_object import DBObject, DBObjectField
 from plynx.utils.common import ObjectId
-from plynx.constants import NodeStatus, NodeRunningStatus, SpecialNodeId
-from plynx.plugins.resources.common import FILE_KIND
-from plynx.constants import ParameterTypes
 
 
 class Group(DBObject):

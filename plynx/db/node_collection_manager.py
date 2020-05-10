@@ -1,7 +1,6 @@
 from pymongo import ReturnDocument
 from past.builtins import basestring
 from collections import OrderedDict
-from plynx.db.db_object import get_class
 from plynx.db.node import Node
 from plynx.constants import NodeRunningStatus, Collections, NodeStatus
 from plynx.utils.common import to_object_id, parse_search_string
