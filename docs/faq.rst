@@ -1,8 +1,9 @@
 .. _plynx-faq:
 
-
 Frequently Asked Questions
 ==========================
+
+.. _plynx-faq-who-is-it-for:
 
 Who is it for?
 --------------------------------------
@@ -12,6 +13,8 @@ It is not limited by them and can be used by other technical and non-technical p
 
 Modular architecture makes PLynx rather a graph editor that transforms graphs into executable code.
 
+
+.. _plynx-faq-run-without-docker:
 
 Can I run it without docker?
 --------------------------------------
@@ -23,6 +26,8 @@ Besides encapsulation, isolation and portability, it provides a more convenient 
 
 If you still want to run it without docker or have some other issues with deployment, please don't hesitate to contact us in `discord <https://discord.gg/ZC3wY2J>`_
 
+
+.. _plynx-faq-what-different:
 
 How is it different from Airflow, Kubeflow and other platforms?
 ---------------------------------------------------------------
@@ -38,11 +43,15 @@ Here are some main differences and principles.
 - Experiments in Graph format are very well interpretable. It can be used by non-experts, or by people from other teams.
 
 
+.. _plynx-faq-no-code:
+
 Is it a no-code platform?
 -------------------------------------------------------------
 
 Not exactly. Users have ability to write their own Operations as well as use existing repositories.
 
+
+.. _plynx-faq-additional-packages:
 
 How can I install additional packages?
 -------------------------------------------------------------
@@ -53,16 +62,23 @@ How can I install additional packages?
 - Install `PyPI PLynx package <https://pypi.org/project/plynx/>`_
 - Deploy your new image.
 
-**Option 2.** Local build copy.
+**Option 2.** Run worker locally. (experimental)
+
+- Run ``make up_local_service`` to start the database, UI and api services in docker-compose.
+- Run ``make up_local_worker`` to start a single local worker. Note you will need to install packages necessary to run a worker itself.
+
+**Option 3.** Local build copy.
 
 - Add dependancies to your `requirements.txt <https://github.com/plynx-team/plynx/blob/master/docker/backend/requirements.txt>`_
 - Run ``make build`` to build new images.
 - Run ``make up`` to start your local PLynx.
 
-**Option 3.** Kubernetes Operation (not available now)
+**Option 4.** Kubernetes Operation (not available now)
 
 Currently work in queue. `Please upvote <https://github.com/plynx-team/plynx/issues/37>`_
 
+
+.. _plynx-faq-contact:
 
 How to contact us?
 -------------------------------------------------------------
