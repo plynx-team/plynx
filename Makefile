@@ -18,6 +18,13 @@ up:
 	docker-compose -f $(DOCKER_COMPOSE_FILE) up -d --scale workers=5 --scale test=0
 	python -m webbrowser "http://localhost:3001/"
 
+up_local_service:
+	docker-compose -f $(DOCKER_COMPOSE_FILE) up --scale workers=0 --scale test=0
+	python -m webbrowser "http://localhost:3001/"
+
+up_local_worker:
+	./scripts/run_local_worker.sh
+
 down:
 	docker-compose -f $(DOCKER_COMPOSE_FILE) down
 
