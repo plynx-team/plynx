@@ -188,7 +188,7 @@ class NodeCollectionManager(object):
         if new_node._id == node.original_node_id:
             return node
         new_node.apply_properties(node)
-        new_node.original_node_id = new_node.original_node_id
+        new_node.original_node_id = new_node._id
         new_node.parent_node_id = new_node.successor_node_id = None
         new_node._id = node._id
         return new_node
@@ -206,7 +206,7 @@ class NodeCollectionManager(object):
         node_ids = set(
             [node.original_node_id for node in sub_nodes]
         )
-        db_nodes = self.get_db_nodes_by_ids(node_ids)
+        db_nodes = self.get_db_objects_by_ids(node_ids)
         new_node_db_mapping = {}
 
         for db_node in db_nodes:
