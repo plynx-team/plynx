@@ -113,12 +113,6 @@ plugins:
         - directory
         - cloud-storage
   hubs:
-    - kind: group-hub
-      title: Group hub
-      icon: feathericons.layers
-      cls: plynx.plugins.hubs.static_list.StaticListHub
-      args:
-        filename: /app/plynx/static_templates.py
     - kind: db-hub
       title: Database hub
       icon: feathericons.database
@@ -134,5 +128,4 @@ plugins:
       title: Basic DAG Workflow
       executor: plynx.plugins.executors.dag.DAG
       hubs:
-        - group-hub
         - db-hub
