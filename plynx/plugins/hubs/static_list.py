@@ -27,7 +27,6 @@ class StaticListHub(hub.BaseHub):
             data_list = json.load(f)
             for raw_item in data_list:
                 self.list_of_nodes.append(_enhance_list_item(raw_item))
-        print(self.list_of_nodes)
 
     def search(self, query):
         # TODO use search_parameters
