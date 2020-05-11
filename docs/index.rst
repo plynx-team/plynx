@@ -11,8 +11,11 @@ Content
     overview
     start
     concepts
+    configuration
+    plugins
     rest
     internal
     kubernetes
+    faq
     license
     _api/index

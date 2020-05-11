@@ -67,16 +67,89 @@
 }
 
 .hub-list-header .SearchBar {
-    min-width: 230px;
+  min-width: 230px;
 }
 
 .hub-entry-list {
   flex: 1;
   overflow:auto;
   background-color: #404040;
-  height: 1px;
+  padding: 2px;
+}
+
+.hub-entry-list .closed {
+  display: none;
 }
 
 .NodeItemDnD {
   cursor: grab;
+  margin: 3px 0 3px 0;
+}
+
+.hub-arrow {
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  display: inline-block;
+  padding: 3px;
+}
+
+.right {
+  transform: rotate(-45deg);
+  -webkit-transform: rotate(-45deg);
+}
+
+.left {
+  transform: rotate(135deg);
+  -webkit-transform: rotate(135deg);
+}
+
+.up {
+  transform: rotate(-135deg);
+  -webkit-transform: rotate(-135deg);
+}
+
+.down {
+  transform: rotate(45deg);
+  -webkit-transform: rotate(45deg);
+}
+
+.hub-entry-group > .hub-entry-list {
+  margin-left: 20px;
+}
+
+.hub-entry-group-title {
+  cursor: pointer;
+}
+
+.hub-entry-group-title-text {
+  display: inline-block;
+  font-weight: 700;
+}
+
+.hub-entry-group-title-text:hover {
+  text-decoration: underline;
+}
+
+.hub-item {
+  padding: 5px;
+  display: flex;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  align-items: center;
+}
+
+.hub-item-node {
+  background-color: #333;
+}
+
+.hub-item-node:hover {
+  background-color: #458;
+}
+
+.hub-item-icon {
+  width: 16px;
+  height: 16px;
+  margin: 0 5px 0 5px;
 }

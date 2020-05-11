@@ -1,4 +1,8 @@
 
+.. warning::
+
+   API docs are outdated. Please contact us for details.
+
 .. _plynx-rest:
 
 ========

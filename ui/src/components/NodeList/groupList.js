@@ -2,15 +2,15 @@ import React, { Component } from 'react';
 import BaseList from './baseList';
 import { makeControlSeparator } from '../Common/controlButton';
 import { COLLECTIONS, VIRTUAL_COLLECTIONS } from '../../constants';
-import { renderNodeItem, NODE_ITEM_HEADER } from './common';
+import { renderGroupItem, GROUP_ITEM_HEADER } from './common';
 
 
-const renderItem = renderNodeItem(COLLECTIONS.TEMPLATES, 'node_status');
+const renderItem = renderGroupItem(COLLECTIONS.GROUPS);
 
-export default class OperationListPage extends Component {
+export default class GroupListPage extends Component {
   constructor(props) {
     super(props);
-    document.title = "Operations - PLynx";
+    document.title = "Groups - PLynx";
   }
 
   MENU_PANEL_DESCRIPTOR = [
@@ -26,11 +26,10 @@ export default class OperationListPage extends Component {
             <BaseList
                 menuPanelDescriptor={this.MENU_PANEL_DESCRIPTOR}
                 tag="node-list-item"
-                extraSearch={{virtual_collection: VIRTUAL_COLLECTIONS.OPERATIONS}}
-                header={NODE_ITEM_HEADER}
+                header={GROUP_ITEM_HEADER}
                 renderItem={renderItem}
-                virtualCollection={VIRTUAL_COLLECTIONS.OPERATIONS}
-                collection={COLLECTIONS.TEMPLATES}
+                virtualCollection={VIRTUAL_COLLECTIONS.WORKFLOWS}
+                collection={COLLECTIONS.GROUPS}
             >
             </BaseList>
         </div>

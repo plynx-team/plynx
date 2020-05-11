@@ -155,6 +155,11 @@ class Node(DBObject):
             default=ObjectId,
             is_list=False,
             ),
+        '_type': DBObjectField(
+            type=str,
+            default='Node',
+            is_list=False,
+            ),
         'title': DBObjectField(
             type=str,
             default='Title',
@@ -322,7 +327,7 @@ class Node(DBObject):
     def arrange_auto_layout(self, readonly=False):
         """Use heuristic to rearange nodes."""
         HEADER_HEIGHT = 23
-        DESCRIPTION_HEIGHT = 20
+        TITLE_HEIGHT = 20
         FOOTER_HEIGHT = 10
         BORDERS_HEIGHT = 2
         ITEM_HEIGHT = 20
@@ -332,7 +337,7 @@ class Node(DBObject):
         LEVEL_WIDTH = 252
         SPECIAL_PARAMETER_HEIGHT = 20
         SPECIAL_PARAMETER_TYPES = [ParameterTypes.CODE]
-        min_node_height = HEADER_HEIGHT + DESCRIPTION_HEIGHT + FOOTER_HEIGHT + BORDERS_HEIGHT
+        min_node_height = HEADER_HEIGHT + TITLE_HEIGHT + FOOTER_HEIGHT + BORDERS_HEIGHT
 
         node_id_to_level = defaultdict(lambda: -1)
         node_id_to_node = {}

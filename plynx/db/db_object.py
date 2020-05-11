@@ -8,6 +8,16 @@ from plynx.utils.common import ObjectId
 
 DBObjectField = namedtuple('DBObjectField', ['type', 'default', 'is_list'])
 
+_registry = {}
+
+
+def register_class(target_class):
+    _registry[target_class.__name__] = target_class
+
+
+def get_class(name):
+    return _registry[name]
+
 
 class DBObjectNotFound(Exception):
     """Internal Exception."""
@@ -19,7 +29,7 @@ class ClassNotSavable(Exception):
     pass
 
 
-class DBObject(object):
+class _DBObject(object):
     """DB Object.
     Abstraction of an object in the DB.
 
@@ -154,3 +164,14 @@ class DBObject(object):
             cls_name=self.__class__.__name__,
             value=str(self.to_dict()),
         )
+
+
+class Meta(type):
+    def __new__(meta, name, bases, class_dict):
+        cls = type.__new__(meta, name, bases, class_dict)
+        register_class(cls)
+        return cls
+
+
+class DBObject(_DBObject, metaclass=Meta):
+    pass

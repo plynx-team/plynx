@@ -28,6 +28,13 @@ def init_indexes():
     _db[Collections.RUN_CANCELLATIONS].create_index('insertion_date', expireAfterSeconds=60)
     _db[Collections.RUN_CANCELLATIONS].create_index('run_id')
 
+    _db[Collections.GROUPS].create_index('insertion_date')
+    _db[Collections.GROUPS].create_index([
+        ('starred', pymongo.DESCENDING),
+        ('insertion_date', pymongo.DESCENDING)
+    ])
+    _db[Collections.GROUPS].create_index([('title', pymongo.TEXT)])
+
 
 def get_db_connector():
     global _db

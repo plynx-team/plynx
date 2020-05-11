@@ -2,6 +2,7 @@ from __future__ import absolute_import
 import json
 from flask import request, g
 from plynx.db.node import Node
+from plynx.db.group import Group
 import plynx.db.node_collection_manager
 import plynx.db.run_cancellation_manager
 import plynx.base.hub
@@ -20,7 +21,7 @@ PERMITTED_READONLY_POST_ACTIONS = {
 
 node_collection_managers = {
     collection: plynx.db.node_collection_manager.NodeCollectionManager(collection=collection)
-    for collection in [Collections.TEMPLATES, Collections.RUNS]
+    for collection in [Collections.TEMPLATES, Collections.RUNS, Collections.GROUPS]
 }
 run_cancellation_manager = plynx.db.run_cancellation_manager.RunCancellationManager()
 
@@ -61,7 +62,7 @@ def post_search_nodes(collection):
             query['node_kinds'] = list(operation_manager.kind_to_operation_dict.keys())
         elif virtual_collection == NodeVirtualCollection.WORKFLOWS:
             query['node_kinds'] = list(workflow_manager.kind_to_workflow_dict.keys())
-        res = node_collection_managers[collection].get_db_nodes(**query)
+        res = node_collection_managers[collection].get_db_objects(**query)
 
     return JSONEncoder().encode({
         'items': res['list'],
@@ -93,11 +94,30 @@ def get_nodes(collection, node_link=None):
             'tour_steps': tour_steps,
             'plugins_dict': PLUGINS_DICT,
             'status': 'success'})
+    elif node_link in workflow_manager.kind_to_workflow_dict and collection == Collections.GROUPS:
+        # TODO move group to a separate class
+        group_dict = Group().to_dict()
+        group_dict['kind'] = node_link
+        return JSONEncoder().encode({
+            'group': group_dict,
+            'plugins_dict': PLUGINS_DICT,
+            'status': 'success'})
     else:
         try:
             node_id = to_object_id(node_link)
         except Exception:
             return make_fail_response('Invalid ID'), 404
+        if collection == Collections.GROUPS:
+            # TODO move group to a separate class
+            group = node_collection_managers[collection].get_db_object(node_id, user_id)
+            if group:
+                return JSONEncoder().encode({
+                    'group': group,
+                    'plugins_dict': PLUGINS_DICT,
+                    'status': 'success',
+                    })
+            else:
+                make_fail_response('Group `{}` was not found'.format(node_link)), 404
         node = node_collection_managers[collection].get_db_node(node_id, user_id)
         app.logger.debug(node)
         if node:
@@ -244,4 +264,29 @@ def post_node(collection):
         {
             'status': NodePostStatus.SUCCESS,
             'message': 'Node(_id=`{}`) successfully updated'.format(str(node._id))
+        })
+
+
+@app.route('/plynx/api/v0/groups', methods=['POST'])
+@handle_errors
+@requires_auth
+def post_group():
+    app.logger.debug(request.data)
+
+    data = json.loads(request.data)
+
+    group = Group.from_dict(data['group'])
+    group.author = g.user._id
+    db_group = node_collection_managers[Collections.GROUPS].get_db_object(group._id, g.user._id)
+    action = data['action']
+    if db_group and db_group['_readonly'] and action not in PERMITTED_READONLY_POST_ACTIONS:
+        return make_fail_response('Permission denied'), 403
+
+    if action == NodePostAction.SAVE:
+        group.save(force=True)
+
+    return JSONEncoder().encode(
+        {
+            'status': NodePostStatus.SUCCESS,
+            'message': 'Group(_id=`{}`) successfully updated'.format(str(group._id))
         })

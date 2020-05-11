@@ -16,8 +16,7 @@ SUM_OUTPUT = 'sum_o'
 
 def create_seq_operation(num):
     node = local.BashJinja2.get_default_node(is_workflow=False)
-    node.title = 'Sequence'
-    node.description = '1 to {}'.format(num)
+    node.title = '1 to {}'.format(num)
     node.kind = 'basic-bash-jinja2-operation'
     node.node_running_status = NodeRunningStatus.READY
 
@@ -45,8 +44,7 @@ def create_seq_operation(num):
 
 def create_grep_operation(input_reference, template):
     node = local.BashJinja2.get_default_node(is_workflow=False)
-    node.title = 'Grep'
-    node.description = 'Template "{}"'.format(template)
+    node.title = 'Template "{}"'.format(template)
     node.kind = 'basic-bash-jinja2-operation'
     node.node_running_status = NodeRunningStatus.READY
 
@@ -85,8 +83,7 @@ def create_grep_operation(input_reference, template):
 
 def create_sum_operation(input_references):
     node = local.PythonNode.get_default_node(is_workflow=False)
-    node.title = 'Sum'
-    node.description = 'Sum integers'
+    node.title = 'Sum integers'
     node.kind = 'basic-python-node-operation'
     node.node_running_status = NodeRunningStatus.READY
 
@@ -140,7 +137,6 @@ def create_dag_executor(N):
 
     dag_node = dag.DAG.get_default_node(is_workflow=True)
     dag_node.title = 'Test sum DAG'
-    dag_node.description = 'Integration test'
     dag_node.kind = 'basic-dag-workflow'
     dag_node.node_running_status = 'READY'
     nodes = dag_node.get_parameter_by_name('_nodes', throw=True).value.value

@@ -17,7 +17,7 @@ class NodeCollectionManager(object):
 
         self.collection = collection
 
-    def get_db_nodes(
+    def get_db_objects(
             self,
             status='',
             node_kinds=None,
@@ -26,7 +26,7 @@ class NodeCollectionManager(object):
             offset=0,
             user_id=None,
             ):
-        """Get subset of the Nodes.
+        """Get subset of the Objects.
 
         Args:
             status              (str, None):                Node Running Status
@@ -109,19 +109,19 @@ class NodeCollectionManager(object):
 
         return next(get_db_connector()[self.collection].aggregate(aggregate_list), None)
 
-    def get_db_nodes_by_ids(self, ids, collection=None):
-        """Find all the Nodes with a given IDs.
+    def get_db_objects_by_ids(self, ids, collection=None):
+        """Find all the Objects with a given IDs.
 
         Args:
-            ids    (list of ObjectID):  Node Ids
+            ids    (list of ObjectID):  Object Ids
         """
-        db_nodes = get_db_connector()[collection or self.collection].find({
+        db_objects = get_db_connector()[collection or self.collection].find({
             '_id': {
                 '$in': list(ids)
             }
         })
 
-        return list(db_nodes)
+        return list(db_objects)
 
     def _update_sub_nodes_fields(self, sub_nodes_dicts, reference_node_id, target_props, reference_collection=None):
         if not sub_nodes_dicts:
@@ -129,7 +129,7 @@ class NodeCollectionManager(object):
         reference_collection = reference_collection or self.collection
         id_to_updated_node_dict = {}
         upd_node_ids = set(map(lambda node_dict: node_dict[reference_node_id], sub_nodes_dicts))
-        for upd_node_dict in self.get_db_nodes_by_ids(upd_node_ids, collection=reference_collection):
+        for upd_node_dict in self.get_db_objects_by_ids(upd_node_ids, collection=reference_collection):
             id_to_updated_node_dict[upd_node_dict['_id']] = upd_node_dict
         for sub_node_dict in sub_nodes_dicts:
             if sub_node_dict[reference_node_id] not in id_to_updated_node_dict:
@@ -138,20 +138,18 @@ class NodeCollectionManager(object):
                 sub_node_dict[prop] = id_to_updated_node_dict[sub_node_dict[reference_node_id]][prop]
 
     def get_db_node(self, node_id, user_id=None):
-        """Get dict representation of the Node.
+        """Get dict representation of a Node.
 
         Args:
-            node_id     (ObjectId, str):        Node ID
+            node_id     (ObjectId, str):        Object ID
             user_id     (str, ObjectId, None):  User ID
 
         Return:
-            (dict)  dict representation of the Node
+            (dict)  dict representation of the Object
         """
-        res = get_db_connector()[self.collection].find_one({'_id': to_object_id(node_id)})
+        res = self.get_db_object(node_id, user_id)
         if not res:
             return res
-
-        res['_readonly'] = (user_id != to_object_id(res['author']))
 
         sub_nodes_dicts = None
         for parameter in res['parameters']:
@@ -166,12 +164,30 @@ class NodeCollectionManager(object):
 
         return res
 
+    def get_db_object(self, object_id, user_id=None):
+        """Get dict representation of an Object.
+
+        Args:
+            object_id   (ObjectId, str):        Object ID
+            user_id     (str, ObjectId, None):  User ID
+
+        Return:
+            (dict)  dict representation of the Object
+        """
+        res = get_db_connector()[self.collection].find_one({'_id': to_object_id(object_id)})
+        if not res:
+            return res
+
+        res['_readonly'] = (user_id != to_object_id(res['author']))
+
+        return res
+
     @staticmethod
     def _transplant_node(node, new_node):
         if new_node._id == node.original_node_id:
             return node
         new_node.apply_properties(node)
-        new_node.original_node_id = new_node.original_node_id
+        new_node.original_node_id = new_node._id
         new_node.parent_node_id = new_node.successor_node_id = None
         new_node._id = node._id
         return new_node
@@ -189,7 +205,7 @@ class NodeCollectionManager(object):
         node_ids = set(
             [node.original_node_id for node in sub_nodes]
         )
-        db_nodes = self.get_db_nodes_by_ids(node_ids)
+        db_nodes = self.get_db_objects_by_ids(node_ids)
         new_node_db_mapping = {}
 
         for db_node in db_nodes:

@@ -74,12 +74,14 @@ class API {
 const plynxApi = new API({ url: API_ENDPOINT });
 plynxApi.createEntity({ name: COLLECTIONS.TEMPLATES });
 plynxApi.createEntity({ name: COLLECTIONS.RUNS });
+plynxApi.createEntity({ name: COLLECTIONS.GROUPS });
 plynxApi.createEntity({ name: 'resource' });
 plynxApi.createEntity({ name: 'token' });
 plynxApi.createEntity({ name: 'demo' });
 plynxApi.createEntity({ name: 'worker_states' });
 plynxApi.createEntity({ name: `search_${COLLECTIONS.TEMPLATES}` });
 plynxApi.createEntity({ name: `search_${COLLECTIONS.RUNS}` });
+plynxApi.createEntity({ name: `search_${COLLECTIONS.GROUPS}` });
 plynxApi.createEntity({ name: `search_in_hubs` });
 
 export const PLynxApi = plynxApi;

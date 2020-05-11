@@ -189,8 +189,7 @@ export default class Editor extends Component {
         self.props.history.replace("/not_found");
         window.location.reload(false);
         loading = false;
-      }
-      if (error.response.status === 401) {
+      } else if (error.response.status === 401) {
         PLynxApi.getAccessToken()
         .then((isSuccessfull) => {
           if (!isSuccessfull) {
@@ -529,6 +528,12 @@ export default class Editor extends Component {
     this.setState({tourSteps: tourSteps});
   }
 
+  handleShowNodeDialog() {
+    this.setState({
+      preview_text: JSON.stringify(this.node, null, 2),
+    });
+  }
+
   makeControls() {
     const items = [
       {
@@ -651,7 +656,17 @@ export default class Editor extends Component {
           className: 'preview-button',
           func: () => this.handlePreview(),
         },
+      }, {
+        render: makeControlButton,
+        props: {
+          img: 'preview.svg',
+          text: 'Json',
+          enabled: true,
+          className: 'show-code-button',
+          func: () => this.handleShowNodeDialog(),
+        },
       },
+
 
       {
         render: makeControlSeparator,

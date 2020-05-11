@@ -10,4 +10,4 @@ class CollectionHub(hub.BaseHub):
         self.operations = operations
 
     def search(self, query):
-        return self.node_collection_manager.get_db_nodes(node_kinds=self.operations, **query._asdict())
+        return self.node_collection_manager.get_db_objects(node_kinds=self.operations, **query._asdict())

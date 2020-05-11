@@ -18,6 +18,7 @@ import '../controls.css';
 export default class ListPage extends Component {
   static propTypes = {
     search: PropTypes.string,
+    collection: PropTypes.string.isRequired,
     virtualCollection: PropTypes.string,
     children: PropTypes.array,
     menuPanelDescriptor: PropTypes.array,
@@ -25,9 +26,6 @@ export default class ListPage extends Component {
     tag: PropTypes.string.isRequired,
     header: PropTypes.array.isRequired,
     renderItem: PropTypes.func.isRequired,
-    endpoint: PropTypes.shape({
-      create: PropTypes.func.isRequired,
-    }),
   }
 
 
@@ -117,7 +115,7 @@ export default class ListPage extends Component {
     /* eslint-disable no-await-in-loop */
     /* eslint-disable no-unmodified-loop-condition */
     while (loading) {
-      await this.props.endpoint.create({
+      await PLynxApi.endpoints[`search_${this.props.collection}`].create({
         offset: self.state.offset,
         per_page: self.perPage,
         search: self.state.search,
@@ -173,7 +171,7 @@ export default class ListPage extends Component {
               props: {
                 img: 'plus.svg',
                 text: operation.title,
-                href: `/templates/${operation.kind}`,
+                href: `/${this.props.collection}/${operation.kind}`,
                 key: operation.kind
               },
             };

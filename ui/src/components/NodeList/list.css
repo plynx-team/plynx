@@ -20,6 +20,10 @@
   flex: 1 1;
 }
 
+.list-item-link {
+  text-decoration: none;
+}
+
 .list-item {
   border-radius: 4px;
   margin: 3px;
@@ -63,30 +67,7 @@
 }
 
 .list-item:active {
-  -background-color: #62a6f3;
   background-color: #3f6da0;
-}
-
-.list-item .ItemHeader {
-  display: inline-grid;
-  grid-template-columns: 1fr 40px;
-}
-
-.list-item .TitleDescription {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.list-item .TitleDescription .Title {
-  font-weight: 700;
-  font-size: 15pt;
-  text-overflow: inherit;
-  overflow: inherit;
-}
-
-.list-item .TitleDescription .Description {
-  text-overflow: inherit;
-  overflow: inherit;
 }
 
 .list-item .star-hidden {

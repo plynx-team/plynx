@@ -38,15 +38,10 @@
 
   background: #000;
 
-  padding-left: 10px;
-  text-transform: uppercase;
-
   border-top-left-radius: 4px;
   border-top-right-radius: 4px;
-
   border-bottom: 1px solid #353535;
 
-  padding-top: 3px;
   height: 23px;
 
   font-size: 13px;
@@ -63,11 +58,24 @@
   background: #335;
 }
 
-.node-title {
+.node-header-title {
   font-size:10px;
+  margin: 0px;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
+  padding: 3px 0px 0px 5px;
+  display: flex;
+  flex-direction: row;
+}
+
+.operation-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.operation-title-text {
+  margin-left: 5px;
 }
 
 .node-header > .remove {
@@ -84,7 +92,7 @@
 }
 
 
-.node-description {
+.node-title {
   color: #ccc;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -92,11 +100,11 @@
   padding: 0 3px 0 3px;
 }
 
-.node.status-deprecated > .node-header, .node.status-deprecated > .node-description {
+.node.status-deprecated > .node-header, .node.status-deprecated > .node-title {
   text-decoration: line-through;
 }
 
-.node.status-mandatory_deprecated > .node-header, .node.status-mandatory_deprecated > .node-description {
+.node.status-mandatory_deprecated > .node-header, .node.status-mandatory_deprecated > .node-title {
   text-decoration: line-through;
 }
 
@@ -293,7 +301,6 @@
 
 
 .editable .nodeOutputList li div {
-  background-color: rgba(33, 150, 243, 0.04);
   border-top-right-radius: 5px;
   border-bottom-right-radius: 5px;
 }
@@ -342,7 +349,6 @@
 }
 
 .editable .nodeInputList li div {
-  background-color: rgba(255, 255, 255, 0.03);
   border-top-left-radius: 5px;
   border-bottom-left-radius: 5px;
 }

@@ -22,9 +22,9 @@ It will start the following services:
 
  * MongoDB instance
  * PLynx User Interface
- * Backend
- * Master
- * Several workers (5 by default)
+ * API service
+ * DAG worker
+ * Several Python and Bash workers (5 by default)
 
 Run :code:`make down` to stop the services.
 

@@ -68,5 +68,5 @@ export default class CacheBuster extends React.Component {
 
 
 CacheBuster.propTypes = {
-    children: PropTypes.node.isRequired,
+  children: PropTypes.func.isRequired,
 };
