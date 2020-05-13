@@ -4,6 +4,7 @@ import { PLynxApi } from '../../API';
 import { SimpleLoader } from '../LoadingScreen';
 import NodeItem from '../Common/NodeItem';
 import { utcTimeToLocal } from '../../utils';
+import { PluginsProvider } from '../../contexts';
 import './MasterState.css';
 
 class ListItem extends Component {
@@ -96,7 +97,10 @@ export default class MasterState extends Component {
       const data = response.data;
       console.log(data);
 
-      this.setState({workers: data.items});
+      this.setState({
+          workers: data.items,
+          plugins_dict: data.plugins_dict,
+      });
       loading = false;
     };
 
@@ -151,17 +155,19 @@ export default class MasterState extends Component {
         </div>
 
         <div className='list'>
-          <div className='master-list-item list-header'>
-            <div className='host'>Host</div>
-            <div className='worker-id'>Worker ID</div>
-            <div className='kinds'>Kinds</div>
-            <div className='updated-datetime'>Updated</div>
-            <div className='running-node'>Nodes</div>
-          </div>
-          {this.state.loading &&
-            <SimpleLoader/>
-          }
-          {listItems.length ? listItems : <b>No items to show</b>}
+          <PluginsProvider value={this.state.plugins_dict}>
+              <div className='master-list-item list-header'>
+                <div className='host'>Host</div>
+                <div className='worker-id'>Worker ID</div>
+                <div className='kinds'>Kinds</div>
+                <div className='updated-datetime'>Updated</div>
+                <div className='running-node'>Nodes</div>
+              </div>
+              {this.state.loading &&
+                <SimpleLoader/>
+              }
+              {listItems.length ? listItems : <b>No items to show</b>}
+          </PluginsProvider>
         </div>
       </div>
     );

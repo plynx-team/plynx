@@ -88,6 +88,8 @@ _hub_manager = None
 _workflow_manager = None
 _executor_manager = None
 
+_plugins_dict = None
+
 
 def get_resource_manager():
     global _resource_manager
@@ -122,3 +124,16 @@ def get_executor_manager():
     if not _executor_manager:
         _executor_manager = _ExecutorManager(_plugins)
     return _executor_manager
+
+
+def get_plugins_dict():
+    global _plugins_dict
+    if not _plugins_dict:
+        _plugins_dict = {
+            'resources_dict': get_resource_manager().kind_to_resource_dict,
+            'operations_dict': get_operation_manager().kind_to_operation_dict,
+            'hubs_dict': get_hub_manager().kind_to_hub_dict,
+            'workflows_dict': get_workflow_manager().kind_to_workflow_dict,
+            'executors_info': get_executor_manager().kind_info,
+        }
+    return _plugins_dict
