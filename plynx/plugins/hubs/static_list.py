@@ -35,8 +35,7 @@ class StaticListHub(hub.BaseHub):
 
         def filter_func(raw_node):
             return len(search_string) == 0 or \
-                search_string.upper() in raw_node['title'].upper() or \
-                search_string.upper() in raw_node['description'].upper()
+                search_string.upper() in raw_node['title'].upper()
         res = list(filter(
             filter_func,
             self.list_of_nodes
