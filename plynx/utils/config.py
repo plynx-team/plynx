@@ -4,6 +4,8 @@ import os
 from collections import namedtuple
 
 PLYNX_CONFIG_PATH = os.getenv('PLYNX_CONFIG_PATH', 'config.yaml')
+DEFAULT_ICON = 'feathericons.x-square'
+DEFAULT_COLOR = '#ffffff'
 _config = None
 
 WorkerConfig = namedtuple('WorkerConfig', ['kinds'])
@@ -110,8 +112,8 @@ def get_plugins():
             kind=raw_resource['kind'],
             title=raw_resource['title'],
             cls=raw_resource['cls'],
-            icon=raw_resource['icon'],
-            color=raw_resource.get('color', ''),
+            icon=raw_resource.get('icon', DEFAULT_ICON),
+            color=raw_resource.get('color', DEFAULT_COLOR),
         )
         for raw_resource in _config['plugins']['resources']
     }
@@ -128,8 +130,8 @@ def get_plugins():
             kind=operation_kind,
             title=raw_operation['title'],
             executor=raw_operation['executor'],
-            icon=raw_operation['icon'],
-            color=raw_operation['color'],
+            icon=raw_operation.get('icon', DEFAULT_ICON),
+            color=raw_operation.get('color', DEFAULT_COLOR),
             hubs=raw_operation.get('hubs', []),
             resources=[resource for kind, resource in kind_to_resource.items() if kind in raw_operation['resources']],
         )
@@ -139,7 +141,7 @@ def get_plugins():
         hubs.append(HubConfig(
             kind=raw_hub['kind'],
             title=raw_hub['title'],
-            icon=raw_hub['icon'],
+            icon=raw_hub.get('icon', DEFAULT_ICON),
             cls=raw_hub['cls'],
             args=raw_hub['args'],
         ))
