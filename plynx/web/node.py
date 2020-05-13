@@ -25,7 +25,7 @@ node_collection_managers = {
 }
 run_cancellation_manager = plynx.db.run_cancellation_manager.RunCancellationManager()
 
-resource_manager = plynx.utils.plugin_manager.get_resource_manager()
+
 operation_manager = plynx.utils.plugin_manager.get_operation_manager()
 hub_manager = plynx.utils.plugin_manager.get_hub_manager()
 workflow_manager = plynx.utils.plugin_manager.get_workflow_manager()
