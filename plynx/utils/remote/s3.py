@@ -1,11 +1,11 @@
 from future.standard_library import install_aliases
 install_aliases()   # noqa
 
-import os
-import boto3
-from botocore.errorfactory import ClientError
-from urllib.parse import urlparse
-from plynx.utils.remote.base import ContentsHandlerBase, RemoteBase
+import os                                                               # noqa: E402
+import boto3                                                            # noqa: E402
+from botocore.errorfactory import ClientError                           # noqa: E402
+from urllib.parse import urlparse                                       # noqa: E402
+from plynx.utils.remote.base import ContentsHandlerBase, RemoteBase     # noqa: E402
 
 
 class ContentsHandlerS3(ContentsHandlerBase):

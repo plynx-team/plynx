@@ -25,19 +25,13 @@ node_collection_managers = {
 }
 run_cancellation_manager = plynx.db.run_cancellation_manager.RunCancellationManager()
 
-resource_manager = plynx.utils.plugin_manager.get_resource_manager()
+
 operation_manager = plynx.utils.plugin_manager.get_operation_manager()
 hub_manager = plynx.utils.plugin_manager.get_hub_manager()
 workflow_manager = plynx.utils.plugin_manager.get_workflow_manager()
 executor_manager = plynx.utils.plugin_manager.get_executor_manager()
 
-PLUGINS_DICT = {
-    'resources_dict': resource_manager.kind_to_resource_dict,
-    'operations_dict': operation_manager.kind_to_operation_dict,
-    'hubs_dict': hub_manager.kind_to_hub_dict,
-    'workflows_dict': workflow_manager.kind_to_workflow_dict,
-    'executors_info': executor_manager.kind_info,
-}
+PLUGINS_DICT = plynx.utils.plugin_manager.get_plugins_dict()
 
 
 @app.route('/plynx/api/v0/search_<collection>', methods=['POST'])

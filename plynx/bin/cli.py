@@ -7,7 +7,6 @@ from plynx.service.worker import run_worker
 from plynx.service.users import run_users
 from plynx.service.cache import run_cache
 from plynx.service.execute import run_execute
-from plynx.web.common import run_api
 from plynx.utils.logs import set_logging_level
 
 
@@ -21,6 +20,8 @@ _config = get_config()
 
 
 def api(args):
+    # lazy load because web initializes too many variables
+    from plynx.web.common import run_api    # noqa: E402
     set_logging_level(args.pop('verbose'))
     run_api(**args)
 
