@@ -21,7 +21,7 @@ _config = get_config()
 
 def api(args):
     # lazy load because web initializes too many variables
-    from plynx.web.common import run_api
+    from plynx.web.common import run_api    # noqa: E402
     set_logging_level(args.pop('verbose'))
     run_api(**args)
 
