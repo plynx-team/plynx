@@ -1,10 +1,10 @@
 from future.standard_library import install_aliases
 install_aliases()   # noqa
 
-import os
-from google.cloud import storage
-from urllib.parse import urlparse
-from plynx.utils.remote.base import ContentsHandlerBase, RemoteBase
+import os                                                               # noqa: E402
+from google.cloud import storage                                        # noqa: E402
+from urllib.parse import urlparse                                       # noqa: E402
+from plynx.utils.remote.base import ContentsHandlerBase, RemoteBase     # noqa: E402
 
 
 class ContentsHandlerGS(ContentsHandlerBase):
