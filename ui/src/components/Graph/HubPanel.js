@@ -44,7 +44,7 @@ export default class HubPanel extends Component {
             </div>
             <div className='hub-box-content'>
                 <HubEntry
-                    hub={Object.values(plugins_dict.hubs_dict)[this.state.index].kind}
+                    hub={{...plugins_dict.workflows_dict, ...plugins_dict.operations_dict}[this.props.kind].hubs[this.state.index]}
                     key={this.state.index}
                 />
             </div>
