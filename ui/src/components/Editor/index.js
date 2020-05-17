@@ -730,6 +730,7 @@ export default class Editor extends Component {
                 <TextViewDialog className="TextViewDialog"
                   title='Preview'
                   text={this.state.preview_text}
+                  showAlert={(message, type) => this.showAlert(message, type)}
                   onClose={() => this.setState({preview_text: null})}
                 />
               }
