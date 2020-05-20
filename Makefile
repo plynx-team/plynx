@@ -15,7 +15,7 @@ run_tests:
 	docker-compose -f $(DOCKER_COMPOSE_DEV_FILE) up --abort-on-container-exit --scale workers=5 --scale frontend=0 --scale test=1
 
 up:
-	docker-compose -f $(DOCKER_COMPOSE_FILE) up -d --scale workers=5 --scale test=0
+	docker-compose -f $(DOCKER_COMPOSE_FILE) up -d --scale workers=3 --scale test=0
 	python -m webbrowser "http://localhost:3001/"
 
 up_local_service:

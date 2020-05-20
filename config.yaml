@@ -100,7 +100,6 @@ plugins:
       icon: feathericons.grid
       color: '#5ed1ff'
       hubs:
-        - group-hub
         - db-hub
       resources:
         - file
