@@ -86,7 +86,7 @@ export default class Editor extends Component {
 
     this.setState({
       node: this.node,
-      editable: this.props.collection === COLLECTIONS.TEMPLATES && this.node.node_status.toUpperCase() === NODE_STATUS.CREATED,
+      editable: !this.node._readonly && this.props.collection === COLLECTIONS.TEMPLATES && this.node.node_status.toUpperCase() === NODE_STATUS.CREATED,
       collection: this.props.collection,
       activeStatus: ACTIVE_NODE_RUNNING_STATUSES.has(this.node.node_running_status),
     });
@@ -756,6 +756,7 @@ export default class Editor extends Component {
                         is_workflow={this.state.is_workflow}
                         is_graph={this.state.is_graph}
                         onNodeChange={(node) => this.handleNodeChange(node)}
+                        readOnly={!this.state.editable}
                       />
                   }
                   {

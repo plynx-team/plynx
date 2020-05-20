@@ -36,7 +36,7 @@ export default class EnumItem extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      readOnly: this.props.readOnly || !this.props.showEnumOptions,
+      readOnly: this.props.readOnly,
       value: this.props.value.value,
       mode: this.props.value.mode,
     };

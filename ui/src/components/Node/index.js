@@ -48,7 +48,7 @@ export default class Node extends Component {
 
     this.state = {
       loading: true,
-      readOnly: true,
+      readOnly: this.props.readOnly,
       is_workflow: this.props.is_workflow,
     };
   }
@@ -74,7 +74,6 @@ export default class Node extends Component {
     this.setState({node: this.node});
     document.title = data.title + " - Node - PLynx";
     const node_status = data.node_status;
-    this.setState({readOnly: node_status !== NODE_RUNNING_STATUS.CREATED});
   }
 
   handleParameterChanged(name, value) {
