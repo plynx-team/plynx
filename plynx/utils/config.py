@@ -13,12 +13,12 @@ MongoConfig = namedtuple('MongoConfig', ['user', 'password', 'host', 'port'])
 StorageConfig = namedtuple('StorageConfig', ['scheme', 'prefix', 'credential_path'])
 AuthConfig = namedtuple('AuthConfig', ['secret_key'])
 WebConfig = namedtuple('WebConfig', ['host', 'port', 'endpoint', 'api_endpoint', 'debug'])
-DemoConfig = namedtuple('DemoConfig', ['enabled', 'kind'])
+DemoConfig = namedtuple('DemoConfig', ['enabled', 'kind', 'template_id'])
 CloudServiceConfig = namedtuple('CloudServiceConfig', ['prefix', 'url_prefix', 'url_postfix'])
 ResourceConfig = namedtuple('ResourceConfig', ['kind', 'title', 'cls', 'icon', 'color'])
 DummyOperationConfig = namedtuple('DummyOperationConfig', ['title', 'kind', 'executor', 'operations', 'icon', 'color'])
 OperationConfig = namedtuple('OperationConfig', ['kind', 'title', 'executor', 'hubs', 'resources', 'icon', 'color'])
-HubConfig = namedtuple('HubConfig', ['kind', 'title', 'icon', 'cls', 'args'])
+HubConfig = namedtuple('HubConfig', ['kind', 'title', 'icon', 'color', 'cls', 'args'])
 WorkflowConfig = namedtuple('WorkflowConfig', ['kind', 'title', 'executor', 'operations', 'hubs', 'icon', 'color'])
 PluginsConfig = namedtuple('PluginsConfig', ['resources', 'operations', 'hubs', 'workflows', 'dummy_operations'])
 
@@ -94,6 +94,7 @@ def get_demo_config():
     return DemoConfig(
         enabled=_config.get('demo', {}).get('enabled', False),
         kind=_config.get('demo', {}).get('kind', None),
+        template_id=_config.get('demo', {}).get('template_id', None),
     )
 
 
@@ -142,6 +143,7 @@ def get_plugins():
             kind=raw_hub['kind'],
             title=raw_hub['title'],
             icon=raw_hub.get('icon', DEFAULT_ICON),
+            color=raw_hub.get('color', DEFAULT_COLOR),
             cls=raw_hub['cls'],
             args=raw_hub['args'],
         ))
