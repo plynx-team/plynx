@@ -32,7 +32,7 @@ export default class HubPanel extends Component {
                         key={index}
                     >
                         <Icon
-                            type_descriptor={{icon: hub.icon, color: "#fff"}}
+                            type_descriptor={{icon: hub.icon, color: hub.color}}
                             width={15}
                             height={15}
                         />
