@@ -21,19 +21,19 @@ export default class HubEntryList extends Component {
     const listItems = this.props.items.map(
       (entry) => {
         if (entry._type === 'Group') {
-            return <HubEntryListGroup
+          return <HubEntryListGroup
                 key={entry._id}
                 group={entry}
                 level={this.props.level}
-            />
+            />;
         } else {
-            return <HubEntryListNode
+          return <HubEntryListNode
               key={entry._id}
               nodeContent={entry}
               />;
         }
       }
-    )
+    );
 
     return (
       <div className={`hub-entry-list ${this.props.extraClassName}`}>
@@ -53,7 +53,7 @@ class HubEntryListGroup extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      open: this.props.level === 0 ? true : false,
+      open: this.props.level === 0,
     };
   }
 
@@ -78,6 +78,6 @@ class HubEntryListGroup extends Component {
             level={this.props.level + 1}
         />
       </div>
-    )
+    );
   }
 }

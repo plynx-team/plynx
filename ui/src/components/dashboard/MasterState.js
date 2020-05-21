@@ -98,8 +98,8 @@ export default class MasterState extends Component {
       console.log(data);
 
       this.setState({
-          workers: data.items,
-          plugins_dict: data.plugins_dict,
+        workers: data.items,
+        plugins_dict: data.plugins_dict,
       });
       loading = false;
     };

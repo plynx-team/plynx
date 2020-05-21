@@ -22,14 +22,14 @@ export default class TextViewDialog extends Component {
 
   makeControls() {
     const items = [
-        {
-          render: makeControlButton,
-          props: {
-            img: 'copy.svg',
-            text: 'Copy',
-            func: () => this.handleCopy(),
-          },
+      {
+        render: makeControlButton,
+        props: {
+          img: 'copy.svg',
+          text: 'Copy',
+          func: () => this.handleCopy(),
         },
+      },
     ];
 
     return makeControlPanel(
