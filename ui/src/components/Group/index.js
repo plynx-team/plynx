@@ -92,7 +92,7 @@ export default class Group extends Component {
 
     const loadNode = (response) => {
       const searchValues = queryString.parse(this.props.location.search);
-      let group = response.data.group;
+      const group = response.data.group;
       self.group = group;
       console.log('group', group);
 

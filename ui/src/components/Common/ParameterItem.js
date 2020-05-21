@@ -58,7 +58,7 @@ export default class ParameterItem extends Component {
                   value: this.state.value,
                   handleChange: this.handleChange,
                   readOnly: this.state.readOnly,
-                  className: 'parameter-value'
+                  className: 'parameter-value',
                 }
                 )
             }

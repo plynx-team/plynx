@@ -6,7 +6,7 @@ import ParameterList from './ParameterList';
 import TextViewDialog from '../Dialogs/TextViewDialog';
 import { PluginsProvider, PluginsConsumer } from '../../contexts';
 import { HotKeys } from 'react-hotkeys';
-import { NODE_RUNNING_STATUS, KEY_MAP } from '../../constants';
+import { KEY_MAP } from '../../constants';
 import { addStyleToTourSteps } from '../../utils';
 
 import './style.css';
@@ -48,7 +48,7 @@ export default class Node extends Component {
 
     this.state = {
       loading: true,
-      readOnly: true,
+      readOnly: this.props.readOnly,
       is_workflow: this.props.is_workflow,
     };
   }
@@ -73,8 +73,6 @@ export default class Node extends Component {
     this.node = data;
     this.setState({node: this.node});
     document.title = data.title + " - Node - PLynx";
-    const node_status = data.node_status;
-    this.setState({readOnly: node_status !== NODE_RUNNING_STATUS.CREATED});
   }
 
   handleParameterChanged(name, value) {
@@ -190,6 +188,7 @@ Node.propTypes = {
   }),
   history: PropTypes.object,
   is_workflow: PropTypes.bool.isRequired,
+  readOnly: PropTypes.bool.isRequired,
   node: PropTypes.object.isRequired,    // TODO more detailed
   onNodeChange: PropTypes.func.isRequired,
   plugins_dict: PropTypes.object.isRequired,    // TODO more detailed

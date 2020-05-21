@@ -9,6 +9,7 @@ export default function renderValueElement(args) {
   const className = args.className ? args.className : "";
   const showEnumOptions = args.showEnumOptions;
   const height = args.height;
+  console.log('a', value, readOnly);
 
   switch (parameterType) {
     case 'str':

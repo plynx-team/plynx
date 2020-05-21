@@ -37,6 +37,7 @@ def worker(args):
 
 
 def users(args):
+    set_logging_level(args.pop('verbose'))
     run_users(**args)
 
 
@@ -200,7 +201,7 @@ class CLIFactory(object):
         }, {
             'func': users,
             'help': "Users cli utils",
-            'args': ('mode', 'username', 'password', 'db_host'),
+            'args': ('verbose', 'mode', 'username', 'password', 'db_host'),
         }, {
             'func': cache,
             'help': "Cache cli utils",

@@ -43,7 +43,7 @@ export default class DirectoryColumn extends Component {
     this.setState({
       items,
     });
-    //this.props.onChanged(items);
+    // this.props.onChanged(items);
   }
 
   handleChanged(index, name, value) {
