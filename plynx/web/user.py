@@ -35,7 +35,9 @@ def post_demo_user():
         try:
             node_id = to_object_id(DemoUserManager.demo_config.template_id)
         except Exception as e:
-            return make_fail_response('Failed to create a demo user')
+            app.logger.error('node_id `{}` is invalid'.format(DemoUserManager.demo_config.template_id))
+            app.logger.error(e)
+            return make_fail_response('Failed to create a demo node')
         try:
             user_id = user._id
             node = template_collection_manager.get_db_node(node_id, user_id)
