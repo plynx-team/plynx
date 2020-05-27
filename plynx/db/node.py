@@ -548,7 +548,7 @@ def _value_is_valid(value, parameter_type):
         except Exception:
             return False
         return True
-    if parameter_type == ParameterTypes.INT:
+    if parameter_type == ParameterTypes.FLOAT:
         try:
             float(str(value))
         except Exception:
