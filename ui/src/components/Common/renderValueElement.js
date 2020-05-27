@@ -3,6 +3,8 @@ import PropTypes from 'prop-types';
 import EnumItem from './EnumItem';  // eslint-disable-line import/no-cycle
 import CodeItem from './CodeItem';
 import './ValueList.css';
+import './NumericInput.css';
+
 
 export default function renderValueElement(args) {
   const { parameterType, value, handleChange, readOnly } = args;
