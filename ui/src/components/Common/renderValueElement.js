@@ -49,7 +49,6 @@ export default function renderValueElement(args) {
               />;
     case 'float':
       return <input
-              autoComplete="off"
               className={className}
               type="number"
               step="any"
@@ -212,7 +211,7 @@ export class ValueList extends Component {
             <div
               className={'remove'}
               onClick={() => this.handleRemoveItem(index)}
-            > - </div>
+            > × </div>
           }
           </div>
         ))}
