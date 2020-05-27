@@ -16,7 +16,7 @@ export default function renderValueElement(args) {
   switch (parameterType) {
     case 'str':
       return <input
-              autocomplete="off"
+              autoComplete="off"
               className={className}
               type="text"
               name="value"
@@ -27,7 +27,8 @@ export default function renderValueElement(args) {
               />;
     case 'int':
       return <input
-              autocomplete="off"
+              onWheel={event => event.currentTarget.blur()}
+              autoComplete="off"
               className={className}
               type="number"
               name="value"
@@ -38,7 +39,8 @@ export default function renderValueElement(args) {
               />;
     case 'float':
       return <input
-              autocomplete="off"
+              autoComplete="off"
+              onWheel={event => event.currentTarget.blur()}
               className={className}
               type="number"
               step="any"
