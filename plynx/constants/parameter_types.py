@@ -1,6 +1,7 @@
 class ParameterTypes:
     STR = 'str'
     INT = 'int'
+    FLOAT = 'float'
     BOOL = 'bool'
     TEXT = 'text'
     ENUM = 'enum'

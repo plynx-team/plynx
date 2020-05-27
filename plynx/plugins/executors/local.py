@@ -270,6 +270,8 @@ class BaseBash(plynx.base.executor.BaseExecutor):
                 value = parameter.value.value
             elif parameter.parameter_type == ParameterTypes.INT:
                 value = int(parameter.value)
+            elif parameter.parameter_type == ParameterTypes.FLOAT:
+                value = float(parameter.value)
             else:
                 value = parameter.value
             res[parameter.name] = value

@@ -12,6 +12,8 @@ function getDefaultParameterValue(parameter_type) {
       return '';
     case 'int':
       return '0';
+    case 'float':
+      return '0.0';
     case 'bool':
       return false;
     case 'text':

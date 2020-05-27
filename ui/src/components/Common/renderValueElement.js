@@ -32,6 +32,18 @@ export default function renderValueElement(args) {
               readOnly={readOnly}
               key={parameterType}
               />;
+    case 'float':
+      return <input
+              className={className}
+              type="number"
+              step="any"
+              name="value"
+              onChange={handleChange}
+              value={value}
+              readOnly={readOnly}
+              key={parameterType}
+              />;
+
     case 'bool':
       return <div className={className}>
               <input

@@ -12,3 +12,6 @@ plynx.egg-info/
 web/.DS_Store
 web/static/bower_components/
 *.pyc
+venv
+ui/report.20200526.173030.25.0.001.json
+.idea

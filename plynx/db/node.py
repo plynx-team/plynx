@@ -519,6 +519,8 @@ def _get_default_by_type(parameter_type):
         return ''
     if parameter_type == ParameterTypes.INT:
         return 0
+    if parameter_type == ParameterTypes.FLOAT:
+        return 0
     if parameter_type == ParameterTypes.BOOL:
         return False
     if parameter_type == ParameterTypes.TEXT:
@@ -543,6 +545,12 @@ def _value_is_valid(value, parameter_type):
     if parameter_type == ParameterTypes.INT:
         try:
             int(value)
+        except Exception:
+            return False
+        return True
+    if parameter_type == ParameterTypes.INT:
+        try:
+            float(str(value))
         except Exception:
             return False
         return True
