@@ -27,8 +27,6 @@ export default function renderValueElement(args) {
               />;
     case 'int':
       return <input
-              onWheel={event => event.currentTarget.blur()}
-              autoComplete="off"
               className={className}
               type="number"
               name="value"
@@ -36,11 +34,22 @@ export default function renderValueElement(args) {
               value={value}
               readOnly={readOnly}
               key={parameterType}
+              onKeyDown={e => {
+                console.log(e);
+                if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  console.log(e.key);
+                  return false;
+                }
+                e.stopPropagation();
+              }}
+              onWheel={event => event.currentTarget.blur()}
+              autoComplete="off"
               />;
     case 'float':
       return <input
               autoComplete="off"
-              onWheel={event => event.currentTarget.blur()}
               className={className}
               type="number"
               step="any"
@@ -49,6 +58,18 @@ export default function renderValueElement(args) {
               value={value}
               readOnly={readOnly}
               key={parameterType}
+              onKeyDown={e => {
+                console.log(e);
+                if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  console.log(e.key);
+                  return false;
+                }
+                e.stopPropagation();
+              }}
+              onWheel={event => event.currentTarget.blur()}
+              autoComplete="off"
               />;
 
     case 'bool':
