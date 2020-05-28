@@ -5,7 +5,7 @@ import { NODE_STATUS, COLLECTIONS } from '../../constants';
 import ParameterItem from '../Common/ParameterItem';
 import makePropertiesBox from '../Common/makePropertiesBox';
 import './NodeProperties.css';
-
+var dateFormat = require('dateformat');
 
 function makeKeyValueRow(name, value, key) {
   return (
@@ -79,8 +79,8 @@ export default class NodeProperties extends Component {
 
     const statePropertiesItems = [
       makeKeyValueRow('Node Status', <i>{this.state.nodeStatus}</i>, 'node_status'),
-      makeKeyValueRow('Created', <i>{this.props.created}</i>, 'created'),
-      makeKeyValueRow('Updated', <i>{this.props.updated}</i>, 'updated'),
+      makeKeyValueRow('Created', <i>{dateFormat(Date.parse(this.props.created), "yyyy-mm-dd HH:MM:ss")}</i>, 'created'),
+      makeKeyValueRow('Updated', <i>{dateFormat(Date.parse(this.props.created), "yyyy-mm-dd HH:MM:ss")}</i>, 'updated'),
     ];
 
     const inheritancePropertiesItems = [
