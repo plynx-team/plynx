@@ -93,22 +93,22 @@
   padding: 3px;
 }
 
-.right {
+.hub-arrow .arrow-right {
   transform: rotate(-45deg);
   -webkit-transform: rotate(-45deg);
 }
 
-.left {
+.hub-arrow .arrow-left {
   transform: rotate(135deg);
   -webkit-transform: rotate(135deg);
 }
 
-.up {
+.hub-arrow .arrow-up {
   transform: rotate(-135deg);
   -webkit-transform: rotate(-135deg);
 }
 
-.down {
+.hub-arrow .arrow-down {
   transform: rotate(45deg);
   -webkit-transform: rotate(45deg);
 }
