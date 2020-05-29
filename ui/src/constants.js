@@ -3,12 +3,16 @@ import { ObjectID } from 'bson';
 
 export const PARAMETER_TYPES = [
   {
-    type: 'str',
-    alias: 'String',
+    type: 'str', //same as in parameter_types.py
+    alias: 'String', //for humans reading in UI
   },
   {
     type: 'int',
     alias: 'Integer',
+  },
+  {
+    type: 'float',
+    alias: 'Float',
   },
   {
     type: 'bool',

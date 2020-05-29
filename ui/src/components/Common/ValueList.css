@@ -8,9 +8,6 @@
   margin: 5px;
 }
 
-.ValueList > .row > .remove {
-
-}
 
 .ValueList > a, .ValueList > .row > a {
   font-family: monospace;
@@ -29,7 +26,7 @@
   cursor: pointer;
   background-color: #bbb;
 }
-
+/*
 .ValueList > .row > .remove {
   color: red;
   font-size: 15px;
@@ -39,4 +36,17 @@
   color: black;
   cursor: pointer;
   background-color: #B00;
-}
+}*/
+
+
+.ValueList > .row > .remove {
+  color: pink;
+  cursor: pointer;
+  width: 20px;
+  text-align: center;
+  }
+  
+  .ValueList > .row > .remove:hover {
+    color: red;
+  }
+  

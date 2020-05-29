@@ -3,6 +3,8 @@ import PropTypes from 'prop-types';
 import EnumItem from './EnumItem';  // eslint-disable-line import/no-cycle
 import CodeItem from './CodeItem';
 import './ValueList.css';
+import './NumericInput.css';
+
 
 export default function renderValueElement(args) {
   const { parameterType, value, handleChange, readOnly } = args;
@@ -14,6 +16,7 @@ export default function renderValueElement(args) {
   switch (parameterType) {
     case 'str':
       return <input
+              autoComplete="off"
               className={className}
               type="text"
               name="value"
@@ -31,7 +34,43 @@ export default function renderValueElement(args) {
               value={value}
               readOnly={readOnly}
               key={parameterType}
+              onKeyDown={e => {
+                console.log(e);
+                if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  console.log(e.key);
+                  return false;
+                }
+                e.stopPropagation();
+              }}
+              onWheel={event => event.currentTarget.blur()}
+              autoComplete="off"
               />;
+    case 'float':
+      return <input
+              className={className}
+              type="number"
+              step="any"
+              name="value"
+              onChange={handleChange}
+              value={value}
+              readOnly={readOnly}
+              key={parameterType}
+              onKeyDown={e => {
+                console.log(e);
+                if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  console.log(e.key);
+                  return false;
+                }
+                e.stopPropagation();
+              }}
+              onWheel={event => event.currentTarget.blur()}
+              autoComplete="off"
+              />;
+
     case 'bool':
       return <div className={className}>
               <input
@@ -172,7 +211,7 @@ export class ValueList extends Component {
             <div
               className={'remove'}
               onClick={() => this.handleRemoveItem(index)}
-            > - </div>
+            > × </div>
           }
           </div>
         ))}
