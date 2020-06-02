@@ -1,3 +1,7 @@
+.DeprecateDialogWindow {
+  background-color: #404040;
+}
+
 .DeprecateDialog{
   margin: 5px;
 }
