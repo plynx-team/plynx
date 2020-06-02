@@ -5,7 +5,7 @@ import { NODE_STATUS, COLLECTIONS } from '../../constants';
 import ParameterItem from '../Common/ParameterItem';
 import makePropertiesBox from '../Common/makePropertiesBox';
 import './NodeProperties.css';
-
+import { utcTimeToLocal } from '../../utils';
 
 function makeKeyValueRow(name, value, key) {
   return (
@@ -77,10 +77,11 @@ export default class NodeProperties extends Component {
         />
       );
 
+
     const statePropertiesItems = [
       makeKeyValueRow('Node Status', <i>{this.state.nodeStatus}</i>, 'node_status'),
-      makeKeyValueRow('Created', <i>{this.props.created}</i>, 'created'),
-      makeKeyValueRow('Updated', <i>{this.props.updated}</i>, 'updated'),
+      makeKeyValueRow('Created', <i>{utcTimeToLocal(this.props.created)}</i>, 'created'),
+      makeKeyValueRow('Updated', <i>{utcTimeToLocal(this.props.updated)}</i>, 'updated'),
     ];
 
     const inheritancePropertiesItems = [
