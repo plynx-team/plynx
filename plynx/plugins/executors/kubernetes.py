@@ -39,6 +39,24 @@ def _extend_default_node_in_place(node):
                 'removable': False,
                 }
             ),
+            Parameter.from_dict({
+                'name': '_request_memory',
+                'parameter_type': ParameterTypes.STR,
+                'value': '64Mi',
+                'mutable_type': False,
+                'publicable': True,
+                'removable': False,
+                }
+            ),
+            Parameter.from_dict({
+                'name': '_limit_memory',
+                'parameter_type': ParameterTypes.STR,
+                'value': '2048Mi',
+                'mutable_type': False,
+                'publicable': True,
+                'removable': False,
+                }
+            ),
         ]
     )
 
@@ -108,6 +126,14 @@ def create_kubernetes_body(node_param_dict, job_name, workdir):
         env=ENV_LIST,
         # command=['sleep', str(node_param_dict.get('_timeout', 600))],
         command=['sleep', '10'],
+        resources=kubernetes.client.V1ResourceRequirements(
+            requests={
+                'memory': node_param_dict.get('_request_memory', '64Mi'),
+            },
+            limits={
+                'memory': node_param_dict.get('_limit_memory', '2048Mi'),
+            },
+        ),
     )
     template.template.spec = kubernetes.client.V1PodSpec(
         containers=[container],
@@ -167,7 +193,9 @@ class BashJinja2(local.BashJinja2):
                             'Pod `{}` in `{}` status\n'.format(job_name, phase)
                             )
                         if phase == KubernetesStatusPhase.PENDING:
-                            continue
+                            for condition in event['object'].status.conditions:
+                                if condition.reason == 'Unschedulable':
+                                    raise Exception(condition.message)
                         elif phase == KubernetesStatusPhase.RUNNING:
                             if second_time_running:
                                 continue
