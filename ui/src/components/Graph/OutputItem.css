@@ -1,11 +1,14 @@
 .OutputItem {
   display: grid;
-  grid-template-columns: 30% 70%;
+  grid-template-columns: 40% 60%;
 }
 
 .OutputNameCell {
   float: left;
   padding-left: 10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 
 .OutputItemPreview {
