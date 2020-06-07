@@ -23,6 +23,7 @@ KUBECTL_RETURN_CODES = {
 
 KeyValue = collections.namedtuple('KeyValue', ['name', 'default', 'type'])
 
+
 class KeyConstants(Enum):
     IMAGE = KeyValue('_image', 'alpine:3.7', ParameterTypes.STR)
     IMAGE_COMMAND = KeyValue('_image_command', 'sh', ParameterTypes.STR)
@@ -164,6 +165,7 @@ def delete_pod(job_name, log_stream):
 
 def _init(self):
     self.job_name = None
+
 
 def _exec_script(self, script_location):
     res = JobReturnStatus.FAILED
