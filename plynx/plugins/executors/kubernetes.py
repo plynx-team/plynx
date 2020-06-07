@@ -1,21 +1,34 @@
 from subprocess import Popen
 import os
+import time
 import uuid
 import shutil
 import string
 import random
 import logging
+import collections
 import kubernetes
+from enum import Enum
 from plynx.constants import JobReturnStatus, ParameterTypes
 from plynx.db.node import Parameter, Output
 import plynx.plugins.executors.local as local
 from plynx.plugins.resources.common import FILE_KIND
 
 NAMESPACE = 'plynx-worker'
+SCHEDULING_RETRY = 30
 
 KUBECTL_RETURN_CODES = {
     137: 'Pod was not found: plese check `_timeout` parameter and/or `k8s_worker` logs',
 }
+
+KeyValue = collections.namedtuple('KeyValue', ['name', 'default', 'type'])
+
+class KeyConstants(Enum):
+    IMAGE = KeyValue('_image', 'alpine:3.7', ParameterTypes.STR)
+    IMAGE_COMMAND = KeyValue('_image_command', 'sh', ParameterTypes.STR)
+    CPU = KeyValue('_cpu', '100m', ParameterTypes.STR)
+    MEMORY = KeyValue('_memory', '1024Mi', ParameterTypes.STR)
+    SCHEDULING_RETRY = KeyValue('_scheduling_retry', 30, ParameterTypes.INT)
 
 
 def gen_rand(length=8):
@@ -28,37 +41,18 @@ def gen_rand_name():
 
 
 def _extend_default_node_in_place(node):
-    node.parameters.extend(
-        [
+    for param in KeyConstants:
+        node.parameters.append(
             Parameter.from_dict({
-                'name': '_image',
-                'parameter_type': ParameterTypes.STR,
-                'value': 'alpine:3.7',
+                'name': param.value.name,
+                'parameter_type': param.value.type,
+                'value': param.value.default,
                 'mutable_type': False,
                 'publicable': True,
                 'removable': False,
                 }
-            ),
-            Parameter.from_dict({
-                'name': '_request_memory',
-                'parameter_type': ParameterTypes.STR,
-                'value': '64Mi',
-                'mutable_type': False,
-                'publicable': True,
-                'removable': False,
-                }
-            ),
-            Parameter.from_dict({
-                'name': '_limit_memory',
-                'parameter_type': ParameterTypes.STR,
-                'value': '2048Mi',
-                'mutable_type': False,
-                'publicable': True,
-                'removable': False,
-                }
-            ),
-        ]
-    )
+            )
+        )
 
     node.logs.extend(
         [
@@ -68,6 +62,10 @@ def _extend_default_node_in_place(node):
             }),
         ]
     )
+
+
+def _extract_param_value(node_param_dict, e):
+    return node_param_dict.get(e.value.name, e.value.default)
 
 
 class KubernetesStatusPhase:
@@ -109,7 +107,7 @@ def wait_and_check_return_status(sp):
 
 
 def create_kubernetes_body(node_param_dict, job_name, workdir):
-    container_image = node_param_dict['_image']
+    container_image = _extract_param_value(node_param_dict, KeyConstants.IMAGE)
     ENV_LIST = []
 
     body = kubernetes.client.V1Pod(api_version="v1", kind="Pod")
@@ -124,14 +122,15 @@ def create_kubernetes_body(node_param_dict, job_name, workdir):
         name=job_name,
         image=container_image,
         env=ENV_LIST,
-        # command=['sleep', str(node_param_dict.get('_timeout', 600))],
-        command=['sleep', '10'],
+        command=['sleep', str(node_param_dict.get('_timeout', 600) * 60)],
         resources=kubernetes.client.V1ResourceRequirements(
             requests={
-                'memory': node_param_dict.get('_request_memory', '64Mi'),
+                'memory': _extract_param_value(node_param_dict, KeyConstants.MEMORY),
+                'cpu': _extract_param_value(node_param_dict, KeyConstants.CPU),
             },
             limits={
-                'memory': node_param_dict.get('_limit_memory', '2048Mi'),
+                'memory': _extract_param_value(node_param_dict, KeyConstants.MEMORY),
+                'cpu': _extract_param_value(node_param_dict, KeyConstants.CPU),
             },
         ),
     )
@@ -148,158 +147,212 @@ def create_kubernetes_body(node_param_dict, job_name, workdir):
     return body
 
 
-class BashJinja2(local.BashJinja2):
-    @classmethod
-    def get_default_node(cls, is_workflow):
-        node = super().get_default_node(is_workflow)
-        _extend_default_node_in_place(node)
+def delete_pod(job_name, log_stream):
+    logging.info("Deleting pod")
+    sp = Popen(
+        [
+            'kubectl', 'delete', 'pod',
+            '--namespace', NAMESPACE,
+            '--grace-period=0',
+            job_name
+        ],
+        stdout=log_stream,
+        stderr=log_stream,
+    )
+    wait_and_check_return_status(sp)
 
-        node.parameters.extend(
-            [
-                Parameter.from_dict({
-                    'name': '_image_command',
-                    'parameter_type': ParameterTypes.STR,
-                    'value': 'bash',
-                    'mutable_type': False,
-                    'publicable': True,
-                    'removable': False,
-                    }
-                ),
-            ]
-        )
-        return node
 
-    def exec_script(self, script_location, command='bash'):
-        res = JobReturnStatus.FAILED
+def _init(self):
+    self.job_name = None
 
-        try:
-            param_dict = get_param_dict(self.node)
-            job_name = gen_rand_name()
-            body = create_kubernetes_body(param_dict, job_name, self.workdir)
-            api_response = get_api_instance().create_namespaced_pod(NAMESPACE, body, pretty=True)
-            logging.info(api_response)
+def _exec_script(self, script_location):
+    res = JobReturnStatus.FAILED
 
-            stream = kubernetes.watch.Watch().stream(
-                func=get_api_instance().list_namespaced_pod,
-                namespace=NAMESPACE,
-                field_selector="metadata.name={}".format(job_name)
-                )
-            second_time_running = False
-            with open(self.logs['stdout'], 'wb', buffering=0) as stdout_file, open(self.logs['stderr'], 'wb', buffering=0) as stderr_file:
-                for event in stream:
-                    phase = event["object"].status.phase
-                    with open(self.logs['k8s_worker'], 'a+') as k8s_worker_log_file:
-                        k8s_worker_log_file.write(
-                            'Pod `{}` in `{}` status\n'.format(job_name, phase)
-                            )
-                        if phase == KubernetesStatusPhase.PENDING:
-                            for condition in event['object'].status.conditions:
-                                if condition.reason == 'Unschedulable':
+    try:
+        param_dict = get_param_dict(self.node)
+        self.job_name = gen_rand_name()
+        body = create_kubernetes_body(param_dict, self.job_name, self.workdir)
+        api_response = get_api_instance().create_namespaced_pod(NAMESPACE, body, pretty=True)
+        logging.info(api_response)
+
+        # append running script to worker log
+        with open(script_location, 'r') as sf, open(self.logs['worker'], 'a') as wf:
+            wf.write(self._make_debug_text("Running script:"))
+            wf.write(sf.read())
+            wf.write('\n')
+            wf.write(self._make_debug_text("End script"))
+
+        stream = kubernetes.watch.Watch().stream(
+            func=get_api_instance().list_namespaced_pod,
+            namespace=NAMESPACE,
+            field_selector="metadata.name={}".format(self.job_name)
+            )
+        second_time_running = False
+        with open(self.logs['stdout'], 'wb', buffering=0) as stdout_file, open(self.logs['stderr'], 'wb', buffering=0) as stderr_file:
+            for event in stream:
+                phase = event["object"].status.phase
+                with open(self.logs['k8s_worker'], 'a+') as k8s_worker_log_file:
+                    k8s_worker_log_file.write(
+                        'Pod `{}` in `{}` status\n'.format(self.job_name, phase)
+                        )
+                    if phase == KubernetesStatusPhase.PENDING:
+                        # for some reason pod sometimes gets back to this state
+                        if second_time_running:
+                            break
+                        if not event['object'].status.conditions:
+                            continue
+                        for condition in event['object'].status.conditions:
+                            if condition.reason == 'Unschedulable':
+                                scheduled = False
+                                for ii in range(param_dict.get('_scheduling_retry', SCHEDULING_RETRY)):
+                                    time.sleep(1)
+                                    pod_list = get_api_instance().list_namespaced_pod(
+                                        namespace=NAMESPACE,
+                                        field_selector="metadata.name={}".format(self.job_name)
+                                    )
+                                    k8s_worker_log_file.write(
+                                        'Retry scheduling #{}\n'.format(ii)
+                                        )
+                                    if len(pod_list.items) != 1:
+                                        raise Exception('Unexpected number of pods: {}'.format(len(pod_list.items)))
+                                    if pod_list.items[0].status.phase == KubernetesStatusPhase.PENDING:
+                                        continue
+                                    scheduled = True
+                                    break
+                                if not scheduled:
                                     raise Exception(condition.message)
-                        elif phase == KubernetesStatusPhase.RUNNING:
-                            if second_time_running:
-                                continue
-                            second_time_running = True
-                            k8s_worker_log_file.write('Uploading artifacts...\n')
+                    elif phase == KubernetesStatusPhase.RUNNING:
+                        if second_time_running:
+                            continue
+                        second_time_running = True
+                        k8s_worker_log_file.write('Uploading artifacts...\n')
+                        sp = Popen(
+                            [
+                                'kubectl', 'cp',
+                                '--namespace', NAMESPACE,
+                                self.workdir, '{}:{}'.format(self.job_name, self.workdir)
+                            ],
+                            stdout=k8s_worker_log_file,
+                            stderr=k8s_worker_log_file,
+                            cwd=self.workdir
+                        )
+                        wait_and_check_return_status(sp)
+
+                        k8s_worker_log_file.write('Running script...\n')
+                        sp = Popen(
+                            [
+                                'kubectl', 'exec',
+                                '--namespace', NAMESPACE,
+                                '-it', self.job_name,
+                                _extract_param_value(param_dict, KeyConstants.IMAGE_COMMAND), script_location
+                            ],
+                            stdout=stdout_file,
+                            stderr=stderr_file,
+                            cwd=self.workdir
+                        )
+                        wait_and_check_return_status(sp)
+
+                        # Hack: absolute path does not work with `kubectl cp`
+                        # solution: download to a local `tmp_dir` directory and move it to `workdir`
+                        tmp_dir = str(uuid.uuid1())
+                        os.mkdir(tmp_dir)
+                        k8s_worker_log_file.write('Downloading artifacts...\n')
+                        for output_name, filename in self.output_to_filename.items():
+                            k8s_worker_log_file.write('Downloading `{}`...\n'.format(output_name))
+                            local_filename = os.path.join(tmp_dir, os.path.basename(filename))
                             sp = Popen(
                                 [
                                     'kubectl', 'cp',
                                     '--namespace', NAMESPACE,
-                                    self.workdir, '{}:{}'.format(job_name, self.workdir)
+                                    '{}:{}'.format(self.job_name, filename), local_filename,
                                 ],
                                 stdout=k8s_worker_log_file,
                                 stderr=k8s_worker_log_file,
-                                cwd=self.workdir
                             )
                             wait_and_check_return_status(sp)
 
-                            k8s_worker_log_file.write('Running script...\n')
-                            sp = Popen(
-                                [
-                                    'kubectl', 'exec',
-                                    '--namespace', NAMESPACE,
-                                    '-it', job_name,
-                                    param_dict.get('_image_command', command), script_location
-                                ],
-                                stdout=stdout_file,
-                                stderr=stderr_file,
-                                cwd=self.workdir
-                            )
-                            wait_and_check_return_status(sp)
+                            if os.path.exists(filename):
+                                if os.path.isfile(filename):
+                                    os.remove(filename)
+                                else:
+                                    shutil.rmtree(filename)
+                            shutil.move(local_filename, filename)
+                        os.rmdir(tmp_dir)
 
-                            # Hack: absolute path does not work with `kubectl cp`
-                            # solution: download to a local `tmp_dir` directory and move it to `workdir`
-                            tmp_dir = str(uuid.uuid1())
-                            os.mkdir(tmp_dir)
-                            k8s_worker_log_file.write('Downloading artifacts...\n')
-                            for output_name, filename in self.output_to_filename.items():
-                                k8s_worker_log_file.write('Downloading `{}`...\n'.format(output_name))
-                                local_filename = os.path.join(tmp_dir, os.path.basename(filename))
-                                sp = Popen(
-                                    [
-                                        'kubectl', 'cp',
-                                        '--namespace', NAMESPACE,
-                                        '{}:{}'.format(job_name, filename), local_filename,
-                                    ],
-                                    stdout=k8s_worker_log_file,
-                                    stderr=k8s_worker_log_file,
-                                )
-                                wait_and_check_return_status(sp)
+                        delete_pod(self.job_name, k8s_worker_log_file)
+                        res = JobReturnStatus.SUCCESS
+                    elif phase in (KubernetesStatusPhase.SUCCEEDED, KubernetesStatusPhase.FAILED):
+                        if res == JobReturnStatus.SUCCESS:
+                            break
+                        k8s_worker_log_file.write('Removing pod `{}`\n'.format(self.job_name))
+                        delete_pod(self.job_name, k8s_worker_log_file)
+                        raise Exception("Kubernetes pod failed")
+                    elif phase == KubernetesStatusPhase.UNKNOWN:
+                        raise Exception("Kubernetes pod is unknown")
+                    else:
+                        raise Exception("Unknown Kubernetes pod phase: `{}`".format(phase))
 
-                                if os.path.exists(filename):
-                                    if os.path.isfile(filename):
-                                        os.remove(filename)
-                                    else:
-                                        shutil.rmtree(filename)
-                                shutil.move(local_filename, filename)
-                            os.rmdir(tmp_dir)
+    except Exception as e:
+        res = JobReturnStatus.FAILED
+        logging.exception("Job failed")
+        with open(self.logs['k8s_worker'], 'a+') as k8s_worker_log_file:
+            k8s_worker_log_file.write(self._make_debug_text("JOB FAILED"))
+            k8s_worker_log_file.write(str(e))
 
-                            sp = Popen(
-                                [
-                                    'kubectl', 'delete', 'pod',
-                                    '--namespace', NAMESPACE,
-                                    job_name
-                                ],
-                                stdout=k8s_worker_log_file,
-                                stderr=k8s_worker_log_file,
-                                cwd=self.workdir
-                            )
-                            wait_and_check_return_status(sp)
-                            res = JobReturnStatus.SUCCESS
-                        elif phase in (KubernetesStatusPhase.SUCCEEDED, KubernetesStatusPhase.FAILED):
-                            if res == JobReturnStatus.SUCCESS:
-                                break
-                            k8s_worker_log_file.write('Removing pod `{}`\n'.format(job_name))
-                            sp = Popen(
-                                [
-                                    'kubectl', 'delete', 'pod',
-                                    '--namespace', NAMESPACE,
-                                    job_name
-                                ],
-                                stdout=k8s_worker_log_file,
-                                stderr=k8s_worker_log_file,
-                                cwd=self.workdir
-                            )
-                            wait_and_check_return_status(sp)
-                            raise Exception("Kubernetes pod failed")
-                        elif phase == KubernetesStatusPhase.UNKNOWN:
-                            raise Exception("Kubernetes pod is unknown")
-                        else:
-                            raise Exception("Unknown Kubernetes pod phase: `{}`".format(phase))
-
-        except Exception as e:
-            res = JobReturnStatus.FAILED
-            logging.exception("Job failed")
-            with open(self.logs['k8s_worker'], 'a+') as k8s_worker_log_file:
-                k8s_worker_log_file.write(self._make_debug_text("JOB FAILED"))
-                k8s_worker_log_file.write(str(e))
-
-        return res
+    return res
 
 
-class PythonNode(local.PythonNode):
+def _kill(self):
+    if not self.job_name:
+        return
+
+    delete_pod(self.job_name, None)
+
+
+class BashJinja2(local.BashJinja2):
+    def __init__(self, node=None):
+        super(BashJinja2, self).__init__(node)
+        _init(self)
+
     @classmethod
     def get_default_node(cls, is_workflow):
         node = super().get_default_node(is_workflow)
+        node.title = 'New bash k8s script'
+
         _extend_default_node_in_place(node)
+
         return node
+
+    def exec_script(self, script_location):
+        return _exec_script(self, script_location)
+
+    def kill(self):
+        return _kill(self)
+
+
+class PythonNode(local.PythonNode):
+    def __init__(self, node=None):
+        super(PythonNode, self).__init__(node)
+        _init(self)
+
+    @classmethod
+    def get_default_node(cls, is_workflow):
+        node = super().get_default_node(is_workflow)
+        node.title = 'New python k8s script'
+
+        _extend_default_node_in_place(node)
+
+        param = list(filter(lambda p: p.name == '_cmd', node.parameters))[0]
+        param.value.mode = 'python'
+        param.value.value = 'print("hello world")'
+
+        param = list(filter(lambda p: p.name == KeyConstants.IMAGE_COMMAND.value.name, node.parameters))[0]
+        param.value = 'python'
+
+        return node
+
+    def exec_script(self, script_location):
+        return _exec_script(self, script_location)
+
+    def kill(self):
+        return _kill(self)
