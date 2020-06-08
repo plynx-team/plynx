@@ -98,7 +98,7 @@ export default class Dialog extends Component {
                 {this.props.title}
               </div>
             </div>
-            <div className='content'
+            <div className={'content ' + this.props.className}
                  onClick={(e) => {
                    this.noop(e);
                  }}

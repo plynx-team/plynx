@@ -130,7 +130,7 @@ export default class DeprecateDialog extends Component {
 
   render() {
     return (
-      <Dialog className='DeprecateDialog'
+      <Dialog className='DeprecateDialogWindow'
               onClose={() => {
                 this.props.onClose();
               }}

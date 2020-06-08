@@ -9,13 +9,10 @@ from collections import defaultdict
 from plynx.constants import JobReturnStatus, ParameterTypes
 from plynx.db.node import Parameter, Output
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
-from plynx.utils.config import get_worker_config
 import plynx.utils.plugin_manager
 from plynx.plugins.resources.common import FILE_KIND
 import plynx.base.executor
 from plynx.constants import NodeResources
-
-WORKER_CONFIG = get_worker_config()
 
 
 def _RESOURCE_MERGER_FUNC():
@@ -73,9 +70,11 @@ class BaseBash(plynx.base.executor.BaseExecutor):
         self.final_logs_uploaded = False
         self.logs = {}
         self.logs_lock = threading.Lock()
+        self.output_to_filename = {}
         self._resource_manager = plynx.utils.plugin_manager.get_resource_manager()
+        self._command = 'bash'
 
-    def exec_script(self, script_location, command='bash'):
+    def exec_script(self, script_location):
         res = JobReturnStatus.SUCCESS
 
         try:
@@ -97,7 +96,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
 
             with open(self.logs['stdout'], 'wb') as stdout_file, open(self.logs['stderr'], 'wb') as stderr_file:
                 self.sp = Popen(
-                    [command, script_location],
+                    [self._command, script_location],
                     stdout=stdout_file, stderr=stderr_file,
                     cwd=self.workdir, env=env,
                     preexec_fn=pre_exec)
@@ -159,7 +158,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
                     'parameter_type': ParameterTypes.CODE,
                     'value': {
                         'mode': 'sh',
-                        'value': 'set -e\n\n',
+                        'value': 'set -e\n\necho "hello world"\n',
                     },
                     'mutable_type': False,
                     'publicable': False,
@@ -235,6 +234,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
         )
         for output in self.node.outputs:
             filename = os.path.join(self.workdir, 'o_{}'.format(output.name))
+            self.output_to_filename[output.name] = filename
             resource_merger.append(
                 self._resource_manager.kind_to_resource_class[output.file_type].prepare_output(filename, preview),
                 output.name,
@@ -385,6 +385,7 @@ class BashJinja2(BaseBash):
 class PythonNode(BaseBash):
     def __init__(self, node=None):
         super(PythonNode, self).__init__(node)
+        self._command = 'python'
 
     def run(self, preview=False):
         inputs = self._prepare_inputs(preview)
@@ -419,7 +420,7 @@ class PythonNode(BaseBash):
                 cmd_string
             )
 
-        res = self.exec_script(script_location, command='python')
+        res = self.exec_script(script_location)
 
         self._postprocess_outputs(outputs[NodeResources.OUTPUT])
         self._postprocess_logs()

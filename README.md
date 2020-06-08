@@ -64,7 +64,8 @@ git clone https://github.com/plynx-team/plynx.git   # Clone the repo
 
 cd plynx
 
-make up                                         # to start production services
+cp template_config.yaml config.yaml                 # Make a copy of a config
+make up                                             # to start production services
 ```
 
 Then go to [http://localhost:3001](http://localhost:3001)
@@ -76,14 +77,11 @@ By default it will start the following services:
  * Backend
  * Several workers
 
-Run `make down` to stop the services.
-
 ### Other `make` commands:
 
 - `make build` - build all docker images.
 - `make run_tests` - build docker images and run the tests.
 - `make up` - run the services locally.
-- `make down` - shut down services.
 - `make dev` - run developer version of PLynx.
 
 
