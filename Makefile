@@ -15,18 +15,15 @@ run_tests:
 	docker-compose -f $(DOCKER_COMPOSE_DEV_FILE) up --abort-on-container-exit --scale workers=5 --scale frontend=0 --scale test=1
 
 up:
-	docker-compose -f $(DOCKER_COMPOSE_FILE) up -d --scale workers=3 --scale test=0
 	python -m webbrowser "http://localhost:3001/"
+	docker-compose -f $(DOCKER_COMPOSE_FILE) up --scale workers=3 --scale test=0
 
 up_local_service:
-	docker-compose -f $(DOCKER_COMPOSE_FILE) up --scale workers=0 --scale test=0
 	python -m webbrowser "http://localhost:3001/"
+	docker-compose -f $(DOCKER_COMPOSE_FILE) up --scale workers=0 --scale test=0
 
 up_local_worker:
 	./scripts/run_local_worker.sh
-
-down:
-	docker-compose -f $(DOCKER_COMPOSE_FILE) down
 
 dev:
 	PLYNX_IMAGES="backend ui_dev" ./scripts/build_images.sh

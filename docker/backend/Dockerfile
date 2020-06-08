@@ -13,9 +13,6 @@ RUN apt-get install -y \
     bc \
     mongo-tools
 
-# Copy config
-ADD ./config.yaml /app/config.yaml
-
 # Copy the current directory contents into the container at /app
 ADD ./wsgi.py /app/wsgi.py
 
