@@ -72,8 +72,9 @@ class BaseBash(plynx.base.executor.BaseExecutor):
         self.logs_lock = threading.Lock()
         self.output_to_filename = {}
         self._resource_manager = plynx.utils.plugin_manager.get_resource_manager()
+        self._command = 'bash'
 
-    def exec_script(self, script_location, command='bash'):
+    def exec_script(self, script_location):
         res = JobReturnStatus.SUCCESS
 
         try:
@@ -95,7 +96,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
 
             with open(self.logs['stdout'], 'wb') as stdout_file, open(self.logs['stderr'], 'wb') as stderr_file:
                 self.sp = Popen(
-                    [command, script_location],
+                    [self._command, script_location],
                     stdout=stdout_file, stderr=stderr_file,
                     cwd=self.workdir, env=env,
                     preexec_fn=pre_exec)
@@ -157,7 +158,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
                     'parameter_type': ParameterTypes.CODE,
                     'value': {
                         'mode': 'sh',
-                        'value': 'set -e\n\n',
+                        'value': 'set -e\n\necho "hello world"\n',
                     },
                     'mutable_type': False,
                     'publicable': False,
@@ -384,6 +385,7 @@ class BashJinja2(BaseBash):
 class PythonNode(BaseBash):
     def __init__(self, node=None):
         super(PythonNode, self).__init__(node)
+        self._command = 'python'
 
     def run(self, preview=False):
         inputs = self._prepare_inputs(preview)
@@ -418,7 +420,7 @@ class PythonNode(BaseBash):
                 cmd_string
             )
 
-        res = self.exec_script(script_location, command='python')
+        res = self.exec_script(script_location)
 
         self._postprocess_outputs(outputs[NodeResources.OUTPUT])
         self._postprocess_logs()
