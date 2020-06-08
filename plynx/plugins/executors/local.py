@@ -127,7 +127,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
             logging.error('Error: {}'.format(e))
 
     def is_updated(self):
-        # logging.info('Tick')
+        logging.info('Tick')
         return self.upload_logs(final=False)
 
     # Hack: do not pickle file
