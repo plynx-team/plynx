@@ -64,7 +64,8 @@ git clone https://github.com/plynx-team/plynx.git   # Clone the repo
 
 cd plynx
 
-make up                                         # to start production services
+cp template_config.yaml config.yaml                 # Make a copy of a config
+make up                                             # to start production services
 ```
 
 Then go to [http://localhost:3001](http://localhost:3001)
