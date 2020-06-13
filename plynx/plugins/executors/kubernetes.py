@@ -29,6 +29,7 @@ class KeyConstants(Enum):
     IMAGE_COMMAND = KeyValue('_image_command', 'sh', ParameterTypes.STR)
     CPU = KeyValue('_cpu', '100m', ParameterTypes.STR)
     MEMORY = KeyValue('_memory', '1024Mi', ParameterTypes.STR)
+    GPU = KeyValue('_gpu', 0, ParameterTypes.INT)
     SCHEDULING_RETRY = KeyValue('_scheduling_retry', 30, ParameterTypes.INT)
 
 
@@ -128,10 +129,12 @@ def create_kubernetes_body(node_param_dict, job_name, workdir):
             requests={
                 'memory': _extract_param_value(node_param_dict, KeyConstants.MEMORY),
                 'cpu': _extract_param_value(node_param_dict, KeyConstants.CPU),
+                'nvidia.com/gpu': _extract_param_value(node_param_dict, KeyConstants.GPU),
             },
             limits={
                 'memory': _extract_param_value(node_param_dict, KeyConstants.MEMORY),
                 'cpu': _extract_param_value(node_param_dict, KeyConstants.CPU),
+                'nvidia.com/gpu': _extract_param_value(node_param_dict, KeyConstants.GPU),
             },
         ),
     )
