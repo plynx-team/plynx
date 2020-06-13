@@ -9,11 +9,13 @@ from plynx.utils.common import to_object_id
 import plynx.base.executor
 import plynx.utils.executor
 import plynx.db.node_collection_manager
+import plynx.db.node_cache_manager
 import plynx.db.run_cancellation_manager
 
 
 node_collection_manager = plynx.db.node_collection_manager.NodeCollectionManager(collection=Collections.RUNS)
 run_cancellation_manager = plynx.db.run_cancellation_manager.RunCancellationManager()
+node_cache_manager = plynx.db.node_cache_manager.NodeCacheManager()
 
 _GRAPH_ITERATION_SLEEP = 1
 _WAIT_STATUS_BEFORE_FAILED = {
@@ -133,16 +135,15 @@ class DAG(plynx.base.executor.BaseExecutor):
             orig_node.node_running_status = NodeRunningStatus.IN_QUEUE
             node = orig_node.copy()
 
-            if DAG._cacheable(node) and False:  # !!! _cacheable is broken
+            if DAG._cacheable(node):
                 try:
-                    cache = self.node_cache_manager.get(node, self.graph.author)
+                    cache = node_cache_manager.get(node)
                     if cache:
                         node.node_running_status = NodeRunningStatus.RESTORED
                         node.outputs = cache.outputs
                         node.logs = cache.logs
-                        node.cache_url = '{}/graphs/{}?nid={}'.format(
-                            self.WEB_CONFIG.endpoint.rstrip('/'),
-                            str(cache.graph_id),
+                        node.cache_url = '/runs/{}?nid={}'.format(
+                            str(cache.run_id),
                             str(cache.node_id),
                         )
                         cached_nodes.append(node)
@@ -159,12 +160,11 @@ class DAG(plynx.base.executor.BaseExecutor):
 
     def update_node(self, node):
         dest_node = self.node_id_to_node[node._id]
-        """
         if node.node_running_status == NodeRunningStatus.SUCCESS \
                 and dest_node.node_running_status != node.node_running_status \
-                and GraphScheduler._cacheable(node):
-            GraphScheduler.node_cache_manager.post(node, self.graph_id, self.graph.author)
-        """
+                and DAG._cacheable(node):
+            node_cache_manager.post(node, self.node._id)
+
         if dest_node.node_running_status == node.node_running_status:
             return
 
@@ -216,8 +216,8 @@ class DAG(plynx.base.executor.BaseExecutor):
     @classmethod
     def get_default_node(cls, is_workflow):
         node = super().get_default_node(is_workflow)
-        node.parameters.extend(
-            [
+        if not is_workflow:
+            node.parameters.append(
                 Parameter.from_dict({
                     'name': '_cacheable',
                     'parameter_type': ParameterTypes.BOOL,
@@ -225,16 +225,17 @@ class DAG(plynx.base.executor.BaseExecutor):
                     'mutable_type': False,
                     'publicable': False,
                     'removable': False,
-                }),
-                Parameter.from_dict({
-                    'name': '_timeout',
-                    'parameter_type': ParameterTypes.INT,
-                    'value': 600,
-                    'mutable_type': False,
-                    'publicable': True,
-                    'removable': False
-                }),
-            ]
+                })
+            )
+        node.parameters.append(
+            Parameter.from_dict({
+                'name': '_timeout',
+                'parameter_type': ParameterTypes.INT,
+                'value': 600,
+                'mutable_type': False,
+                'publicable': True,
+                'removable': False
+            })
         )
         node.title = 'New DAG workflow'
         return node

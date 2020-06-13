@@ -23,7 +23,7 @@ class NodeCache(DBObject):
             default='',
             is_list=False,
             ),
-        'graph_id': DBObjectField(
+        'run_id': DBObjectField(
             type=ObjectId,
             default=None,
             is_list=False,
@@ -43,17 +43,6 @@ class NodeCache(DBObject):
             default=list,
             is_list=True,
             ),
-        # `protected` is used to prevent removing saved cache
-        'protected': DBObjectField(
-            type=bool,
-            default=False,
-            is_list=False,
-            ),
-        'removed': DBObjectField(
-            type=bool,
-            default=False,
-            is_list=False,
-            ),
     }
 
     DB_COLLECTION = Collections.NODE_CACHE
@@ -61,40 +50,35 @@ class NodeCache(DBObject):
     IGNORED_PARAMETERS = {'cmd', '_timeout'}
 
     @staticmethod
-    def instantiate(node, graph_id, user_id):
+    def instantiate(node, run_id):
         """Instantiate a Node Cache from Node.
 
         Args:
             node        (Node):             Node object
-            graph_id    (ObjectId, str):    Graph ID
-            user_id     (ObjectId, str):    User ID
+            run_id      (ObjectId, str):    Run ID
 
         Return:
             (NodeCache)
         """
 
         return NodeCache({
-            'key': NodeCache.generate_key(node, user_id),
+            'key': NodeCache.generate_key(node),
             'node_id': node._id,
-            'graph_id': graph_id,
+            'run_id': run_id,
             'outputs': [output.to_dict() for output in node.outputs],
             'logs': [log.to_dict() for log in node.logs],
         })
 
-    # TODO after Demo: remove user_id
     @staticmethod
-    def generate_key(node, user_id):
+    def generate_key(node):
         """Generate hash.
 
         Args:
             node        (Node):             Node object
-            user_id     (ObjectId, str):    User ID
 
         Return:
             (str)   Hash value
         """
-        if not demo_config.enabled:
-            user_id = ''    # TODO after demo
         inputs = node.inputs
         parameters = node.parameters
         original_node_id = node.original_node_id
@@ -118,11 +102,11 @@ class NodeCache(DBObject):
         ])
 
         return hashlib.sha256(
-            '{};{};{};{}'.format(
-                original_node_id,
-                inputs_hash,
-                parameters_hash,
-                str(user_id)).encode('utf-8')
+            ';'.join([
+                    str(original_node_id),
+                    inputs_hash,
+                    parameters_hash,
+                ]).encode('utf-8')
         ).hexdigest()
 
     def __str__(self):

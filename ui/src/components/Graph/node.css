@@ -129,7 +129,9 @@
 }
 
 .node.running-status-restored {
-  background-color: rgba(0, 100, 0, 0.7);
+  background: repeating-linear-gradient(
+      -45deg, rgba(0, 100, 0, 0.7), rgba(0, 100, 0, 0.7) 20px, rgba(128, 96, 44, 0.6) 20px, rgba(128, 96, 44, 0.6) 25px
+      );
 }
 
 .node.running-status-canceled {

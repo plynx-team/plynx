@@ -172,7 +172,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
                 Parameter.from_dict({
                     'name': '_cacheable',
                     'parameter_type': ParameterTypes.BOOL,
-                    'value': True,
+                    'value': False,
                     'mutable_type': False,
                     'publicable': False,
                     'removable': False,

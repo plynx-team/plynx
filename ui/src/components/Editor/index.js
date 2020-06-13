@@ -148,9 +148,12 @@ export default class Editor extends Component {
         view_mode = Math.max(parseInt(searchValues['view_mode'], 10), is_graph ? 0 : 1);
       }
 
+      const selectedNode = searchValues.nid;
+
       self.setState({
         plugins_dict: response.data.plugins_dict,
         view_mode: view_mode,
+        selectedNode: selectedNode,
         is_graph: is_graph,
         is_workflow: response.data.plugins_dict.workflows_dict.hasOwnProperty(node.kind),
       });
@@ -745,6 +748,7 @@ export default class Editor extends Component {
                         onNodeChange={(node) => this.handleNodeChange(node)}
                         editable={this.state.editable}
                         showAlert={(message, type) => this.showAlert(message, type)}
+                        selectedNode={this.state.selectedNode}
                       />
                   }
                   {

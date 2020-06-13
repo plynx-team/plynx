@@ -14,17 +14,16 @@ class NodeCacheManager(object):
     """
 
     @staticmethod
-    def get(node, user_id):
+    def get(node):
         """Pull NodeCache if exists.
 
         Args:
             node        (Node):             Node object
-            user_id     (ObjectId, str):    User ID
 
         Return:
             (NodeCache)     NodeCache or None
         """
-        key = NodeCache.generate_key(node, user_id)
+        key = NodeCache.generate_key(node)
         db_node_cache = get_db_connector().node_cache.find({
             'key': key,
             'removed': {'$ne': True}
@@ -35,22 +34,20 @@ class NodeCacheManager(object):
         else:
             return None
 
-    # TODO Demo: remove user_id
     @staticmethod
-    def post(node, graph_id, user_id):
+    def post(node, run_id):
         """Create NodeCache instance in the database.
 
         Args:
             node        (Node):             Node object
-            graph_id    (ObjectId, str):    Graph ID
-            user_id     (ObjectId, str):    User ID
+            run_id      (ObjectId, str):    Run ID
 
         Return:
             True if cache saved else False
         """
         assert node.node_running_status == NodeRunningStatus.SUCCESS, \
             'Only Nodes with status SUCCESS can be cached'
-        node_cache = NodeCache.instantiate(node=node, graph_id=graph_id, user_id=user_id)
+        node_cache = NodeCache.instantiate(node=node, run_id=run_id)
         try:
             node_cache.save()
         except Exception as e:
