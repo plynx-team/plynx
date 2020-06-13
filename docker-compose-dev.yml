@@ -21,6 +21,7 @@ services:
             - mongodb
         volumes:
             - ./plynx:/app/plynx
+            - ./config.yaml:/app/config.yaml
         environment:
             - PLYNX_MODE=worker -e basic-dag-workflow
             - PLYNX_CONFIG=/app/config.yaml
@@ -35,6 +36,7 @@ services:
         volumes:
             - ./data:/data
             - ./plynx:/app/plynx
+            - ./config.yaml:/app/config.yaml
         environment:
             - PLYNX_MODE=worker -e basic-bash-jinja2-operation -e basic-python-node-operation -e basic-dag-operation
             - PLYNX_CONFIG=/app/config.yaml
@@ -52,6 +54,7 @@ services:
         volumes:
             - ./data:/data
             - ./plynx:/app/plynx
+            - ./config.yaml:/app/config.yaml
         environment:
             - PLYNX_MODE=api
             - PLYNX_CONFIG=/app/config.yaml
@@ -67,6 +70,7 @@ services:
         volumes:
             - ./data:/data
             - ./plynx:/app/plynx
+            - ./config.yaml:/app/config.yaml
         command: /app/tests/run_tests.sh
 
     frontend:
