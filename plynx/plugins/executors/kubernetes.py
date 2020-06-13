@@ -249,6 +249,7 @@ def _exec_script(self, script_location):
                                 'kubectl', 'exec',
                                 '--namespace', NAMESPACE,
                                 '-it', self.job_name,
+                                '--',
                                 _extract_param_value(param_dict, KeyConstants.IMAGE_COMMAND), script_location
                             ],
                             stdout=stdout_file,
