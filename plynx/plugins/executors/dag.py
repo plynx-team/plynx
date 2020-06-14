@@ -155,6 +155,8 @@ class DAG(plynx.base.executor.BaseExecutor):
 
         for node in cached_nodes:
             self.update_node(node)
+        if cached_nodes:
+            node.save(collection=Collections.RUNS)
 
         return res
 
