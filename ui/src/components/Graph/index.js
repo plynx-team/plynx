@@ -94,12 +94,14 @@ class Graph extends Component {
     onNodeChange: PropTypes.func.isRequired,
     node: PropTypes.object.isRequired,
     editable: PropTypes.bool.isRequired,
+    selectedNode: PropTypes.string,
   }
 
   constructor(props) {
     super(props);
     this.graph_node = {};
     this.tourSteps = addStyleToTourSteps(TOUR_STEPS);
+    this.selectedNode = this.props.selectedNode;
     document.title = "Graph";
 
     this.state = {
@@ -264,11 +266,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
       }
     }
 
-    /*
-    const nid = queryString.parse(this.props.location.search).nid;
-    */
-    const nid = null;
-
     this.setState({
       nodes: this.nodes,
       connections: this.connections,
@@ -276,8 +273,9 @@ ENDPOINT = '` + API_ENDPOINT + `'
       editable: this.props.editable,
 
     }, () => {
-      if (nid) {
-        this.mainGraph.getDecoratedComponentInstance().selectBlocks([nid]);
+      if (this.selectedNode) {
+        this.mainGraph.getDecoratedComponentInstance().selectBlocks([this.selectedNode]);
+        this.selectedNode = null;
       }
     });
   }

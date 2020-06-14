@@ -6,7 +6,7 @@ import six
 import traceback
 import uuid
 import socket
-from plynx.constants import JobReturnStatus, NodeRunningStatus, Collections
+from plynx.constants import NodeRunningStatus, Collections
 import plynx.db.node_collection_manager
 import plynx.db.run_cancellation_manager
 from plynx.db.worker_state import WorkerState
@@ -44,7 +44,10 @@ class TickThread(object):
             self._stop_event.wait(timeout=TickThread.TICK_TIMEOUT)
             if self.executor.is_updated():
                 # Save logs whe operation is running
-                self.executor.node.save(collection=Collections.RUNS)
+                with self.executor._lock:
+                    if NodeRunningStatus.is_finished(self.executor.node.node_running_status):
+                        continue
+                    self.executor.node.save(collection=Collections.RUNS)
 
 
 class Worker(object):
@@ -108,7 +111,7 @@ class Worker(object):
     def execute_job(self, executor):
         try:
             try:
-                status = JobReturnStatus.FAILED
+                status = NodeRunningStatus.FAILED
                 executor.workdir = os.path.join('/tmp', str(uuid.uuid1()))
                 executor.init_workdir()
                 with TickThread(executor):
@@ -131,20 +134,15 @@ class Worker(object):
                 title=executor.node.title,
                 status=status,
                 ))
-            if status == JobReturnStatus.SUCCESS:
-                executor.node.node_running_status = NodeRunningStatus.SUCCESS
-            elif executor.node._id in self._killed_run_ids:
+            executor.node.node_running_status = status
+            if executor.node._id in self._killed_run_ids:
                 self._killed_run_ids.remove(executor.node._id)
-                executor.node.node_running_status = NodeRunningStatus.CANCELED
-            elif status == JobReturnStatus.FAILED:
-                executor.node.node_running_status = NodeRunningStatus.FAILED
-            else:
-                raise Exception("Unknown return status value: `{}`".format(status))
         except Exception as e:
             logging.warning('Execution failed: {}'.format(e))
             executor.node.node_running_status = NodeRunningStatus.FAILED
         finally:
-            executor.node.save(collection=Collections.RUNS)
+            with executor._lock:
+                executor.node.save(collection=Collections.RUNS)
             with self._run_id_to_executor_lock:
                 del self._run_id_to_executor[executor.node._id]
 
@@ -156,6 +154,7 @@ class Worker(object):
                 if node:
                     logging.info('New node found: {} {} {}'.format(node['_id'], node['node_running_status'], node['title']))
                     executor = plynx.utils.executor.materialize_executor(node)
+                    executor._lock = threading.Lock()
 
                     with self._run_id_to_executor_lock:
                         self._run_id_to_executor[executor.node._id] = executor

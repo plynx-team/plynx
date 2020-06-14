@@ -28,6 +28,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: copy config file
+          command: cp template_config.yaml config.yaml
+      - run:
           name: build docker images
           command: make build
       - run:

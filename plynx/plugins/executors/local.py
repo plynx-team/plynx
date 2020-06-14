@@ -6,7 +6,7 @@ import threading
 import jinja2
 from past.builtins import basestring
 from collections import defaultdict
-from plynx.constants import JobReturnStatus, ParameterTypes
+from plynx.constants import NodeRunningStatus, ParameterTypes
 from plynx.db.node import Parameter, Output
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
 import plynx.utils.plugin_manager
@@ -73,9 +73,10 @@ class BaseBash(plynx.base.executor.BaseExecutor):
         self.output_to_filename = {}
         self._resource_manager = plynx.utils.plugin_manager.get_resource_manager()
         self._command = 'bash'
+        self._node_running_status = NodeRunningStatus.READY
 
     def exec_script(self, script_location):
-        res = JobReturnStatus.SUCCESS
+        self._node_running_status = NodeRunningStatus.SUCCESS
 
         try:
             def pre_exec():
@@ -107,17 +108,20 @@ class BaseBash(plynx.base.executor.BaseExecutor):
                 raise Exception("Process returned non-zero value")
 
         except Exception as e:
-            res = JobReturnStatus.FAILED
+            if self._node_running_status != NodeRunningStatus.CANCELED:
+                self._node_running_status = NodeRunningStatus.FAILED
             logging.exception("Job failed")
             with open(self.logs['worker'], 'a+') as worker_log_file:
                 worker_log_file.write(self._make_debug_text("JOB FAILED"))
                 worker_log_file.write(str(e))
 
-        return res
+        return self._node_running_status
 
     def kill(self):
         if not hasattr(self, 'sp') or not self.sp:
             return
+
+        self._node_running_status = NodeRunningStatus.CANCELED
 
         logging.info('Sending SIGTERM signal to bash process group')
         try:
@@ -168,7 +172,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
                 Parameter.from_dict({
                     'name': '_cacheable',
                     'parameter_type': ParameterTypes.BOOL,
-                    'value': True,
+                    'value': False,
                     'mutable_type': False,
                     'publicable': False,
                     'removable': False,
@@ -365,12 +369,12 @@ class BashJinja2(BaseBash):
                 cmd_string
             )
 
-        res = self.exec_script(script_location)
+        self._node_running_status = self.exec_script(script_location)
 
         self._postprocess_outputs(outputs[NodeResources.OUTPUT])
         self._postprocess_logs()
 
-        return res
+        return self._node_running_status
 
     def status(self):
         pass

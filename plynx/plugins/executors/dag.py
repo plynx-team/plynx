@@ -4,16 +4,18 @@ from collections import defaultdict
 from plynx.constants import ParameterTypes
 from plynx.db.node import Node, Parameter
 from plynx.db.validation_error import ValidationError
-from plynx.constants import JobReturnStatus, NodeRunningStatus, ValidationTargetType, ValidationCode, SpecialNodeId, Collections
+from plynx.constants import NodeRunningStatus, ValidationTargetType, ValidationCode, SpecialNodeId, Collections
 from plynx.utils.common import to_object_id
 import plynx.base.executor
 import plynx.utils.executor
 import plynx.db.node_collection_manager
+import plynx.db.node_cache_manager
 import plynx.db.run_cancellation_manager
 
 
 node_collection_manager = plynx.db.node_collection_manager.NodeCollectionManager(collection=Collections.RUNS)
 run_cancellation_manager = plynx.db.run_cancellation_manager.RunCancellationManager()
+node_cache_manager = plynx.db.node_cache_manager.NodeCacheManager()
 
 _GRAPH_ITERATION_SLEEP = 1
 _WAIT_STATUS_BEFORE_FAILED = {
@@ -57,6 +59,8 @@ class DAG(plynx.base.executor.BaseExecutor):
         self.node_id_to_dependency_index = defaultdict(lambda: 0)
         self.uncompleted_nodes_count = 0
 
+        self._node_running_status = NodeRunningStatus.READY
+
         for node in self.subnodes:
             node_id = node._id
             if node_id == SpecialNodeId.INPUT:
@@ -88,7 +92,7 @@ class DAG(plynx.base.executor.BaseExecutor):
         self.monitoring_node_ids = set()
 
     def finished(self):
-        if self.node.node_running_status in _ACTIVE_WAITING_TO_STOP:
+        if self._node_running_status in _ACTIVE_WAITING_TO_STOP:
             # wait for the rest of the running jobs to finish
             # check running status of each of the nodes
             for node in self.subnodes:
@@ -96,10 +100,10 @@ class DAG(plynx.base.executor.BaseExecutor):
                     return False
 
             # set status to FAILED
-            if self.node.node_running_status == NodeRunningStatus.FAILED_WAITING:
-                self.node.node_running_status = NodeRunningStatus.FAILED
+            if self._node_running_status == NodeRunningStatus.FAILED_WAITING:
+                self._node_running_status = NodeRunningStatus.FAILED
             return True
-        return self.node.node_running_status in {NodeRunningStatus.SUCCESS, NodeRunningStatus.FAILED, NodeRunningStatus.CANCELED}
+        return self._node_running_status in {NodeRunningStatus.SUCCESS, NodeRunningStatus.FAILED, NodeRunningStatus.CANCELED}
 
     def pop_jobs(self):
         """Get a set of nodes with satisfied dependencies"""
@@ -113,8 +117,8 @@ class DAG(plynx.base.executor.BaseExecutor):
                 self.update_node(node)
                 self.monitoring_node_ids.remove(node._id)
 
-        if NodeRunningStatus.is_failed(self.node.node_running_status):
-            logging.info("Job in DAG failed, pop_jobs returns []")
+        if NodeRunningStatus.is_failed(self._node_running_status):
+            logging.info("Job in DAG failed, pop_jobs will return []")
             return res
 
         cached_nodes = []
@@ -131,16 +135,15 @@ class DAG(plynx.base.executor.BaseExecutor):
             orig_node.node_running_status = NodeRunningStatus.IN_QUEUE
             node = orig_node.copy()
 
-            if DAG._cacheable(node) and False:  # !!! _cacheable is broken
+            if DAG._cacheable(node):
                 try:
-                    cache = self.node_cache_manager.get(node, self.graph.author)
+                    cache = node_cache_manager.get(node)
                     if cache:
                         node.node_running_status = NodeRunningStatus.RESTORED
                         node.outputs = cache.outputs
                         node.logs = cache.logs
-                        node.cache_url = '{}/graphs/{}?nid={}'.format(
-                            self.WEB_CONFIG.endpoint.rstrip('/'),
-                            str(cache.graph_id),
+                        node.cache_url = '/runs/{}?nid={}'.format(
+                            str(cache.run_id),
                             str(cache.node_id),
                         )
                         cached_nodes.append(node)
@@ -157,12 +160,11 @@ class DAG(plynx.base.executor.BaseExecutor):
 
     def update_node(self, node):
         dest_node = self.node_id_to_node[node._id]
-        """
         if node.node_running_status == NodeRunningStatus.SUCCESS \
                 and dest_node.node_running_status != node.node_running_status \
-                and GraphScheduler._cacheable(node):
-            GraphScheduler.node_cache_manager.post(node, self.graph_id, self.graph.author)
-        """
+                and DAG._cacheable(node):
+            node_cache_manager.post(node, self.node._id)
+
         if dest_node.node_running_status == node.node_running_status:
             return
 
@@ -182,7 +184,7 @@ class DAG(plynx.base.executor.BaseExecutor):
         if node_running_status == NodeRunningStatus.FAILED:
             # TODO optional cancel based on parameter
             self.kill()
-            self.node.node_running_status = NodeRunningStatus.FAILED_WAITING
+            self._node_running_status = NodeRunningStatus.FAILED_WAITING
 
         if node_running_status in {NodeRunningStatus.SUCCESS, NodeRunningStatus.RESTORED}:
             for dependent_node_id in self.node_id_to_dependents[node_id]:
@@ -201,8 +203,8 @@ class DAG(plynx.base.executor.BaseExecutor):
                 self.node_id_to_dependency_index[dependent_node_id] = dependency_index
             self.uncompleted_nodes_count -= 1
 
-        if self.uncompleted_nodes_count == 0 and not NodeRunningStatus.is_failed(self.node.node_running_status):
-            self.node.node_running_status = NodeRunningStatus.SUCCESS
+        if self.uncompleted_nodes_count == 0 and not NodeRunningStatus.is_failed(self._node_running_status):
+            self._node_running_status = NodeRunningStatus.SUCCESS
 
     @staticmethod
     def _cacheable(node):
@@ -214,8 +216,8 @@ class DAG(plynx.base.executor.BaseExecutor):
     @classmethod
     def get_default_node(cls, is_workflow):
         node = super().get_default_node(is_workflow)
-        node.parameters.extend(
-            [
+        if not is_workflow:
+            node.parameters.append(
                 Parameter.from_dict({
                     'name': '_cacheable',
                     'parameter_type': ParameterTypes.BOOL,
@@ -223,16 +225,17 @@ class DAG(plynx.base.executor.BaseExecutor):
                     'mutable_type': False,
                     'publicable': False,
                     'removable': False,
-                }),
-                Parameter.from_dict({
-                    'name': '_timeout',
-                    'parameter_type': ParameterTypes.INT,
-                    'value': 600,
-                    'mutable_type': False,
-                    'publicable': True,
-                    'removable': False
-                }),
-            ]
+                })
+            )
+        node.parameters.append(
+            Parameter.from_dict({
+                'name': '_timeout',
+                'parameter_type': ParameterTypes.INT,
+                'value': 600,
+                'mutable_type': False,
+                'publicable': True,
+                'removable': False
+            })
         )
         node.title = 'New DAG workflow'
         return node
@@ -254,7 +257,7 @@ class DAG(plynx.base.executor.BaseExecutor):
             for node in new_jobs:
                 self._execute_node(node)
 
-        is_succeeded = NodeRunningStatus.is_succeeded(self.node.node_running_status)
+        is_succeeded = NodeRunningStatus.is_succeeded(self._node_running_status)
         if is_succeeded:
             for node in self.subnodes:
                 if node._id != SpecialNodeId.OUTPUT:
@@ -268,14 +271,14 @@ class DAG(plynx.base.executor.BaseExecutor):
                             break
                 if updated_resources_count != len(node.inputs):
                     raise Exception('Used {} inputs for {} outputs'.format(updated_resources_count, len(node.inputs)))
-        return JobReturnStatus.SUCCESS if is_succeeded else JobReturnStatus.FAILED
+        return self._node_running_status
 
     def kill(self):
         """Force to kill the process.
 
         The reason can be the fact it was working too long or parent exectuter canceled it.
         """
-        self.node.node_running_status = NodeRunningStatus.CANCELED
+        self._node_running_status = NodeRunningStatus.CANCELED
         for node_id in list(self.monitoring_node_ids):
             run_cancellation_manager.cancel_run(node_id)
 

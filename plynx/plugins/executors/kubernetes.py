@@ -9,7 +9,7 @@ import logging
 import collections
 import kubernetes
 from enum import Enum
-from plynx.constants import JobReturnStatus, ParameterTypes
+from plynx.constants import NodeRunningStatus, ParameterTypes
 from plynx.db.node import Parameter, Output
 import plynx.plugins.executors.local as local
 from plynx.plugins.resources.common import FILE_KIND
@@ -29,6 +29,7 @@ class KeyConstants(Enum):
     IMAGE_COMMAND = KeyValue('_image_command', 'sh', ParameterTypes.STR)
     CPU = KeyValue('_cpu', '100m', ParameterTypes.STR)
     MEMORY = KeyValue('_memory', '1024Mi', ParameterTypes.STR)
+    GPU = KeyValue('_gpu', 0, ParameterTypes.INT)
     SCHEDULING_RETRY = KeyValue('_scheduling_retry', 30, ParameterTypes.INT)
 
 
@@ -128,10 +129,12 @@ def create_kubernetes_body(node_param_dict, job_name, workdir):
             requests={
                 'memory': _extract_param_value(node_param_dict, KeyConstants.MEMORY),
                 'cpu': _extract_param_value(node_param_dict, KeyConstants.CPU),
+                'nvidia.com/gpu': _extract_param_value(node_param_dict, KeyConstants.GPU),
             },
             limits={
                 'memory': _extract_param_value(node_param_dict, KeyConstants.MEMORY),
                 'cpu': _extract_param_value(node_param_dict, KeyConstants.CPU),
+                'nvidia.com/gpu': _extract_param_value(node_param_dict, KeyConstants.GPU),
             },
         ),
     )
@@ -168,7 +171,7 @@ def _init(self):
 
 
 def _exec_script(self, script_location):
-    res = JobReturnStatus.FAILED
+    self._node_running_status = NodeRunningStatus.FAILED
 
     try:
         param_dict = get_param_dict(self.node)
@@ -246,6 +249,7 @@ def _exec_script(self, script_location):
                                 'kubectl', 'exec',
                                 '--namespace', NAMESPACE,
                                 '-it', self.job_name,
+                                '--',
                                 _extract_param_value(param_dict, KeyConstants.IMAGE_COMMAND), script_location
                             ],
                             stdout=stdout_file,
@@ -282,9 +286,9 @@ def _exec_script(self, script_location):
                         os.rmdir(tmp_dir)
 
                         delete_pod(self.job_name, k8s_worker_log_file)
-                        res = JobReturnStatus.SUCCESS
+                        self._node_running_status = NodeRunningStatus.SUCCESS
                     elif phase in (KubernetesStatusPhase.SUCCEEDED, KubernetesStatusPhase.FAILED):
-                        if res == JobReturnStatus.SUCCESS:
+                        if self._node_running_status == NodeRunningStatus.SUCCESS:
                             break
                         k8s_worker_log_file.write('Removing pod `{}`\n'.format(self.job_name))
                         delete_pod(self.job_name, k8s_worker_log_file)
@@ -295,19 +299,20 @@ def _exec_script(self, script_location):
                         raise Exception("Unknown Kubernetes pod phase: `{}`".format(phase))
 
     except Exception as e:
-        res = JobReturnStatus.FAILED
+        self._node_running_status = NodeRunningStatus.FAILED
         logging.exception("Job failed")
         with open(self.logs['k8s_worker'], 'a+') as k8s_worker_log_file:
             k8s_worker_log_file.write(self._make_debug_text("JOB FAILED"))
             k8s_worker_log_file.write(str(e))
 
-    return res
+    return self._node_running_status
 
 
 def _kill(self):
     if not self.job_name:
         return
 
+    self._node_running_status = NodeRunningStatus.CANCELED
     delete_pod(self.job_name, None)
 
 

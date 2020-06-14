@@ -36,7 +36,7 @@ setup(
     author='Ivan Khomyakov',
     author_email='ivan@plynx.com',
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
 
         'Environment :: Console',
         'Environment :: Web Environment',

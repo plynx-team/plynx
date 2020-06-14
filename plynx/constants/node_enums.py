@@ -1,11 +1,6 @@
 from bson.objectid import ObjectId
 
 
-class JobReturnStatus:
-    SUCCESS = 'SUCCESS'
-    FAILED = 'FAILED'
-
-
 class NodeRunningStatus:
     STATIC = 'STATIC'
     CREATED = 'CREATED'

@@ -143,14 +143,14 @@ class Block extends React.Component {
                 </div>
               }
               {
-                this.state.cache_url &&
-                <a href={this.state.cache_url}
+                this.props.node.cache_url &&
+                <a href={this.props.node.cache_url}
                   className={'remove'}
                 >
                   <img
                     src={"/icons/cached.svg"}
-                    width="10"
-                    height="10"
+                    width="11"
+                    height="11"
                     alt="cached"
                     />
                 </a>

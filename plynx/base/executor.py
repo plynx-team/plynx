@@ -25,7 +25,7 @@ class BaseExecutor:
         - It is OK to raise an exception in this function.
 
         Returns:
-            enum: plynx.constants.JobReturnStatus
+            enum: plynx.constants.NodeRunningStatus
         """
         pass
 
