@@ -87,7 +87,7 @@ class NodeCache(DBObject):
         inputs_hash = ','.join([
             '{}:{}'.format(
                 input.name,
-                ','.join(sorted(map(lambda x: x.resource_id, input.values)))
+                ','.join(sorted(input.values))
             )
             for input in sorted_inputs
         ])
