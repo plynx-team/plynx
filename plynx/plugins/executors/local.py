@@ -465,7 +465,7 @@ class PythonNode(BaseBash):
 
 class File(plynx.base.executor.BaseExecutor):
     def __init__(self, node=None):
-        super(Dummy, self).__init__(node)
+        super(File, self).__init__(node)
 
     def run(self):
         raise NotImplementedError()
