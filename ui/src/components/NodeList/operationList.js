@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import BaseList from './baseList';
-import { makeControlSeparator } from '../Common/controlButton';
+import FileDialog from '../Dialogs/FileDialog';
+import FileUploadDialog from '../Dialogs/FileUploadDialog';
+import { makeControlSeparator, makeControlButton } from '../Common/controlButton';
 import { COLLECTIONS, VIRTUAL_COLLECTIONS } from '../../constants';
 import { renderNodeItem, NODE_ITEM_HEADER } from './common';
 
@@ -11,6 +13,9 @@ export default class OperationListPage extends Component {
   constructor(props) {
     super(props);
     document.title = "Operations - PLynx";
+    this.state = {
+      uploadOperation: null,
+    }
   }
 
   MENU_PANEL_DESCRIPTOR = [
@@ -19,6 +24,12 @@ export default class OperationListPage extends Component {
       props: {key: 'separator_1'}
     },
   ];
+
+  handleCloseDialog() {
+    this.setState({
+      uploadOperation: null,
+    })
+  }
 
   render() {
     return (
@@ -31,7 +42,22 @@ export default class OperationListPage extends Component {
                 renderItem={renderItem}
                 virtualCollection={VIRTUAL_COLLECTIONS.OPERATIONS}
                 collection={COLLECTIONS.TEMPLATES}
+                onUploadDialog={
+                    (operation_descriptor) => {
+                        console.log(operation_descriptor);
+                        this.setState({
+                            uploadOperation: operation_descriptor
+                        })
+                    }
+                }
             >
+            {this.state.uploadOperation &&
+              <FileUploadDialog
+                onClose={() => this.handleCloseDialog()}
+                uploadOperation={this.state.uploadOperation}
+                //onPostFile={(file) => this.postFile(file, ACTION.SAVE, 1)}
+              />
+            }
             </BaseList>
         </div>
     );

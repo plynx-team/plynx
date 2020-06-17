@@ -1,0 +1,52 @@
+.FileDialogBody, .FileUploadDialogBody {
+  padding: 5px;
+  background-color: #404040;
+}
+
+.FileDialogBody > .MainBlock, .FileUploadDialogBody > .MainBlock {
+  display: grid;
+  grid-template-columns: 1fr 150px;
+}
+
+.FileDialogBody > .Summary, .FileUploadDialogBody > .Summary {
+  padding-top: 10px;
+}
+
+.FileDialogBody > .Summary > .Item, .FileUploadDialogBody > .Summary > .Item {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  padding: 2px;
+}
+
+.FileDialogBody .Title, .FileUploadDialogBody .Title{
+  font-weight: 700;
+  font-size: 15pt;
+}
+
+.FileDialogBody .Type .Widget, .FileUploadDialogBody .Type .Widget {
+  display: inline-block;
+  width: 150px;
+  background-color: #c29b3c;
+  text-align: center;
+  border-radius: 2px;
+  border: 1px darkgrey solid;
+}
+
+.FileDialogBody .Type .Widget img, .FileUploadDialogBody .Type .Widget img,
+.FileDialogBody .Type .Widget svg, .FileUploadDialogBody .Type .Widget svg {
+  vertical-align: middle;
+}
+
+.FileDialogBody .Status.READY {
+  color:green;
+}
+
+.FileDialogBody .Status.DEPRECATED {
+  color:red;
+}
+
+.FileDialogBody > .Controls, .FileUploadDialogBody > .Controls {
+  text-align: right;
+  right: 5px;
+  bottom: 5px;
+}
