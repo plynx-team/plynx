@@ -12,7 +12,7 @@ WorkerConfig = namedtuple('WorkerConfig', ['kinds'])
 MongoConfig = namedtuple('MongoConfig', ['user', 'password', 'host', 'port'])
 StorageConfig = namedtuple('StorageConfig', ['scheme', 'prefix', 'credential_path'])
 AuthConfig = namedtuple('AuthConfig', ['secret_key'])
-WebConfig = namedtuple('WebConfig', ['host', 'port', 'endpoint', 'api_endpoint', 'debug'])
+WebConfig = namedtuple('WebConfig', ['host', 'port', 'endpoint', 'debug'])
 DemoConfig = namedtuple('DemoConfig', ['enabled', 'kind', 'template_id'])
 CloudServiceConfig = namedtuple('CloudServiceConfig', ['prefix', 'url_prefix', 'url_postfix'])
 ResourceConfig = namedtuple('ResourceConfig', ['kind', 'title', 'cls', 'icon', 'color'])
@@ -84,8 +84,7 @@ def get_web_config():
     return WebConfig(
         host=_config.get('web', {}).get('host', '0.0.0.0'),
         port=int(_config.get('web', {}).get('port', 5000)),
-        endpoint=_config.get('web', {}).get('endpoint', '/'),
-        api_endpoint=_config.get('web', {}).get('api_endpoint', '/plynx/api/v0'),
+        endpoint=_config.get('web', {}).get('endpoint', '/').rstrip('/'),
         debug=bool(_config.get('web', {}).get('debug', False)),
     )
 
