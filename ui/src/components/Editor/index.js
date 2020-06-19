@@ -14,6 +14,7 @@ import {
   VALIDATION_CODES,
   VALIDATION_TARGET_TYPE,
   NODE_STATUS,
+  NODE_RUNNING_STATUS,
   COLLECTIONS,
   ACTIVE_NODE_RUNNING_STATUSES,
 } from '../../constants';
@@ -617,6 +618,7 @@ export default class Editor extends Component {
         props: {
           img: 'copy.svg',
           text: 'Clone',
+          enabled: this.node && this.node.node_running_status !== NODE_RUNNING_STATUS.STATIC,
           func: () => this.handleClone(),
         },
       }, {

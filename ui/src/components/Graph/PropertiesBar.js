@@ -121,12 +121,8 @@ export default class PropertiesBar extends Component {
         (output) => output.values.map(
             (output_value) => {
               return <OutputItem
-                graphId={this.state.graphId}
-                resourceName={output.name}
-                resourceId={output_value}
-                nodeId={this.state.nodeId}
+                item={output}
                 key={output_value}
-                fileType={output.file_type}
                 onPreview={(previewData) => this.handlePreview(previewData)}
                 />;
             }

@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import Icon from '../Common/Icon';
 import { PluginsConsumer } from '../../contexts';
+import OutputItem from '../Graph/OutputItem';
 
 
 export default class InOutItem extends Component {
@@ -146,6 +147,14 @@ export default class InOutItem extends Component {
           </div>
         </div>
         }
+
+        {this.state.item.values.map( (resource_id) =>
+            <OutputItem
+              item={this.state.item}
+              key={resource_id}
+              onPreview={(previewData) => this.handlePreview(previewData)}
+              />
+        )}
 
       </div>
     );
