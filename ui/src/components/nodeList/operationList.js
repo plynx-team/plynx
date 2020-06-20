@@ -1,8 +1,7 @@
 import React, { Component } from 'react';
 import BaseList from './baseList';
-import FileDialog from '../Dialogs/FileDialog';
 import FileUploadDialog from '../Dialogs/FileUploadDialog';
-import { makeControlSeparator, makeControlButton } from '../Common/controlButton';
+import { makeControlSeparator } from '../Common/controlButton';
 import { COLLECTIONS, VIRTUAL_COLLECTIONS } from '../../constants';
 import { renderNodeItem, NODE_ITEM_HEADER } from './common';
 
@@ -15,7 +14,7 @@ export default class OperationListPage extends Component {
     document.title = "Operations - PLynx";
     this.state = {
       uploadOperation: null,
-    }
+    };
   }
 
   MENU_PANEL_DESCRIPTOR = [
@@ -28,7 +27,7 @@ export default class OperationListPage extends Component {
   handleCloseDialog() {
     this.setState({
       uploadOperation: null,
-    })
+    });
   }
 
   render() {
@@ -44,10 +43,10 @@ export default class OperationListPage extends Component {
                 collection={COLLECTIONS.TEMPLATES}
                 onUploadDialog={
                     (operation_descriptor) => {
-                        console.log(operation_descriptor);
-                        this.setState({
-                            uploadOperation: operation_descriptor
-                        })
+                      console.log(operation_descriptor);
+                      this.setState({
+                        uploadOperation: operation_descriptor
+                      });
                     }
                 }
             >
@@ -55,7 +54,7 @@ export default class OperationListPage extends Component {
               <FileUploadDialog
                 onClose={() => this.handleCloseDialog()}
                 uploadOperation={this.state.uploadOperation}
-                //onPostFile={(file) => this.postFile(file, ACTION.SAVE, 1)}
+                // onPostFile={(file) => this.postFile(file, ACTION.SAVE, 1)}
               />
             }
             </BaseList>

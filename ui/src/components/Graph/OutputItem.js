@@ -9,10 +9,6 @@ import './OutputItem.css';
 const FileDownload = require('react-file-download');
 
 export default class OutputItem extends Component {
-  constructor(props) {
-    super(props);
-  }
-
   download() {
     // TODO render multiple values if it is an array
     const resourceId = this.props.item.values[0];
@@ -50,8 +46,7 @@ export default class OutputItem extends Component {
             onClick={() => this.handleClick()}>
             <PluginsConsumer>
             {
-                plugins_dict =>
-                <Icon
+                plugins_dict => <Icon
                   type_descriptor={plugins_dict.resources_dict[this.props.item.file_type]}
                 />
             }
@@ -73,5 +68,10 @@ OutputItem.propTypes = {
   fileType: PropTypes.string,
   resourceId: PropTypes.string,
   resourceName: PropTypes.string,
-  onPreview: PropTypes.func,
+  onPreview: PropTypes.func.isRequired,
+  item: PropTypes.shape({
+    values: PropTypes.array.isRequired,
+    file_type: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+  }),
 };

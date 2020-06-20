@@ -148,8 +148,7 @@ export default class InOutItem extends Component {
         </div>
         }
 
-        {this.state.item.values.map( (resource_id) =>
-            <OutputItem
+        {this.state.item.values.map((resource_id) => <OutputItem
               item={this.state.item}
               key={resource_id}
               onPreview={(previewData) => this.handlePreview(previewData)}

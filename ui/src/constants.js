@@ -3,8 +3,8 @@ import { ObjectID } from 'bson';
 
 export const PARAMETER_TYPES = [
   {
-    type: 'str', //same as in parameter_types.py
-    alias: 'String', //for humans reading in UI
+    type: 'str', // same as in parameter_types.py
+    alias: 'String', // for humans reading in UI
   },
   {
     type: 'int',
@@ -98,22 +98,6 @@ export const ACTIVE_NODE_RUNNING_STATUSES = Object.freeze(new Set([
   NODE_RUNNING_STATUS.RUNNING,
   NODE_RUNNING_STATUS.FAILED_WAITING,
 ]));
-
-export const GRAPH_RUNNING_STATUS = Object.freeze({
-  CREATED: 'CREATED',
-  READY: 'READY',
-  RUNNING: 'RUNNING',
-  SUCCESS: 'SUCCESS',
-  FAILED: 'FAILED',
-  CANCELED: 'CANCELED',
-  FAILED_WAITING: 'FAILED_WAITING',
-});
-
-export const FILE_STATUS = Object.freeze({
-  READY: 'READY',
-  DEPRECATED: 'DEPRECATED',
-  MANDATORY_DEPRECATED: 'MANDATORY_DEPRECATED'
-});
 
 export const VALIDATION_TARGET_TYPE = Object.freeze({
   NODE: 'NODE',

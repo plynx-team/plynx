@@ -1,13 +1,12 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { GRAPH_RUNNING_STATUS, COLLECTIONS } from '../../constants';
+import { COLLECTIONS } from '../../constants';
 import { makeControlLink, makeControlToggles } from '../Common/controlButton';
 import { VIEW_MODE } from '../Editor/index';
 
 export default class Controls extends Component {
   static propTypes = {
     className: PropTypes.string.isRequired,
-    graphRunningStatus: PropTypes.oneOf(Object.values(GRAPH_RUNNING_STATUS)),
     onApprove: PropTypes.func.isRequired,
     onCancel: PropTypes.func.isRequired,
     onClone: PropTypes.func.isRequired,

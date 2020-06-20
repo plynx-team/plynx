@@ -5,8 +5,8 @@ import { PLynxApi } from '../../API';
 import LoadingScreen from '../LoadingScreen';
 import {PluginsConsumer} from '../../contexts';
 import Icon from '../Common/Icon';
-import { ACTION, NODE_STATUS, RESPONCE_STATUS, NODE_RUNNING_STATUS } from '../../constants';
-import './FileUploadDialog.css'
+import { RESPONCE_STATUS } from '../../constants';
+import './FileUploadDialog.css';
 
 
 const DEFAULT_TITLE = 'File';
@@ -14,6 +14,9 @@ const DEFAULT_TITLE = 'File';
 export default class FileUploadDialog extends Component {
   static propTypes = {
     onClose: PropTypes.func.isRequired,
+    uploadOperation: PropTypes.shape({
+      resources: PropTypes.array.isRequired,
+    }),
   }
 
   constructor(props) {
