@@ -53,7 +53,7 @@ def post_search_nodes(collection):
         res = hub_manager.kind_to_hub_class[hub].search(plynx.base.hub.Query(**query))
     else:
         if virtual_collection == NodeVirtualCollection.OPERATIONS:
-            query['node_kinds'] = list(operation_manager.kind_to_operation_dict.keys()) + ['file']
+            query['node_kinds'] = list(operation_manager.kind_to_operation_dict.keys())
         elif virtual_collection == NodeVirtualCollection.WORKFLOWS:
             query['node_kinds'] = list(workflow_manager.kind_to_workflow_dict.keys())
         res = node_collection_managers[collection].get_db_objects(**query)
@@ -140,7 +140,7 @@ def post_node(collection):
         return make_fail_response('Permission denied'), 403
 
     if action == NodePostAction.SAVE:
-        if node.node_status != NodeStatus.CREATED and node.kind != 'file':
+        if node.node_status != NodeStatus.CREATED:
             return make_fail_response('Cannot save node with status `{}`'.format(node.node_status))
 
         node.save(force=True)

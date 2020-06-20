@@ -564,6 +564,7 @@ Example
         -F title=report \
         -F description=2019 \
         -F file_type=csv
+        -F node_kind=basic-file
 
 
 
