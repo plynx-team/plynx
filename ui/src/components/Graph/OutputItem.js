@@ -29,10 +29,10 @@ export default class OutputItem extends Component {
   handleClick() {
     if (this.props.onPreview) {
       this.props.onPreview({
-        title: this.props.resourceName,
-        file_type: this.props.fileType,
-        resource_id: this.props.resourceId,
-        download_name: this.props.resourceName,
+        title: this.props.item.name,
+        file_type: this.props.item.file_type,
+        resource_id: this.props.item.values[0],
+        download_name: this.props.item.name,
       });
     }
   }
@@ -65,9 +65,6 @@ export default class OutputItem extends Component {
 }
 
 OutputItem.propTypes = {
-  fileType: PropTypes.string,
-  resourceId: PropTypes.string,
-  resourceName: PropTypes.string,
   onPreview: PropTypes.func.isRequired,
   item: PropTypes.shape({
     values: PropTypes.array.isRequired,

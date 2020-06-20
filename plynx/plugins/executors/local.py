@@ -467,7 +467,9 @@ class File(plynx.base.executor.BaseExecutor):
     def __init__(self, node=None):
         super(File, self).__init__(node)
 
-    def run(self):
+    def run(self, preview=False):
+        if preview:
+            return "Cannot preview the content. Please check the outputs."
         raise NotImplementedError()
 
     def status(self):

@@ -14,6 +14,7 @@ export default class InOutItem extends Component {
     onRemove: PropTypes.func,
     item: PropTypes.object.isRequired,
     nodeKind: PropTypes.string.isRequired,
+    onPreview: PropTypes.func.isRequired,
   };
 
   constructor(props) {
@@ -46,6 +47,12 @@ export default class InOutItem extends Component {
 
   handleRemoveItem() {
     this.props.onRemove(this.props.index);
+  }
+
+  handlePreview(previewData) {
+    if (this.props.onPreview) {
+      this.props.onPreview(previewData);
+    }
   }
 
   render() {

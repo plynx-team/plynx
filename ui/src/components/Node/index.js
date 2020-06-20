@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import NodeProperties from './NodeProperties';
 import InOutList from './InOutList';
 import ParameterList from './ParameterList';
-import TextViewDialog from '../Dialogs/TextViewDialog';
+import PreviewDialog from '../Dialogs/PreviewDialog';
 import { PluginsProvider, PluginsConsumer } from '../../contexts';
 import { HotKeys } from 'react-hotkeys';
 import { KEY_MAP } from '../../constants';
@@ -82,6 +82,18 @@ export default class Node extends Component {
     document.title = this.node.title + " - Node - PLynx";
   }
 
+  handlePreview(previewData) {
+    this.setState({
+      previewData: previewData,
+    });
+  }
+
+  handleCloseDialogs() {
+    this.setState({
+      previewData: null,
+    });
+  }
+
   render() {
     let node = this.state.node;
     const key = (this.state.node ? this.state.node._id : '') + this.state.readOnly;
@@ -97,15 +109,17 @@ export default class Node extends Component {
       <HotKeys className='EditNodeMain'
                handlers={this.keyHandlers} keyMap={KEY_MAP}
       >
-        <PluginsProvider value={this.props.plugins_dict}>
-          {
-            this.state.preview_text &&
-            <TextViewDialog className="TextViewDialog"
-              title='Preview'
-              text={this.state.preview_text}
-              onClose={() => this.handleClosePreview()}
+        {
+            (this.state.previewData) &&
+            <PreviewDialog className="PreviewDialog"
+              title={this.state.previewData.title}
+              file_type={this.state.previewData.file_type}
+              resource_id={this.state.previewData.resource_id}
+              download_name={this.state.previewData.download_name}
+              onClose={() => this.handleCloseDialogs()}
             />
-          }
+        }
+        <PluginsProvider value={this.props.plugins_dict}>
           <div className='EditNodeHeader'>
             <PluginsConsumer>
             { plugins_dict => <NodeProperties
@@ -169,6 +183,7 @@ export default class Node extends Component {
                   nodeKind={node.kind}
                   onChanged={(value) => this.handleParameterChanged('outputs', value)}
                   readOnly={this.state.readOnly || this.state.is_workflow}
+                  onPreview={(previewData) => this.handlePreview(previewData)}
                 />
               </div>
             </div>
