@@ -5,7 +5,8 @@ import { PLynxApi } from '../../API';
 import LoadingScreen from '../LoadingScreen';
 import {PluginsConsumer} from '../../contexts';
 import Icon from '../Common/Icon';
-import { NODE_STATUS, RESPONCE_STATUS, NODE_RUNNING_STATUS } from '../../constants';
+import { RESPONCE_STATUS } from '../../constants';
+import './FileUploadDialog.css';
 
 
 const DEFAULT_TITLE = 'File';
@@ -13,6 +14,9 @@ const DEFAULT_TITLE = 'File';
 export default class FileUploadDialog extends Component {
   static propTypes = {
     onClose: PropTypes.func.isRequired,
+    uploadOperation: PropTypes.shape({
+      resources: PropTypes.array.isRequired,
+    }),
   }
 
   constructor(props) {
@@ -55,6 +59,11 @@ export default class FileUploadDialog extends Component {
     const self = this;
     const formData = new FormData();
     formData.append('data', this.file);
+    formData.append('title', self.state.title);
+    formData.append('description', self.state.description);
+    formData.append('file_type', self.state.file_type);
+    formData.append('node_type', self.props.uploadOperation.kind);
+    console.log(self.props.uploadOperation.kind);
 
     const config = {
       headers: { 'content-type': 'multipart/form-data' },
@@ -67,30 +76,12 @@ export default class FileUploadDialog extends Component {
     };
 
     self.setState({loading: true});
-    PLynxApi.endpoints.resource.upload(formData, config)
+    PLynxApi.endpoints.upload_file.upload(formData, config)
     .then((response) => {
       const data = response.data;
       console.log(data);
 
       if (data.status === RESPONCE_STATUS.SUCCESS) {
-        const resourceId = data.resource_id;
-        self.props.onPostFile({
-          title: self.state.title,
-          description: self.state.description,
-          base_node_name: 'file',
-          node_running_status: NODE_RUNNING_STATUS.STATIC,
-          node_status: NODE_STATUS.READY,
-          inputs: [],
-          parameters: [],
-          logs: [],
-          outputs: [
-            {
-              file_type: self.state.file_type,
-              name: "out",
-              resource_id: resourceId
-            }
-          ]
-        });
         self.props.onClose();
         self.setState({loading: false});
       }
@@ -121,7 +112,7 @@ export default class FileUploadDialog extends Component {
                 this.props.onClose();
               }}
               width={600}
-              height={230}
+              height={240}
               title={'Upload file'}
               enableResizing={false}
       >
@@ -131,7 +122,7 @@ export default class FileUploadDialog extends Component {
         </div>
       }
       <PluginsConsumer>
-      { plugins_dict => <div className='FileUploadDialogBody selectable'>
+      { plugins_info => <div className='FileUploadDialogBody selectable'>
           <div className='MainBlock'>
 
             <div className='TitleDescription'>
@@ -146,11 +137,11 @@ export default class FileUploadDialog extends Component {
             <div className={'Type'}>
               <div className='Widget'>
                 <Icon
-                  type_descriptor={plugins_dict.resources_dict[this.state.file_type]}
+                  type_descriptor={plugins_info.resources_dict[this.state.file_type]}
                   width={"20"}
                   height={"20"}
                 />
-                {plugins_dict.resources_dict[this.state.file_type].alias}
+                {plugins_info.resources_dict[this.state.file_type].title}
               </div>
             </div>
           </div>
@@ -183,11 +174,11 @@ export default class FileUploadDialog extends Component {
                 onChange={(e) => this.handleChange(e)}
               >
               {
-                Object.values(plugins_dict.resources_dict).map((description) => <option
-                    value={description.name}
-                    key={description.name}
+                Object.values(this.props.uploadOperation.resources).map((description) => <option
+                    value={description.kind}
+                    key={description.kind}
                     >
-                    {description.alias}
+                    {description.title}
                     </option>
                 )
               }

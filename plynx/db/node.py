@@ -47,17 +47,21 @@ def _clone_update_in_place(node, node_clone_policy):
                 input.values = []
                 for input_reference in input.input_references:
                     input_reference.node_id = object_id_mapping[ObjectId(input_reference.node_id)]
-            # TODO STATIC
-            for output in sub_node.outputs:
-                output.values = []
-
-            for log in sub_node.logs:
-                log.values = []
 
             for parameter in sub_node.parameters:
                 if not parameter.reference:
                     continue
                 parameter.value = node.get_parameter_by_name(parameter.reference, throw=True).value
+
+            if sub_node.node_running_status == NodeRunningStatus.STATIC:
+                # do not copy the rest of the elements because they don't change
+                continue
+
+            for output in sub_node.outputs:
+                output.values = []
+
+            for log in sub_node.logs:
+                log.values = []
 
     for output_or_log in node.outputs + node.logs:
         output_or_log.resource_id = None
@@ -293,7 +297,8 @@ class Node(DBObject):
         self.y = other_node.y
 
     def clone(self, node_clone_policy):
-        return _clone_update_in_place(self.copy(), node_clone_policy)
+        node = _clone_update_in_place(self.copy(), node_clone_policy)
+        return node
 
     def __str__(self):
         return 'Node(_id="{}")'.format(self._id)

@@ -6,6 +6,18 @@ import './ValueList.css';
 import './NumericInput.css';
 
 
+function stopPropagation(e) {
+  console.log(e);
+  if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+    e.stopPropagation();
+    e.preventDefault();
+    console.log(e.key);
+    return false;
+  }
+  e.stopPropagation();
+  return false;
+}
+
 export default function renderValueElement(args) {
   const { parameterType, value, handleChange, readOnly } = args;
   const className = args.className ? args.className : "";
@@ -34,16 +46,7 @@ export default function renderValueElement(args) {
               value={value}
               readOnly={readOnly}
               key={parameterType}
-              onKeyDown={e => {
-                console.log(e);
-                if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  console.log(e.key);
-                  return false;
-                }
-                e.stopPropagation();
-              }}
+              onKeyDown={stopPropagation}
               onWheel={event => event.currentTarget.blur()}
               autoComplete="off"
               />;
@@ -57,16 +60,7 @@ export default function renderValueElement(args) {
               value={value}
               readOnly={readOnly}
               key={parameterType}
-              onKeyDown={e => {
-                console.log(e);
-                if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  console.log(e.key);
-                  return false;
-                }
-                e.stopPropagation();
-              }}
+              onKeyDown={stopPropagation}
               onWheel={event => event.currentTarget.blur()}
               autoComplete="off"
               />;

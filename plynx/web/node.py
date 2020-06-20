@@ -140,7 +140,7 @@ def post_node(collection):
         return make_fail_response('Permission denied'), 403
 
     if action == NodePostAction.SAVE:
-        if node.node_status != NodeStatus.CREATED and node.base_node_name != 'file':
+        if node.node_status != NodeStatus.CREATED:
             return make_fail_response('Cannot save node with status `{}`'.format(node.node_status))
 
         node.save(force=True)

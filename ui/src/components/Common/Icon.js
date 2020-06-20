@@ -17,6 +17,7 @@ const DEFAULT_PROPS = {
 const RenderIcon = ({ family, name, ...props }) => {
   if (family === 'plynx') {
     return <img
+      className='file-type-icon'
       src={"/icons/file_types/" + name + ".svg"}
       {...DEFAULT_PROPS}
       {...props}
@@ -25,6 +26,7 @@ const RenderIcon = ({ family, name, ...props }) => {
   }
   if (family === 'feathericons') {
     return <svg
+      className='file-type-icon'
       {...DEFAULT_PROPS}
       {...props}
       dangerouslySetInnerHTML={{ __html: icons[name] }}           // eslint-disable-line react/no-danger

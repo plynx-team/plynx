@@ -91,6 +91,9 @@ class DAG(plynx.base.executor.BaseExecutor):
 
         self.monitoring_node_ids = set()
 
+        if self.uncompleted_nodes_count == 0:
+            self._node_running_status = NodeRunningStatus.SUCCESS
+
     def finished(self):
         if self._node_running_status in _ACTIVE_WAITING_TO_STOP:
             # wait for the rest of the running jobs to finish

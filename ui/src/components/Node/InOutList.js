@@ -79,6 +79,12 @@ export default class InOutList extends Component {
     this.props.onChanged(items);
   }
 
+  handlePreview(previewData) {
+    if (this.props.onPreview) {
+      this.props.onPreview(previewData);
+    }
+  }
+
   // Normally you would want to split things out into separate components.
   // But in this example everything is just done in one place for simplicity
   render() {
@@ -121,6 +127,7 @@ export default class InOutList extends Component {
                             onRemove={(index) => this.handleRemoveItem(index)}                          // eslint-disable-line no-shadow
                             readOnly={this.state.readOnly}
                             nodeKind={this.props.nodeKind}
+                            onPreview={(previewData) => this.handlePreview(previewData)}
                           />
                         }
                       </div>
@@ -156,4 +163,5 @@ InOutList.propTypes = {
   items: PropTypes.array,
   readOnly: PropTypes.bool,
   onChanged: PropTypes.func,
+  onPreview: PropTypes.func.isRequired,
 };

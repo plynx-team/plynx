@@ -4,7 +4,7 @@ import Dialog from './Dialog';
 import { PLynxApi } from '../../API';
 import {PluginsConsumer} from '../../contexts';
 import Icon from '../Common/Icon';
-import { FILE_STATUS, NODE_STATUS } from '../../constants';
+import { NODE_STATUS } from '../../constants';
 import { API_ENDPOINT } from '../../configConsts';
 
 const FileDownload = require('react-file-download');
@@ -126,7 +126,7 @@ export default class FileDialog extends Component {
                className="control-button">
                <img src="/icons/download2.svg" alt="download" /> Download
             </div>
-            { this.props.fileObj.node_status === FILE_STATUS.READY && !this.props.hideDeprecate &&
+            { this.props.fileObj.node_status === NODE_STATUS.READY && !this.props.hideDeprecate &&
               <div
                  onClick={(e) => {
                    e.preventDefault();

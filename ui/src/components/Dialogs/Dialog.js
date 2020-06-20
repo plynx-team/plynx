@@ -15,6 +15,7 @@ export default class Dialog extends Component {
     onClose: PropTypes.func.isRequired,
     title: PropTypes.string.isRequired,
     width: PropTypes.number.isRequired,
+    className: PropTypes.string.isRequired,
   }
 
   constructor(props) {

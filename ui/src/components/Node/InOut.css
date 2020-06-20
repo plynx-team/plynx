@@ -59,7 +59,7 @@
   margin: 2px;
 }
 
-.InOutCellValue > img, .InOutCellValue > svg {
+.InOutCellValue > .file-type-icon {
     width: 17px;
     height: 17px;
     margin-left: 3px;
