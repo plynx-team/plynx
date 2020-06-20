@@ -461,3 +461,23 @@ class PythonNode(BaseBash):
         param.value.mode = 'python'
         param.value.value = 'print("hello world")'
         return node
+
+
+class File(plynx.base.executor.BaseExecutor):
+    def __init__(self, node=None):
+        super(File, self).__init__(node)
+
+    def run(self, preview=False):
+        if preview:
+            return "Cannot preview the content. Please check the outputs."
+        raise NotImplementedError()
+
+    def status(self):
+        raise NotImplementedError()
+
+    def kill(self):
+        raise NotImplementedError()
+
+    @classmethod
+    def get_default_node(cls, is_workflow):
+        raise NotImplementedError()

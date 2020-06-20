@@ -1,13 +1,13 @@
 import json
 from flask import request, send_file, g
-# !!! TODO figure out with STATIC
+import plynx.db.node
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 import plynx.base.resource
 from plynx.plugins.resources.common import FILE_KIND
 import plynx.utils.plugin_manager
 from plynx.utils.common import JSONEncoder
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
-from plynx.constants import ResourcePostStatus
+from plynx.constants import ResourcePostStatus, NodeRunningStatus, NodeStatus
 
 
 RESOURCE_TYPES = list(plynx.utils.plugin_manager.get_resource_manager().kind_to_resource_class.keys())
@@ -51,17 +51,31 @@ def upload_file():
     title = request.form.get('title', '{title}')
     description = request.form.get('description', '{description}')
     file_type = request.form.get('file_type', FILE_KIND)
+    node_kind = request.form.get('node_kind', 'basic-file')
+    app.logger.debug(request)
     if file_type not in RESOURCE_TYPES:
+        app.logger.debug(file_type)
+        app.logger.debug(RESOURCE_TYPES)
         return make_fail_response('Unknown file type `{}`'.format(file_type)), 400
 
     resource_id = upload_file_stream(request.files['data'])
-    raise NotImplementedError()
-    file = None
+
+    file = plynx.db.node.Node.from_dict({
+        'title': title,
+        'description': description,
+        'kind': node_kind,
+        'node_running_status': NodeRunningStatus.STATIC,
+        'node_status': NodeStatus.READY,
+    })
+    file.outputs.append(
+        plynx.db.node.Output.from_dict({
+            'name': 'file',
+            'file_type': file_type,
+            'values': [resource_id],
+        })
+    )
+
     file.author = g.user._id
-    file.title = title
-    file.description = description
-    file.outputs[0].resource_id = resource_id
-    file.outputs[0].file_type = file_type
     file.save()
 
     return JSONEncoder().encode({

@@ -14,7 +14,7 @@ auth:
 web:
   host: '0.0.0.0'
   port: 5000
-  endpoint: http://localhost:3001
+  endpoint: http://localhost:5000/plynx/api/v0/
   debug: true
 
 demo:
@@ -64,6 +64,22 @@ plugins:
       icon: feathericons.hard-drive
       color: '#5ed1ff'
   operations:
+    - kind: basic-file
+      title: File
+      executor: plynx.plugins.executors.local.File
+      icon: feathericons.file
+      color: '#fff'
+      is_static: true
+      resources:
+        - file
+        - pdf
+        - image
+        - csv
+        - tsv
+        - json
+        - executable
+        - directory
+        - cloud-storage
     - kind: basic-bash-jinja2-operation
       title: BashJinja2 Operation
       executor: plynx.plugins.executors.local.BashJinja2

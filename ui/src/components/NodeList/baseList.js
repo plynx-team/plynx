@@ -8,7 +8,7 @@ import ReactPaginate from 'react-paginate';
 import LoadingScreen from '../LoadingScreen';
 import { ALERT_OPTIONS } from '../../constants';
 import SearchBar from '../Common/SearchBar';
-import { makeControlPanel, makeControlLink } from '../Common/controlButton';
+import { makeControlPanel, makeControlLink, makeControlButton, makeControlSeparator } from '../Common/controlButton';
 import {PluginsProvider, PluginsConsumer} from '../../contexts';
 import PropTypes from 'prop-types';
 import './list.css';
@@ -17,15 +17,19 @@ import '../controls.css';
 
 export default class ListPage extends Component {
   static propTypes = {
+    children: PropTypes.oneOfType([
+      PropTypes.array.isRequired,
+      PropTypes.object.isRequired,
+    ]),
     search: PropTypes.string,
     collection: PropTypes.string.isRequired,
     virtualCollection: PropTypes.string,
-    children: PropTypes.array,
     menuPanelDescriptor: PropTypes.array,
     extraSearch: PropTypes.object,
     tag: PropTypes.string.isRequired,
     header: PropTypes.array.isRequired,
     renderItem: PropTypes.func.isRequired,
+    onUploadDialog: PropTypes.func,
   }
 
 
@@ -164,19 +168,49 @@ export default class ListPage extends Component {
     if (!plugins_info || !this.props.virtualCollection) {
       return [];
     }
-    return Object.values(plugins_info[`${this.props.virtualCollection}_dict`]).map(
-          (operation) => {
-            return {
-              render: makeControlLink,
-              props: {
-                img: 'plus.svg',
-                text: operation.title,
-                href: `/${this.props.collection}/${operation.kind}`,
-                key: operation.kind
-              },
-            };
-          }
-      );
+    const result = [];
+    result.push(
+        ...Object.values(plugins_info[`${this.props.virtualCollection}_dict`])
+            .filter((operation) => operation.is_static).map(
+              (operation) => {
+                return {
+                  render: makeControlButton,
+                  props: {
+                    img: 'upload.svg',
+                    text: `Upload ${operation.title}`,
+                    func: () => {
+                      this.props.onUploadDialog(plugins_info.operations_dict[operation.kind]);
+                    },
+                    key: operation.kind
+                  },
+                };
+              }
+          )
+    );
+    if (result.length > 0) {
+      result.push({
+        render: makeControlSeparator,
+        props: {key: 'separator_00'}
+      },);
+    }
+    result.push(
+        ...Object.values(plugins_info[`${this.props.virtualCollection}_dict`])
+            .filter((operation) => ! operation.is_static).map(
+              (operation) => {
+                return {
+                  render: makeControlLink,
+                  props: {
+                    img: 'plus.svg',
+                    text: operation.title,
+                    href: `/${this.props.collection}/${operation.kind}`,
+                    key: operation.kind
+                  },
+                };
+              }
+          )
+    );
+
+    return result;
   }
 
   render() {
