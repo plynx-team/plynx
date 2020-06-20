@@ -83,5 +83,6 @@ plynxApi.createEntity({ name: `search_${COLLECTIONS.TEMPLATES}` });
 plynxApi.createEntity({ name: `search_${COLLECTIONS.RUNS}` });
 plynxApi.createEntity({ name: `search_${COLLECTIONS.GROUPS}` });
 plynxApi.createEntity({ name: `search_in_hubs` });
+plynxApi.createEntity({ name: `upload_file` });
 
 export const PLynxApi = plynxApi;

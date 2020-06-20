@@ -288,7 +288,7 @@ class ReactBlockGraph extends React.Component {
   handleOutputClick(nid, outputIndex) {
     const nodes = this.state.data.nodes;
     const block = this.getBlockbyId(nodes, nid);
-    if (block.nodeRunningStatus !== NODE_RUNNING_STATUS.STATIC && this.state.editable) {
+    if (block.node_running_status !== NODE_RUNNING_STATUS.STATIC && this.state.editable) {
       return;
     }
     this.props.onOutputClick(nid, outputIndex);

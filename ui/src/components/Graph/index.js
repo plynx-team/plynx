@@ -753,7 +753,9 @@ ENDPOINT = '` + API_ENDPOINT + `'
         file_type: node.outputs[i].file_type,
         is_array: node.outputs[i].is_array,
       });
-      node.outputs[i].values = []; // clear outputs
+      if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
+        node.outputs[i].values = []; // clear outputs
+      }
     }
     for (i = 0; i < node.logs.length; ++i) {
       node.logs[i].values = []; // clear outputs
@@ -766,8 +768,9 @@ ENDPOINT = '` + API_ENDPOINT + `'
     node.x = Math.max(blockObj.mousePos.x - 340, 0);
     node.y = Math.max(blockObj.mousePos.y - 80, 0);
 
-    // Change for files
-    node.node_running_status = NODE_RUNNING_STATUS.CREATED;
+    if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
+      node.node_running_status = NODE_RUNNING_STATUS.CREATED;
+    }
     node.cache_url = null;
 
     this.node_lookup[node._id] = node;

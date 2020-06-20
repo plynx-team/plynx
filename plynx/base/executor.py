@@ -68,8 +68,6 @@ class BaseExecutor:
             )
             if not is_workflow:
                 # need to add inputs and outputs
-                import logging
-                logging.info(type(nodes_parameter.value.value), 'a')
                 nodes_parameter.value.value.extend(
                     [
                         Node.from_dict({

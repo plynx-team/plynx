@@ -19,7 +19,7 @@ class PDF(resource.BaseResource):
     def preview(cls, preview_object):
         return '<iframe src="{}" title="preview" type="application/pdf" width="100%"/>'.format(
             '{}/resource/{}'.format(
-                WEB_CONFIG.api_endpoint,
+                WEB_CONFIG.endpoint,
                 preview_object.resource_id),
         )
 
@@ -29,7 +29,7 @@ class Image(resource.BaseResource):
     def preview(cls, preview_object):
         return '<img src="{}" width="100%" alt="preview" />'.format(
             '{}/resource/{}'.format(
-                WEB_CONFIG.api_endpoint,
+                WEB_CONFIG.endpoint,
                 preview_object.resource_id),
         )
 
