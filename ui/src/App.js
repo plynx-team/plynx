@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { Route, Switch, withRouter } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import Header from './components/Header';
+import Settings from './components/Settings';
 import LogIn from './components/LogIn';
 import LogInRedirect from './components/LogInRedirect';
 import Dashboard from './components/Dashboard';
@@ -74,6 +75,7 @@ class App extends Component {
                   <Route path={`/${COLLECTIONS.TEMPLATES}`} component={NodeRouter}/>
                   <Route path={`/${COLLECTIONS.RUNS}`} component={NodeRouter}/>
                   <Route exact path="/login" component={LogIn} />
+                  <Route exact path="/settings" component={Settings} />
                   <Route path="*" component={NotFound} />
                 </Switch>
               </div>

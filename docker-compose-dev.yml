@@ -85,4 +85,4 @@ services:
         volumes:
             - ./ui:/app
         tty: true
-        command: npm start
+        command: sh -c "npm install && npm start"
