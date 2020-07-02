@@ -38,15 +38,15 @@ const Inputs = (props) => {
     return (
         <div className='option-wrapper'>
           {
-            props.options.map((option) => {
+            Object.keys(props.options).map(function(key) {
               return (
-                <div className='option-cell' key={option.title}>
-                    <div className='cell-title'>{option.title}</div>
+                <div className='option-cell' key={key}>
+                    <div className='cell-title'>{key}</div>
                     <InputType 
-                        type={option.type}
-                        choice={option.choice}
-                        values={option.values}
-                        title={option.title}
+                        type={props.options[key].type}
+                        choice={props.options[key].choice}
+                        values={props.options[key].values}
+                        title={key}
                         input_change={props.input_change}
                     />
                 </div>

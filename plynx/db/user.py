@@ -33,6 +33,15 @@ class User(DBObject):
             default=True,
             is_list=False,
             ),
+        'settings': DBObjectField(
+            type=list,
+            default=[
+                ['Theme', 'three'], 
+                ['Github', 'true'], 
+                ['Docs', 'true'],
+                ],
+            is_list=False,
+        )
     }
 
     DB_COLLECTION = Collections.USERS

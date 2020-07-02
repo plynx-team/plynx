@@ -19,6 +19,7 @@ export default class LogIn extends Component {
       cookie.remove('access_token', { path: '/' });
       cookie.remove('refresh_token', { path: '/' });
       cookie.remove('username', { path: '/' });
+      cookie.remove('settings');
       window.location.reload(false);
     }
   }
@@ -52,6 +53,7 @@ export default class LogIn extends Component {
       cookie.save('access_token', response.data.access_token, { path: '/' });
       cookie.save('refresh_token', response.data.refresh_token, { path: '/' });
       cookie.save('username', username, { path: '/' });
+      cookie.save('settings', response.data.settings, { path: '/' });
       window.location = '/workflows';
     })
     .catch((error) => {

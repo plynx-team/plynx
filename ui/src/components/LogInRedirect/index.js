@@ -55,6 +55,7 @@ export default class LogInRedirect extends Component {
         cookie.save('access_token', response.data.access_token, { path: '/' });
         cookie.save('refresh_token', response.data.refresh_token, { path: '/' });
         cookie.save('username', response.data.username, { path: '/' });
+        cookie.save('settings', response.data.settings, { path: '/' });
         cookie.save('showTour', true, { path: '/' });
         window.location = response.data.url;
         loading = false;
@@ -72,6 +73,7 @@ export default class LogInRedirect extends Component {
         cookie.save('access_token', response.data.access_token, { path: '/' });
         cookie.save('refresh_token', response.data.refresh_token, { path: '/' });
         cookie.save('username', SPECIAL_USERS.DEFAULT, { path: '/' });
+        cookie.save('settings', response.data.settings, { path: '/' });
         window.location = '/workflows';
       };
     }

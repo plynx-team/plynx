@@ -19,6 +19,7 @@ export default class UserButton extends Component {
   handleLogOut() {
     console.log("Log out");
     cookie.remove('username');
+    cookie.remove('settings');
     cookie.remove('access_token');
     cookie.remove('refresh_token');
     window.location = "/login";

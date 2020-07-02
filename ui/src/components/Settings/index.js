@@ -1,4 +1,6 @@
 import React, { Component } from 'react';
+import cookie from 'react-cookies';
+import { API_ENDPOINT } from '../../configConsts';
 
 import Inputs from './Inputs';
 
@@ -9,25 +11,41 @@ export default class Settings extends Component {
     constructor(props) {
         super(props);
 
+        const settings = cookie.load('settings');
+        const split_settings = settings.split('-');
+        var settingls = [];
+        var valuedict = {};
+        for (var i in split_settings) {
+            settingls.push(
+                split_settings[i].split('_')
+            );
+        }
+        for (var j in settingls) {
+            if (settingls[j][1] === 'true') {
+                valuedict[settingls[j][0]] = true;
+            } else if (settingls[j][1] === 'false') {
+                valuedict[settingls[j][0]] = false;
+            } else {
+                valuedict[settingls[j][0]] = settingls[j][1];
+            }
+        }        
+
         this.state = {
-            options: [
-                {   
-                    title: 'Theme',
+            options: {
+                'Theme': {
                     type: 'list',
+                    choice: valuedict['Theme'],
                     values: ['one', 'two', 'three'],
-                    choice: 'three'
                 },
-                {   
-                    title: 'Github',
+                'Github' : {
                     type: 'boolean',
-                    choice: true,
+                    choice: valuedict['Github'],
                 },
-                {   
-                    title: 'Docs',
+                'Docs' :{
                     type: 'boolean',
-                    choice: false,
+                    choice: valuedict['Docs'],
                 },
-            ],
+            },
             changes: 'disabled',
         };
 
@@ -39,31 +57,38 @@ export default class Settings extends Component {
 
     handleInputChange = (e) => {
         this.setState({changes: 'enabled'});
-        
         var main_title;
         var dic = this.state.options;
 
-        for (var i in this.state.options) {
-            var inp_title = this.state.options[i].title;
-            if (e.target.className.includes('boolean-input')) {
-                main_title = e.target.className.replace('boolean-input-', '');
-                if (inp_title === main_title) {
-                    dic[i].choice = !dic[i].choice;
-                    break
-                }
-            } else if (e.target.className.includes('list-input')) {
-                main_title = e.target.className.replace('list-input-', '');
-                if (inp_title === main_title) {
-                    dic[i].choice = e.target.value;
-                    break
-                }
-            }
-            this.setState({options:dic});
+        if (e.target.className.includes('boolean-input')) {
+            main_title = e.target.className.replace('boolean-input-', '');
+            dic[main_title].choice = !dic[main_title].choice;
+        } else if (e.target.className.includes('list-input')) {
+            main_title = e.target.className.replace('list-input-', '');
+            dic[main_title].choice = e.target.value;
         }
+        this.setState({options:dic});
     }
 
     handleSave = () => {
-        console.log('bassed')
+        const dict = this.state.options;
+        const keys = Object.keys(dict);
+        var value_obj = {};
+        for (var i in keys) {
+            value_obj[keys[i]] = dict[keys[i]]['choice'];
+        }
+
+        PLynxApi.endpoints.settings.getCustom({
+            method: 'post',
+            url: API_ENDPOINT + '/settings',
+            headers: {'values': JSON.stringify(value_obj)},
+        })
+          .then((response) => {
+              cookie.save('settings', response.data);
+              this.setState({changes: 'disabled'});
+           }).catch((error) => {
+              console.log(error); 
+           });
     }
 
     render() {
@@ -71,8 +96,8 @@ export default class Settings extends Component {
         <div className='login-redirect'>
             <div className='option-grid'>
                 <div className='option-header'>
-                    <div onClick={PLynxApi.demo.test.testval()} className='header'>Settings</div>
-                    <div className='setting-changes'>{this.state.changes === 'enabled' ? "unsaved changes": "setting saved"}</div>
+                    <div className='header'>Settings</div>
+                    <div className='setting-changes'>{this.state.changes === 'enabled' ? "Unsaved changes": "Settings saved"}</div>
                 </div>
                 <Inputs 
                     options={this.state.options}
