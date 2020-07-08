@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import { Route, Switch, withRouter } from 'react-router-dom';
+import cookie from 'react-cookies';
 import PropTypes from 'prop-types';
 import Header from './components/Header';
 import Settings from './components/Settings';
@@ -17,7 +18,38 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.reloadOnChangePath = true;
-    this.state = {};
+
+    if (cookie.load('refresh_token') !== undefined) {
+      var setting_dict = this.settingsFromCookie();
+    } else {
+      setting_dict = {
+        'Theme': 'one',
+        'Docs': true,
+        'Github': true
+      }
+    }
+
+    this.state = {
+      options: {
+        'Theme': {
+            type: 'list',
+            choice: setting_dict['Theme'],
+            values: ['one', 'two', 'three'],
+        },
+        'Github' : {
+            type: 'boolean',
+            choice: setting_dict['Github'],
+        },
+        'Docs' :{
+            type: 'boolean',
+            choice: setting_dict['Docs'],
+        },
+      },
+    };
+
+    this.headerRef = React.createRef();
+
+    this.settingChanged.bind(this);
   }
 
   getPathTuple(path) {
@@ -29,6 +61,7 @@ class App extends Component {
     /* A trick: reload the page every time when the url does not end with '$'*/
     const prevPathTuple = this.getPathTuple(prevProps.location.pathname);
     const pathTuple = this.getPathTuple(this.props.location.pathname);
+    console.log(prevProps, pathTuple, 'bababich');
     if (this.props.location !== prevProps.location) {
       if (this.props.location.pathname.endsWith("$")) {
         this.reloadOnChangePath = false;
@@ -51,6 +84,32 @@ class App extends Component {
     }
   }
 
+  settingChanged(options, headerRef) {
+    headerRef.current.navigationRef.current.handleNavChange(options['Github'], options['Docs']);
+  }
+
+  settingsFromCookie() {
+    const settings = cookie.load('settings');
+    const split_settings = settings.split('-');
+    var settingls = [];
+    var valuedict = {};
+    for (var i in split_settings) {
+        settingls.push(
+            split_settings[i].split('_')
+        );
+    }
+    for (var j in settingls) {
+        if (settingls[j][1] === 'true') {
+            valuedict[settingls[j][0]] = true;
+        } else if (settingls[j][1] === 'false') {
+            valuedict[settingls[j][0]] = false;
+        } else {
+            valuedict[settingls[j][0]] = settingls[j][1];
+        }
+    }
+    return valuedict
+  }
+
   render() {
     return (
       <CacheBuster>
@@ -63,7 +122,11 @@ class App extends Component {
 
           return (
             <div className="App">
-              <Header/>
+              <Header
+                Docs={this.state.options.Docs.choice}
+                Github={this.state.options.Github.choice}
+                ref={this.headerRef}
+              />
               <div className="Content">
                 <Switch>
                   <Route exact path="/" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEFAULT} maxTry={6} />}/>
@@ -75,7 +138,18 @@ class App extends Component {
                   <Route path={`/${COLLECTIONS.TEMPLATES}`} component={NodeRouter}/>
                   <Route path={`/${COLLECTIONS.RUNS}`} component={NodeRouter}/>
                   <Route exact path="/login" component={LogIn} />
-                  <Route exact path="/settings" component={Settings} />
+                  <Route
+                   exact
+                   path="/settings"
+                   render={
+                    (props) => <Settings
+                      {...props}
+                      options={this.state.options}
+                      saveFunc={this.settingChanged}
+                      headerRef={this.headerRef}
+                    />
+                   }
+                  />
                   <Route path="*" component={NotFound} />
                 </Switch>
               </div>

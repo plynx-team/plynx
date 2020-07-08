@@ -11,43 +11,12 @@ export default class Settings extends Component {
     constructor(props) {
         super(props);
 
-        const settings = cookie.load('settings');
-        const split_settings = settings.split('-');
-        var settingls = [];
-        var valuedict = {};
-        for (var i in split_settings) {
-            settingls.push(
-                split_settings[i].split('_')
-            );
-        }
-        for (var j in settingls) {
-            if (settingls[j][1] === 'true') {
-                valuedict[settingls[j][0]] = true;
-            } else if (settingls[j][1] === 'false') {
-                valuedict[settingls[j][0]] = false;
-            } else {
-                valuedict[settingls[j][0]] = settingls[j][1];
-            }
-        }        
-
         this.state = {
-            options: {
-                'Theme': {
-                    type: 'list',
-                    choice: valuedict['Theme'],
-                    values: ['one', 'two', 'three'],
-                },
-                'Github' : {
-                    type: 'boolean',
-                    choice: valuedict['Github'],
-                },
-                'Docs' :{
-                    type: 'boolean',
-                    choice: valuedict['Docs'],
-                },
-            },
+            options: props.options,
             changes: 'disabled',
         };
+
+        this.headerRef = props.headerRef;
 
         this.handleInputChange.bind(this);
         this.handleSave.bind(this);
@@ -86,6 +55,7 @@ export default class Settings extends Component {
           .then((response) => {
               cookie.save('settings', response.data);
               this.setState({changes: 'disabled'});
+              this.props.saveFunc(value_obj, this.headerRef);
            }).catch((error) => {
               console.log(error); 
            });
