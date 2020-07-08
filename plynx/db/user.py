@@ -36,7 +36,7 @@ class User(DBObject):
         'settings': DBObjectField(
             type=list,
             default=[
-                ['Theme', 'three'], 
+                ['Node Display', 'Type and title'], 
                 ['Github', 'true'], 
                 ['Docs', 'true'],
                 ],

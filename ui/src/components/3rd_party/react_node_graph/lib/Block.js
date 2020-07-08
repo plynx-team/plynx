@@ -48,7 +48,8 @@ class Block extends React.Component {
       selected: props.selected,
       readonly: props.readonly,
       highlight: props.highlight,
-      cache_url: props.cache_url // eslint-disable-line
+      cache_url: props.cache_url, // eslint-disable-line
+      nodeDis: props.nodeDis,
     };
   }
 
@@ -130,7 +131,7 @@ class Block extends React.Component {
                     className="operation-icon"
                   />
                   <div className="operation-title-text">
-                    {plugins_dict.executors_info[this.props.node.kind].title}
+                    {this.state.nodeDis === 'Title and description' ? this.props.node.title: plugins_dict.executors_info[this.props.node.kind].title}
                   </div>
               </span>
               {
@@ -156,7 +157,7 @@ class Block extends React.Component {
                 </a>
               }
             </header>
-            <div className="node-title">{this.props.node.title}</div>
+            <div className="node-title">{this.state.nodeDis === 'Title and description' ? this.props.node.description: this.props.node.title}</div>
             <div className="node-content" onClick={(e) => {
               this.handleClick(e);
             }}>

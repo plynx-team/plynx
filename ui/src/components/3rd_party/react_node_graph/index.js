@@ -97,7 +97,8 @@ class ReactBlockGraph extends React.Component {
       dragging: false,
       editable: this.props.editable,
       selectedNIDs: this.selectedNIDs,
-      graphId: this.props.graphId
+      graphId: this.props.graphId,
+      nodeDis: props.nodeDis,
     };
 
     this.onMouseMove = this.onMouseMove.bind(this);
@@ -502,6 +503,7 @@ class ReactBlockGraph extends React.Component {
 
                       selected={selectedBlock}
                       readonly={!this.state.editable || block.node_running_status === NODE_RUNNING_STATUS.SPECIAL}
+                      nodeDis={this.state.nodeDis}
                     />;
           })}
 

@@ -23,7 +23,7 @@ class App extends Component {
       var setting_dict = this.settingsFromCookie();
     } else {
       setting_dict = {
-        'Theme': 'one',
+        'Node Display': 'Type and title',
         'Docs': true,
         'Github': true
       }
@@ -31,10 +31,10 @@ class App extends Component {
 
     this.state = {
       options: {
-        'Theme': {
+        'Node Display': {
             type: 'list',
-            choice: setting_dict['Theme'],
-            values: ['one', 'two', 'three'],
+            choice: setting_dict['Node Display'],
+            values: ['Type and title', 'Title and description'],
         },
         'Github' : {
             type: 'boolean',
@@ -135,7 +135,15 @@ class App extends Component {
                   <Route path={`/${VIRTUAL_COLLECTIONS.OPERATIONS}`} component={NodeRouter}/>
                   <Route path={`/${VIRTUAL_COLLECTIONS.WORKFLOWS}`} component={NodeRouter}/>
                   <Route path={`/${COLLECTIONS.GROUPS}`} component={NodeRouter}/>
-                  <Route path={`/${COLLECTIONS.TEMPLATES}`} component={NodeRouter}/>
+                  <Route 
+                    path={`/${COLLECTIONS.TEMPLATES}`}
+                    render={
+                      (props) => <NodeRouter
+                        {...props}
+                        nodeDis={this.state.options['Node Display']['choice']}
+                      />
+                    }
+                    />
                   <Route path={`/${COLLECTIONS.RUNS}`} component={NodeRouter}/>
                   <Route exact path="/login" component={LogIn} />
                   <Route
