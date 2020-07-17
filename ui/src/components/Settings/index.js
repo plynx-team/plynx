@@ -47,10 +47,13 @@ export default class Settings extends Component {
             value_obj[keys[i]] = dict[keys[i]]['choice'];
         }
 
-        PLynxApi.endpoints.settings.getCustom({
+        PLynxApi.endpoints.user_settings.getCustom({
             method: 'post',
-            url: API_ENDPOINT + '/settings',
-            headers: {'values': JSON.stringify(value_obj)},
+            url: API_ENDPOINT + '/user_settings',
+            headers: {
+                'values': JSON.stringify(value_obj),
+                'token': cookie.load('access_token'),
+            },
         })
           .then((response) => {
               cookie.save('settings', response.data);

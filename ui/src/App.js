@@ -12,12 +12,36 @@ import NotFound from './components/NotFound';
 import CacheBuster from './CacheBuster';
 import { COLLECTIONS, VIRTUAL_COLLECTIONS, SPECIAL_USERS } from './constants';
 
+import { PLynxApi } from './API';
+import { API_ENDPOINT } from './configConsts';
 import './App.css';
 
 class App extends Component {
   constructor(props) {
     super(props);
     this.reloadOnChangePath = true;
+
+    if (cookie.load('access_token') !== undefined) {
+      PLynxApi.endpoints.pull_settings.getCustom({
+        method: 'post',
+        url: API_ENDPOINT + '/pull_settings',
+        headers: { 'token': cookie.load('access_token') },
+      }).then((response) => {
+        console.log(response)
+      }).catch((error) => {
+        console.log(error); 
+      });
+    } else {
+      PLynxApi.endpoints.pull_settings.getCustom({
+        method: 'post',
+        url: API_ENDPOINT + '/pull_settings',
+        headers: { 'token': undefined },
+      }).then((response) => {
+        console.log(response)
+      }).catch((error) => {
+        console.log(error); 
+      });
+    }
 
     if (cookie.load('refresh_token') !== undefined) {
       var setting_dict = this.settingsFromCookie();

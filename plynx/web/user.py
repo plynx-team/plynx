@@ -7,6 +7,9 @@ from plynx.web.common import app, requires_auth, make_fail_response, handle_erro
 from plynx.utils.common import JSONEncoder, to_object_id
 from plynx.constants import Collections, NodeClonePolicy
 from plynx.utils.db_connector import get_db_connector
+from plynx.utils.config import get_settings_config, get_auth_config
+from plynx.db.user import User
+from itsdangerous import JSONWebSignatureSerializer as JSONserializer
 
 
 demo_user_manager = DemoUserManager()
@@ -69,13 +72,17 @@ def post_demo_user():
     })
 
 
-@app.route('/plynx/api/v0/settings', methods=['POST'])
+@app.route('/plynx/api/v0/user_settings', methods=['POST'])
 @handle_errors
 def post_user_settings():
     data = loads(request.headers.get('values'))
+    token = request.headers.get('token')
 
-    # TODO change from finding 'username': 'default' to '_id': ID
-    default_user = getattr(get_db_connector(), Collections.USERS).find_one({'username': 'default'})
+    userDOM = User()
+    s = JSONserializer(get_auth_config().secret_key)
+    username = s.loads(token)
+
+    default_user = getattr(get_db_connector(), Collections.USERS).find_one({'username': username['username']})
     for i in default_user['settings']:
         if i[0] in data:
             if data[i[0]] == True:
@@ -86,4 +93,18 @@ def post_user_settings():
                 i[1] = data[i[0]]
                 
     getattr(get_db_connector(), Collections.USERS).save(default_user)
+    return to_cookie(default_user['settings'])
+
+@app.route('/plynx/api/v0/pull_settings', methods=['POST'])
+@handle_errors
+def post_pull_settings():
+    token = request.headers.get('token')
+    if token == 'undefined':
+        print(get_settings_config().settings, 'asdd')
+        return get_settings_config().settings
+    
+    userDOM = User()
+    s = JSONserializer(get_auth_config().secret_key)
+    username = s.loads(token)
+    default_user = getattr(get_db_connector(), Collections.USERS).find_one({'username': username['username']})
     return to_cookie(default_user['settings'])
