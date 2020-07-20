@@ -1,4 +1,4 @@
-from flask import g, request
+from flask import g, request, jsonify
 from json import loads
 import plynx.db.node_collection_manager
 from plynx.db.db_object import get_class
@@ -17,6 +17,7 @@ template_collection_manager = plynx.db.node_collection_manager.NodeCollectionMan
 
 def to_cookie(a):
     for i in range(len(a)):
+        a[i][1] = str(a[i][1])
         a[i] = '_'.join(a[i])
     return '-'.join(a)
 
@@ -100,11 +101,15 @@ def post_user_settings():
 def post_pull_settings():
     token = request.headers.get('token')
     if token == 'undefined':
-        print(get_settings_config().settings, 'asdd')
         return get_settings_config().settings
     
     userDOM = User()
     s = JSONserializer(get_auth_config().secret_key)
     username = s.loads(token)
     default_user = getattr(get_db_connector(), Collections.USERS).find_one({'username': username['username']})
-    return to_cookie(default_user['settings'])
+    dic = get_settings_config().settings
+
+    for i in default_user['settings']:
+        dic[i[0]]['choice'] = i[1]
+    
+    return dic

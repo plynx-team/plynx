@@ -21,58 +21,27 @@ class App extends Component {
     super(props);
     this.reloadOnChangePath = true;
 
-    if (cookie.load('access_token') !== undefined) {
-      PLynxApi.endpoints.pull_settings.getCustom({
-        method: 'post',
-        url: API_ENDPOINT + '/pull_settings',
-        headers: { 'token': cookie.load('access_token') },
-      }).then((response) => {
-        console.log(response)
-      }).catch((error) => {
-        console.log(error); 
-      });
-    } else {
-      PLynxApi.endpoints.pull_settings.getCustom({
-        method: 'post',
-        url: API_ENDPOINT + '/pull_settings',
-        headers: { 'token': undefined },
-      }).then((response) => {
-        console.log(response)
-      }).catch((error) => {
-        console.log(error); 
-      });
-    }
-
-    if (cookie.load('refresh_token') !== undefined) {
-      var setting_dict = this.settingsFromCookie();
-    } else {
-      setting_dict = {
-        'Node Display': 'Type and title',
-        'Docs': true,
-        'Github': true
-      }
-    }
-
     this.state = {
       options: {
         'Node Display': {
             type: 'list',
-            choice: setting_dict['Node Display'],
+            choice: 'Type and title',
             values: ['Type and title', 'Title and description'],
         },
         'Github' : {
             type: 'boolean',
-            choice: setting_dict['Github'],
+            choice: true,
         },
         'Docs' :{
             type: 'boolean',
-            choice: setting_dict['Docs'],
+            choice: true,
         },
       },
     };
 
     this.headerRef = React.createRef();
 
+    this.getSettings.bind(this)
     this.settingChanged.bind(this);
   }
 
@@ -81,11 +50,25 @@ class App extends Component {
     return pathParts;
   }
 
+  getSettings() {
+    var options;
+    PLynxApi.endpoints.pull_settings.getCustom({
+      method: 'post',
+      url: API_ENDPOINT + '/pull_settings',
+      headers: { 'token': cookie.load('access_token') },
+    }).then((response) => {
+      options = response.data;
+      console.log(options);
+    }).catch((error) => {
+      console.log(error); 
+    });
+    return options
+  }
+
   componentDidUpdate(prevProps) {
     /* A trick: reload the page every time when the url does not end with '$'*/
     const prevPathTuple = this.getPathTuple(prevProps.location.pathname);
     const pathTuple = this.getPathTuple(this.props.location.pathname);
-    console.log(prevProps, pathTuple, 'bababich');
     if (this.props.location !== prevProps.location) {
       if (this.props.location.pathname.endsWith("$")) {
         this.reloadOnChangePath = false;
@@ -110,28 +93,6 @@ class App extends Component {
 
   settingChanged(options, headerRef) {
     headerRef.current.navigationRef.current.handleNavChange(options['Github'], options['Docs']);
-  }
-
-  settingsFromCookie() {
-    const settings = cookie.load('settings');
-    const split_settings = settings.split('-');
-    var settingls = [];
-    var valuedict = {};
-    for (var i in split_settings) {
-        settingls.push(
-            split_settings[i].split('_')
-        );
-    }
-    for (var j in settingls) {
-        if (settingls[j][1] === 'true') {
-            valuedict[settingls[j][0]] = true;
-        } else if (settingls[j][1] === 'false') {
-            valuedict[settingls[j][0]] = false;
-        } else {
-            valuedict[settingls[j][0]] = settingls[j][1];
-        }
-    }
-    return valuedict
   }
 
   render() {

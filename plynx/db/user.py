@@ -3,14 +3,14 @@ from plynx.constants import Collections
 from plynx.db.db_object import DBObject, DBObjectField
 from plynx.utils.db_connector import get_db_connector
 from plynx.utils.common import ObjectId
-from plynx.utils.config import get_auth_config
+from plynx.utils.config import get_auth_config, get_settings_config
 from itsdangerous import (SignatureExpired, BadSignature,
                           TimedJSONWebSignatureSerializer as TimedSerializer,
                           JSONWebSignatureSerializer as Serializer)
 
 
-class User(DBObject):
-    """Basic User class with db interface."""
+def create_fields():
+    default_settings = get_settings_config().settings
 
     FIELDS = {
         '_id': DBObjectField(
@@ -33,16 +33,91 @@ class User(DBObject):
             default=True,
             is_list=False,
             ),
-        'settings': DBObjectField(
+    }
+
+    # Import the settings from configs into the user
+    values = []
+    for i in default_settings:
+        dic = default_settings[i]
+        # values = [
+        #         dic['variable'],
+        #         dic['default choice'],
+        #         dic['type']
+        #     ]
+        
+        # if (dic['type'] == 'list'):
+        #     values.append(dic['values'])
+
+        # FIELDS[i] = DBObjectField(
+        #     type=list,
+        #     default=values,
+        #     is_list=False,
+        # )
+        values.append([i, dic['default choice']])
+    
+    FIELDS['settings'] = DBObjectField(
             type=list,
-            default=[
-                ['Node Display', 'Type and title'], 
-                ['Github', 'true'], 
-                ['Docs', 'true'],
-                ],
+            default=values,
             is_list=False,
         )
-    }
+    return FIELDS
+
+class User(DBObject):
+    """Basic User class with db interface."""
+
+    # default_settings = get_settings_config().settings
+
+    # FIELDS = {
+    #     '_id': DBObjectField(
+    #         type=ObjectId,
+    #         default=ObjectId,
+    #         is_list=False,
+    #         ),
+    #     'username': DBObjectField(
+    #         type=str,
+    #         default='',
+    #         is_list=False,
+    #         ),
+    #     'password_hash': DBObjectField(
+    #         type=str,
+    #         default='',
+    #         is_list=False,
+    #         ),
+    #     'active': DBObjectField(
+    #         type=bool,
+    #         default=True,
+    #         is_list=False,
+    #         ),
+    #     'settings': DBObjectField(
+    #         type=list,
+    #         default=[
+    #             ['Node Display', 'Type and title'], 
+    #             ['Github', 'true'], 
+    #             ['Docs', 'true'],
+    #             ],
+    #         is_list=False,
+    #     )
+    # }
+
+    # # Import the settings from configs into the user
+    # # for i in default_settings:
+    # #     dic = default_settings[i]
+    # #     values = [
+    # #             dic['variable'],
+    # #             dic['default choice'],
+    # #             dic['type']
+    # #         ]
+        
+    # #     if (dic['type'] == 'list'):
+    # #         values.append(dic['values'])
+
+    # #     FIELDS[i] = DBObject(
+    # #         type=list,
+    # #         default=values,
+    # #         is_list=False,
+    # #     )
+
+    FIELDS = create_fields()
 
     DB_COLLECTION = Collections.USERS
 
