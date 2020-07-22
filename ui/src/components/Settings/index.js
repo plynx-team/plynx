@@ -1,13 +1,18 @@
 import React, { Component } from 'react';
 import cookie from 'react-cookies';
+import onClickOutside from "react-onclickoutside";
 import { API_ENDPOINT } from '../../configConsts';
 
 import Inputs from './Inputs';
+import { ModalContext } from '../../contexts';
+import { SettingsContext } from '../../settingsContext';
 
 import './style.css';
 import { PLynxApi } from '../../API';
 
-export default class Settings extends Component {
+export class Settings extends Component {
+    static contextType = ModalContext;
+
     constructor(props) {
         super(props);
 
@@ -64,27 +69,40 @@ export default class Settings extends Component {
            });
     }
 
+    handleClickOutside = (e) => {
+        if (e.target.className.baseVal !== 'cogPath') {
+            this.context.hideModal();
+        }
+    }
+
     render() {
       return (
-        <div className='login-redirect'>
-            <div className='option-grid'>
-                <div className='option-header'>
-                    <div className='header'>Settings</div>
-                    <div className='setting-changes'>{this.state.changes === 'enabled' ? "Unsaved changes": "Settings saved"}</div>
+        <ModalContext.Consumer>{(context) => {
+            return (
+                <div className='setting-wrapper'>
+                    {context.showModal &&
+                        <div className='option-grid'>
+                            <div className='option-header'>
+                                <div className='header'>Settings</div>
+                                <div className='setting-changes'>{this.state.changes === 'enabled' ? "Unsaved changes": "Settings saved"}</div>
+                            </div>
+                            <Inputs 
+                                options={this.state.options}
+                                input_change={this.handleInputChange}
+                            />
+                            <div onClick={this.handleSave} className={'control-button ' + this.state.changes}>
+                                <img src="/icons/check.svg" alt="Approve"/>
+                                <div className='control-button-text'>
+                                    Save Changes
+                                </div>
+                            </div>
+                        </div>
+                    }
                 </div>
-                <Inputs 
-                    options={this.state.options}
-                    input_change={this.handleInputChange}
-                />
-                <div onClick={this.handleSave} className={'control-button ' + this.state.changes}>
-                    <img src="/icons/check.svg" alt="Approve"/>
-                    <div className='control-button-text'>
-                        Save Changes
-                    </div>
-                </div>
-            </div>
-        </div>
+            )    
+        }}</ModalContext.Consumer>
       );
     }
   }
-  
+
+  export default onClickOutside(Settings);

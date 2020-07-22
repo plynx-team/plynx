@@ -10,6 +10,7 @@ import Dashboard from './components/Dashboard';
 import NodeRouter from './components/NodeRouter';
 import NotFound from './components/NotFound';
 import CacheBuster from './CacheBuster';
+import { ModalContextProvider } from './contexts'
 import { COLLECTIONS, VIRTUAL_COLLECTIONS, SPECIAL_USERS } from './constants';
 
 import { PLynxApi } from './API';
@@ -107,45 +108,40 @@ class App extends Component {
 
           return (
             <div className="App">
-              <Header
-                Docs={this.state.options.Docs.choice}
-                Github={this.state.options.Github.choice}
-                ref={this.headerRef}
-              />
-              <div className="Content">
-                <Switch>
-                  <Route exact path="/" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEFAULT} maxTry={6} />}/>
-                  <Route exact path="/demo" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEMO} maxTry={3} />}/>
-                  <Route exact path="/dashboard" component={Dashboard} />
-                  <Route path={`/${VIRTUAL_COLLECTIONS.OPERATIONS}`} component={NodeRouter}/>
-                  <Route path={`/${VIRTUAL_COLLECTIONS.WORKFLOWS}`} component={NodeRouter}/>
-                  <Route path={`/${COLLECTIONS.GROUPS}`} component={NodeRouter}/>
-                  <Route 
-                    path={`/${COLLECTIONS.TEMPLATES}`}
-                    render={
-                      (props) => <NodeRouter
-                        {...props}
-                        nodeDis={this.state.options['Node Display']['choice']}
+              <ModalContextProvider>
+                <Header
+                  Docs={this.state.options.Docs.choice}
+                  Github={this.state.options.Github.choice}
+                  ref={this.headerRef}
+                />
+                <Settings 
+                  options={this.state.options}
+                  saveFunc={this.settingChanged}
+                  headerRef={this.headerRef}
+                />
+              </ModalContextProvider> 
+                <div className="Content">
+                  <Switch>
+                    <Route exact path="/" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEFAULT} maxTry={6} />}/>
+                    <Route exact path="/demo" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEMO} maxTry={3} />}/>
+                    <Route exact path="/dashboard" component={Dashboard} />
+                    <Route path={`/${VIRTUAL_COLLECTIONS.OPERATIONS}`} component={NodeRouter}/>
+                    <Route path={`/${VIRTUAL_COLLECTIONS.WORKFLOWS}`} component={NodeRouter}/>
+                    <Route path={`/${COLLECTIONS.GROUPS}`} component={NodeRouter}/>
+                    <Route 
+                      path={`/${COLLECTIONS.TEMPLATES}`}
+                      render={
+                        (props) => <NodeRouter
+                          {...props}
+                          nodeDis={this.state.options['Node Display']['choice']}
+                        />
+                      }
                       />
-                    }
-                    />
-                  <Route path={`/${COLLECTIONS.RUNS}`} component={NodeRouter}/>
-                  <Route exact path="/login" component={LogIn} />
-                  <Route
-                   exact
-                   path="/settings"
-                   render={
-                    (props) => <Settings
-                      {...props}
-                      options={this.state.options}
-                      saveFunc={this.settingChanged}
-                      headerRef={this.headerRef}
-                    />
-                   }
-                  />
-                  <Route path="*" component={NotFound} />
-                </Switch>
-              </div>
+                    <Route path={`/${COLLECTIONS.RUNS}`} component={NodeRouter}/>
+                    <Route exact path="/login" component={LogIn} />
+                    <Route path="*" component={NotFound} />
+                  </Switch>
+                </div>
             </div>
           );
         }}
