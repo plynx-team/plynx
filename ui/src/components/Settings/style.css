@@ -1,0 +1,38 @@
+.option-grid {
+    background-color: #2b2b2b;
+    border: 1px solid #404040;
+    padding: 5px;
+    border-radius: 4px;
+    color: white;
+    font-weight: 400;
+    font-size: 13pt;
+    position: absolute;
+    right: 5px;
+    top: 43px;
+    min-width: 300px;
+    -webkit-box-shadow: 0px 0px 2px 2px rgba(0, 0, 0, 0.39);
+    -moz-box-shadow: 0px 0px 2px 2px rgba(0, 0, 0, 0.39);
+    box-shadow: 0px 0px 2px 2px rgba(0, 0, 0, 0.39);
+}
+
+.header {
+    margin: 10px;
+    font-weight: 800;
+    font-size: 16pt;
+}
+
+.option-cell {
+    border-radius: 4px;
+    margin: 8px 5px 8px;
+    color: #ddd;
+    font-weight: 400;
+    font-size: 12pt;
+    padding: 5px;
+    background-color: #404040;
+}
+
+.option-cell {
+    max-width: 500px;
+    display: flex;
+    justify-content: space-between;
+}
