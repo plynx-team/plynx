@@ -67,10 +67,6 @@ export default class Editor extends Component {
       activeStatus: false,
     };
 
-    if (window.location.pathname.split('/')[1] === 'templates') {
-      this.state['nodeDis'] = props.nodeDis;
-    }
-
     let token = cookie.load('refresh_token');
     // TODO remove after demo
     if (token === 'Not assigned') {
@@ -755,7 +751,6 @@ export default class Editor extends Component {
                         editable={this.state.editable}
                         showAlert={(message, type) => this.showAlert(message, type)}
                         selectedNode={this.state.selectedNode}
-                        nodeDis={this.state.nodeDis}
                       />
                   }
                   {

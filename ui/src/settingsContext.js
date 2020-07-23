@@ -18,12 +18,29 @@ export class SettingsContextProvider extends Component {
                 'type': 'boolean',
                 'choice': true,
             }
-        }
+        },
+        showModal: false,
+    }
+
+    toggleModal = () => {
+        this.setState({ showModal: !this.state.showModal });
+    }
+
+    hideModal = () => {
+        this.setState({ showModal: false });
+    }
+
+    setSettings = (dict) => {
+        this.setState({ options: dict });
     }
 
     render() {
         return (
-            <SettingsContext.Provider value={{...this.state}}>
+            <SettingsContext.Provider value={{...this.state, 
+                hideModal: this.hideModal, 
+                toggleModal: this.toggleModal,
+                setSettings: this.setSettings
+            }}>
                 {this.props.children}
             </SettingsContext.Provider>
         )

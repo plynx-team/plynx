@@ -118,7 +118,6 @@ class Graph extends Component {
       previewData: null,
       generatedCode: "",
       linkParameters: null,
-      nodeDis: props.nodeDis,
     };
 
     let token = cookie.load('refresh_token');
@@ -916,7 +915,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
           onAllBlocksDeselect={() => this.handleBlocksSelect([])}
           onSavePressed={() => this.handleSave()}
           key={'graph' + this.state.editable}
-          nodeDis={this.state.nodeDis}
         />
 
         { this.state.editable !== null &&

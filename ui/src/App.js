@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import { Route, Switch, withRouter } from 'react-router-dom';
-import cookie from 'react-cookies';
 import PropTypes from 'prop-types';
 import Header from './components/Header';
 import Settings from './components/Settings';
@@ -10,11 +9,9 @@ import Dashboard from './components/Dashboard';
 import NodeRouter from './components/NodeRouter';
 import NotFound from './components/NotFound';
 import CacheBuster from './CacheBuster';
-import { ModalContextProvider } from './contexts'
+import { SettingsContextProvider } from './settingsContext'
 import { COLLECTIONS, VIRTUAL_COLLECTIONS, SPECIAL_USERS } from './constants';
 
-import { PLynxApi } from './API';
-import { API_ENDPOINT } from './configConsts';
 import './App.css';
 
 class App extends Component {
@@ -22,48 +19,11 @@ class App extends Component {
     super(props);
     this.reloadOnChangePath = true;
 
-    this.state = {
-      options: {
-        'Node Display': {
-            type: 'list',
-            choice: 'Type and title',
-            values: ['Type and title', 'Title and description'],
-        },
-        'Github' : {
-            type: 'boolean',
-            choice: true,
-        },
-        'Docs' :{
-            type: 'boolean',
-            choice: true,
-        },
-      },
-    };
-
-    this.headerRef = React.createRef();
-
-    this.getSettings.bind(this)
-    this.settingChanged.bind(this);
   }
 
   getPathTuple(path) {
     const pathParts = path.split('/').concat(['', '']);
     return pathParts;
-  }
-
-  getSettings() {
-    var options;
-    PLynxApi.endpoints.pull_settings.getCustom({
-      method: 'post',
-      url: API_ENDPOINT + '/pull_settings',
-      headers: { 'token': cookie.load('access_token') },
-    }).then((response) => {
-      options = response.data;
-      console.log(options);
-    }).catch((error) => {
-      console.log(error); 
-    });
-    return options
   }
 
   componentDidUpdate(prevProps) {
@@ -92,10 +52,6 @@ class App extends Component {
     }
   }
 
-  settingChanged(options, headerRef) {
-    headerRef.current.navigationRef.current.handleNavChange(options['Github'], options['Docs']);
-  }
-
   render() {
     return (
       <CacheBuster>
@@ -108,18 +64,9 @@ class App extends Component {
 
           return (
             <div className="App">
-              <ModalContextProvider>
-                <Header
-                  Docs={this.state.options.Docs.choice}
-                  Github={this.state.options.Github.choice}
-                  ref={this.headerRef}
-                />
-                <Settings 
-                  options={this.state.options}
-                  saveFunc={this.settingChanged}
-                  headerRef={this.headerRef}
-                />
-              </ModalContextProvider> 
+              <SettingsContextProvider>
+                <Header />
+                <Settings />
                 <div className="Content">
                   <Switch>
                     <Route exact path="/" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEFAULT} maxTry={6} />}/>
@@ -128,20 +75,13 @@ class App extends Component {
                     <Route path={`/${VIRTUAL_COLLECTIONS.OPERATIONS}`} component={NodeRouter}/>
                     <Route path={`/${VIRTUAL_COLLECTIONS.WORKFLOWS}`} component={NodeRouter}/>
                     <Route path={`/${COLLECTIONS.GROUPS}`} component={NodeRouter}/>
-                    <Route 
-                      path={`/${COLLECTIONS.TEMPLATES}`}
-                      render={
-                        (props) => <NodeRouter
-                          {...props}
-                          nodeDis={this.state.options['Node Display']['choice']}
-                        />
-                      }
-                      />
+                    <Route path={`/${COLLECTIONS.TEMPLATES}`} component={NodeRouter}/>
                     <Route path={`/${COLLECTIONS.RUNS}`} component={NodeRouter}/>
                     <Route exact path="/login" component={LogIn} />
                     <Route path="*" component={NotFound} />
                   </Switch>
                 </div>
+              </SettingsContextProvider> 
             </div>
           );
         }}

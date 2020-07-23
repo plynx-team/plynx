@@ -15,23 +15,15 @@ from itsdangerous import JSONWebSignatureSerializer as JSONserializer
 demo_user_manager = DemoUserManager()
 template_collection_manager = plynx.db.node_collection_manager.NodeCollectionManager(collection=Collections.TEMPLATES)
 
-def to_cookie(a):
-    for i in range(len(a)):
-        a[i][1] = str(a[i][1])
-        a[i] = '_'.join(a[i])
-    return '-'.join(a)
-
 @app.route('/plynx/api/v0/token', strict_slashes=False)
 @requires_auth
 @handle_errors
 def get_auth_token():
     access_token = g.user.generate_access_token()
     refresh_token = g.user.generate_refresh_token()
-    settings = to_cookie(g.user.settings)
     return JSONEncoder().encode({
         'access_token': access_token.decode('ascii'),
         'refresh_token': refresh_token.decode('ascii'),
-        'settings': settings
     })
 
 
@@ -62,14 +54,12 @@ def post_demo_user():
             app.logger.error(e)
             return make_fail_response(str(e)), 500
 
-    settings = to_cookie(user.settings)
     access_token = user.generate_access_token(expiration=1800)
     return JSONEncoder().encode({
         'access_token': access_token.decode('ascii'),
         'refresh_token': 'Not assigned',
         'username': user.username,
         'url': '/{}/{}'.format(Collections.TEMPLATES, template_id),
-        'settings': settings,
     })
 
 
@@ -86,15 +76,10 @@ def post_user_settings():
     default_user = getattr(get_db_connector(), Collections.USERS).find_one({'username': username['username']})
     for i in default_user['settings']:
         if i[0] in data:
-            if data[i[0]] == True:
-                i[1] = 'true'
-            elif data[i[0]] == False:
-                i[1] = 'false'
-            else:    
-                i[1] = data[i[0]]
+            i[1] = data[i[0]]
                 
     getattr(get_db_connector(), Collections.USERS).save(default_user)
-    return to_cookie(default_user['settings'])
+    return 'sucess'
 
 @app.route('/plynx/api/v0/pull_settings', methods=['POST'])
 @handle_errors

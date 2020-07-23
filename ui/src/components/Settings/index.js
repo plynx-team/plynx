@@ -4,48 +4,52 @@ import onClickOutside from "react-onclickoutside";
 import { API_ENDPOINT } from '../../configConsts';
 
 import Inputs from './Inputs';
-import { ModalContext } from '../../contexts';
 import { SettingsContext } from '../../settingsContext';
 
 import './style.css';
 import { PLynxApi } from '../../API';
 
 export class Settings extends Component {
-    static contextType = ModalContext;
+    static contextType = SettingsContext;
 
     constructor(props) {
         super(props);
 
         this.state = {
             options: props.options,
-            changes: 'disabled',
         };
 
-        this.headerRef = props.headerRef;
-
         this.handleInputChange.bind(this);
-        this.handleSave.bind(this);
 
         document.title = "Settings - PLynx";
     }
 
+    
+    componentDidMount() {
+        PLynxApi.endpoints.pull_settings.getCustom({
+            method: 'post',
+            url: API_ENDPOINT + '/pull_settings',
+            headers: { 'token': cookie.load('access_token') },
+        }).then((response) => {
+            this.context.setSettings(response.data);
+        }).catch((error) => {
+            console.log(error);
+        });
+    }
+
     handleInputChange = (e) => {
-        this.setState({changes: 'enabled'});
         var main_title;
-        var dic = this.state.options;
+        var dict = this.context.options;
 
         if (e.target.className.includes('boolean-input')) {
             main_title = e.target.className.replace('boolean-input-', '');
-            dic[main_title].choice = !dic[main_title].choice;
+            dict[main_title].choice = !dict[main_title].choice;
         } else if (e.target.className.includes('list-input')) {
             main_title = e.target.className.replace('list-input-', '');
-            dic[main_title].choice = e.target.value;
+            dict[main_title].choice = e.target.value;
         }
-        this.setState({options:dic});
-    }
+        this.context.setSettings(dict);
 
-    handleSave = () => {
-        const dict = this.state.options;
         const keys = Object.keys(dict);
         var value_obj = {};
         for (var i in keys) {
@@ -60,10 +64,8 @@ export class Settings extends Component {
                 'token': cookie.load('access_token'),
             },
         })
-          .then((response) => {
-              cookie.save('settings', response.data);
-              this.setState({changes: 'disabled'});
-              this.props.saveFunc(value_obj, this.headerRef);
+          .then(() => {
+            console.log('Settings Updated!');
            }).catch((error) => {
               console.log(error); 
            });
@@ -77,30 +79,21 @@ export class Settings extends Component {
 
     render() {
       return (
-        <ModalContext.Consumer>{(context) => {
+        <SettingsContext.Consumer>{(context) => {
             return (
                 <div className='setting-wrapper'>
                     {context.showModal &&
                         <div className='option-grid'>
-                            <div className='option-header'>
-                                <div className='header'>Settings</div>
-                                <div className='setting-changes'>{this.state.changes === 'enabled' ? "Unsaved changes": "Settings saved"}</div>
-                            </div>
+                            <div className='header'>Settings</div>
                             <Inputs 
-                                options={this.state.options}
+                                options={this.context.options}
                                 input_change={this.handleInputChange}
                             />
-                            <div onClick={this.handleSave} className={'control-button ' + this.state.changes}>
-                                <img src="/icons/check.svg" alt="Approve"/>
-                                <div className='control-button-text'>
-                                    Save Changes
-                                </div>
-                            </div>
                         </div>
                     }
                 </div>
             )    
-        }}</ModalContext.Consumer>
+        }}</SettingsContext.Consumer>
       );
     }
   }

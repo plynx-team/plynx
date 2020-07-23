@@ -16,14 +16,14 @@
 }
 
 .header {
-    margin: 10px 0px 5px 15px;
+    margin: 10px;
     font-weight: 800;
     font-size: 16pt;
 }
 
 .option-cell {
     border-radius: 4px;
-    margin: 5px;
+    margin: 8px 5px 8px;
     color: #ddd;
     font-weight: 400;
     font-size: 12pt;
@@ -31,16 +31,8 @@
     background-color: #404040;
 }
 
-.option-header,
 .option-cell {
     max-width: 500px;
     display: flex;
     justify-content: space-between;
-}
-
-.setting-changes {
-    margin-top: 14px;
-    color: #ccc;
-    font-weight: 400;
-    font-size: 12pt;
 }

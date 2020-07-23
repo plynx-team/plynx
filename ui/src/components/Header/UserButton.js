@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import cookie from 'react-cookies';
-import { ModalContext } from '../../contexts'
+import { SettingsContext } from '../../settingsContext'
 
 import './style.css';
 
@@ -20,7 +20,6 @@ export default class UserButton extends Component {
   handleLogOut() {
     console.log("Log out");
     cookie.remove('username');
-    cookie.remove('settings');
     cookie.remove('access_token');
     cookie.remove('refresh_token');
     window.location = "/login";
@@ -43,7 +42,7 @@ export default class UserButton extends Component {
             <div className="action" onClick={() => this.handleLogOut()}>
               LogOut
             </div>
-            <ModalContext.Consumer>{(context) =>{
+            <SettingsContext.Consumer>{(context) =>{
               return (
                 <svg onClick={context.toggleModal} className='cog' viewBox="0 0 93.776665 94.046021">
                   <g transform="translate(41.811 -175.31)">
@@ -51,7 +50,7 @@ export default class UserButton extends Component {
                   </g>
                 </svg>
               )
-            }}</ModalContext.Consumer>
+            }}</SettingsContext.Consumer>
           </div>
         }
         {!this.state.refreshTokenExists &&
