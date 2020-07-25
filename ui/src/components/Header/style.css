@@ -16,7 +16,7 @@
   display: none;
 }
 
-.Header .logo, .Header .menu-button-sl, .cog > g > .cogPath {
+.Header .logo, .Header .menu-button-sl {
   -moz-transition: all .1s ease-in;
   -o-transition: all .1s ease-in;
   -webkit-transition: all .1s ease-in;
@@ -118,19 +118,6 @@
 .Header > .logo > .icon {
   vertical-align: middle;
   height: 60px;
-}
-
-.cog {
-  height: 20px;
-  margin-left: 15px;
-}
-
-.cog > g > .cogPath {
-  fill: white;
-}
-
-.cog:hover > g > .cogPath {
-  fill: #337ab7;
 }
 
 .Header .menu-button-sl {

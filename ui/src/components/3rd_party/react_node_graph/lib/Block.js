@@ -4,7 +4,6 @@ import BlockInputList from './BlockInputList';
 import BlockOuputList from './BlockOutputList';
 import ParameterList from './ParameterList';
 import {PluginsConsumer} from '../../../../contexts';
-import {SettingsContext} from '../../../../settingsContext';
 import { NODE_STATUS, NODE_RUNNING_STATUS } from '../../../../constants';
 
 import Icon from '../../../Common/Icon';
@@ -49,7 +48,7 @@ class Block extends React.Component {
       selected: props.selected,
       readonly: props.readonly,
       highlight: props.highlight,
-      cache_url: props.cache_url, // eslint-disable-line
+      cache_url: props.cache_url // eslint-disable-line
     };
   }
 
@@ -115,75 +114,71 @@ class Block extends React.Component {
         plugins_dict => <div onClick={(e) => {
           this.handleClick(e);
         }} style={{position: 'relative'}}>
-        <SettingsContext.Consumer>{(context) => {
-        return (
-          <Draggable
-            defaultPosition={{x: this.props.node.x, y: this.props.node.y}}
-            handle=".node-header,.node-header-title,.node-content"
-            onStart={(event, ui) => this.handleDragStart(event, ui)}
-            onStop={() => this.handleDragStop()}
-            onDrag={(event, ui) => this.handleDrag(event, ui)}
-            // grid={[15, 15]}
-            >
-            <section className={blockClass} style={{zIndex: 10000}} >
-                <header className="node-header">
-                  <span className="node-header-title">
-                      <Icon
-                        type_descriptor={plugins_dict.executors_info[this.props.node.kind]}
-                        className="operation-icon"
-                      />
-                      <div className="operation-title-text">
-                        {context.options['Node Display']['choice'] === 'Title and description' ? this.props.node.title: plugins_dict.executors_info[this.props.node.kind].title}
-                      </div>
-                  </span>
-                  {
-                    !this.state.readonly &&
-                    <div
-                      className={'remove'}
-                      onClick={(e) => this.handleRemove(e)}
-                    >
-                      &#215;
-                    </div>
-                  }
-                  {
-                    this.props.node.cache_url &&
-                    <a href={this.props.node.cache_url}
-                      className={'remove'}
-                    >
-                      <img
-                        src={"/icons/cached.svg"}
-                        width="11"
-                        height="11"
-                        alt="cached"
-                        />
-                    </a>
-                  }
-                </header>
-                <div className="node-title">{context.options['Node Display']['choice'] === 'Title and description' ? this.props.node.description: this.props.node.title}</div>
-                <div className="node-content" onClick={(e) => {
-                  this.handleClick(e);
-                }}>
-                    <BlockInputList
-                                  items={this.props.node.inputs}
-                                  onCompleteConnector={(index) => this.onCompleteConnector(index)}
-                                  resources_dict={plugins_dict.resources_dict}
-                                  />
-                    <BlockOuputList
-                                  items={this.props.node.outputs}
-                                  onStartConnector={(index) => this.onStartConnector(index)}
-                                  onClick={(index) => this.onOutputClick(index)}
-                                  resources_dict={plugins_dict.resources_dict}
-                                  />
-
+        <Draggable
+          defaultPosition={{x: this.props.node.x, y: this.props.node.y}}
+          handle=".node-header,.node-header-title,.node-content"
+          onStart={(event, ui) => this.handleDragStart(event, ui)}
+          onStop={() => this.handleDragStop()}
+          onDrag={(event, ui) => this.handleDrag(event, ui)}
+          // grid={[15, 15]}
+          >
+        <section className={blockClass} style={{zIndex: 10000}} >
+            <header className="node-header">
+              <span className="node-header-title">
+                  <Icon
+                    type_descriptor={plugins_dict.executors_info[this.props.node.kind]}
+                    className="operation-icon"
+                  />
+                  <div className="operation-title-text">
+                    {plugins_dict.executors_info[this.props.node.kind].title}
+                  </div>
+              </span>
+              {
+                !this.state.readonly &&
+                <div
+                  className={'remove'}
+                  onClick={(e) => this.handleRemove(e)}
+                >
+                  &#215;
                 </div>
-                <ParameterList
-                    items={[]}
-                    onClick={(index) => this.onSpecialParameterClick(index)}
-                />
-            </section>
-          </Draggable>
-        )
-        }}</SettingsContext.Consumer>
+              }
+              {
+                this.props.node.cache_url &&
+                <a href={this.props.node.cache_url}
+                  className={'remove'}
+                >
+                  <img
+                    src={"/icons/cached.svg"}
+                    width="11"
+                    height="11"
+                    alt="cached"
+                    />
+                </a>
+              }
+            </header>
+            <div className="node-title">{this.props.node.title}</div>
+            <div className="node-content" onClick={(e) => {
+              this.handleClick(e);
+            }}>
+                <BlockInputList
+                              items={this.props.node.inputs}
+                              onCompleteConnector={(index) => this.onCompleteConnector(index)}
+                              resources_dict={plugins_dict.resources_dict}
+                              />
+                <BlockOuputList
+                              items={this.props.node.outputs}
+                              onStartConnector={(index) => this.onStartConnector(index)}
+                              onClick={(index) => this.onOutputClick(index)}
+                              resources_dict={plugins_dict.resources_dict}
+                              />
+
+            </div>
+            <ParameterList
+                items={[]}
+                onClick={(index) => this.onSpecialParameterClick(index)}
+            />
+        </section>
+        </Draggable>
       </div>
       }
       </PluginsConsumer>
