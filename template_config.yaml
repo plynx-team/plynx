@@ -144,18 +144,3 @@ plugins:
       executor: plynx.plugins.executors.dag.DAG
       hubs:
         - db-hub
-
-settings:
-  Node Display:
-    type: list
-    default choice: Type and title
-    values: [Type and title, Title and description]
-    variable: true
-  Github:
-    type: boolean
-    default choice: true
-    variable: true
-  Docs:
-    type: boolean
-    default choice: true
-    variable: true

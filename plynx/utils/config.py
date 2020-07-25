@@ -21,7 +21,6 @@ OperationConfig = namedtuple('OperationConfig', ['kind', 'title', 'executor', 'h
 HubConfig = namedtuple('HubConfig', ['kind', 'title', 'icon', 'color', 'cls', 'args'])
 WorkflowConfig = namedtuple('WorkflowConfig', ['kind', 'title', 'executor', 'operations', 'hubs', 'icon', 'color'])
 PluginsConfig = namedtuple('PluginsConfig', ['resources', 'operations', 'hubs', 'workflows', 'dummy_operations'])
-Settings = namedtuple('Settings', ['settings'])
 
 
 Config = namedtuple(
@@ -34,7 +33,6 @@ Config = namedtuple(
         'web',
         'demo',
         'cloud_service',
-        'settings',
     ]
 )
 
@@ -106,10 +104,6 @@ def get_cloud_service_config():
         url_postfix=_config.get('cloud_service', {}).get('url_postfix', ''),
     )
 
-def get_settings_config():
-    return Settings(
-        settings=_config.get('settings', {})
-    )
 
 def get_plugins():
     # resources
@@ -197,7 +191,6 @@ def get_config():
         web=get_web_config(),
         demo=get_demo_config(),
         cloud_service=get_cloud_service_config(),
-        settings=get_settings_config(),
     )
 
 

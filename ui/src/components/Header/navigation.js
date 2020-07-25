@@ -3,17 +3,14 @@ import { NavLink } from 'react-router-dom';
 import { separator } from './common';
 import cookie from 'react-cookies';
 import { VIRTUAL_COLLECTIONS } from '../../constants';
-import { SettingsContext } from '../../settingsContext';
 
 import './style.css';
 
 class Navigation extends Component {
-  static contextType = SettingsContext;
-  
   constructor(props) {
     super(props);
     this.state = {
-      refreshTokenExists: !!cookie.load('refresh_token'),
+      refreshTokenExists: !!cookie.load('refresh_token')
     };
   }
 
@@ -38,13 +35,9 @@ class Navigation extends Component {
               <NavLink to={`/${VIRTUAL_COLLECTIONS.RUNS}`} className="Item">Runs</NavLink>
             }
             {separator()}
-            {this.context.options.Docs.choice && 
-              <a href='https://plynx.readthedocs.io/en/latest/overview.html' className="Item">Docs</a>
-            }
+            <a href='https://plynx.readthedocs.io/en/latest/overview.html' className="Item">Docs</a>
             {separator()}
-            {this.context.options.Github.choice && 
-              <a href='https://github.com/plynx-team/plynx' className="Item">Github</a>
-            }
+            <a href='https://github.com/plynx-team/plynx' className="Item">Github</a>
             {separator()}
           </div>
       </div>

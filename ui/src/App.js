@@ -2,14 +2,12 @@ import React, { Component } from 'react';
 import { Route, Switch, withRouter } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import Header from './components/Header';
-import Settings from './components/Settings';
 import LogIn from './components/LogIn';
 import LogInRedirect from './components/LogInRedirect';
 import Dashboard from './components/Dashboard';
 import NodeRouter from './components/NodeRouter';
 import NotFound from './components/NotFound';
 import CacheBuster from './CacheBuster';
-import { SettingsContextProvider } from './settingsContext'
 import { COLLECTIONS, VIRTUAL_COLLECTIONS, SPECIAL_USERS } from './constants';
 
 import './App.css';
@@ -18,7 +16,7 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.reloadOnChangePath = true;
-
+    this.state = {};
   }
 
   getPathTuple(path) {
@@ -64,24 +62,21 @@ class App extends Component {
 
           return (
             <div className="App">
-              <SettingsContextProvider>
-                <Header />
-                <Settings />
-                <div className="Content">
-                  <Switch>
-                    <Route exact path="/" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEFAULT} maxTry={6} />}/>
-                    <Route exact path="/demo" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEMO} maxTry={3} />}/>
-                    <Route exact path="/dashboard" component={Dashboard} />
-                    <Route path={`/${VIRTUAL_COLLECTIONS.OPERATIONS}`} component={NodeRouter}/>
-                    <Route path={`/${VIRTUAL_COLLECTIONS.WORKFLOWS}`} component={NodeRouter}/>
-                    <Route path={`/${COLLECTIONS.GROUPS}`} component={NodeRouter}/>
-                    <Route path={`/${COLLECTIONS.TEMPLATES}`} component={NodeRouter}/>
-                    <Route path={`/${COLLECTIONS.RUNS}`} component={NodeRouter}/>
-                    <Route exact path="/login" component={LogIn} />
-                    <Route path="*" component={NotFound} />
-                  </Switch>
-                </div>
-              </SettingsContextProvider> 
+              <Header/>
+              <div className="Content">
+                <Switch>
+                  <Route exact path="/" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEFAULT} maxTry={6} />}/>
+                  <Route exact path="/demo" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEMO} maxTry={3} />}/>
+                  <Route exact path="/dashboard" component={Dashboard} />
+                  <Route path={`/${VIRTUAL_COLLECTIONS.OPERATIONS}`} component={NodeRouter}/>
+                  <Route path={`/${VIRTUAL_COLLECTIONS.WORKFLOWS}`} component={NodeRouter}/>
+                  <Route path={`/${COLLECTIONS.GROUPS}`} component={NodeRouter}/>
+                  <Route path={`/${COLLECTIONS.TEMPLATES}`} component={NodeRouter}/>
+                  <Route path={`/${COLLECTIONS.RUNS}`} component={NodeRouter}/>
+                  <Route exact path="/login" component={LogIn} />
+                  <Route path="*" component={NotFound} />
+                </Switch>
+              </div>
             </div>
           );
         }}
