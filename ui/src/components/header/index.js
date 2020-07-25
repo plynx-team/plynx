@@ -8,7 +8,17 @@ import './style.css';
 export default class Header extends Component {
   constructor(props) {
     super(props);
-    this.state = { width: 0, height: 0, showMenu: false };
+
+    this.state = { 
+      width: 0,
+      height: 0,
+      showMenu: false,
+      Docs: props.Docs,
+      Github: props.Github,
+    };
+
+    this.navigationRef = React.createRef();
+    
     this.updateWindowDimensions = this.updateWindowDimensions.bind(this);
   }
 
@@ -42,7 +52,12 @@ export default class Header extends Component {
       <div className="Header" onMouseUp={() => this.onMouseUp()}>
         <a href='https://plynx.com' className="logo"><img src='/logo.png' className='icon' alt='PLynx'/></a>
         <div className={'menu-sl' + (showMenu ? "-show" : "-hide")} id='menu-sl'>
-          <Navigation showMenu={showMenu}/>
+          <Navigation 
+            showMenu={showMenu}
+            Github={this.state.Github}
+            Docs={this.state.Docs}
+            ref={this.navigationRef}
+          />
         </div>
         {
           showMenuButton &&
