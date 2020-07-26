@@ -163,6 +163,7 @@ export const COLLECTIONS = Object.freeze({
   TEMPLATES: 'templates',
   RUNS: 'runs',
   GROUPS: 'groups',
+  USERS: 'users',
 });
 
 export const VIRTUAL_COLLECTIONS = Object.freeze({

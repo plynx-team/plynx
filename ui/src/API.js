@@ -60,7 +60,9 @@ class API {
     .then(response => {
       cookie.save('access_token', response.data.access_token, { path: '/' });
       cookie.save('refresh_token', response.data.refresh_token, { path: '/' });
+      cookie.save('user', response.data.user, { path: '/' });
       console.log("Successfully updated token");
+      console.log(response.data.user);
       isSuccessfull = true;
     })
     .catch(() => {

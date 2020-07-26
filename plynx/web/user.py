@@ -3,6 +3,7 @@ from json import loads
 import plynx.db.node_collection_manager
 from plynx.db.db_object import get_class
 from plynx.db.demo_user_manager import DemoUserManager
+from plynx.db.user import UserCollectionManager
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 from plynx.utils.common import JSONEncoder, to_object_id
 from plynx.constants import Collections, NodeClonePolicy
@@ -21,9 +22,13 @@ template_collection_manager = plynx.db.node_collection_manager.NodeCollectionMan
 def get_auth_token():
     access_token = g.user.generate_access_token()
     refresh_token = g.user.generate_refresh_token()
+
+    user_obj = g.user.to_dict()
+    user_obj['hash_password'] = ''
     return JSONEncoder().encode({
         'access_token': access_token.decode('ascii'),
         'refresh_token': refresh_token.decode('ascii'),
+        'user': user_obj,
     })
 
 
@@ -55,46 +60,25 @@ def post_demo_user():
             return make_fail_response(str(e)), 500
 
     access_token = user.generate_access_token(expiration=1800)
+    user_obj = g.user.to_dict()
+    user_obj['hash_password'] = ''
     return JSONEncoder().encode({
         'access_token': access_token.decode('ascii'),
         'refresh_token': 'Not assigned',
-        'username': user.username,
+        'user': user_obj,
         'url': '/{}/{}'.format(Collections.TEMPLATES, template_id),
     })
 
 
-@app.route('/plynx/api/v0/user_settings', methods=['POST'])
+@app.route('/plynx/api/v0/users/<username>', methods=['GET'])
 @handle_errors
-def post_user_settings():
-    data = loads(request.headers.get('values'))
-    token = request.headers.get('token')
-
-    userDOM = User()
-    s = JSONserializer(get_auth_config().secret_key)
-    username = s.loads(token)
-
-    default_user = getattr(get_db_connector(), Collections.USERS).find_one({'username': username['username']})
-    for i in default_user['settings']:
-        if i[0] in data:
-            i[1] = data[i[0]]
-                
-    getattr(get_db_connector(), Collections.USERS).save(default_user)
-    return 'sucess'
-
-@app.route('/plynx/api/v0/pull_settings', methods=['POST'])
-@handle_errors
-def post_pull_settings():
-    token = request.headers.get('token')
-    if token == 'undefined':
-        return get_settings_config().settings
-    
-    userDOM = User()
-    s = JSONserializer(get_auth_config().secret_key)
-    username = s.loads(token)
-    default_user = getattr(get_db_connector(), Collections.USERS).find_one({'username': username['username']})
-    dic = get_settings_config().settings
-
-    for i in default_user['settings']:
-        dic[i[0]]['choice'] = i[1]
-    
-    return dic
+@requires_auth
+def get_user(username):
+    user = UserCollectionManager.find_user_by_name(username)
+    if not user:
+        return make_fail_response('User not found'), 404
+    user_obj = user.to_dict()
+    return JSONEncoder().encode({
+        'user': user_obj,
+        'status': 'success',
+    })

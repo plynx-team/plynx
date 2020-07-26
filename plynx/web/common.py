@@ -3,7 +3,7 @@ import traceback
 from flask import Flask, request, g, Response
 from flask_cors import CORS
 from functools import wraps
-from plynx.db.user import User
+from plynx.db.user import User, UserCollectionManager
 from plynx.utils.config import get_config
 from plynx.utils.common import JSONEncoder
 from plynx.utils.db_connector import check_connection
@@ -22,7 +22,7 @@ def verify_password(username_or_token, password):
     user = User.verify_auth_token(username_or_token)
     if not user:
         # try to authenticate with username/password
-        user = User.find_user_by_name(username_or_token)
+        user = UserCollectionManager.find_user_by_name(username_or_token)
         if not user or not user.verify_password(password):
             return False
     g.user = user
@@ -64,7 +64,7 @@ def register_user(username, password):
     if username is None or password is None:
         return 'Missing username or password'
 
-    if User.find_user_by_name(username):
+    if UserCollectionManager.find_user_by_name(username):
         return 'User with name `{}` already exists'.format(username)
 
     user = User()
@@ -75,7 +75,7 @@ def register_user(username, password):
 
 
 def _init_default_user():
-    if not User.find_user_by_name(DEFAULT_USERNAME):
+    if not UserCollectionManager.find_user_by_name(DEFAULT_USERNAME):
         message = register_user(DEFAULT_USERNAME, DEFAULT_PASSWORD)
         if message:
             raise Exception(message)
