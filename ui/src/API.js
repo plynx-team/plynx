@@ -77,6 +77,7 @@ plynxApi.createEntity({ name: COLLECTIONS.RUNS });
 plynxApi.createEntity({ name: COLLECTIONS.GROUPS });
 plynxApi.createEntity({ name: 'resource' });
 plynxApi.createEntity({ name: 'token' });
+plynxApi.createEntity({ name: 'register' });
 plynxApi.createEntity({ name: 'demo' });
 plynxApi.createEntity({ name: 'user_settings' });
 plynxApi.createEntity({ name: 'pull_settings' });

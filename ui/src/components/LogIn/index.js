@@ -11,8 +11,17 @@ export default class LogIn extends Component {
     super(props);
     document.title = "Log In - PLynx";
     this.state = {
+      email: '',
       username: '',
-      password: ''
+      password: '',
+      confpassword: '',
+      login: true,
+      errors: {
+        email: '',
+        username: '',
+        password: '',
+        confpassword: '',
+      }
     };
 
     if (cookie.load('username')) {
@@ -23,12 +32,33 @@ export default class LogIn extends Component {
     }
   }
 
+  toggleForms() {
+    this.setState({ login: !this.state.login });
+  }
+
+  handleButton() {
+    if (this.state.login) {
+      this.handleLogin();
+    } else {
+      this.handleRegister();
+    }
+  }
+
   handleLogin() {
     console.log("Login");
     this.loginUser({
       username: this.state.username,
       password: this.state.password
     });
+  }
+
+  handleRegister() {
+    this.registerUser ({
+      email: this.state.email,
+      username: this.state.username,
+      password: this.state.password,
+      confpassword: this.state.confpassword
+    })
   }
 
   showAlert(message, type) {
@@ -60,13 +90,66 @@ export default class LogIn extends Component {
     });
   }
 
+  registerUser({ email, username, password, confpassword }) {
+    PLynxApi.endpoints.register.getCustom({
+      method: 'post',
+      headers: {
+        email: email,
+        username: username,
+        password: password,
+        confpassword: confpassword,
+      }
+    })
+    .then(response => {
+      console.log(response.data);
+      if (response.data.success) {
+        console.log('Registered');
+        cookie.save('access_token', response.data.access_token, { path: '/' });
+        cookie.save('refresh_token', response.data.refresh_token, { path: '/' });
+        cookie.save('username', username, { path: '/' });
+        window.location = '/workflows';
+      } else {
+        var dic = this.state.errors
+        for (var key in response.data) {
+          if (key !== 'success') {
+            dic[key] = response.data[key]
+          }
+        }
+        this.setState({ errors: dic });
+        this.showAlert('Failed user registration', 'failed');
+      }
+    })
+    .catch((error) => {
+      this.showAlert('Failed user registration', 'failed');
+      console.error(error);
+    });
+  }
+
   handleChange(event) {
     this.setState({[event.target.name]: event.target.value});
   }
 
   handleKeyPressed(event) {
     if (event.key === 'Enter') {
-      this.handleLogin();
+      if (this.state.login && event.target.name === 'password') {
+        this.handleLogin();
+      } else if (event.target.name === 'confpassword') {
+        this.handleRegister();
+      } else {
+        event.target.blur();
+        var children = document.getElementsByClassName('Items')[0].children;
+        var activeinput = event.target.parentNode.parentNode;
+        var next = false;
+        for (var i = 0; i < children.length; i++) {
+          if (next) {
+            children[i].children[1].children[0].focus();
+            return -1
+          } else if (children[i] === activeinput) {
+            next = true;
+          }
+        }
+        
+      }
     }
   }
 
@@ -76,6 +159,26 @@ export default class LogIn extends Component {
         <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
         <div className='LoginBlock'>
           <div className='Items'>
+          {!this.state.login &&
+            <div className='Item'>
+                <div className='NameCell'>
+                  Email
+                </div>
+                <div className='ValueCell'>
+                  <input name='email'
+                        value={this.state.email}
+                        autoComplete="on"
+                        type="email"
+                        onChange={(e) => this.handleChange(e)}
+                        onKeyPress={(e) => this.handleKeyPressed(e)}
+                        />
+                </div>
+                <div className="ErrorCell">
+                  {this.state.errors.email}
+                </div>
+              </div>
+            }
+
             <div className='Item'>
               <div className='NameCell'>
                 Username
@@ -87,6 +190,9 @@ export default class LogIn extends Component {
                        onChange={(e) => this.handleChange(e)}
                        onKeyPress={(e) => this.handleKeyPressed(e)}
                        />
+              </div>
+              <div className="ErrorCell">
+                {this.state.errors.username}
               </div>
             </div>
 
@@ -103,13 +209,42 @@ export default class LogIn extends Component {
                        onKeyPress={(e) => this.handleKeyPressed(e)}
                        />
               </div>
+              <div className="ErrorCell">
+                {this.state.errors.password}
+              </div>
             </div>
+
+            {!this.state.login &&
+            <div className='Item'>
+                <div className='NameCell'>
+                  Confirm Password
+                </div>
+                <div className='ValueCell'>
+                  <input name='confpassword'
+                        value={this.state.confpassworf}
+                        autoComplete="on"
+                        type="password"
+                        onChange={(e) => this.handleChange(e)}
+                        onKeyPress={(e) => this.handleKeyPressed(e)}
+                        />
+                </div>
+                <div className="ErrorCell">
+                  {this.state.errors.confpassword}
+                </div>
+              </div>
+            }
           </div>
-          <div className="buttons">
-            <div className="loginButton" onClick={() => this.handleLogin()} href="#">
-            Login
-            </div>
-          </div>
+            <button className="loginButton" onClick={() => this.handleButton()} href="#">
+            {this.state.login ? 'Login': 'Register'}
+            </button>
+              <div className="toggleState" onClick={() => this.toggleForms()}>
+                {this.state.login ? 'Register': 'Login'}
+              </div>
+              {this.state.login &&
+                <div className="forgotPassword" onClick={() => this.showAlert("This part wasn't codded in yet...", "failed")}>
+                  Forgot Password?
+                </div>
+              }
         </div>
       </div>
     );

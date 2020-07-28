@@ -23,6 +23,11 @@ def create_fields():
             default='',
             is_list=False,
             ),
+        'email': DBObjectField(
+            type=str,
+            default='',
+            is_list=False,
+            ),
         'password_hash': DBObjectField(
             type=str,
             default='',
@@ -115,6 +120,22 @@ class User(DBObject):
             (User)   User object or None
         """
         user_dict = getattr(get_db_connector(), User.DB_COLLECTION).find_one({'username': username})
+        if not user_dict:
+            return None
+
+        return User(user_dict)
+
+    @staticmethod
+    def find_user_by_email(email):
+        """Find User.
+
+        Args:
+            email    (str)   Email
+
+        Return:
+            (User)   User object or None
+        """
+        user_dict = getattr(get_db_connector(), User.DB_COLLECTION).find_one({'email': email})
         if not user_dict:
             return None
 
