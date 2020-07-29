@@ -19,15 +19,17 @@ def run_list_users():
         print(','.join(map(str, [user._id, user.username])))
 
 
-def run_create_user(username, password):
+def run_create_user(email, username, password):
     if not username:
-        raise ValueError('Usernmane must be specified')
+        raise ValueError('Username must be specified')
     password = password or ''
     user = User()
     user.username = username
+    user.email = email
     user.hash_password(password)
     user.save()
     print('User `{}` created'.format(username))
+    return user
 
 
 def run_set_activation(username, value):

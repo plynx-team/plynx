@@ -1,10 +1,12 @@
-from flask import g
+from flask import g, request
 import plynx.db.node_collection_manager
 from plynx.db.db_object import get_class
 from plynx.db.demo_user_manager import DemoUserManager
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
+from plynx.web.validation import validate_user
 from plynx.utils.common import JSONEncoder, to_object_id
 from plynx.constants import Collections, NodeClonePolicy
+from plynx.service.users import run_create_user
 
 
 demo_user_manager = DemoUserManager()
@@ -21,6 +23,31 @@ def get_auth_token():
         'access_token': access_token.decode('ascii'),
         'refresh_token': refresh_token.decode('ascii')
     })
+
+
+@app.route('/plynx/api/v0/register', methods=['POST'])
+@handle_errors
+def post_register():
+    email = request.headers.get('email').lower()
+    username = request.headers.get('username').lower() 
+    password = request.headers.get('password')
+
+    dic = validate_user(
+        email=email, 
+        username=username, 
+        password=password, 
+        confpassword=request.headers.get('confpassword')
+    )
+
+    if dic['success']:
+        user = run_create_user(email, username, password)
+        access_token = user.generate_access_token()
+        refresh_token = user.generate_refresh_token()
+        dic['access_token'] = access_token.decode('ascii')
+        dic['refresh_token'] = refresh_token.decode('ascii')
+        return dic
+
+    return dic
 
 
 @app.route('/plynx/api/v0/demo', methods=['POST'])
