@@ -21,7 +21,6 @@ export class Settings extends Component {
 
     handleClickOutside = (e) => {
         this.context.hideModal();
-        e.preventDefault();
     }
 
     handleLogOut() {

@@ -16,3 +16,15 @@
   position: absolute;
   transform: translate(-50%, 0);
 }
+
+.user-preview {
+  display: flex;
+  align-items: center;
+  font-size: 25pt;
+  padding: 30px 0px 30px 0px;
+}
+
+.user-icon {
+    height: 64px;
+    width: 64px;
+}

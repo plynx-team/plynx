@@ -37,6 +37,17 @@ export default function renderValueElement(args) {
               readOnly={readOnly}
               key={parameterType}
               />;
+      case 'password':
+        return <input
+                autoComplete="off"
+                className={className}
+                type="password"
+                name="value"
+                onChange={handleChange}
+                value={value}
+                readOnly={readOnly}
+                key={parameterType}
+                />;
     case 'int':
       return <input
               className={className}

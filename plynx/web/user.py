@@ -8,7 +8,7 @@ from plynx.web.common import app, requires_auth, make_fail_response, handle_erro
 from plynx.utils.common import JSONEncoder, to_object_id
 from plynx.constants import Collections, NodeClonePolicy
 from plynx.utils.db_connector import get_db_connector
-from plynx.utils.config import get_settings_config, get_auth_config
+from plynx.utils.config import get_auth_config
 from plynx.db.user import User
 from itsdangerous import JSONWebSignatureSerializer as JSONserializer
 

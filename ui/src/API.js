@@ -77,6 +77,7 @@ const plynxApi = new API({ url: API_ENDPOINT });
 plynxApi.createEntity({ name: COLLECTIONS.TEMPLATES });
 plynxApi.createEntity({ name: COLLECTIONS.RUNS });
 plynxApi.createEntity({ name: COLLECTIONS.GROUPS });
+plynxApi.createEntity({ name: COLLECTIONS.USERS });
 plynxApi.createEntity({ name: 'resource' });
 plynxApi.createEntity({ name: 'token' });
 plynxApi.createEntity({ name: 'demo' });

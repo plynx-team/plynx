@@ -3,10 +3,13 @@ from plynx.constants import Collections
 from plynx.db.db_object import DBObject, DBObjectField
 from plynx.utils.db_connector import get_db_connector
 from plynx.utils.common import ObjectId
-from plynx.utils.config import get_auth_config
+from plynx.utils.config import get_auth_config, get_iam_policies_config
 from itsdangerous import (SignatureExpired, BadSignature,
                           TimedJSONWebSignatureSerializer as TimedSerializer,
                           JSONWebSignatureSerializer as Serializer)
+
+
+DEFAULT_POLICIES = get_iam_policies_config().default_policies
 
 
 class UserSettings(DBObject):
@@ -17,6 +20,16 @@ class UserSettings(DBObject):
             type=ObjectId,
             default=ObjectId,
             is_list=False,
+            ),
+        'display_name': DBObjectField(
+            type=str,
+            default='',
+            is_list=False,
+            ),
+        'policies': DBObjectField(
+            type=str,
+            default=lambda: DEFAULT_POLICIES,
+            is_list=True,
             ),
     }
 
@@ -37,11 +50,6 @@ class User(DBObject):
             is_list=False,
             ),
         'username': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
-        'display_name': DBObjectField(
             type=str,
             default='',
             is_list=False,
