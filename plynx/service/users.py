@@ -43,7 +43,7 @@ def run_set_activation(username, value):
     print('User`s `{}` active state changed to {}'.format(username, value))
 
 
-def run_users(mode, username=None, password=''):
+def run_users(mode, email=None, username=None, password=''):
     if mode not in MODES:
         raise ValueError('`mode` must be one of `{values}`. Value `{mode}` is given'.format(
             values=MODES,
@@ -52,7 +52,7 @@ def run_users(mode, username=None, password=''):
     if mode == LIST_USERS:
         run_list_users()
     elif mode == CREATE_USER:
-        run_create_user(username, password)
+        run_create_user(email, username, password)
     elif mode == ACTIVATE_USER:
         run_set_activation(username, True)
     elif mode == DEACTIVATE_USER:

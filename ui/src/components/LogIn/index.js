@@ -53,12 +53,17 @@ export default class LogIn extends Component {
   }
 
   handleRegister() {
-    this.registerUser ({
-      email: this.state.email,
-      username: this.state.username,
-      password: this.state.password,
-      confpassword: this.state.confpassword
-    })
+    if (this.state.password !== this.state.confpassword) {
+      var dic = this.state.errors;
+      dic.confpassword = "Password and confirmation must match";
+      this.setState({ errors: dic });
+    } else {
+      this.registerUser ({
+        email: this.state.email,
+        username: this.state.username,
+        password: this.state.password,
+      })
+    }
   }
 
   showAlert(message, type) {
@@ -90,15 +95,11 @@ export default class LogIn extends Component {
     });
   }
 
-  registerUser({ email, username, password, confpassword }) {
-    PLynxApi.endpoints.register.getCustom({
-      method: 'post',
-      headers: {
-        email: email,
-        username: username,
-        password: password,
-        confpassword: confpassword,
-      }
+  registerUser({ email, username, password }) {
+    PLynxApi.endpoints.register.create({
+      email: email,
+      username: username,
+      password: password,
     })
     .then(response => {
       console.log(response.data);
@@ -110,11 +111,9 @@ export default class LogIn extends Component {
         window.location = '/workflows';
       } else {
         var dic = this.state.errors
-        for (var key in response.data) {
-          if (key !== 'success') {
-            dic[key] = response.data[key]
-          }
-        }
+        dic['email'] = response.data.emailError;
+        dic['username'] = response.data.usernameError;
+        dic['password'] = response.data.passwordError;
         this.setState({ errors: dic });
         this.showAlert('Failed user registration', 'failed');
       }
@@ -136,19 +135,22 @@ export default class LogIn extends Component {
       } else if (event.target.name === 'confpassword') {
         this.handleRegister();
       } else {
-        event.target.blur();
-        var children = document.getElementsByClassName('Items')[0].children;
-        var activeinput = event.target.parentNode.parentNode;
-        var next = false;
-        for (var i = 0; i < children.length; i++) {
-          if (next) {
-            children[i].children[1].children[0].focus();
-            return -1
-          } else if (children[i] === activeinput) {
-            next = true;
-          }
-        }
-        
+        this.focusNext(event.target);
+      }
+    }
+  }
+
+  focusNext(activeInput) {
+    activeInput.blur();
+    var children = document.getElementsByClassName('Items')[0].children;
+    var activeinput = activeInput.parentNode.parentNode;
+    var next = false;
+    for (var i = 0; i < children.length; i++) {
+      if (next) {
+        children[i].children[1].children[0].focus();
+        return -1
+      } else if (children[i] === activeinput) {
+        next = true;
       }
     }
   }

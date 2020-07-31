@@ -1,4 +1,5 @@
 from flask import g, request
+import json
 import plynx.db.node_collection_manager
 from plynx.db.db_object import get_class
 from plynx.db.demo_user_manager import DemoUserManager
@@ -28,26 +29,32 @@ def get_auth_token():
 @app.route('/plynx/api/v0/register', methods=['POST'])
 @handle_errors
 def post_register():
-    email = request.headers.get('email').lower()
-    username = request.headers.get('username').lower() 
-    password = request.headers.get('password')
+    query = json.loads(request.data)
 
-    dic = validate_user(
-        email=email, 
-        username=username, 
-        password=password, 
-        confpassword=request.headers.get('confpassword')
-    )
+    email = query['email'].lower()
+    username = query['username'].lower() 
+    password = query['password']
 
-    if dic['success']:
+    success, emailError, usernameError, passwordError = validate_user(email, username, password)
+
+    if success:
         user = run_create_user(email, username, password)
         access_token = user.generate_access_token()
         refresh_token = user.generate_refresh_token()
-        dic['access_token'] = access_token.decode('ascii')
-        dic['refresh_token'] = refresh_token.decode('ascii')
-        return dic
+        errors['access_token'] = access_token.decode('ascii')
+        errors['refresh_token'] = refresh_token.decode('ascii')
+        return JSONEncoder().encode({
+            'success': success,
+            'access_token': access_token.decode('ascii'),
+            'refresh_token': refresh_token.decode('ascii')
+        })
 
-    return dic
+    return JSONEncoder().encode({
+        'success': success,
+        'emailError': emailError,
+        'usernameError': usernameError, 
+        'passwordError': passwordError
+    })
 
 
 @app.route('/plynx/api/v0/demo', methods=['POST'])
