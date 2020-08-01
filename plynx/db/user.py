@@ -1,6 +1,7 @@
 from passlib.apps import custom_app_context as pwd_context
-from plynx.constants import Collections
+from plynx.constants import Collections, OperationViewSetting
 from plynx.db.db_object import DBObject, DBObjectField
+from plynx.db.node import ParameterEnum
 from plynx.utils.db_connector import get_db_connector
 from plynx.utils.common import ObjectId
 from plynx.utils.config import get_auth_config, get_iam_policies_config
@@ -10,34 +11,6 @@ from itsdangerous import (SignatureExpired, BadSignature,
 
 
 DEFAULT_POLICIES = get_iam_policies_config().default_policies
-
-
-class UserSettings(DBObject):
-    """User Settings structure."""
-
-    FIELDS = {
-        'node_view_mode': DBObjectField(
-            type=ObjectId,
-            default=ObjectId,
-            is_list=False,
-            ),
-        'display_name': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
-        'policies': DBObjectField(
-            type=str,
-            default=lambda: DEFAULT_POLICIES,
-            is_list=True,
-            ),
-    }
-
-    def __str__(self):
-        return 'UserSettings(name="{}")'.format(self.name)
-
-    def __repr__(self):
-        return 'UserSettings({})'.format(str(self.to_dict()))
 
 
 class User(DBObject):
@@ -64,9 +37,21 @@ class User(DBObject):
             default=True,
             is_list=False,
             ),
-        'settings': DBObjectField(
-            type=UserSettings,
-            default=UserSettings,
+
+        # settings
+        'node_view_mode': DBObjectField(
+            type=ObjectId,
+            default=lambda: ParameterEnum.from_dict({'values': [OperationViewSetting.KIND_AND_TITLE, OperationViewSetting.TITLE_AND_DESCRIPTION], 'index': 0}),
+            is_list=False,
+            ),
+        'display_name': DBObjectField(
+            type=str,
+            default='',
+            is_list=False,
+            ),
+        'policies': DBObjectField(
+            type=int,
+            default=DEFAULT_POLICIES,
             is_list=False,
             ),
     }

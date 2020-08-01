@@ -4,7 +4,7 @@ import { PLynxApi } from '../../API';
 import APIObject from '../Common/APIObject';
 import makePropertiesBox from '../Common/makePropertiesBox';
 import ParameterItem from '../Common/ParameterItem';
-import { ALERT_OPTIONS, COLLECTIONS } from '../../constants';
+import { ALERT_OPTIONS, COLLECTIONS, IAM_POLICIES } from '../../constants';
 import { User } from 'react-feather';
 import cookie from 'react-cookies';
 
@@ -16,11 +16,9 @@ export default class LogIn extends Component {
     document.title = "Users - PLynx";
     this.user = {
         username: '',
+        node_view_mode: {values: ['1'], index: 0},
         display_name: '',
-        settings: {
-            node_view_mode: 1,
-        },
-
+        policies: 0,
     };
     this.state = {
       user: this.user,
@@ -35,23 +33,22 @@ export default class LogIn extends Component {
     });
   }
 
-
-
-  handleChange(event) {
-    this.setState({[event.target.name]: event.target.value});
-  }
-
-  handleKeyPressed(event) {
-    if (event.key === 'Enter') {
-      this.handleLogin();
-    }
-  }
-
-  handleParameterChanged(name, value) {
+  handleParameterChange(name, value) {
     this.user[name] = value;
     this.setState({
         user: this.user
     })
+  }
+
+  handlePolicyChange(name, value) {
+    if (value) {
+      this.user.policies = this.user.policies | IAM_POLICIES[name];
+    } else {
+      this.user.policies = this.user.policies & (~IAM_POLICIES[name]);
+    }
+    this.setState({
+        user: this.user
+    });
   }
 
   loadUser(user) {
@@ -73,8 +70,7 @@ export default class LogIn extends Component {
             parameterType={'str'}
             key={(++keyCounter) + this.state.user.username}
             readOnly={true}
-            onParameterChanged={(name, value) => this.handleParameterChanged(name, value)}
-            onLinkClick={(name) => this.handleLinkClick(name)}
+            onParameterChanged={(name, value) => this.handleParameterChange(name, value)}
           />,
         <ParameterItem
             name={'display_name'}
@@ -83,7 +79,7 @@ export default class LogIn extends Component {
             parameterType={'str'}
             key={(++keyCounter)}
             readOnly={false}
-            onParameterChanged={(name, value) => this.handleParameterChanged(name, value)}
+            onParameterChanged={(name, value) => this.handleParameterChange(name, value)}
             />,
     ];
     const passwordSettingsList = [
@@ -94,8 +90,7 @@ export default class LogIn extends Component {
             parameterType={'password'}
             key={(++keyCounter)}
             readOnly={false}
-            onParameterChanged={(name, value) => this.handleParameterChanged(name, value)}
-            onLinkClick={(name) => this.handleLinkClick(name)}
+            onParameterChanged={(name, value) => this.handleParameterChange(name, value)}
           />,
         <ParameterItem
             name={'new_password'}
@@ -104,7 +99,7 @@ export default class LogIn extends Component {
             parameterType={'password'}
             key={(++keyCounter)}
             readOnly={false}
-            onParameterChanged={(name, value) => this.handleParameterChanged(name, value)}
+            onParameterChanged={(name, value) => this.handleParameterChange(name, value)}
             />,
         <ParameterItem
             name={'new_password_retype'}
@@ -113,11 +108,35 @@ export default class LogIn extends Component {
             parameterType={'password'}
             key={(++keyCounter)}
             readOnly={false}
-            onParameterChanged={(name, value) => this.handleParameterChanged(name, value)}
+            onParameterChanged={(name, value) => this.handleParameterChange(name, value)}
             />,
     ];
+    const viewSettingsList = [
+        <ParameterItem
+            name={'node_view_mode'}
+            widget={'Node view settings'}
+            value={this.state.user.node_view_mode}
+            parameterType={'enum'}
+            key={(++keyCounter) + this.state.user.node_view_mode.index}
+            readOnly={false}
+            onParameterChanged={(name, value) => this.handleParameterChange(name, value)}
+          />,
+    ];
+
+    const iamSettingsList = Object.entries(IAM_POLICIES).map((policy_tuple, index) =>
+        <ParameterItem
+            name={policy_tuple[0]}
+            widget={policy_tuple[0]}
+            value={this.state.user.policies & policy_tuple[1] > 0}
+            parameterType={'bool'}
+            key={(++keyCounter) + this.state.user.username + policy_tuple[0]}
+            readOnly={false}
+            onParameterChanged={(name, value) => this.handlePolicyChange(name, value)}
+          />
+      );
+
     return (
-      <div className='user-view-window'>
+      <div className='user-view-content'>
         <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
         <APIObject
             collection={COLLECTIONS.USERS}
@@ -133,6 +152,8 @@ export default class LogIn extends Component {
           </div>
           {makePropertiesBox('Personal Settings', personalSettingsList)}
           {makePropertiesBox('Change Password', passwordSettingsList)}
+          {makePropertiesBox('View Settings', viewSettingsList)}
+          {makePropertiesBox('IAM Policies Settings', iamSettingsList)}
         </div>
       </div>
     );

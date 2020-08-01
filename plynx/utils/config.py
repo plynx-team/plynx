@@ -109,11 +109,15 @@ def get_cloud_service_config():
 
 def get_iam_policies_config():
     all_policies = [
-        value for name, value in vars(plynx.constants.IAMPolicies).items() if not name.startswith('_')
+        name for name, value in vars(plynx.constants.IAMPolicies).items() if not name.startswith('_')
     ]
-    logging.info('Using default IAM policies for new users: {}'.format(all_policies))
+    default_policies = _config.get('default_policies', all_policies)
+    logging.info('Using default IAM policies for new users: {}'.format(default_policies))
+    policies = 0
+    for policy in default_policies:
+        policies = policies | getattr(plynx.constants.IAMPolicies, policy)
     return IAMPoliciesConfig(
-        default_policies=_config.get('default_policies', all_policies)
+        default_policies=policies
     )
 
 def get_plugins():
