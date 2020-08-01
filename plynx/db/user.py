@@ -50,9 +50,9 @@ class User(DBObject):
             is_list=False,
             ),
         'policies': DBObjectField(
-            type=int,
-            default=DEFAULT_POLICIES,
-            is_list=False,
+            type=set,
+            default=lambda: set(DEFAULT_POLICIES),
+            is_list=True,
             ),
     }
 

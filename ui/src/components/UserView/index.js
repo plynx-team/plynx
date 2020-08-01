@@ -18,10 +18,13 @@ export default class LogIn extends Component {
         username: '',
         node_view_mode: {values: ['1'], index: 0},
         display_name: '',
-        policies: 0,
+        policies: [],
     };
     this.state = {
       user: this.user,
+      oldPassword: '',
+      newPassword: '',
+      confirmNewPassword: '',
     };
   }
 
@@ -40,12 +43,19 @@ export default class LogIn extends Component {
     })
   }
 
+  handleChange(name, value) {
+    this.setState({
+        name: value
+    })
+  }
+
   handlePolicyChange(name, value) {
     if (value) {
-      this.user.policies = this.user.policies | IAM_POLICIES[name];
+      this.user.policies.push(name);
     } else {
-      this.user.policies = this.user.policies & (~IAM_POLICIES[name]);
+      this.user.policies = this.user.policies.filter((policy) => policy !== name);
     }
+    console.log(this.user.policies);
     this.setState({
         user: this.user
     });
@@ -53,6 +63,7 @@ export default class LogIn extends Component {
 
   loadUser(user) {
     this.user = user;
+    console.log('resp', user);
     this.setState({
       user: this.user,
     });
@@ -84,31 +95,31 @@ export default class LogIn extends Component {
     ];
     const passwordSettingsList = [
         <ParameterItem
-            name={'old_password'}
+            name={'oldPassword'}
             widget={'Old password'}
-            value={this.state.old_password}
+            value={this.state.oldPassword}
             parameterType={'password'}
             key={(++keyCounter)}
             readOnly={false}
-            onParameterChanged={(name, value) => this.handleParameterChange(name, value)}
+            onParameterChanged={(name, value) => this.handleChange(name, value)}
           />,
         <ParameterItem
-            name={'new_password'}
+            name={'newPassword'}
             widget={'New password'}
-            value={this.state.new_password}
+            value={this.state.newPassword}
             parameterType={'password'}
             key={(++keyCounter)}
             readOnly={false}
-            onParameterChanged={(name, value) => this.handleParameterChange(name, value)}
+            onParameterChanged={(name, value) => this.handleChange(name, value)}
             />,
         <ParameterItem
-            name={'new_password_retype'}
-            widget={'New password retype'}
-            value={this.state.new_password}
+            name={'confirmNewPassword'}
+            widget={'Confirm new password'}
+            value={this.state.confirmNewPassword}
             parameterType={'password'}
             key={(++keyCounter)}
             readOnly={false}
-            onParameterChanged={(name, value) => this.handleParameterChange(name, value)}
+            onParameterChanged={(name, value) => this.handleChange(name, value)}
             />,
     ];
     const viewSettingsList = [
@@ -127,7 +138,7 @@ export default class LogIn extends Component {
         <ParameterItem
             name={policy_tuple[0]}
             widget={policy_tuple[0]}
-            value={this.state.user.policies & policy_tuple[1] > 0}
+            value={this.state.user.policies.indexOf(policy_tuple[1]) >= 0}
             parameterType={'bool'}
             key={(++keyCounter) + this.state.user.username + policy_tuple[0]}
             readOnly={false}
@@ -151,7 +162,9 @@ export default class LogIn extends Component {
             </div>
           </div>
           {makePropertiesBox('Personal Settings', personalSettingsList)}
-          {makePropertiesBox('Change Password', passwordSettingsList)}
+          <form>
+            {makePropertiesBox('Change Password', passwordSettingsList)}
+          </form>
           {makePropertiesBox('View Settings', viewSettingsList)}
           {makePropertiesBox('IAM Policies Settings', iamSettingsList)}
         </div>
