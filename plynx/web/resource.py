@@ -7,7 +7,7 @@ from plynx.plugins.resources.common import FILE_KIND
 import plynx.utils.plugin_manager
 from plynx.utils.common import JSONEncoder
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
-from plynx.constants import ResourcePostStatus, NodeRunningStatus, NodeStatus
+from plynx.constants import ResponseStatus, NodeRunningStatus, NodeStatus
 
 
 RESOURCE_TYPES = list(plynx.utils.plugin_manager.get_resource_manager().kind_to_resource_class.keys())
@@ -38,7 +38,7 @@ def get_resource(resource_id):
 def post_resource():
     resource_id = upload_file_stream(request.files['data'])
     return JSONEncoder().encode({
-        'status': ResourcePostStatus.SUCCESS,
+        'status': ResponseStatus.SUCCESS,
         'resource_id': resource_id
     })
 
@@ -79,7 +79,7 @@ def upload_file():
     file.save()
 
     return JSONEncoder().encode({
-        'status': ResourcePostStatus.SUCCESS,
+        'status': ResponseStatus.SUCCESS,
         'resource_id': resource_id,
         'node': file.to_dict(),
     })

@@ -96,6 +96,45 @@ export default class APIObject extends Component {
       });
     }
 
+    postData(data, { retryOnAuth = true} = {}) {
+      const self = this;
+      self.setState({loading: true});
+
+      console.log('Post', data);
+
+      PLynxApi.endpoints[self.props.collection].create(data)
+      .then((response) => {
+        const data = response.data;
+        console.log(data);
+        self.setState({loading: false});
+        self.props.onPostResponse(data);
+      })
+      .catch((error) => {
+        console.log(error);
+        if (error.response.status === 401) {
+          PLynxApi.getAccessToken()
+          .then((isSuccessfull) => {
+            if (!isSuccessfull) {
+              console.error("Could not refresh token");
+              self.showAlert('Failed to authenticate', 'failed');
+            } else if (retryOnAuth) {
+                  // Token updated, try posting again
+              self.postData(data, {retryOnAuth: false});
+            } else {
+              self.showAlert(error.response.data.message, 'failed');
+            }
+          });
+        } else {
+          try {
+            self.showAlert(error.response.data.message, 'failed');
+          } catch {
+            self.showAlert('Unknown error', 'failed');
+          }
+        }
+        self.setState({loading: false});
+      });
+    }
+
     render() {
       return (
           <div

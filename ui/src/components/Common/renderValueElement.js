@@ -82,7 +82,7 @@ export default function renderValueElement(args) {
                 name="value"
                 onChange={handleChange}
                 checked={value}
-                readOnly={readOnly}
+                disabled={readOnly}
                 key={parameterType}
                 />
               <label className="BoolLabel">

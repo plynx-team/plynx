@@ -14,11 +14,11 @@ input, select, textarea {
   color: #eee;
 }
 
-input:-moz-read-only, select:-moz-read-only, textarea:-moz-read-only {
+input:-moz-read-only, select:-moz-disabled, textarea:-moz-read-only {
   color: #999;
 }
 
-input:read-only, select:read-only, textarea:read-only {
+input:read-only, select:disabled, textarea:read-only {
   color: #999;
 }
 

@@ -9,8 +9,31 @@ from itsdangerous import (SignatureExpired, BadSignature,
                           TimedJSONWebSignatureSerializer as TimedSerializer,
                           JSONWebSignatureSerializer as Serializer)
 
-
 DEFAULT_POLICIES = get_iam_policies_config().default_policies
+
+
+class UserSettings(DBObject):
+    """User Settings structure."""
+
+    FIELDS = {
+        # settings
+        'node_view_mode': DBObjectField(
+            type=str,
+            default=OperationViewSetting.KIND_AND_TITLE,
+            is_list=False,
+            ),
+        'display_name': DBObjectField(
+            type=str,
+            default='',
+            is_list=False,
+            ),
+    }
+
+    def __str__(self):
+        return 'UserSettings(name="{}")'.format(self.name)
+
+    def __repr__(self):
+        return 'UserSettings({})'.format(str(self.to_dict()))
 
 
 class User(DBObject):
@@ -37,22 +60,16 @@ class User(DBObject):
             default=True,
             is_list=False,
             ),
-
-        # settings
-        'node_view_mode': DBObjectField(
-            type=ObjectId,
-            default=lambda: ParameterEnum.from_dict({'values': [OperationViewSetting.KIND_AND_TITLE, OperationViewSetting.TITLE_AND_DESCRIPTION], 'index': 0}),
-            is_list=False,
-            ),
-        'display_name': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
         'policies': DBObjectField(
-            type=set,
-            default=lambda: set(DEFAULT_POLICIES),
+            type=str,
+            default=DEFAULT_POLICIES,
             is_list=True,
+            ),
+
+        'settings': DBObjectField(
+            type=UserSettings,
+            default=UserSettings,
+            is_list=False,
             ),
     }
 

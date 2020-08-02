@@ -1,12 +1,12 @@
 from flask import g, request, jsonify
-from json import loads
+import json
 import plynx.db.node_collection_manager
 from plynx.db.db_object import get_class
 from plynx.db.demo_user_manager import DemoUserManager
 from plynx.db.user import UserCollectionManager
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
 from plynx.utils.common import JSONEncoder, to_object_id
-from plynx.constants import Collections, NodeClonePolicy
+from plynx.constants import Collections, NodeClonePolicy, IAMPolicies, ResponseStatus, UserPostAction
 from plynx.utils.db_connector import get_db_connector
 from plynx.utils.config import get_auth_config
 from plynx.db.user import User
@@ -78,7 +78,51 @@ def get_user(username):
     if not user:
         return make_fail_response('User not found'), 404
     user_obj = user.to_dict()
+
+    is_admin = IAMPolicies.IS_ADMIN in g.user.policies
+    user_obj['_is_admin'] = is_admin
+    user_obj['_readonly'] = user._id != g.user._id and not is_admin
+    del user_obj['password_hash']
+
     return JSONEncoder().encode({
         'user': user_obj,
-        'status': 'success',
+        'status': ResponseStatus.SUCCESS,
+    })
+
+
+@app.route('/plynx/api/v0/users', methods=['POST'])
+@handle_errors
+@requires_auth
+def post_user():
+    data = json.loads(request.data)
+    app.logger.warn(data)
+    action = data.get('action', '')
+    old_password = data.get('old_password', '')
+    new_password = data.get('new_password', '')
+    if action == UserPostAction.CREATE:
+        raise NotImplementedError("Not implemented")
+    elif action == UserPostAction.MODIFY:
+        posted_user = User.from_dict(data['user'])
+        existing_user = UserCollectionManager.find_user_by_name(posted_user.username)
+        if not existing_user:
+            return make_fail_response('User not found'), 404
+        if g.user.username != posted_user.username and IAMPolicies.IS_ADMIN not in g.user.policies:
+            return make_fail_response('You don`t have permission to modify this user'), 401
+
+        if set(posted_user.policies) != set(existing_user.policies) and IAMPolicies.IS_ADMIN not in g.user.policies:
+            return make_fail_response('You don`t have permission to modify policies'), 401
+
+        if new_password:
+            if not existing_user.verify_password(old_password):
+                return make_fail_response('Incorrect password'), 401
+            existing_user.hash_password(new_password)
+
+        existing_user.settings = posted_user.settings
+
+        existing_user.save()
+    else:
+        raise Exception('Unknown action: `{}`'.format(action))
+
+    return JSONEncoder().encode({
+        'status': ResponseStatus.SUCCESS,
     })

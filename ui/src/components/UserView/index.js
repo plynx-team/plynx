@@ -1,14 +1,17 @@
 import React, { Component } from 'react';
-import AlertContainer from '../3rd_party/react-alert';
 import { PLynxApi } from '../../API';
 import APIObject from '../Common/APIObject';
 import makePropertiesBox from '../Common/makePropertiesBox';
 import ParameterItem from '../Common/ParameterItem';
-import { ALERT_OPTIONS, COLLECTIONS, IAM_POLICIES } from '../../constants';
+import { makeControlPanel, makeControlButton, makeControlSeparator } from '../Common/controlButton';
+import { COLLECTIONS, IAM_POLICIES, USER_POST_ACTION, OPERATION_VIEW_SETTING, RESPONCE_STATUS } from '../../constants';
+import { validatePassword } from './utils';
 import { User } from 'react-feather';
 import cookie from 'react-cookies';
 
 import './style.css';
+
+const NODE_VIEW_MODES = [OPERATION_VIEW_SETTING.KIND_AND_TITLE, OPERATION_VIEW_SETTING.TITLE_AND_DESCRIPTION];
 
 export default class LogIn extends Component {
   constructor(props) {
@@ -16,9 +19,13 @@ export default class LogIn extends Component {
     document.title = "Users - PLynx";
     this.user = {
         username: '',
-        node_view_mode: {values: ['1'], index: 0},
-        display_name: '',
+        settings: {
+            node_view_mode: OPERATION_VIEW_SETTING.KIND_AND_TITLE,
+            display_name: '',
+        },
         policies: [],
+        _is_admin: false,
+        _readonly: true,
     };
     this.state = {
       user: this.user,
@@ -28,14 +35,6 @@ export default class LogIn extends Component {
     };
   }
 
-  showAlert(message, type) {
-    this.msg.show(message, {
-      time: 5000,
-      type: 'error',
-      icon: <img src={"/alerts/" + type + ".svg"} width="32" height="32" alt={type} />
-    });
-  }
-
   handleParameterChange(name, value) {
     this.user[name] = value;
     this.setState({
@@ -43,7 +42,16 @@ export default class LogIn extends Component {
     })
   }
 
+  handleSettingsChange(name, value) {
+    this.user.settings[name] = value;
+    console.log('!!@#!', name, value);
+    this.setState({
+        user: this.user
+    })
+  }
+
   handleChange(name, value) {
+    this[name] = value
     this.setState({
         name: value
     })
@@ -69,29 +77,71 @@ export default class LogIn extends Component {
     });
   }
 
+  handleSave() {
+    if (this.oldPassword && this.newPassword !== this.confirmNewPassword) {
+        this.apiObject.showAlert('New passwords don`t match', 'failed');
+        return;
+    }
+    if (this.oldPassword && !validatePassword(this.newPassword)) {
+        this.apiObject.showAlert('Password must have at least 8 characters, including an uppercase letter and a number', 'failed');
+        return;
+    }
+    if (!this.oldPassword && (this.newPassword || this.confirmNewPassword)) {
+        this.apiObject.showAlert('Please enter `old password`', 'failed');
+        return;
+    }
+    this.apiObject.postData({
+        action: USER_POST_ACTION.MODIFY,
+        user: this.user,
+        old_password: this.oldPassword,
+        new_password: this.newPassword,
+    })
+  }
+
+  handlePostResponse(data) {
+    if (data.status === RESPONCE_STATUS.SUCCESS) {
+       this.apiObject.showAlert('Saved', 'success');
+    } else {
+      this.apiObject.showAlert(data.message, 'failed');
+    }
+  }
+
+  makeControls() {
+    const items = [
+      {
+        render: makeControlButton,
+        props: {
+          img: 'save.svg',
+          text: 'Save',
+          enabled: !this.state.user._readonly,
+          func: () => this.handleSave(),
+        },
+      },
+    ];
+
+    return makeControlPanel(
+      {
+        props: {
+          items: items,
+          key: 'control',
+        },
+      });
+  }
+
   render() {
     const username = this.props.match.params.username.replace(/\$+$/, '');
     let keyCounter = 0;
 
-    const personalSettingsList = [
+    const accountSettingsList = [
         <ParameterItem
             name={'username'}
             widget={'Username'}
             value={this.state.user.username}
             parameterType={'str'}
-            key={(++keyCounter) + this.state.user.username}
+            key={[(++keyCounter), this.state.user._readonly].join('')}
             readOnly={true}
             onParameterChanged={(name, value) => this.handleParameterChange(name, value)}
           />,
-        <ParameterItem
-            name={'display_name'}
-            widget={'Display Name'}
-            value={this.state.user.display_name}
-            parameterType={'str'}
-            key={(++keyCounter)}
-            readOnly={false}
-            onParameterChanged={(name, value) => this.handleParameterChange(name, value)}
-            />,
     ];
     const passwordSettingsList = [
         <ParameterItem
@@ -99,8 +149,8 @@ export default class LogIn extends Component {
             widget={'Old password'}
             value={this.state.oldPassword}
             parameterType={'password'}
-            key={(++keyCounter)}
-            readOnly={false}
+            key={[(++keyCounter), this.state.user._readonly].join('')}
+            readOnly={this.state.user._readonly}
             onParameterChanged={(name, value) => this.handleChange(name, value)}
           />,
         <ParameterItem
@@ -108,8 +158,8 @@ export default class LogIn extends Component {
             widget={'New password'}
             value={this.state.newPassword}
             parameterType={'password'}
-            key={(++keyCounter)}
-            readOnly={false}
+            key={[(++keyCounter), this.state.user._readonly].join('')}
+            readOnly={this.state.user._readonly}
             onParameterChanged={(name, value) => this.handleChange(name, value)}
             />,
         <ParameterItem
@@ -117,56 +167,70 @@ export default class LogIn extends Component {
             widget={'Confirm new password'}
             value={this.state.confirmNewPassword}
             parameterType={'password'}
-            key={(++keyCounter)}
-            readOnly={false}
+            key={[(++keyCounter), this.state.user._readonly].join('')}
+            readOnly={this.state.user._readonly}
             onParameterChanged={(name, value) => this.handleChange(name, value)}
             />,
     ];
-    const viewSettingsList = [
+    const personalSettingsList = [
+        <ParameterItem
+            name={'display_name'}
+            widget={'Display Name'}
+            value={this.state.user.settings.display_name}
+            parameterType={'str'}
+            key={[(++keyCounter), this.state.user._readonly].join('')}
+            readOnly={this.state.user._readonly}
+            onParameterChanged={(name, value) => this.handleSettingsChange(name, value)}
+            />,
         <ParameterItem
             name={'node_view_mode'}
             widget={'Node view settings'}
-            value={this.state.user.node_view_mode}
+            value={{
+                values: NODE_VIEW_MODES,
+                index: NODE_VIEW_MODES.indexOf(this.state.user.settings.node_view_mode),
+            }}
             parameterType={'enum'}
-            key={(++keyCounter) + this.state.user.node_view_mode.index}
-            readOnly={false}
-            onParameterChanged={(name, value) => this.handleParameterChange(name, value)}
+            key={[(++keyCounter), this.state.user._readonly, this.state.user.settings.node_view_mode].join('')}
+            readOnly={this.state.user._readonly}
+            onParameterChanged={(name, value) => {this.handleSettingsChange(name, value.values[value.index])}}
           />,
     ];
-
     const iamSettingsList = Object.entries(IAM_POLICIES).map((policy_tuple, index) =>
         <ParameterItem
             name={policy_tuple[0]}
             widget={policy_tuple[0]}
             value={this.state.user.policies.indexOf(policy_tuple[1]) >= 0}
             parameterType={'bool'}
-            key={(++keyCounter) + this.state.user.username + policy_tuple[0]}
-            readOnly={false}
+            key={[(++keyCounter), this.state.user._readonly, this.state.user.username, policy_tuple[0]].join('')}
+            readOnly={!this.state.user._is_admin}
             onParameterChanged={(name, value) => this.handlePolicyChange(name, value)}
           />
       );
 
     return (
       <div className='user-view-content'>
-        <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
         <APIObject
             collection={COLLECTIONS.USERS}
             object_id={username}
             onUpdateData={data => {this.loadUser(data.user)}}
+            onPostResponse={data => {this.handlePostResponse(data);}}
+            ref={a => this.apiObject = a}
         />
         <div className='user-view-block'>
           <div className='user-preview'>
             <User className='user-icon' />
             <div>
-              {this.state.user.display_name ? this.state.user.display_name : this.state.user.username}
+              {this.state.user.settings.display_name ? this.state.user.settings.display_name : this.state.user.username}
             </div>
           </div>
-          {makePropertiesBox('Personal Settings', personalSettingsList)}
+          {makePropertiesBox('Account Settings', accountSettingsList)}
           <form>
             {makePropertiesBox('Change Password', passwordSettingsList)}
           </form>
-          {makePropertiesBox('View Settings', viewSettingsList)}
+          {makePropertiesBox('Personal Settings', personalSettingsList)}
           {makePropertiesBox('IAM Policies Settings', iamSettingsList)}
+
+          {this.makeControls()}
         </div>
       </div>
     );
