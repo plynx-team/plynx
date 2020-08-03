@@ -4,7 +4,7 @@ import plynx.db.node_collection_manager
 from plynx.db.db_object import get_class
 from plynx.db.demo_user_manager import DemoUserManager
 from plynx.db.user import UserCollectionManager
-from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
+from plynx.web.common import app, requires_auth, make_success_response, make_fail_response, handle_errors
 from plynx.utils.common import JSONEncoder, to_object_id
 from plynx.constants import Collections, NodeClonePolicy, IAMPolicies, ResponseStatus, UserPostAction
 from plynx.utils.db_connector import get_db_connector
@@ -25,7 +25,7 @@ def get_auth_token():
 
     user_obj = g.user.to_dict()
     user_obj['hash_password'] = ''
-    return JSONEncoder().encode({
+    return make_success_response({
         'access_token': access_token.decode('ascii'),
         'refresh_token': refresh_token.decode('ascii'),
         'user': user_obj,
@@ -84,10 +84,9 @@ def get_user(username):
     user_obj['_readonly'] = user._id != g.user._id and not is_admin
     del user_obj['password_hash']
 
-    return JSONEncoder().encode({
+    return make_success_response({
         'user': user_obj,
-        'status': ResponseStatus.SUCCESS,
-    })
+        })
 
 
 @app.route('/plynx/api/v0/users', methods=['POST'])
@@ -109,8 +108,10 @@ def post_user():
         if g.user.username != posted_user.username and IAMPolicies.IS_ADMIN not in g.user.policies:
             return make_fail_response('You don`t have permission to modify this user'), 401
 
-        if set(posted_user.policies) != set(existing_user.policies) and IAMPolicies.IS_ADMIN not in g.user.policies:
-            return make_fail_response('You don`t have permission to modify policies'), 401
+        if set(posted_user.policies) != set(existing_user.policies):
+            if IAMPolicies.IS_ADMIN not in g.user.policies:
+                return make_fail_response('You don`t have permission to modify policies'), 401
+            existing_user.policies = posted_user.policies
 
         if new_password:
             if not existing_user.verify_password(old_password):
@@ -123,6 +124,4 @@ def post_user():
     else:
         raise Exception('Unknown action: `{}`'.format(action))
 
-    return JSONEncoder().encode({
-        'status': ResponseStatus.SUCCESS,
-    })
+    return make_success_response()

@@ -44,7 +44,6 @@ export default class LogIn extends Component {
 
   handleSettingsChange(name, value) {
     this.user.settings[name] = value;
-    console.log('!!@#!', name, value);
     this.setState({
         user: this.user
     })

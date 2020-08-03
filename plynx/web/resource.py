@@ -1,7 +1,7 @@
 import json
 from flask import request, send_file, g
 import plynx.db.node
-from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
+from plynx.web.common import app, requires_auth, make_success_response, make_fail_response, handle_errors
 import plynx.base.resource
 from plynx.plugins.resources.common import FILE_KIND
 import plynx.utils.plugin_manager
@@ -37,8 +37,7 @@ def get_resource(resource_id):
 @requires_auth
 def post_resource():
     resource_id = upload_file_stream(request.files['data'])
-    return JSONEncoder().encode({
-        'status': ResponseStatus.SUCCESS,
+    return make_success_response({
         'resource_id': resource_id
     })
 
@@ -78,8 +77,7 @@ def upload_file():
     file.author = g.user._id
     file.save()
 
-    return JSONEncoder().encode({
-        'status': ResponseStatus.SUCCESS,
+    return make_success_response({
         'resource_id': resource_id,
         'node': file.to_dict(),
     })

@@ -24,6 +24,16 @@ export default class UserButton extends Component {
   }
 
   render() {
+    let username = '';
+    if (this.state.user) {
+        if (this.state.user.settings && this.state.user.settings.display_name) {
+            username = this.state.user.settings.display_name;
+        } else {
+            username = this.state.user.username;
+        }
+
+    }
+
     return (
       <div className="UserButton">
         {this.state.refreshTokenExists &&
@@ -33,7 +43,7 @@ export default class UserButton extends Component {
                   <a className="user-menu" href={`/users/${this.state.user.username}`} onClick={(e) => {context.toggleModal(); e.preventDefault()}}>
                     <User/>
                     <div className="username">
-                      {this.state.user.username}
+                      {username}
                     </div>
                   </a>
                 </div>

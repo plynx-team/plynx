@@ -3,6 +3,7 @@ import traceback
 from flask import Flask, request, g, Response
 from flask_cors import CORS
 from functools import wraps
+from plynx.constants import ResponseStatus
 from plynx.db.user import User, UserCollectionManager
 from plynx.utils.config import get_config
 from plynx.utils.common import JSONEncoder
@@ -86,17 +87,18 @@ def _init_default_user():
 
 def make_fail_response(message):
     return JSONEncoder().encode({
-        'status': 'failed',
+        'status': ResponseStatus.FAILED,
         'message': message
     })
 
 
-def make_success_response(message='Completed', **extra_response):
+def make_success_response(extra_response=None):
     return JSONEncoder().encode(dict(
         {
-            'status': 'success',
-            'message': message,
-        }, **extra_response))
+            'status': ResponseStatus.SUCCESS,
+            'message': 'Success',
+            'settings': g.user.settings.to_dict(),
+        }, **(extra_response or {})))
 
 
 def handle_errors(f):
