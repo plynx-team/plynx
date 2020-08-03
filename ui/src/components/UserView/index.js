@@ -100,8 +100,15 @@ export default class LogIn extends Component {
   handlePostResponse(data) {
     if (data.status === RESPONCE_STATUS.SUCCESS) {
        this.apiObject.showAlert('Saved', 'success');
+       const refresh = cookie.load('user').username === data.user.username;
+       cookie.save('user', data.user, { path: '/' });
+       cookie.save('settings', data.settings, { path: '/' });
+       if (refresh) {
+         // Need to reload header if this is the current user
+         window.location.reload(false);
+       }
     } else {
-      this.apiObject.showAlert(data.message, 'failed');
+       this.apiObject.showAlert(data.message, 'failed');
     }
   }
 

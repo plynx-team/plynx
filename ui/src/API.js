@@ -61,6 +61,7 @@ class API {
       cookie.save('access_token', response.data.access_token, { path: '/' });
       cookie.save('refresh_token', response.data.refresh_token, { path: '/' });
       cookie.save('user', response.data.user, { path: '/' });
+      cookie.save('settings', response.data.settings, { path: '/' });
       console.log("Successfully updated token");
       console.log(response.data.user);
       isSuccessfull = true;

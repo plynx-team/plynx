@@ -121,7 +121,17 @@ def post_user():
         existing_user.settings = posted_user.settings
 
         existing_user.save()
+
+        is_admin = IAMPolicies.IS_ADMIN in g.user.policies
+        user_obj = existing_user.to_dict()
+        user_obj['_is_admin'] = is_admin
+        user_obj['_readonly'] = existing_user._id != g.user._id and not is_admin
+        del user_obj['password_hash']
+
+        return make_success_response({
+            'user': user_obj,
+            })
     else:
         raise Exception('Unknown action: `{}`'.format(action))
 
-    return make_success_response()
+    raise NotImplementedError("Nothing is to return")
