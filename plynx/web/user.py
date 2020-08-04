@@ -4,7 +4,7 @@ import plynx.db.node_collection_manager
 from plynx.db.db_object import get_class
 from plynx.db.demo_user_manager import DemoUserManager
 from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
-from plynx.web.validation import validate_user
+from plynx.db.user import User
 from plynx.utils.common import JSONEncoder, to_object_id
 from plynx.constants import Collections, NodeClonePolicy
 from plynx.service.users import run_create_user
@@ -32,17 +32,21 @@ def post_register():
     query = json.loads(request.data)
 
     email = query['email'].lower()
-    username = query['username'].lower() 
+    username = query['username']
     password = query['password']
 
-    success, emailError, usernameError, passwordError = validate_user(email, username, password)
+    u = User()
+
+    success, emailError, usernameError, passwordError = u.validate_user(
+                                                                        email, 
+                                                                        username, 
+                                                                        password
+                                                                    )
 
     if success:
         user = run_create_user(email, username, password)
         access_token = user.generate_access_token()
         refresh_token = user.generate_refresh_token()
-        errors['access_token'] = access_token.decode('ascii')
-        errors['refresh_token'] = refresh_token.decode('ascii')
         return JSONEncoder().encode({
             'success': success,
             'access_token': access_token.decode('ascii'),
