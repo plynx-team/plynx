@@ -7,34 +7,34 @@ import { SettingsContext } from '../../../settingsContext';
 import './style.css';
 
 export class Settings extends Component {
-    static contextType = SettingsContext;
+  static contextType = SettingsContext;
 
-    constructor(props) {
-        super(props);
+  constructor(props) {
+    super(props);
 
-        const user = cookie.load('user');
+    const user = cookie.load('user');
 
-        this.state = {
-            user: user,
-        };
-    }
+    this.state = {
+      user: user,
+    };
+  }
 
-    handleClickOutside = (e) => {
-        this.context.hideModal();
-    }
+  handleClickOutside = (e) => {
+    this.context.hideModal();
+  }
 
-    handleLogOut() {
-        console.log("Log out");
-        cookie.remove('user');
-        cookie.remove('access_token');
-        cookie.remove('refresh_token');
-        window.location = "/login";
-    }
+  handleLogOut() {
+    console.log("Log out");
+    cookie.remove('user');
+    cookie.remove('access_token');
+    cookie.remove('refresh_token');
+    window.location = "/login";
+  }
 
-    render() {
-      return (
+  render() {
+    return (
         <SettingsContext.Consumer>{(context) => {
-            return (
+          return (
                 <div className='user-menu-wrapper'>
                     {context.showModal &&
                         <div className='user-menu-grid'>
@@ -47,10 +47,10 @@ export class Settings extends Component {
                         </div>
                     }
                 </div>
-            )
+          );
         }}</SettingsContext.Consumer>
-      );
-    }
+    );
+  }
   }
 
-  export default onClickOutside(Settings);
+export default onClickOutside(Settings);

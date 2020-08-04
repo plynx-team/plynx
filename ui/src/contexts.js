@@ -7,23 +7,23 @@ export const PluginsProvider = PluginsContext.Provider;
 export const PluginsConsumer = PluginsContext.Consumer;
 
 export class ModalContextProvider extends Component {
-    state = {
-        showModal: false,
-    }
+  state = {
+    showModal: false,
+  }
 
-    toggleModal = () => {
-        this.setState({ showModal: !this.state.showModal });
-    }
+  toggleModal = () => {
+    this.setState({ showModal: !this.state.showModal });
+  }
 
-    hideModal = () => {
-        this.setState({ showModal: false });
-    }
+  hideModal = () => {
+    this.setState({ showModal: false });
+  }
 
-    render() {
-        return (
-            <ModalContext.Provider value={{...this.state, hideModal: this.hideModal, toggleModal:this.toggleModal}}>
+  render() {
+    return (
+            <ModalContext.Provider value={{...this.state, hideModal: this.hideModal, toggleModal: this.toggleModal}}>
                 {this.props.children}
             </ModalContext.Provider>
-        )
-    }
+    );
+  }
 }

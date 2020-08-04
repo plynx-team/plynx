@@ -86,7 +86,7 @@ export default class EnumItem extends Component {
                   name='values'
                   items={this.state.values}
                   onChange={this.handleChange}
-                  //readOnly={this.state.readOnly}
+                  // readOnly={this.state.readOnly}
                   parameterType="str"
                   />
           </div>

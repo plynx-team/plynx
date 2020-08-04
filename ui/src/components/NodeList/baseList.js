@@ -38,7 +38,7 @@ export default class ListPage extends Component {
     const user = cookie.load('user');
     let username = '';
     if (user) {
-        username = user.username;
+      username = user.username;
     }
 
     let search = username ? 'author:' + username + ' ' : '';

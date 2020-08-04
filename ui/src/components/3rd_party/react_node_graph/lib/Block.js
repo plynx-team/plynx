@@ -116,7 +116,7 @@ class Block extends React.Component {
           this.handleClick(e);
         }} style={{position: 'relative'}}>
         <SettingsContext.Consumer>{(context) => {
-        return (
+          return (
           <Draggable
             defaultPosition={{x: this.props.node.x, y: this.props.node.y}}
             handle=".node-header,.node-header-title,.node-content"
@@ -133,7 +133,7 @@ class Block extends React.Component {
                         className="operation-icon"
                       />
                       <div className="operation-title-text">
-                        {context.options['Node Display']['choice'] === 'Title and description' ? this.props.node.title: plugins_dict.executors_info[this.props.node.kind].title}
+                        {context.options['Node Display']['choice'] === 'Title and description' ? this.props.node.title : plugins_dict.executors_info[this.props.node.kind].title}
                       </div>
                   </span>
                   {
@@ -159,7 +159,7 @@ class Block extends React.Component {
                     </a>
                   }
                 </header>
-                <div className="node-title">{context.options['Node Display']['choice'] === 'Title and description' ? this.props.node.description: this.props.node.title}</div>
+                <div className="node-title">{context.options['Node Display']['choice'] === 'Title and description' ? this.props.node.description : this.props.node.title}</div>
                 <div className="node-content" onClick={(e) => {
                   this.handleClick(e);
                 }}>
@@ -182,7 +182,7 @@ class Block extends React.Component {
                 />
             </section>
           </Draggable>
-        )
+          );
         }}</SettingsContext.Consumer>
       </div>
       }

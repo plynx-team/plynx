@@ -1,9 +1,8 @@
 import React, { Component } from 'react';
-import { PLynxApi } from '../../API';
 import APIObject from '../Common/APIObject';
 import makePropertiesBox from '../Common/makePropertiesBox';
 import ParameterItem from '../Common/ParameterItem';
-import { makeControlPanel, makeControlButton, makeControlSeparator } from '../Common/controlButton';
+import { makeControlPanel, makeControlButton } from '../Common/controlButton';
 import { COLLECTIONS, IAM_POLICIES, USER_POST_ACTION, OPERATION_VIEW_SETTING, RESPONCE_STATUS } from '../../constants';
 import { validatePassword } from './utils';
 import { User } from 'react-feather';
@@ -18,14 +17,14 @@ export default class LogIn extends Component {
     super(props);
     document.title = "Users - PLynx";
     this.user = {
-        username: '',
-        settings: {
-            node_view_mode: OPERATION_VIEW_SETTING.KIND_AND_TITLE,
-            display_name: '',
-        },
-        policies: [],
-        _is_admin: false,
-        _readonly: true,
+      username: '',
+      settings: {
+        node_view_mode: OPERATION_VIEW_SETTING.KIND_AND_TITLE,
+        display_name: '',
+      },
+      policies: [],
+      _is_admin: false,
+      _readonly: true,
     };
     this.state = {
       user: this.user,
@@ -38,22 +37,22 @@ export default class LogIn extends Component {
   handleParameterChange(name, value) {
     this.user[name] = value;
     this.setState({
-        user: this.user
-    })
+      user: this.user
+    });
   }
 
   handleSettingsChange(name, value) {
     this.user.settings[name] = value;
     this.setState({
-        user: this.user
-    })
+      user: this.user
+    });
   }
 
   handleChange(name, value) {
-    this[name] = value
+    this[name] = value;
     this.setState({
-        name: value
-    })
+      name: value
+    });
   }
 
   handlePolicyChange(name, value) {
@@ -64,7 +63,7 @@ export default class LogIn extends Component {
     }
     console.log(this.user.policies);
     this.setState({
-        user: this.user
+      user: this.user
     });
   }
 
@@ -78,37 +77,37 @@ export default class LogIn extends Component {
 
   handleSave() {
     if (this.oldPassword && this.newPassword !== this.confirmNewPassword) {
-        this.apiObject.showAlert('New passwords don`t match', 'failed');
-        return;
+      this.apiObject.showAlert('New passwords don`t match', 'failed');
+      return;
     }
     if (this.oldPassword && !validatePassword(this.newPassword)) {
-        this.apiObject.showAlert('Password must have at least 8 characters, including an uppercase letter and a number', 'failed');
-        return;
+      this.apiObject.showAlert('Password must have at least 8 characters, including an uppercase letter and a number', 'failed');
+      return;
     }
     if (!this.oldPassword && (this.newPassword || this.confirmNewPassword)) {
-        this.apiObject.showAlert('Please enter `old password`', 'failed');
-        return;
+      this.apiObject.showAlert('Please enter `old password`', 'failed');
+      return;
     }
     this.apiObject.postData({
-        action: USER_POST_ACTION.MODIFY,
-        user: this.user,
-        old_password: this.oldPassword,
-        new_password: this.newPassword,
-    })
+      action: USER_POST_ACTION.MODIFY,
+      user: this.user,
+      old_password: this.oldPassword,
+      new_password: this.newPassword,
+    });
   }
 
   handlePostResponse(data) {
     if (data.status === RESPONCE_STATUS.SUCCESS) {
-       this.apiObject.showAlert('Saved', 'success');
-       const refresh = cookie.load('user').username === data.user.username;
-       cookie.save('user', data.user, { path: '/' });
-       cookie.save('settings', data.settings, { path: '/' });
-       if (refresh) {
+      this.apiObject.showAlert('Saved', 'success');
+      const refresh = cookie.load('user').username === data.user.username;
+      cookie.save('user', data.user, { path: '/' });
+      cookie.save('settings', data.settings, { path: '/' });
+      if (refresh) {
          // Need to reload header if this is the current user
-         window.location.reload(false);
-       }
+        window.location.reload(false);
+      }
     } else {
-       this.apiObject.showAlert(data.message, 'failed');
+      this.apiObject.showAlert(data.message, 'failed');
     }
   }
 
@@ -139,18 +138,18 @@ export default class LogIn extends Component {
     let keyCounter = 0;
 
     const accountSettingsList = [
-        <ParameterItem
+      <ParameterItem
             name={'username'}
             widget={'Username'}
             value={this.state.user.username}
             parameterType={'str'}
             key={[(++keyCounter), this.state.user._readonly].join('')}
-            readOnly={true}
+            readOnly
             onParameterChanged={(name, value) => this.handleParameterChange(name, value)}
           />,
     ];
     const passwordSettingsList = [
-        <ParameterItem
+      <ParameterItem
             name={'oldPassword'}
             widget={'Old password'}
             value={this.state.oldPassword}
@@ -159,7 +158,7 @@ export default class LogIn extends Component {
             readOnly={this.state.user._readonly}
             onParameterChanged={(name, value) => this.handleChange(name, value)}
           />,
-        <ParameterItem
+      <ParameterItem
             name={'newPassword'}
             widget={'New password'}
             value={this.state.newPassword}
@@ -168,7 +167,7 @@ export default class LogIn extends Component {
             readOnly={this.state.user._readonly}
             onParameterChanged={(name, value) => this.handleChange(name, value)}
             />,
-        <ParameterItem
+      <ParameterItem
             name={'confirmNewPassword'}
             widget={'Confirm new password'}
             value={this.state.confirmNewPassword}
@@ -179,7 +178,7 @@ export default class LogIn extends Component {
             />,
     ];
     const personalSettingsList = [
-        <ParameterItem
+      <ParameterItem
             name={'display_name'}
             widget={'Display Name'}
             value={this.state.user.settings.display_name}
@@ -188,21 +187,22 @@ export default class LogIn extends Component {
             readOnly={this.state.user._readonly}
             onParameterChanged={(name, value) => this.handleSettingsChange(name, value)}
             />,
-        <ParameterItem
+      <ParameterItem
             name={'node_view_mode'}
             widget={'Node view settings'}
             value={{
-                values: NODE_VIEW_MODES,
-                index: NODE_VIEW_MODES.indexOf(this.state.user.settings.node_view_mode),
+              values: NODE_VIEW_MODES,
+              index: NODE_VIEW_MODES.indexOf(this.state.user.settings.node_view_mode),
             }}
             parameterType={'enum'}
             key={[(++keyCounter), this.state.user._readonly, this.state.user.settings.node_view_mode].join('')}
             readOnly={this.state.user._readonly}
-            onParameterChanged={(name, value) => {this.handleSettingsChange(name, value.values[value.index])}}
+            onParameterChanged={(name, value) => {
+              this.handleSettingsChange(name, value.values[value.index]);
+            }}
           />,
     ];
-    const iamSettingsList = Object.entries(IAM_POLICIES).map((policy_tuple, index) =>
-        <ParameterItem
+    const iamSettingsList = Object.entries(IAM_POLICIES).map((policy_tuple, index) => <ParameterItem
             name={policy_tuple[0]}
             widget={policy_tuple[0]}
             value={this.state.user.policies.indexOf(policy_tuple[1]) >= 0}
@@ -218,8 +218,12 @@ export default class LogIn extends Component {
         <APIObject
             collection={COLLECTIONS.USERS}
             object_id={username}
-            onUpdateData={data => {this.loadUser(data.user)}}
-            onPostResponse={data => {this.handlePostResponse(data);}}
+            onUpdateData={data => {
+              this.loadUser(data.user);
+            }}
+            onPostResponse={data => {
+              this.handlePostResponse(data);
+            }}
             ref={a => this.apiObject = a}
         />
         <div className='user-view-block'>

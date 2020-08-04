@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import cookie from 'react-cookies';
-import { SettingsContext } from '../../settingsContext'
+import { SettingsContext } from '../../settingsContext';
 import { User } from 'react-feather';
 
 import './style.css';
@@ -26,28 +26,29 @@ export default class UserButton extends Component {
   render() {
     let username = '';
     if (this.state.user) {
-        if (this.state.user.settings && this.state.user.settings.display_name) {
-            username = this.state.user.settings.display_name;
-        } else {
-            username = this.state.user.username;
-        }
-
+      if (this.state.user.settings && this.state.user.settings.display_name) {
+        username = this.state.user.settings.display_name;
+      } else {
+        username = this.state.user.username;
+      }
     }
 
     return (
       <div className="UserButton">
         {this.state.refreshTokenExists &&
-          <SettingsContext.Consumer>{(context) =>{
+          <SettingsContext.Consumer>{(context) => {
             return (
                 <div className="inner-user-button">
-                  <a className="user-menu" href={`/users/${this.state.user.username}`} onClick={(e) => {context.toggleModal(); e.preventDefault()}}>
+                  <a className="user-menu" href={`/users/${this.state.user.username}`} onClick={(e) => {
+                    context.toggleModal(); e.preventDefault();
+                  }}>
                     <User/>
                     <div className="username">
                       {username}
                     </div>
                   </a>
                 </div>
-            )
+            );
           }}</SettingsContext.Consumer>
         }
         {!this.state.refreshTokenExists &&

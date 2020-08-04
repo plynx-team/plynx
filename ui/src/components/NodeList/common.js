@@ -29,7 +29,7 @@ export function renderNodeItem(hrefPrefix, statusName) {
                   {plugins_dict.executors_info[node.kind].title}
                 </div>
             </div>
-            { listTextElement('Author', node._user.length > 0 ? (node._user[0].settings.display_name ? node._user[0].settings.display_name : node._user[0].username ) : 'Unknown') }
+            { listTextElement('Author', node._user.length > 0 ? (node._user[0].settings.display_name ? node._user[0].settings.display_name : node._user[0].username) : 'Unknown') }
             { listTextElement('Created', utcTimeToLocal(node.insertion_date)) }
             { listTextElement('Updated', utcTimeToLocal(node.update_date)) }
         </div>

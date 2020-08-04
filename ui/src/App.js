@@ -7,11 +7,11 @@ import LogInRedirect from './components/LogInRedirect';
 import Dashboard from './components/Dashboard';
 import NotFound from './components/NotFound';
 import CacheBuster from './CacheBuster';
-import { SettingsContextProvider } from './settingsContext'
+import { SettingsContextProvider } from './settingsContext';
 import { COLLECTIONS, VIRTUAL_COLLECTIONS, SPECIAL_USERS } from './constants';
 
 import Editor from './components/Editor';
-import UserView from './components/UserView'
+import UserView from './components/UserView';
 // import Group from './Group';
 import OperationList from './components/NodeList/operationList';
 import WorkflowList from './components/NodeList/workflowList';
@@ -25,7 +25,6 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.reloadOnChangePath = true;
-
   }
 
   getPathTuple(path) {
