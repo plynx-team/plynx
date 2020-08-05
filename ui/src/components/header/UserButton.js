@@ -40,7 +40,8 @@ export default class UserButton extends Component {
             return (
                 <div className="inner-user-button">
                   <a className="user-menu" href={`/users/${this.state.user.username}`} onClick={(e) => {
-                    context.toggleModal(); e.preventDefault();
+                    context.toggleModal();
+                    e.preventDefault();
                   }}>
                     <User/>
                     <div className="username">

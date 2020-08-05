@@ -14,8 +14,6 @@ export default class Header extends Component {
       width: 0,
       height: 0,
       showMenu: false,
-      Docs: props.Docs,
-      Github: props.Github,
     };
 
     this.navigationRef = React.createRef();
@@ -56,8 +54,6 @@ export default class Header extends Component {
         <div className={'menu-sl' + (showMenu ? "-show" : "-hide")} id='menu-sl'>
           <Navigation
             showMenu={showMenu}
-            Github={this.state.Github}
-            Docs={this.state.Docs}
             ref={this.navigationRef}
           />
         </div>

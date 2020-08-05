@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import APIObject from '../Common/APIObject';
+import PropTypes from 'prop-types';
 import makePropertiesBox from '../Common/makePropertiesBox';
 import ParameterItem from '../Common/ParameterItem';
 import { makeControlPanel, makeControlButton } from '../Common/controlButton';
@@ -13,6 +14,14 @@ import './style.css';
 const NODE_VIEW_MODES = [OPERATION_VIEW_SETTING.KIND_AND_TITLE, OPERATION_VIEW_SETTING.TITLE_AND_DESCRIPTION];
 
 export default class LogIn extends Component {
+  static propTypes = {
+    match: PropTypes.shape({
+      params: PropTypes.shape({
+        username: PropTypes.string.isRequired
+      }),
+    }),
+  }
+
   constructor(props) {
     super(props);
     document.title = "Users - PLynx";
@@ -101,9 +110,10 @@ export default class LogIn extends Component {
       this.apiObject.showAlert('Saved', 'success');
       const refresh = cookie.load('user').username === data.user.username;
       cookie.save('user', data.user, { path: '/' });
+      console.log('settings', data.settings);
       cookie.save('settings', data.settings, { path: '/' });
       if (refresh) {
-         // Need to reload header if this is the current user
+        // Need to reload header if this is the current user
         window.location.reload(false);
       }
     } else {
@@ -202,7 +212,7 @@ export default class LogIn extends Component {
             }}
           />,
     ];
-    const iamSettingsList = Object.entries(IAM_POLICIES).map((policy_tuple, index) => <ParameterItem
+    const iamSettingsList = Object.entries(IAM_POLICIES).map((policy_tuple) => <ParameterItem
             name={policy_tuple[0]}
             widget={policy_tuple[0]}
             value={this.state.user.policies.indexOf(policy_tuple[1]) >= 0}

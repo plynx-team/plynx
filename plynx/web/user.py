@@ -121,6 +121,8 @@ def post_user():
         existing_user.settings = posted_user.settings
 
         existing_user.save()
+        if g.user.username == posted_user.username:
+            g.user = posted_user
 
         is_admin = IAMPolicies.IS_ADMIN in g.user.policies
         user_obj = existing_user.to_dict()

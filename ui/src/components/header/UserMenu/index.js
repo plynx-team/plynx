@@ -19,7 +19,7 @@ export class Settings extends Component {
     };
   }
 
-  handleClickOutside = (e) => {
+  handleClickOutside = () => {
     this.context.hideModal();
   }
 

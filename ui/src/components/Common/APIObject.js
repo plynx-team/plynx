@@ -6,9 +6,12 @@ import cookie from 'react-cookies';
 import LoadingScreen from '../LoadingScreen';
 import { ALERT_OPTIONS } from '../../constants';
 
-// import "./style.css";
 
 export default class APIObject extends Component {
+  static propTypes = {
+    object_id: PropTypes.string.isRequired,
+  }
+
   constructor(props) {
     super(props);
 
@@ -104,10 +107,8 @@ export default class APIObject extends Component {
 
     PLynxApi.endpoints[self.props.collection].create(data)
       .then((response) => {
-        const data = response.data;
-        console.log(data);
         self.setState({loading: false});
-        self.props.onPostResponse(data);
+        self.props.onPostResponse(response.data);
       })
       .catch((error) => {
         console.log(error);

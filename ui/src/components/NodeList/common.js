@@ -6,6 +6,18 @@ import { utcTimeToLocal } from '../../utils';
 import '../controls.css';
 import './items.css';
 
+
+function getAuthorText(node) {
+  if (node._user.length > 0) {
+    if (node._user[0].settings.display_name) {
+      return node._user[0].settings.display_name;
+    }
+    return node._user[0].username;
+  }
+  return 'Unknown';
+}
+
+
 export function renderNodeItem(hrefPrefix, statusName) {
   return (node) => {
     return (
@@ -29,7 +41,7 @@ export function renderNodeItem(hrefPrefix, statusName) {
                   {plugins_dict.executors_info[node.kind].title}
                 </div>
             </div>
-            { listTextElement('Author', node._user.length > 0 ? (node._user[0].settings.display_name ? node._user[0].settings.display_name : node._user[0].username) : 'Unknown') }
+            { listTextElement('Author', getAuthorText(node)) }
             { listTextElement('Created', utcTimeToLocal(node.insertion_date)) }
             { listTextElement('Updated', utcTimeToLocal(node.update_date)) }
         </div>

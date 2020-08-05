@@ -4,8 +4,8 @@ import BlockInputList from './BlockInputList';
 import BlockOuputList from './BlockOutputList';
 import ParameterList from './ParameterList';
 import {PluginsConsumer} from '../../../../contexts';
-import {SettingsContext} from '../../../../settingsContext';
-import { NODE_STATUS, NODE_RUNNING_STATUS } from '../../../../constants';
+import cookie from 'react-cookies';
+import { NODE_STATUS, NODE_RUNNING_STATUS, OPERATION_VIEW_SETTING } from '../../../../constants';
 
 import Icon from '../../../Common/Icon';
 
@@ -17,6 +17,7 @@ class Block extends React.Component {
     node: PropTypes.shape({
       _id: PropTypes.string.isRequired,
       title: PropTypes.string.isRequired,
+      description: PropTypes.string.isRequired,
       kind: PropTypes.string.isRequired,
       cache_url: PropTypes.string,
       node_running_status: PropTypes.oneOf(Object.values(NODE_RUNNING_STATUS)).isRequired,
@@ -45,6 +46,15 @@ class Block extends React.Component {
 
   constructor(props) {
     super(props);
+
+    const settings = cookie.load('settings');
+    if (settings) {
+      this.kindAndTitle = settings.node_view_mode === OPERATION_VIEW_SETTING.KIND_AND_TITLE;
+      console.log('>>>>>>', this.kindAndTitle, settings.node_view_mode);
+    } else {
+      console.error('Could not find settings');
+    }
+
     this.state = {
       selected: props.selected,
       readonly: props.readonly,
@@ -115,8 +125,6 @@ class Block extends React.Component {
         plugins_dict => <div onClick={(e) => {
           this.handleClick(e);
         }} style={{position: 'relative'}}>
-        <SettingsContext.Consumer>{(context) => {
-          return (
           <Draggable
             defaultPosition={{x: this.props.node.x, y: this.props.node.y}}
             handle=".node-header,.node-header-title,.node-content"
@@ -133,7 +141,7 @@ class Block extends React.Component {
                         className="operation-icon"
                       />
                       <div className="operation-title-text">
-                        {context.options['Node Display']['choice'] === 'Title and description' ? this.props.node.title : plugins_dict.executors_info[this.props.node.kind].title}
+                        {this.kindAndTitle ? plugins_dict.executors_info[this.props.node.kind].title : this.props.node.title}
                       </div>
                   </span>
                   {
@@ -159,7 +167,9 @@ class Block extends React.Component {
                     </a>
                   }
                 </header>
-                <div className="node-title">{context.options['Node Display']['choice'] === 'Title and description' ? this.props.node.description : this.props.node.title}</div>
+                <div className="node-title">
+                    {this.kindAndTitle ? this.props.node.title : this.props.node.description}
+                </div>
                 <div className="node-content" onClick={(e) => {
                   this.handleClick(e);
                 }}>
@@ -182,8 +192,6 @@ class Block extends React.Component {
                 />
             </section>
           </Draggable>
-          );
-        }}</SettingsContext.Consumer>
       </div>
       }
       </PluginsConsumer>
