@@ -7,6 +7,7 @@ import cookie from 'react-cookies';
 import './style.css';
 
 export default class LogIn extends Component {
+  
   constructor(props) {
     super(props);
     document.title = "Log In - PLynx";
@@ -15,7 +16,7 @@ export default class LogIn extends Component {
       username: '',
       password: '',
       confpassword: '',
-      login: true,
+      mode: 0,
       errors: {
         email: '',
         username: '',
@@ -32,14 +33,17 @@ export default class LogIn extends Component {
     }
   }
 
-  toggleForms() {
-    this.setState({ login: !this.state.login });
+  toggleForms(MODES) {
+    var m;
+    (this.state.mode === MODES.LOGIN) ? m = MODES.REGISTER : m = MODES.LOGIN
+    this.setState({ mode: m });
+    console.log(m)
   }
 
-  handleButton() {
-    if (this.state.login) {
+  handleButton(MODES) {
+    if (this.state.mode === MODES.LOGIN) {
       this.handleLogin();
-    } else {
+    } else if (this.state.mode === MODES.REGISTER) {
       this.handleRegister();
     }
   }
@@ -128,9 +132,9 @@ export default class LogIn extends Component {
     this.setState({[event.target.name]: event.target.value});
   }
 
-  handleKeyPressed(event) {
+  handleKeyPressed(event, MODES) {
     if (event.key === 'Enter') {
-      if (this.state.login && event.target.name === 'password') {
+      if (this.state.mode === MODES.LOGIN && event.target.name === 'password') {
         this.handleLogin();
       } else if (event.target.name === 'confpassword') {
         this.handleRegister();
@@ -156,12 +160,14 @@ export default class LogIn extends Component {
   }
 
   render() {
+    const MODES = { "LOGIN": 0, 'REGISTER': 1 }
+
     return (
       <div className='Login'>
         <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
         <div className='LoginBlock'>
           <div className='Items'>
-          {!this.state.login &&
+          {this.state.mode === MODES.REGISTER &&
             <div className='Item'>
                 <div className='NameCell'>
                   Email
@@ -172,7 +178,7 @@ export default class LogIn extends Component {
                         autoComplete="on"
                         type="email"
                         onChange={(e) => this.handleChange(e)}
-                        onKeyPress={(e) => this.handleKeyPressed(e)}
+                        onKeyPress={(e) => this.handleKeyPressed(e, MODES)}
                         />
                 </div>
                 <div className="ErrorCell">
@@ -190,7 +196,7 @@ export default class LogIn extends Component {
                        value={this.state.username}
                        autoComplete="on"
                        onChange={(e) => this.handleChange(e)}
-                       onKeyPress={(e) => this.handleKeyPressed(e)}
+                       onKeyPress={(e) => this.handleKeyPressed(e, MODES)}
                        />
               </div>
               <div className="ErrorCell">
@@ -208,7 +214,7 @@ export default class LogIn extends Component {
                        autoComplete="on"
                        type="password"
                        onChange={(e) => this.handleChange(e)}
-                       onKeyPress={(e) => this.handleKeyPressed(e)}
+                       onKeyPress={(e) => this.handleKeyPressed(e, MODES)}
                        />
               </div>
               <div className="ErrorCell">
@@ -216,7 +222,7 @@ export default class LogIn extends Component {
               </div>
             </div>
 
-            {!this.state.login &&
+            {this.state.mode === MODES.REGISTER &&
             <div className='Item'>
                 <div className='NameCell'>
                   Confirm Password
@@ -227,7 +233,7 @@ export default class LogIn extends Component {
                         autoComplete="on"
                         type="password"
                         onChange={(e) => this.handleChange(e)}
-                        onKeyPress={(e) => this.handleKeyPressed(e)}
+                        onKeyPress={(e) => this.handleKeyPressed(e, MODES)}
                         />
                 </div>
                 <div className="ErrorCell">
@@ -236,13 +242,13 @@ export default class LogIn extends Component {
               </div>
             }
           </div>
-            <button className="loginButton" onClick={() => this.handleButton()} href="#">
-            {this.state.login ? 'Login': 'Register'}
+            <button className="loginButton" onClick={() => this.handleButton(MODES)} href="#">
+            {this.state.mode === MODES.LOGIN ? 'Login': 'Register'}
             </button>
-              <div className="toggleState" onClick={() => this.toggleForms()}>
-                {this.state.login ? 'Register': 'Login'}
+              <div className="toggleState" onClick={() => this.toggleForms(MODES)}>
+                {this.state.mode === MODES.LOGIN ? 'Register': 'Login'}
               </div>
-              {this.state.login &&
+              {this.state.mode === MODES.LOGIN &&
                 <div className="forgotPassword" onClick={() => this.showAlert("This part wasn't codded in yet...", "failed")}>
                   Forgot Password?
                 </div>
