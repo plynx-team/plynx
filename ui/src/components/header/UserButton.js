@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import cookie from 'react-cookies';
-import { SettingsContext } from '../../settingsContext';
+import { UserMenuContext } from '../../contexts';
 import { User } from 'react-feather';
 
 import './style.css';
@@ -36,7 +36,7 @@ export default class UserButton extends Component {
     return (
       <div className="UserButton">
         {this.state.refreshTokenExists &&
-          <SettingsContext.Consumer>{(context) => {
+          <UserMenuContext.Consumer>{(context) => {
             return (
                 <div className="inner-user-button">
                   <a className="user-menu" href={`/users/${this.state.user.username}`} onClick={(e) => {
@@ -50,7 +50,7 @@ export default class UserButton extends Component {
                   </a>
                 </div>
             );
-          }}</SettingsContext.Consumer>
+          }}</UserMenuContext.Consumer>
         }
         {!this.state.refreshTokenExists &&
           <div className="inner-user-button">

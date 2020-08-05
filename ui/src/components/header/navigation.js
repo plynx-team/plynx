@@ -3,12 +3,12 @@ import { NavLink } from 'react-router-dom';
 import { separator } from './common';
 import cookie from 'react-cookies';
 import { VIRTUAL_COLLECTIONS } from '../../constants';
-import { SettingsContext } from '../../settingsContext';
+import { UserMenuContext } from '../../contexts';
 
 import './style.css';
 
 class Navigation extends Component {
-  static contextType = SettingsContext;
+  static contextType = UserMenuContext;
 
   constructor(props) {
     super(props);

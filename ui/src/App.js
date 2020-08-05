@@ -7,7 +7,7 @@ import LogInRedirect from './components/LogInRedirect';
 import Dashboard from './components/Dashboard';
 import NotFound from './components/NotFound';
 import CacheBuster from './CacheBuster';
-import { SettingsContextProvider } from './settingsContext';
+import { UserMenuContextProvider } from './contexts';
 import { COLLECTIONS, VIRTUAL_COLLECTIONS, SPECIAL_USERS } from './constants';
 
 import Editor from './components/Editor';
@@ -70,7 +70,7 @@ class App extends Component {
 
           return (
             <div className="App">
-              <SettingsContextProvider>
+              <UserMenuContextProvider>
                 <Header />
                 <div className="Content">
                   <Switch>
@@ -93,7 +93,7 @@ class App extends Component {
                     <Route path="*" component={NotFound} />
                   </Switch>
                 </div>
-              </SettingsContextProvider>
+              </UserMenuContextProvider>
             </div>
           );
         }}

@@ -2,12 +2,12 @@ import React, { Component } from 'react';
 import cookie from 'react-cookies';
 import onClickOutside from "react-onclickoutside";
 
-import { SettingsContext } from '../../../settingsContext';
+import { UserMenuContext } from '../../../contexts';
 
 import './style.css';
 
 export class Settings extends Component {
-  static contextType = SettingsContext;
+  static contextType = UserMenuContext;
 
   constructor(props) {
     super(props);
@@ -33,7 +33,7 @@ export class Settings extends Component {
 
   render() {
     return (
-        <SettingsContext.Consumer>{(context) => {
+        <UserMenuContext.Consumer>{(context) => {
           return (
                 <div className='user-menu-wrapper'>
                     {context.showModal &&
@@ -48,7 +48,7 @@ export class Settings extends Component {
                     }
                 </div>
           );
-        }}</SettingsContext.Consumer>
+        }}</UserMenuContext.Consumer>
     );
   }
   }
