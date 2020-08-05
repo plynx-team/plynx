@@ -1,7 +1,6 @@
 from passlib.apps import custom_app_context as pwd_context
 from plynx.constants import Collections, OperationViewSetting
 from plynx.db.db_object import DBObject, DBObjectField
-from plynx.db.node import ParameterEnum
 from plynx.utils.db_connector import get_db_connector
 from plynx.utils.common import ObjectId
 from plynx.utils.config import get_auth_config, get_iam_policies_config

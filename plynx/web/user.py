@@ -1,4 +1,4 @@
-from flask import g, request, jsonify
+from flask import g, request
 import json
 import plynx.db.node_collection_manager
 from plynx.db.db_object import get_class
@@ -6,15 +6,13 @@ from plynx.db.demo_user_manager import DemoUserManager
 from plynx.db.user import UserCollectionManager
 from plynx.web.common import app, requires_auth, make_success_response, make_fail_response, handle_errors
 from plynx.utils.common import JSONEncoder, to_object_id
-from plynx.constants import Collections, NodeClonePolicy, IAMPolicies, ResponseStatus, UserPostAction
-from plynx.utils.db_connector import get_db_connector
-from plynx.utils.config import get_auth_config
+from plynx.constants import Collections, NodeClonePolicy, IAMPolicies, UserPostAction
 from plynx.db.user import User
-from itsdangerous import JSONWebSignatureSerializer as JSONserializer
 
 
 demo_user_manager = DemoUserManager()
 template_collection_manager = plynx.db.node_collection_manager.NodeCollectionManager(collection=Collections.TEMPLATES)
+
 
 @app.route('/plynx/api/v0/token', strict_slashes=False)
 @requires_auth

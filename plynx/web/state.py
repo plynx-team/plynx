@@ -1,5 +1,4 @@
 from plynx.db.worker_state import get_worker_states
-from plynx.utils.common import JSONEncoder
 import plynx.utils.plugin_manager
 from plynx.web.common import app, requires_auth, make_success_response, make_fail_response, handle_errors
 

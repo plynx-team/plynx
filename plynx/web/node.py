@@ -8,7 +8,7 @@ import plynx.db.run_cancellation_manager
 import plynx.base.hub
 import plynx.utils.plugin_manager
 from plynx.web.common import app, requires_auth, make_success_response, make_fail_response, handle_errors
-from plynx.utils.common import to_object_id, JSONEncoder
+from plynx.utils.common import to_object_id
 from plynx.constants import NodeStatus, NodePostAction, NodePostStatus, Collections, NodeClonePolicy, NodeVirtualCollection
 
 PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'hub', 'node_kinds', 'search', 'user_id'}
@@ -57,7 +57,6 @@ def post_search_nodes(collection):
         elif virtual_collection == NodeVirtualCollection.WORKFLOWS:
             query['node_kinds'] = list(workflow_manager.kind_to_workflow_dict.keys())
         res = node_collection_managers[collection].get_db_objects(**query)
-
 
     return make_success_response({
         'items': res['list'],

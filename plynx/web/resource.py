@@ -5,9 +5,8 @@ from plynx.web.common import app, requires_auth, make_success_response, make_fai
 import plynx.base.resource
 from plynx.plugins.resources.common import FILE_KIND
 import plynx.utils.plugin_manager
-from plynx.utils.common import JSONEncoder
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
-from plynx.constants import ResponseStatus, NodeRunningStatus, NodeStatus
+from plynx.constants import NodeRunningStatus, NodeStatus
 
 
 RESOURCE_TYPES = list(plynx.utils.plugin_manager.get_resource_manager().kind_to_resource_class.keys())

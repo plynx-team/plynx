@@ -107,6 +107,7 @@ def get_cloud_service_config():
         url_postfix=_config.get('cloud_service', {}).get('url_postfix', ''),
     )
 
+
 def get_iam_policies_config():
     all_policies = [
         name for name, value in vars(plynx.constants.IAMPolicies).items() if not name.startswith('_')
@@ -116,6 +117,7 @@ def get_iam_policies_config():
     return IAMPoliciesConfig(
         default_policies=default_policies
     )
+
 
 def get_plugins():
     # resources
