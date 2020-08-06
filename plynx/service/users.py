@@ -1,4 +1,4 @@
-from plynx.db.user import User
+from plynx.db.user import User, UserCollectionManager
 
 
 LIST_USERS = 'list_users'
@@ -33,7 +33,7 @@ def run_create_user(email, username, password):
 
 
 def run_set_activation(username, value):
-    user = User.find_user_by_name(username)
+    user = UserCollectionManager.find_user_by_name(username)
 
     if not user:
         raise ValueError("Username `{}` not found".format(username))

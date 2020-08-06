@@ -1,14 +1,23 @@
 import React, { Component } from 'react';
 import { Route, Switch, withRouter } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import Header from './components/Header';
+import Header from './components/header';
 import LogIn from './components/LogIn';
 import LogInRedirect from './components/LogInRedirect';
 import Dashboard from './components/Dashboard';
-import NodeRouter from './components/NodeRouter';
 import NotFound from './components/NotFound';
 import CacheBuster from './CacheBuster';
+import { UserMenuContextProvider } from './contexts';
 import { COLLECTIONS, VIRTUAL_COLLECTIONS, SPECIAL_USERS } from './constants';
+
+import Editor from './components/Editor';
+import UserView from './components/UserView';
+// import Group from './Group';
+import OperationList from './components/NodeList/operationList';
+import WorkflowList from './components/NodeList/workflowList';
+import RunList from './components/NodeList/runList';
+// import GroupList from './NodeList/groupList';
+
 
 import './App.css';
 
@@ -16,7 +25,6 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.reloadOnChangePath = true;
-    this.state = {};
   }
 
   getPathTuple(path) {
@@ -62,21 +70,30 @@ class App extends Component {
 
           return (
             <div className="App">
-              <Header/>
-              <div className="Content">
-                <Switch>
-                  <Route exact path="/" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEFAULT} maxTry={6} />}/>
-                  <Route exact path="/demo" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEMO} maxTry={3} />}/>
-                  <Route exact path="/dashboard" component={Dashboard} />
-                  <Route path={`/${VIRTUAL_COLLECTIONS.OPERATIONS}`} component={NodeRouter}/>
-                  <Route path={`/${VIRTUAL_COLLECTIONS.WORKFLOWS}`} component={NodeRouter}/>
-                  <Route path={`/${COLLECTIONS.GROUPS}`} component={NodeRouter}/>
-                  <Route path={`/${COLLECTIONS.TEMPLATES}`} component={NodeRouter}/>
-                  <Route path={`/${COLLECTIONS.RUNS}`} component={NodeRouter}/>
-                  <Route exact path="/login" component={LogIn} />
-                  <Route path="*" component={NotFound} />
-                </Switch>
-              </div>
+              <UserMenuContextProvider>
+                <Header />
+                <div className="Content">
+                  <Switch>
+                    <Route exact path="/" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEFAULT} maxTry={6} />}/>
+                    <Route exact path="/demo" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEMO} maxTry={3} />}/>
+                    <Route exact path="/dashboard" component={Dashboard} />
+                    <Route exact path="/login" component={LogIn} />
+
+                    <Route exact path={`/${VIRTUAL_COLLECTIONS.OPERATIONS}`} component={OperationList}/>
+                    <Route exact path={`/${VIRTUAL_COLLECTIONS.WORKFLOWS}`} component={WorkflowList}/>
+                    <Route exact path={`/${VIRTUAL_COLLECTIONS.RUNS}`} render={(props) => <RunList {...props} showControlls />}/>
+                    {/* <Route exact path={`/${VIRTUAL_COLLECTIONS.GROUPS}`} render={(props) => <GroupList {...props} showControlls />}/>*/}
+                    <Route exact path={`/${COLLECTIONS.USERS}`} render={(props) => <RunList {...props} showControlls />}/>
+
+                    <Route path={`/${COLLECTIONS.TEMPLATES}/:node_id`} render={(props) => <Editor {...props} collection={COLLECTIONS.TEMPLATES} />} />
+                    <Route path={`/${COLLECTIONS.RUNS}/:node_id`} render={(props) => <Editor {...props} collection={COLLECTIONS.RUNS} />} />
+                    {/* <Route path={`/${COLLECTIONS.GROUPS}/:group_id`} render={(props) => <Group {...props} collection={COLLECTIONS.GROUPS} />} />*/}
+                    <Route path={`/${COLLECTIONS.USERS}/:username`} render={(props) => <UserView {...props} />} />
+
+                    <Route path="*" component={NotFound} />
+                  </Switch>
+                </div>
+              </UserMenuContextProvider>
             </div>
           );
         }}

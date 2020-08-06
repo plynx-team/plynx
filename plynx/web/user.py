@@ -3,11 +3,12 @@ import json
 import plynx.db.node_collection_manager
 from plynx.db.db_object import get_class
 from plynx.db.demo_user_manager import DemoUserManager
-from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
-from plynx.db.user import User
+from plynx.db.user import UserCollectionManager
+from plynx.web.common import app, requires_auth, make_success_response, make_fail_response, handle_errors
 from plynx.utils.common import JSONEncoder, to_object_id
-from plynx.constants import Collections, NodeClonePolicy
-from plynx.service.users import run_create_user
+from plynx.constants import Collections, NodeClonePolicy, IAMPolicies, UserPostAction
+from plynx.db.user import User
+
 
 
 demo_user_manager = DemoUserManager()
@@ -20,9 +21,13 @@ template_collection_manager = plynx.db.node_collection_manager.NodeCollectionMan
 def get_auth_token():
     access_token = g.user.generate_access_token()
     refresh_token = g.user.generate_refresh_token()
-    return JSONEncoder().encode({
+
+    user_obj = g.user.to_dict()
+    user_obj['hash_password'] = ''
+    return make_success_response({
         'access_token': access_token.decode('ascii'),
-        'refresh_token': refresh_token.decode('ascii')
+        'refresh_token': refresh_token.decode('ascii'),
+        'user': user_obj,
     })
 
 
@@ -89,9 +94,80 @@ def post_demo_user():
             return make_fail_response(str(e)), 500
 
     access_token = user.generate_access_token(expiration=1800)
+    user_obj = g.user.to_dict()
+    user_obj['hash_password'] = ''
     return JSONEncoder().encode({
         'access_token': access_token.decode('ascii'),
         'refresh_token': 'Not assigned',
-        'username': user.username,
+        'user': user_obj,
         'url': '/{}/{}'.format(Collections.TEMPLATES, template_id),
     })
+
+
+@app.route('/plynx/api/v0/users/<username>', methods=['GET'])
+@handle_errors
+@requires_auth
+def get_user(username):
+    user = UserCollectionManager.find_user_by_name(username)
+    if not user:
+        return make_fail_response('User not found'), 404
+    user_obj = user.to_dict()
+
+    is_admin = IAMPolicies.IS_ADMIN in g.user.policies
+    user_obj['_is_admin'] = is_admin
+    user_obj['_readonly'] = user._id != g.user._id and not is_admin
+    del user_obj['password_hash']
+
+    return make_success_response({
+        'user': user_obj,
+        })
+
+
+@app.route('/plynx/api/v0/users', methods=['POST'])
+@handle_errors
+@requires_auth
+def post_user():
+    data = json.loads(request.data)
+    app.logger.warn(data)
+    action = data.get('action', '')
+    old_password = data.get('old_password', '')
+    new_password = data.get('new_password', '')
+    if action == UserPostAction.CREATE:
+        raise NotImplementedError("Not implemented")
+    elif action == UserPostAction.MODIFY:
+        posted_user = User.from_dict(data['user'])
+        existing_user = UserCollectionManager.find_user_by_name(posted_user.username)
+        if not existing_user:
+            return make_fail_response('User not found'), 404
+        if g.user.username != posted_user.username and IAMPolicies.IS_ADMIN not in g.user.policies:
+            return make_fail_response('You don`t have permission to modify this user'), 401
+
+        if set(posted_user.policies) != set(existing_user.policies):
+            if IAMPolicies.IS_ADMIN not in g.user.policies:
+                return make_fail_response('You don`t have permission to modify policies'), 401
+            existing_user.policies = posted_user.policies
+
+        if new_password:
+            if not existing_user.verify_password(old_password):
+                return make_fail_response('Incorrect password'), 401
+            existing_user.hash_password(new_password)
+
+        existing_user.settings = posted_user.settings
+
+        existing_user.save()
+        if g.user.username == posted_user.username:
+            g.user = posted_user
+
+        is_admin = IAMPolicies.IS_ADMIN in g.user.policies
+        user_obj = existing_user.to_dict()
+        user_obj['_is_admin'] = is_admin
+        user_obj['_readonly'] = existing_user._id != g.user._id and not is_admin
+        del user_obj['password_hash']
+
+        return make_success_response({
+            'user': user_obj,
+            })
+    else:
+        raise Exception('Unknown action: `{}`'.format(action))
+
+    raise NotImplementedError("Nothing is to return")

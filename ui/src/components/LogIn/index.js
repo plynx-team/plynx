@@ -25,10 +25,11 @@ export default class LogIn extends Component {
       }
     };
 
-    if (cookie.load('username')) {
+    if (cookie.load('user')) {
       cookie.remove('access_token', { path: '/' });
       cookie.remove('refresh_token', { path: '/' });
-      cookie.remove('username', { path: '/' });
+      cookie.remove('user', { path: '/' });
+      cookie.remove('settings', { path: '/' });
       window.location.reload(false);
     }
   }
@@ -90,7 +91,8 @@ export default class LogIn extends Component {
     .then(response => {
       cookie.save('access_token', response.data.access_token, { path: '/' });
       cookie.save('refresh_token', response.data.refresh_token, { path: '/' });
-      cookie.save('username', username, { path: '/' });
+      cookie.save('user', response.data.user, { path: '/' });
+      cookie.save('settings', response.data.settings, { path: '/' });
       window.location = '/workflows';
     })
     .catch((error) => {

@@ -23,7 +23,6 @@ export default function renderValueElement(args) {
   const className = args.className ? args.className : "";
   const showEnumOptions = args.showEnumOptions;
   const height = args.height;
-  console.log('a', value, readOnly);
 
   switch (parameterType) {
     case 'str':
@@ -37,6 +36,17 @@ export default function renderValueElement(args) {
               readOnly={readOnly}
               key={parameterType}
               />;
+    case 'password':
+      return <input
+                autoComplete="off"
+                className={className}
+                type="password"
+                name="value"
+                onChange={handleChange}
+                value={value}
+                readOnly={readOnly}
+                key={parameterType}
+                />;
     case 'int':
       return <input
               className={className}
@@ -72,7 +82,7 @@ export default function renderValueElement(args) {
                 name="value"
                 onChange={handleChange}
                 checked={value}
-                readOnly={readOnly}
+                disabled={readOnly}
                 key={parameterType}
                 />
               <label className="BoolLabel">

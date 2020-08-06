@@ -2,13 +2,22 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import Navigation from './navigation';
 import UserButton from './UserButton';
+import UserMenu from './UserMenu';
 
 import './style.css';
 
 export default class Header extends Component {
   constructor(props) {
     super(props);
-    this.state = { width: 0, height: 0, showMenu: false };
+
+    this.state = {
+      width: 0,
+      height: 0,
+      showMenu: false,
+    };
+
+    this.navigationRef = React.createRef();
+
     this.updateWindowDimensions = this.updateWindowDimensions.bind(this);
   }
 
@@ -40,9 +49,13 @@ export default class Header extends Component {
 
     return (
       <div className="Header" onMouseUp={() => this.onMouseUp()}>
+        <UserMenu/>
         <a href='https://plynx.com' className="logo"><img src='/logo.png' className='icon' alt='PLynx'/></a>
         <div className={'menu-sl' + (showMenu ? "-show" : "-hide")} id='menu-sl'>
-          <Navigation showMenu={showMenu}/>
+          <Navigation
+            showMenu={showMenu}
+            ref={this.navigationRef}
+          />
         </div>
         {
           showMenuButton &&

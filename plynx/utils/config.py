@@ -2,6 +2,7 @@ import logging
 import yaml
 import os
 from collections import namedtuple
+import plynx.constants
 
 PLYNX_CONFIG_PATH = os.getenv('PLYNX_CONFIG_PATH', 'config.yaml')
 DEFAULT_ICON = 'feathericons.x-square'
@@ -21,6 +22,7 @@ OperationConfig = namedtuple('OperationConfig', ['kind', 'title', 'executor', 'h
 HubConfig = namedtuple('HubConfig', ['kind', 'title', 'icon', 'color', 'cls', 'args'])
 WorkflowConfig = namedtuple('WorkflowConfig', ['kind', 'title', 'executor', 'operations', 'hubs', 'icon', 'color'])
 PluginsConfig = namedtuple('PluginsConfig', ['resources', 'operations', 'hubs', 'workflows', 'dummy_operations'])
+IAMPoliciesConfig = namedtuple('IAMPoliciesConfig', ['default_policies'])
 
 
 Config = namedtuple(
@@ -33,6 +35,7 @@ Config = namedtuple(
         'web',
         'demo',
         'cloud_service',
+        'iam_policies',
     ]
 )
 
@@ -102,6 +105,17 @@ def get_cloud_service_config():
         prefix=_config.get('cloud_service', {}).get('prefix', 'gs://sample'),
         url_prefix=_config.get('cloud_service', {}).get('url_prefix', ''),
         url_postfix=_config.get('cloud_service', {}).get('url_postfix', ''),
+    )
+
+
+def get_iam_policies_config():
+    all_policies = [
+        name for name, value in vars(plynx.constants.IAMPolicies).items() if not name.startswith('_')
+    ]
+    default_policies = set(_config.get('default_policies', all_policies))
+    logging.info('Using default IAM policies for new users: {}'.format(default_policies))
+    return IAMPoliciesConfig(
+        default_policies=default_policies
     )
 
 
@@ -191,6 +205,7 @@ def get_config():
         web=get_web_config(),
         demo=get_demo_config(),
         cloud_service=get_cloud_service_config(),
+        iam_policies=get_iam_policies_config(),
     )
 
 

@@ -3,7 +3,8 @@ import traceback
 from flask import Flask, request, g, Response
 from flask_cors import CORS
 from functools import wraps
-from plynx.db.user import User
+from plynx.constants import ResponseStatus
+from plynx.db.user import User, UserCollectionManager
 from plynx.utils.config import get_config
 from plynx.utils.common import JSONEncoder
 from plynx.utils.db_connector import check_connection
@@ -23,7 +24,7 @@ def verify_password(username_or_token, password):
     user = User.verify_auth_token(username_or_token)
     if not user:
         # try to authenticate with username/password
-        user = User.find_user_by_name(username_or_token)
+        user = UserCollectionManager.find_user_by_name(username_or_token)
         if not user or not user.verify_password(password):
             return False
     g.user = user
@@ -66,7 +67,7 @@ def register_user(email, username, password):
     if username is None or password is None:
         return 'Missing username or password'
 
-    if User.find_user_by_name(username):
+    if UserCollectionManager.find_user_by_name(username):
         return 'User with name `{}` already exists'.format(username)
 
     user = User()
@@ -78,7 +79,8 @@ def register_user(email, username, password):
 
 
 def _init_default_user():
-    if not User.find_user_by_name(DEFAULT_USERNAME):
+
+    if not UserCollectionManager.find_user_by_name(DEFAULT_USERNAME):
         message = register_user(DEFAULT_EMAIL, DEFAULT_USERNAME, DEFAULT_PASSWORD)
         if message:
             raise Exception(message)
@@ -89,17 +91,18 @@ def _init_default_user():
 
 def make_fail_response(message):
     return JSONEncoder().encode({
-        'status': 'failed',
+        'status': ResponseStatus.FAILED,
         'message': message
     })
 
 
-def make_success_response(message='Completed', **extra_response):
+def make_success_response(extra_response=None):
     return JSONEncoder().encode(dict(
         {
-            'status': 'success',
-            'message': message,
-        }, **extra_response))
+            'status': ResponseStatus.SUCCESS,
+            'message': 'Success',
+            'settings': g.user.settings.to_dict(),
+        }, **(extra_response or {})))
 
 
 def handle_errors(f):
