@@ -1,6 +1,7 @@
 /* eslint max-lines: 0 */
 /* eslint complexity: 0 */
 
+
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import ReactNodeGraph from '../3rd_party/react_node_graph';
@@ -128,11 +129,8 @@ class Graph extends Component {
     this.generatedCodeHeader =
 `#!/usr/bin/env python
 from plynx.api import Operation, File, Graph, Client
-
 TOKEN = '` + token + `'
 ENDPOINT = '` + API_ENDPOINT + `'
-
-
 `;
   }
 

@@ -1,7 +1,6 @@
 from plynx.db.worker_state import get_worker_states
-from plynx.utils.common import JSONEncoder
 import plynx.utils.plugin_manager
-from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
+from plynx.web.common import app, requires_auth, make_success_response, make_fail_response, handle_errors
 
 
 PLUGINS_DICT = plynx.utils.plugin_manager.get_plugins_dict()
@@ -12,8 +11,7 @@ PLUGINS_DICT = plynx.utils.plugin_manager.get_plugins_dict()
 @requires_auth
 def worker_states():
     try:
-        return JSONEncoder().encode({
-            'status': 'success',
+        return make_success_response({
             'items': get_worker_states(),
             'plugins_dict': PLUGINS_DICT,
         })

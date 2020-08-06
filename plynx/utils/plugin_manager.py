@@ -44,7 +44,7 @@ class _ExecutorManager(object):
 
         self.kind_info = {}
         for kind, executor_class in self.kind_to_executor_class.items():
-            logging.warning("Initializing executor `{}`".format(kind))
+            logging.info("Initializing executor `{}`".format(kind))
             self.kind_info[kind] = {
                 'is_graph': executor_class.IS_GRAPH,
                 'title': self.kind_to_title[kind],

@@ -7,8 +7,8 @@ import plynx.db.node_collection_manager
 import plynx.db.run_cancellation_manager
 import plynx.base.hub
 import plynx.utils.plugin_manager
-from plynx.web.common import app, requires_auth, make_fail_response, handle_errors
-from plynx.utils.common import to_object_id, JSONEncoder
+from plynx.web.common import app, requires_auth, make_success_response, make_fail_response, handle_errors
+from plynx.utils.common import to_object_id
 from plynx.constants import NodeStatus, NodePostAction, NodePostStatus, Collections, NodeClonePolicy, NodeVirtualCollection
 
 PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'hub', 'node_kinds', 'search', 'user_id'}
@@ -58,11 +58,11 @@ def post_search_nodes(collection):
             query['node_kinds'] = list(workflow_manager.kind_to_workflow_dict.keys())
         res = node_collection_managers[collection].get_db_objects(**query)
 
-    return JSONEncoder().encode({
+    return make_success_response({
         'items': res['list'],
         'total_count': res['metadata'][0]['total'] if res['metadata'] else 0,
         'plugins_dict': PLUGINS_DICT,
-        'status': 'success'})
+    })
 
 
 @app.route('/plynx/api/v0/<collection>/<node_link>', methods=['GET'])
@@ -83,19 +83,19 @@ def get_nodes(collection, node_link=None):
             data = node.to_dict()
             tour_steps = []
         data['kind'] = kind
-        return JSONEncoder().encode({
+        return make_success_response({
             'node': data,
             'tour_steps': tour_steps,
             'plugins_dict': PLUGINS_DICT,
-            'status': 'success'})
+            })
     elif node_link in workflow_manager.kind_to_workflow_dict and collection == Collections.GROUPS:
         # TODO move group to a separate class
         group_dict = Group().to_dict()
         group_dict['kind'] = node_link
-        return JSONEncoder().encode({
+        return make_success_response({
             'group': group_dict,
             'plugins_dict': PLUGINS_DICT,
-            'status': 'success'})
+            })
     else:
         try:
             node_id = to_object_id(node_link)
@@ -105,20 +105,19 @@ def get_nodes(collection, node_link=None):
             # TODO move group to a separate class
             group = node_collection_managers[collection].get_db_object(node_id, user_id)
             if group:
-                return JSONEncoder().encode({
+                return make_success_response({
                     'group': group,
                     'plugins_dict': PLUGINS_DICT,
-                    'status': 'success',
                     })
             else:
                 make_fail_response('Group `{}` was not found'.format(node_link)), 404
         node = node_collection_managers[collection].get_db_node(node_id, user_id)
         app.logger.debug(node)
         if node:
-            return JSONEncoder().encode({
+            return make_success_response({
                 'node': node,
                 'plugins_dict': PLUGINS_DICT,
-                'status': 'success'})
+                })
         else:
             return make_fail_response('Node `{}` was not found'.format(node_link)), 404
 
@@ -150,7 +149,7 @@ def post_node(collection):
             return make_fail_response('Node status `{}` expected. Found `{}`'.format(NodeStatus.CREATED, node.node_status))
         validation_error = executor_manager.kind_to_executor_class[node.kind](node).validate()
         if validation_error:
-            return JSONEncoder().encode({
+            return make_success_response({
                 'status': NodePostStatus.VALIDATION_FAILED,
                 'message': 'Node validation failed',
                 'validation_error': validation_error.to_dict()
@@ -164,7 +163,7 @@ def post_node(collection):
             return make_fail_response('Node status `{}` expected. Found `{}`'.format(NodeStatus.CREATED, node.node_status))
         validation_error = executor_manager.kind_to_executor_class[node.kind](node).validate()
         if validation_error:
-            return JSONEncoder().encode({
+            return make_success_response({
                 'status': NodePostStatus.VALIDATION_FAILED,
                 'message': 'Node validation failed',
                 'validation_error': validation_error.to_dict()
@@ -172,8 +171,7 @@ def post_node(collection):
 
         node = node.clone(NodeClonePolicy.NODE_TO_RUN)
         node.save(collection=Collections.RUNS)
-        return JSONEncoder().encode(
-            {
+        return make_success_response({
                 'status': NodePostStatus.SUCCESS,
                 'message': 'Run(_id=`{}`) successfully created'.format(str(node._id)),
                 'run_id': str(node._id),
@@ -190,9 +188,7 @@ def post_node(collection):
         node = node.clone(node_clone_policy)
         node.save(collection=Collections.TEMPLATES)
 
-        return JSONEncoder().encode(
-            {
-                'status': NodePostStatus.SUCCESS,
+        return make_success_response({
                 'message': 'Node(_id=`{}`) successfully created'.format(str(node._id)),
                 'node_id': str(node._id),
                 'url': '/{}/{}'.format(Collections.TEMPLATES, node._id),
@@ -202,7 +198,7 @@ def post_node(collection):
         validation_error = executor_manager.kind_to_executor_class[node.kind](node).validate()
 
         if validation_error:
-            return JSONEncoder().encode({
+            return make_success_response({
                 'status': NodePostStatus.VALIDATION_FAILED,
                 'message': 'Node validation failed',
                 'validation_error': validation_error.to_dict()
@@ -221,32 +217,24 @@ def post_node(collection):
         node.save(force=True)
     elif action == NodePostAction.PREVIEW_CMD:
 
-        return JSONEncoder().encode(
-            {
-                'status': NodePostStatus.SUCCESS,
+        return make_success_response({
                 'message': 'Successfully created preview',
                 'preview_text': executor_manager.kind_to_executor_class[node.kind](node).run(preview=True)
             })
 
     elif action == NodePostAction.REARRANGE_NODES:
         node.arrange_auto_layout()
-        return JSONEncoder().encode(dict(
-            {
-                'status': NodePostStatus.SUCCESS,
+        return make_success_response({
                 'message': 'Successfully created preview',
                 'node': node.to_dict(),
-            }
-        ))
+            })
     elif action == NodePostAction.UPGRADE_NODES:
         upd = node_collection_managers[collection].upgrade_sub_nodes(node)
-        return JSONEncoder().encode(dict(
-            {
-                'status': NodePostStatus.SUCCESS,
+        return make_success_response({
                 'message': 'Successfully updated nodes',
                 'node': node.to_dict(),
                 'upgraded_nodes_count': upd,
-            }
-        ))
+            })
     elif action == NodePostAction.CANCEL:
         run_cancellation_manager.cancel_run(node._id)
     elif action == NodePostAction.GENERATE_CODE:
@@ -254,9 +242,7 @@ def post_node(collection):
     else:
         return make_fail_response('Unknown action `{}`'.format(action))
 
-    return JSONEncoder().encode(
-        {
-            'status': NodePostStatus.SUCCESS,
+    return make_success_response({
             'message': 'Node(_id=`{}`) successfully updated'.format(str(node._id))
         })
 
@@ -279,8 +265,6 @@ def post_group():
     if action == NodePostAction.SAVE:
         group.save(force=True)
 
-    return JSONEncoder().encode(
-        {
-            'status': NodePostStatus.SUCCESS,
+    return make_success_response({
             'message': 'Group(_id=`{}`) successfully updated'.format(str(group._id))
         })

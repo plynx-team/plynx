@@ -1,12 +1,38 @@
 from passlib.apps import custom_app_context as pwd_context
-from plynx.constants import Collections
+from plynx.constants import Collections, OperationViewSetting
 from plynx.db.db_object import DBObject, DBObjectField
 from plynx.utils.db_connector import get_db_connector
 from plynx.utils.common import ObjectId
-from plynx.utils.config import get_auth_config
+from plynx.utils.config import get_auth_config, get_iam_policies_config
 from itsdangerous import (SignatureExpired, BadSignature,
                           TimedJSONWebSignatureSerializer as TimedSerializer,
                           JSONWebSignatureSerializer as Serializer)
+
+DEFAULT_POLICIES = get_iam_policies_config().default_policies
+
+
+class UserSettings(DBObject):
+    """User Settings structure."""
+
+    FIELDS = {
+        # settings
+        'node_view_mode': DBObjectField(
+            type=str,
+            default=OperationViewSetting.KIND_AND_TITLE,
+            is_list=False,
+            ),
+        'display_name': DBObjectField(
+            type=str,
+            default='',
+            is_list=False,
+            ),
+    }
+
+    def __str__(self):
+        return 'UserSettings(name="{}")'.format(self.name)
+
+    def __repr__(self):
+        return 'UserSettings({})'.format(str(self.to_dict()))
 
 
 class User(DBObject):
@@ -31,6 +57,17 @@ class User(DBObject):
         'active': DBObjectField(
             type=bool,
             default=True,
+            is_list=False,
+            ),
+        'policies': DBObjectField(
+            type=str,
+            default=DEFAULT_POLICIES,
+            is_list=True,
+            ),
+
+        'settings': DBObjectField(
+            type=UserSettings,
+            default=UserSettings,
             is_list=False,
             ),
     }
@@ -87,22 +124,6 @@ class User(DBObject):
         raise Exception("Can't get attribute '{}'".format(name))
 
     @staticmethod
-    def find_user_by_name(username):
-        """Find User.
-
-        Args:
-            username    (str)   Username
-
-        Return:
-            (User)   User object or None
-        """
-        user_dict = getattr(get_db_connector(), User.DB_COLLECTION).find_one({'username': username})
-        if not user_dict:
-            return None
-
-        return User(user_dict)
-
-    @staticmethod
     def find_users():
         return getattr(get_db_connector(), User.DB_COLLECTION).find({})
 
@@ -133,7 +154,33 @@ class User(DBObject):
         except Exception as e:
             print("Unexpected exception: {}".format(e))
             return None
-        user = User.find_user_by_name(data['username'])
+        user = UserCollectionManager.find_user_by_name(data['username'])
         if not user.active:
             return None
         return user
+
+
+class UserCollectionManager(object):
+    @staticmethod
+    def find_user_by_name(username):
+        """Find User.
+
+        Args:
+            username    (str)   Username
+
+        Return:
+            (User)   User object or None
+        """
+        user_dict = getattr(get_db_connector(), User.DB_COLLECTION).find_one({'username': username})
+        if not user_dict:
+            return None
+
+        return User(user_dict)
+
+    @staticmethod
+    def get_users(
+            search='',
+            per_page=20,
+            offset=0,
+            ):
+        raise NotImplementedError()

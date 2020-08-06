@@ -35,7 +35,12 @@ export default class ListPage extends Component {
 
   constructor(props) {
     super(props);
-    const username = cookie.load('username');
+    const user = cookie.load('user');
+    let username = '';
+    if (user) {
+      username = user.username;
+    }
+
     let search = username ? 'author:' + username + ' ' : '';
     if (this.props.search) {
       search = this.props.search;
