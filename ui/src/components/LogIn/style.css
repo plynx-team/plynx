@@ -78,6 +78,14 @@
     border: none;
 }
 
+.loginButton:hover {
+  background-color: #12ccc8;
+}
+
+.Login .loginButton:active {
+  background-color: #2196F3;
+}
+
 .toggleState,
 .forgotPassword {
     margin-top: -5px;

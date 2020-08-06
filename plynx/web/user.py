@@ -4,12 +4,11 @@ import plynx.db.node_collection_manager
 from plynx.db.db_object import get_class
 from plynx.db.demo_user_manager import DemoUserManager
 from plynx.db.user import UserCollectionManager
-from plynx.web.common import app, requires_auth, make_success_response, make_fail_response, handle_errors
+from plynx.web.common import app, register_user, requires_auth, make_success_response, make_fail_response, handle_errors
 from plynx.utils.common import JSONEncoder, to_object_id
+from plynx.utils.exceptions import RegisterUserException
 from plynx.constants import Collections, NodeClonePolicy, IAMPolicies, UserPostAction
 from plynx.db.user import User
-
-
 
 demo_user_manager = DemoUserManager()
 template_collection_manager = plynx.db.node_collection_manager.NodeCollectionManager(collection=Collections.TEMPLATES)
@@ -28,41 +27,6 @@ def get_auth_token():
         'access_token': access_token.decode('ascii'),
         'refresh_token': refresh_token.decode('ascii'),
         'user': user_obj,
-    })
-
-
-@app.route('/plynx/api/v0/register', methods=['POST'])
-@handle_errors
-def post_register():
-    query = json.loads(request.data)
-
-    email = query['email'].lower()
-    username = query['username']
-    password = query['password']
-
-    u = User()
-
-    success, emailError, usernameError, passwordError = u.validate_user(
-                                                                        email, 
-                                                                        username, 
-                                                                        password
-                                                                    )
-
-    if success:
-        user = run_create_user(email, username, password)
-        access_token = user.generate_access_token()
-        refresh_token = user.generate_refresh_token()
-        return JSONEncoder().encode({
-            'success': success,
-            'access_token': access_token.decode('ascii'),
-            'refresh_token': refresh_token.decode('ascii')
-        })
-
-    return JSONEncoder().encode({
-        'success': success,
-        'emailError': emailError,
-        'usernameError': usernameError, 
-        'passwordError': passwordError
     })
 
 
@@ -132,9 +96,7 @@ def post_user():
     action = data.get('action', '')
     old_password = data.get('old_password', '')
     new_password = data.get('new_password', '')
-    if action == UserPostAction.CREATE:
-        raise NotImplementedError("Not implemented")
-    elif action == UserPostAction.MODIFY:
+    if action == UserPostAction.MODIFY:
         posted_user = User.from_dict(data['user'])
         existing_user = UserCollectionManager.find_user_by_name(posted_user.username)
         if not existing_user:
@@ -171,3 +133,37 @@ def post_user():
         raise Exception('Unknown action: `{}`'.format(action))
 
     raise NotImplementedError("Nothing is to return")
+
+
+@app.route('/plynx/api/v0/register', methods=['POST'])
+@handle_errors
+def post_register():
+    query = json.loads(request.data)
+
+    email = query['email'].lower()
+    username = query['username']
+    password = query['password']
+
+    try:
+        user = register_user(
+            username=username,
+            password=password,
+            email=email,
+        )
+    except RegisterUserException as ex:
+        return make_fail_response(
+            ex.message,
+            error_code=ex.error_code,
+        ), 400
+
+    g.user = user
+    access_token = user.generate_access_token()
+    refresh_token = user.generate_refresh_token()
+
+    user_obj = user.to_dict()
+    user_obj['hash_password'] = ''
+    return make_success_response({
+        'access_token': access_token.decode('ascii'),
+        'refresh_token': refresh_token.decode('ascii'),
+        'user': user_obj,
+    })
