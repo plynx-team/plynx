@@ -10,6 +10,7 @@ from plynx.constants import Collections, NodeClonePolicy, IAMPolicies, UserPostA
 from plynx.db.user import User
 
 
+
 demo_user_manager = DemoUserManager()
 template_collection_manager = plynx.db.node_collection_manager.NodeCollectionManager(collection=Collections.TEMPLATES)
 
@@ -27,6 +28,41 @@ def get_auth_token():
         'access_token': access_token.decode('ascii'),
         'refresh_token': refresh_token.decode('ascii'),
         'user': user_obj,
+    })
+
+
+@app.route('/plynx/api/v0/register', methods=['POST'])
+@handle_errors
+def post_register():
+    query = json.loads(request.data)
+
+    email = query['email'].lower()
+    username = query['username']
+    password = query['password']
+
+    u = User()
+
+    success, emailError, usernameError, passwordError = u.validate_user(
+                                                                        email, 
+                                                                        username, 
+                                                                        password
+                                                                    )
+
+    if success:
+        user = run_create_user(email, username, password)
+        access_token = user.generate_access_token()
+        refresh_token = user.generate_refresh_token()
+        return JSONEncoder().encode({
+            'success': success,
+            'access_token': access_token.decode('ascii'),
+            'refresh_token': refresh_token.decode('ascii')
+        })
+
+    return JSONEncoder().encode({
+        'success': success,
+        'emailError': emailError,
+        'usernameError': usernameError, 
+        'passwordError': passwordError
     })
 
 

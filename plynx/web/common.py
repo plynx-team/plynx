@@ -11,6 +11,7 @@ from plynx.utils.db_connector import check_connection
 
 app = Flask(__name__)
 
+DEFAULT_EMAIL = 'default@email.com'
 DEFAULT_USERNAME = 'default'
 DEFAULT_PASSWORD = ''
 
@@ -52,10 +53,11 @@ def requires_auth(f):
     return decorated
 
 
-def register_user(username, password):
+def register_user(email, username, password):
     """Register a new user.
 
     Args:
+        email       (str):  Email
         username    (str):  Username
         password    (str):  Pasword
 
@@ -70,14 +72,16 @@ def register_user(username, password):
 
     user = User()
     user.username = username
+    user.email = email
     user.hash_password(password)
     user.save()
     return None
 
 
 def _init_default_user():
+
     if not UserCollectionManager.find_user_by_name(DEFAULT_USERNAME):
-        message = register_user(DEFAULT_USERNAME, DEFAULT_PASSWORD)
+        message = register_user(DEFAULT_EMAIL, DEFAULT_USERNAME, DEFAULT_PASSWORD)
         if message:
             raise Exception(message)
         logging.info('Created default user `{}`'.format(DEFAULT_USERNAME))
