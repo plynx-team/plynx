@@ -49,6 +49,11 @@ class User(DBObject):
             default='',
             is_list=False,
             ),
+        'email': DBObjectField(
+            type=str,
+            default='',
+            is_list=False,
+            ),
         'password_hash': DBObjectField(
             type=str,
             default='',
@@ -123,7 +128,6 @@ class User(DBObject):
     def __getattr__(self, name):
         raise Exception("Can't get attribute '{}'".format(name))
 
-    @staticmethod
     def find_users():
         return getattr(get_db_connector(), User.DB_COLLECTION).find({})
 
@@ -172,6 +176,22 @@ class UserCollectionManager(object):
             (User)   User object or None
         """
         user_dict = getattr(get_db_connector(), User.DB_COLLECTION).find_one({'username': username})
+        if not user_dict:
+            return None
+
+        return User(user_dict)
+
+    @staticmethod
+    def find_user_by_email(email):
+        """Find User.
+
+        Args:
+            email    (str)   Email
+
+        Return:
+            (User)   User object or None
+        """
+        user_dict = getattr(get_db_connector(), User.DB_COLLECTION).find_one({'email': email})
         if not user_dict:
             return None
 

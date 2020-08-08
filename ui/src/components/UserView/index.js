@@ -5,7 +5,7 @@ import makePropertiesBox from '../Common/makePropertiesBox';
 import ParameterItem from '../Common/ParameterItem';
 import { makeControlPanel, makeControlButton } from '../Common/controlButton';
 import { COLLECTIONS, IAM_POLICIES, USER_POST_ACTION, OPERATION_VIEW_SETTING, RESPONCE_STATUS } from '../../constants';
-import { validatePassword } from './utils';
+import { validatePassword } from '../Common/passwordUtils';
 import { User } from 'react-feather';
 import cookie from 'react-cookies';
 

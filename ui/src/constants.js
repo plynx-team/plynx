@@ -203,3 +203,24 @@ export const USER_POST_ACTION = Object.freeze({
   CREATE: 'CREATE',
   MODIFY: 'MODIFY',
 });
+
+export const REGISTER_USER_EXCEPTION_CODE = Object.freeze({
+  EMPTY_USERNAME: {
+    username: 'Username required',
+  },
+  EMPTY_PASSWORD: {
+    password: 'Password required',
+  },
+  USERNAME_ALREADY_EXISTS: {
+    username: 'Username already taken',
+  },
+  EMAIL_ALREADY_EXISTS: {
+    email: 'Email already taken',
+  },
+  INVALID_EMAIL: {
+    email: 'Invalid email',
+  },
+  INVALID_LENGTH_OF_USERNAME: {
+    username: 'Plese use 6 to 22 characters',
+  },
+});
