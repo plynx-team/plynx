@@ -1,0 +1,13 @@
+.login-redirect .error-icon {
+    color: #d81e1e;
+    text-align: center;
+    width: 50pt;
+    height: 50pt;
+}
+
+.login-redirect .error-text {
+    color: #d81e1e;
+    text-align: center;
+    font-size: 20pt;
+    font-weight: 400;
+}

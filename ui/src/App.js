@@ -1,11 +1,11 @@
 import React, { Component } from 'react';
 import { Route, Switch, withRouter } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import Header from './components/header';
+import Header from './components/Header';
 import LogIn from './components/LogIn';
 import LogInRedirect from './components/LogInRedirect';
 import Dashboard from './components/Dashboard';
-import NotFound from './components/NotFound';
+import ErrorPage from './components/ErrorPage';
 import CacheBuster from './CacheBuster';
 import { UserMenuContextProvider } from './contexts';
 import { COLLECTIONS, VIRTUAL_COLLECTIONS, SPECIAL_USERS } from './constants';
@@ -90,7 +90,7 @@ class App extends Component {
                     {/* <Route path={`/${COLLECTIONS.GROUPS}/:group_id`} render={(props) => <Group {...props} collection={COLLECTIONS.GROUPS} />} />*/}
                     <Route path={`/${COLLECTIONS.USERS}/:username`} render={(props) => <UserView {...props} />} />
 
-                    <Route path="*" component={NotFound} />
+                    <Route path="*" render={(props) => <ErrorPage {...props} errorCode={404} />} />
                   </Switch>
                 </div>
               </UserMenuContextProvider>

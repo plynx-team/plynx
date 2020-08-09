@@ -18,9 +18,3 @@
 .login-redirect .simple-loader {
     color: #246398;
 }
-
-.login-redirect .error-text {
-    color: #d81e1e;
-    text-align: center;
-    height: 20px;
-}
