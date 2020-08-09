@@ -23,7 +23,7 @@ export class Settings extends Component {
     this.context.hideModal();
   }
 
-  handleLogOut() {
+  handleSignOut() {
     console.log("Log out");
     cookie.remove('user');
     cookie.remove('access_token');
@@ -41,8 +41,8 @@ export class Settings extends Component {
                             <a className='menu-item' href={`/users/${this.state.user.username}`}>
                               Settings
                             </a>
-                            <div className='menu-item' onClick={() => this.handleLogOut()}>
-                              LogOut
+                            <div className='menu-item' onClick={() => this.handleSignOut()}>
+                              Sign Out
                             </div>
                         </div>
                     }
