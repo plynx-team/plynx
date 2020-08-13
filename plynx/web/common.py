@@ -124,6 +124,10 @@ def make_fail_response(message, **kwargs):
     })
 
 
+def make_permission_denied(message='Permission denied'):
+    return make_fail_response(message), 403
+
+
 def make_success_response(extra_response=None):
     return JSONEncoder().encode(dict(
         {

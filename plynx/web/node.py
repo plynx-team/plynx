@@ -7,17 +7,11 @@ import plynx.db.node_collection_manager
 import plynx.db.run_cancellation_manager
 import plynx.base.hub
 import plynx.utils.plugin_manager
-from plynx.web.common import app, requires_auth, make_success_response, make_fail_response, handle_errors
+from plynx.web.common import app, requires_auth, make_success_response, make_fail_response, make_permission_denied, handle_errors
 from plynx.utils.common import to_object_id
-from plynx.constants import NodeStatus, NodePostAction, NodePostStatus, Collections, NodeClonePolicy, NodeVirtualCollection
+from plynx.constants import NodeStatus, NodePostAction, NodePostStatus, Collections, NodeClonePolicy, NodeVirtualCollection, IAMPolicies
 
 PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'hub', 'node_kinds', 'search', 'user_id'}
-PERMITTED_READONLY_POST_ACTIONS = {
-    NodePostAction.VALIDATE,
-    NodePostAction.PREVIEW_CMD,
-    NodePostAction.CLONE,
-    NodePostAction.REARRANGE_NODES,
-}
 
 node_collection_managers = {
     collection: plynx.db.node_collection_manager.NodeCollectionManager(collection=collection)
@@ -131,20 +125,38 @@ def post_node(collection):
     data = json.loads(request.data)
 
     node = Node.from_dict(data['node'])
-    node.author = g.user._id
     node.starred = False
     db_node = node_collection_managers[collection].get_db_node(node._id, g.user._id)
     action = data['action']
-    if db_node and db_node['_readonly'] and action not in PERMITTED_READONLY_POST_ACTIONS:
-        return make_fail_response('Permission denied'), 403
+
+    if not db_node:
+        node.author = g.user._id
+    assert node.author == db_node['author'], "Author of the node does not match the one in the database"
+
+    is_admin = IAMPolicies.IS_ADMIN in g.user.policies
+    is_author = db_node['author'] == g.user._id
+    is_workflow = node.kind in workflow_manager.kind_to_workflow_dict
+
+    can_create_operations = IAMPolicies.CAN_CREATE_OPERATIONS in g.user.policies
+    can_create_workflows = IAMPolicies.CAN_CREATE_WORKFLOWS in g.user.policies
+    can_modify_others_workflows = IAMPolicies.CAN_MODIFY_OTHERS_WORKFLOWS in g.user.policies
+    can_run_workflows = IAMPolicies.CAN_RUN_WORKFLOWS in g.user.policies
 
     if action == NodePostAction.SAVE:
+        if (is_workflow and not can_create_workflows) or (not is_workflow and not can_create_operations):
+            return make_permission_denied('You do not have permission to save this object')
+
         if node.node_status != NodeStatus.CREATED:
             return make_fail_response('Cannot save node with status `{}`'.format(node.node_status))
 
-        node.save(force=True)
+        if is_author or is_admin or (is_workflow and can_modify_others_workflows):
+            node.save(force=True)
+        else:
+            return make_permission_denied('Only the owners or users with CAN_MODIFY_OTHERS_WORKFLOWS role can save it')
 
     elif action == NodePostAction.APPROVE:
+        if is_workflow:
+            return make_fail_response('Invalid action for a workflow'), 400
         if node.node_status != NodeStatus.CREATED:
             return make_fail_response('Node status `{}` expected. Found `{}`'.format(NodeStatus.CREATED, node.node_status))
         validation_error = executor_manager.kind_to_executor_class[node.kind](node).validate()
@@ -156,9 +168,15 @@ def post_node(collection):
             })
 
         node.node_status = NodeStatus.READY
-        node.save(force=True)
+
+        if is_author or is_admin:
+            node.save(force=True)
+        else:
+            return make_permission_denied()
 
     elif action == NodePostAction.CREATE_RUN:
+        if not is_workflow:
+            return make_fail_response('Invalid action for an operation'), 400
         if node.node_status != NodeStatus.CREATED:
             return make_fail_response('Node status `{}` expected. Found `{}`'.format(NodeStatus.CREATED, node.node_status))
         validation_error = executor_manager.kind_to_executor_class[node.kind](node).validate()
@@ -170,7 +188,11 @@ def post_node(collection):
             })
 
         node = node.clone(NodeClonePolicy.NODE_TO_RUN)
-        node.save(collection=Collections.RUNS)
+        if is_admin or can_run_workflows:
+            node.save(collection=Collections.RUNS)
+        else:
+            return make_permission_denied('You do not have CAN_RUN_WORKFLOWS role')
+
         return make_success_response({
                 'status': NodePostStatus.SUCCESS,
                 'message': 'Run(_id=`{}`) successfully created'.format(str(node._id)),
@@ -179,6 +201,8 @@ def post_node(collection):
             })
 
     elif action == NodePostAction.CLONE:
+        if (is_workflow and not can_create_workflows) or (not is_workflow and not can_create_operations):
+            return make_permission_denied('You do not have the role to create an object')
         node_clone_policy = None
         if collection == Collections.TEMPLATES:
             node_clone_policy = NodeClonePolicy.NODE_TO_NODE
@@ -208,13 +232,23 @@ def post_node(collection):
             return make_fail_response('Node status `{}` not expected.'.format(node.node_status))
 
         node.node_status = NodeStatus.DEPRECATED
-        node.save(force=True)
+
+        if is_author or is_admin:
+            node.save(force=True)
+        else:
+            return make_permission_denied('You are not an author to deprecate it')
+
     elif action == NodePostAction.MANDATORY_DEPRECATE:
         if node.node_status == NodeStatus.CREATED:
             return make_fail_response('Node status `{}` not expected.'.format(node.node_status))
 
         node.node_status = NodeStatus.MANDATORY_DEPRECATED
-        node.save(force=True)
+
+        if is_author or is_admin:
+            node.save(force=True)
+        else:
+            return make_permission_denied('You are not an author to deprecate it')
+
     elif action == NodePostAction.PREVIEW_CMD:
 
         return make_success_response({
@@ -236,7 +270,12 @@ def post_node(collection):
                 'upgraded_nodes_count': upd,
             })
     elif action == NodePostAction.CANCEL:
-        run_cancellation_manager.cancel_run(node._id)
+
+        if is_author or is_admin:
+            run_cancellation_manager.cancel_run(node._id)
+        else:
+            return make_permission_denied('You are not an author to cancel the run')
+
     elif action == NodePostAction.GENERATE_CODE:
         raise NotImplementedError()
     else:
@@ -259,7 +298,7 @@ def post_group():
     group.author = g.user._id
     db_group = node_collection_managers[Collections.GROUPS].get_db_object(group._id, g.user._id)
     action = data['action']
-    if db_group and db_group['_readonly'] and action not in PERMITTED_READONLY_POST_ACTIONS:
+    if db_group and db_group['_readonly']:
         return make_fail_response('Permission denied'), 403
 
     if action == NodePostAction.SAVE:
