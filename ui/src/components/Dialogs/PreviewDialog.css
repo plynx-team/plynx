@@ -37,17 +37,18 @@
 
 .preview-table {
   border-spacing: 0px;
+  margin: 5px;
 }
 
 .preview-table-col {
   padding: 0px 10px 0px 10px;
-  border-right: 1px solid #bbb;
+  border-right: 1px solid #333;
 }
 
 .preview-table-row-even {
-  background-color: #ccc;
+  background-color: #222;
 }
 
 .preview-table-row-odd {
-  background-color: #ddd;
+  background-color: #111;
 }
