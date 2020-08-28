@@ -188,6 +188,7 @@ def post_node(collection):
             })
 
         node = node.clone(NodeClonePolicy.NODE_TO_RUN)
+        node.author = g.user._id
         if is_admin or can_run_workflows:
             node.save(collection=Collections.RUNS)
         else:
