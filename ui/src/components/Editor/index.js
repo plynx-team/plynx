@@ -770,7 +770,7 @@ export default class Editor extends Component {
                       <RunList
                         ref={a => this.runsComponent = a}
                         showControlls={false}
-                        search={"original_node_id:" + this.state.node._id}
+                        search={"original_node_id:" + (this.props.collection === COLLECTIONS.RUNS ? this.state.node.original_node_id : this.state.node._id)}
                       />
                   }
               </div>
