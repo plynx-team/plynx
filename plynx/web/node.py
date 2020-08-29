@@ -126,15 +126,21 @@ def post_node(collection):
 
     node = Node.from_dict(data['node'])
     node.starred = False
-    db_node = node_collection_managers[collection].get_db_node(node._id, g.user._id)
     action = data['action']
+    db_node = node_collection_managers[collection].get_db_node(node._id, g.user._id)
 
-    if not db_node:
+
+    if db_node:
+        if not node.author:
+            node.author = db_node['author']
+        assert node.author == db_node['author'], "Author of the node does not match the one in the database"
+        is_author = db_node['author'] == g.user._id
+    else:
+        # assign the author
         node.author = g.user._id
-    assert node.author == db_node['author'], "Author of the node does not match the one in the database"
+        is_author = True
 
     is_admin = IAMPolicies.IS_ADMIN in g.user.policies
-    is_author = db_node['author'] == g.user._id
     is_workflow = node.kind in workflow_manager.kind_to_workflow_dict
 
     can_create_operations = IAMPolicies.CAN_CREATE_OPERATIONS in g.user.policies
