@@ -89,7 +89,7 @@ export default class Editor extends Component {
       node: this.node,
       editable: !this.node._readonly && this.props.collection === COLLECTIONS.TEMPLATES && this.node.node_status.toUpperCase() === NODE_STATUS.CREATED,
       collection: this.props.collection,
-      activeStatus: ACTIVE_NODE_RUNNING_STATUSES.has(this.node.node_running_status),
+      activeStatus: this.props.collection === COLLECTIONS.RUNS && ACTIVE_NODE_RUNNING_STATUSES.has(this.node.node_running_status),
     });
     if (this.graphComponent) {
       if (force) {

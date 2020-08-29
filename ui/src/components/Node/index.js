@@ -153,6 +153,7 @@ export default class Node extends Component {
                   nodeKind={node.kind}
                   onChanged={(value) => this.handleParameterChanged('inputs', value)}
                   readOnly={this.state.readOnly || this.state.is_workflow}
+                  onPreview={(previewData) => this.handlePreview(previewData)}
                 />
               </div>
             </div>
