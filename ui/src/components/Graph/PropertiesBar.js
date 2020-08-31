@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import OutputItem from './OutputItem';
 import ParameterItem from '../Common/ParameterItem';
 import makePropertiesBox from '../Common/makePropertiesBox';
-import { COLLECTIONS, IAM_POLICIES, VIRTUAL_COLLECTIONS } from '../../constants';
+import { COLLECTIONS, IAM_POLICIES } from '../../constants';
 import './style.css';
 
 

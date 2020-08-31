@@ -1,9 +1,14 @@
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import { AlertOctagon } from 'react-feather';
 
 import './style.css';
 
 export default class NotFound extends Component {
+  static propTypes = {
+    errorCode: PropTypes.number.isRequired,
+  }
+
   constructor(props) {
     super(props);
     if (this.props.errorCode === 403) {

@@ -154,7 +154,6 @@ def post_node(collection):
     action = data['action']
     db_node = node_collection_managers[collection].get_db_node(node._id, g.user._id)
 
-
     if db_node:
         if not node.author:
             node.author = db_node['author']
