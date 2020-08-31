@@ -77,10 +77,8 @@ def get_nodes(collection, node_link=None):
         # i.e. /templates/basic-bash
         kind = node_link
         if kind in workflow_manager.kind_to_workflow_dict and (not can_view_workflows or not can_create_workflows):
-            app.logger.debug(g.user.policies)
             return make_permission_denied()
         if kind in operation_manager.kind_to_operation_dict and (not can_view_operations or not can_create_operations):
-            app.logger.debug('2'*100)
             return make_permission_denied()
         node = executor_manager.kind_to_executor_class[kind].get_default_node(
             is_workflow=kind in workflow_manager.kind_to_workflow_dict
