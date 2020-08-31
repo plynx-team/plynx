@@ -64,9 +64,24 @@ def post_search_nodes(collection):
 @requires_auth
 def get_nodes(collection, node_link=None):
     user_id = to_object_id(g.user._id)
-    # if node_link is a base node
+
+    can_view_others_operations = g.user.check_role(IAMPolicies.CAN_VIEW_OTHERS_OPERATIONS)
+    can_view_others_workflows = g.user.check_role(IAMPolicies.CAN_VIEW_OTHERS_WORKFLOWS)
+    can_view_operations = g.user.check_role(IAMPolicies.CAN_VIEW_OPERATIONS)
+    can_view_workflows = g.user.check_role(IAMPolicies.CAN_VIEW_WORKFLOWS)
+    can_create_operations = g.user.check_role(IAMPolicies.CAN_CREATE_OPERATIONS)
+    can_create_workflows = g.user.check_role(IAMPolicies.CAN_CREATE_WORKFLOWS)
+
     if node_link in executor_manager.kind_to_executor_class and collection == Collections.TEMPLATES:
+        # if node_link is a base node
+        # i.e. /templates/basic-bash
         kind = node_link
+        if kind in workflow_manager.kind_to_workflow_dict and (not can_view_workflows or not can_create_workflows):
+            app.logger.debug(g.user.policies)
+            return make_permission_denied()
+        if kind in operation_manager.kind_to_operation_dict and (not can_view_operations or not can_create_operations):
+            app.logger.debug('2'*100)
+            return make_permission_denied()
         node = executor_manager.kind_to_executor_class[kind].get_default_node(
             is_workflow=kind in workflow_manager.kind_to_workflow_dict
         )
@@ -91,6 +106,7 @@ def get_nodes(collection, node_link=None):
             'plugins_dict': PLUGINS_DICT,
             })
     else:
+        # when node_link is an id of the object
         try:
             node_id = to_object_id(node_link)
         except Exception:
@@ -107,7 +123,18 @@ def get_nodes(collection, node_link=None):
                 make_fail_response('Group `{}` was not found'.format(node_link)), 404
         node = node_collection_managers[collection].get_db_node(node_id, user_id)
         app.logger.debug(node)
+
         if node:
+            is_owner = node['author'] == user_id
+            kind = node['kind']
+            if kind in workflow_manager.kind_to_workflow_dict and not can_view_workflows:
+                return make_permission_denied()
+            if kind in operation_manager.kind_to_operation_dict and not can_view_operations:
+                return make_permission_denied()
+            if kind in workflow_manager.kind_to_workflow_dict and not can_view_others_workflows and not is_owner:
+                return make_permission_denied()
+            if kind in operation_manager.kind_to_operation_dict and not can_view_others_operations and not is_owner:
+                return make_permission_denied()
             return make_success_response({
                 'node': node,
                 'plugins_dict': PLUGINS_DICT,
@@ -140,13 +167,13 @@ def post_node(collection):
         node.author = g.user._id
         is_author = True
 
-    is_admin = IAMPolicies.IS_ADMIN in g.user.policies
+    is_admin = g.user.check_role(IAMPolicies.IS_ADMIN)
     is_workflow = node.kind in workflow_manager.kind_to_workflow_dict
 
-    can_create_operations = IAMPolicies.CAN_CREATE_OPERATIONS in g.user.policies
-    can_create_workflows = IAMPolicies.CAN_CREATE_WORKFLOWS in g.user.policies
-    can_modify_others_workflows = IAMPolicies.CAN_MODIFY_OTHERS_WORKFLOWS in g.user.policies
-    can_run_workflows = IAMPolicies.CAN_RUN_WORKFLOWS in g.user.policies
+    can_create_operations = g.user.check_role(IAMPolicies.CAN_CREATE_OPERATIONS)
+    can_create_workflows = g.user.check_role(IAMPolicies.CAN_CREATE_WORKFLOWS)
+    can_modify_others_workflows = g.user.check_role(IAMPolicies.CAN_MODIFY_OTHERS_WORKFLOWS)
+    can_run_workflows = g.user.check_role(IAMPolicies.CAN_RUN_WORKFLOWS)
 
     if action == NodePostAction.SAVE:
         if (is_workflow and not can_create_workflows) or (not is_workflow and not can_create_operations):

@@ -119,6 +119,9 @@ class User(DBObject):
         s = Serializer(get_auth_config().secret_key)
         return s.dumps({'username': self.username, 'type': 'refresh'})
 
+    def check_role(self, role):
+        return role in self.policies
+
     def __str__(self):
         return 'User(_id="{}", username={})'.format(self._id, self.username)
 

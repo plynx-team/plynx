@@ -189,6 +189,10 @@ export default class Editor extends Component {
       console.error('-----------');
       if (!error.response) {
         self.setState({error_message: error});
+      } else if (error.response.status === 403) {
+        self.props.history.replace("/permission_denied");
+        window.location.reload(false);
+        loading = false;
       } else if (error.response.status === 404) {
         self.props.history.replace("/not_found");
         window.location.reload(false);

@@ -6,7 +6,10 @@ import './style.css';
 export default class NotFound extends Component {
   constructor(props) {
     super(props);
-    if (this.props.errorCode === 404) {
+    if (this.props.errorCode === 403) {
+      document.title = "Permission Denied - PLynx";
+      this.errorText = "403: permission denied";
+    } else if (this.props.errorCode === 404) {
       document.title = "Not Found - PLynx";
       this.errorText = "404: not found";
     }

@@ -90,6 +90,7 @@ class App extends Component {
                     {/* <Route path={`/${COLLECTIONS.GROUPS}/:group_id`} render={(props) => <Group {...props} collection={COLLECTIONS.GROUPS} />} />*/}
                     <Route path={`/${COLLECTIONS.USERS}/:username`} render={(props) => <UserView {...props} />} />
 
+                    <Route path="/permission_denied" render={(props) => <ErrorPage {...props} errorCode={403} />} />
                     <Route path="*" render={(props) => <ErrorPage {...props} errorCode={404} />} />
                   </Switch>
                 </div>
