@@ -63,7 +63,6 @@ class API {
       cookie.save('user', response.data.user, { path: '/' });
       cookie.save('settings', response.data.settings, { path: '/' });
       console.log("Successfully updated token");
-      console.log(response.data.user);
       isSuccessfull = true;
     })
     .catch(() => {

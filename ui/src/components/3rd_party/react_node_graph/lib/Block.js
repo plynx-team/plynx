@@ -50,7 +50,6 @@ class Block extends React.Component {
     const settings = cookie.load('settings');
     if (settings) {
       this.kindAndTitle = settings.node_view_mode === OPERATION_VIEW_SETTING.KIND_AND_TITLE;
-      console.log('>>>>>>', this.kindAndTitle, settings.node_view_mode);
     } else {
       console.error('Could not find settings');
     }
