@@ -1,9 +1,10 @@
 import React, { Component } from 'react';
+import cookie from 'react-cookies';
 import PropTypes from 'prop-types';
 import OutputItem from './OutputItem';
 import ParameterItem from '../Common/ParameterItem';
 import makePropertiesBox from '../Common/makePropertiesBox';
-import { COLLECTIONS } from '../../constants';
+import { COLLECTIONS, IAM_POLICIES } from '../../constants';
 import './style.css';
 
 
@@ -29,6 +30,10 @@ const renderLinkRow = (title, href, text) => {
 export default class PropertiesBar extends Component {
   constructor(props) {
     super(props);
+
+    const user = cookie.load('user');
+    this.canViewOperations = user.policies.indexOf(IAM_POLICIES.CAN_VIEW_OPERATIONS) > -1;
+
     this.state = this.getStateDict([props.initialNode]);
     this.mainNodeId = props.initialNode._id;
   }
@@ -134,7 +139,7 @@ export default class PropertiesBar extends Component {
     const self = this;
 
     const linksList = [];
-    if (this.state.nodes.length === 1) {
+    if (this.state.nodes.length === 1 && this.canViewOperations) {
       const node = this.state.nodes[0];
       const node_id = node.original_node_id || node.parent_node_id;
       if (node_id) {

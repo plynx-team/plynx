@@ -11,7 +11,7 @@
   font-size: 15pt;
 }
 
-.DeprecateDialog > .MainBlock > .Row{
+.DeprecateDialog > .MainBlock > .Row {
   display: grid;
   grid-template-columns: 1fr 30px 1fr;
 }
@@ -30,6 +30,10 @@
 .DeprecateDialog > .MainBlock > .Row > .Col {
   display: grid;
   grid-template-columns: 30px 1fr;
+}
+
+.DeprecateDialog > .MainBlock > .Row > .Col > a {
+    color: #ccc;
 }
 
 .DeprecateDialog > .Controls{

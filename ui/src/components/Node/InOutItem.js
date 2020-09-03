@@ -50,9 +50,7 @@ export default class InOutItem extends Component {
   }
 
   handlePreview(previewData) {
-    if (this.props.onPreview) {
-      this.props.onPreview(previewData);
-    }
+    this.props.onPreview(previewData);
   }
 
   render() {

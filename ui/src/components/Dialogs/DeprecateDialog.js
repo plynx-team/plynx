@@ -154,7 +154,7 @@ export default class DeprecateDialog extends Component {
                   Id:
                 </div>
                 <Link to={`/${COLLECTIONS.TEMPLATES}/` + this.state.prev_node_id}>
-                    {this.state.prev_node_id}<img src="/icons/external-link.svg" width="12" height="12" alt="link" />
+                    {this.state.prev_node_id} <img src="/icons/external-link.svg" width="12" height="12" alt="link" />
                     </Link>
               </div>
 

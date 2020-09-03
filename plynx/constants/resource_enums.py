@@ -1,8 +1,3 @@
-class ResourcePostStatus:
-    SUCCESS = 'SUCCESS'
-    FAILED = 'FAILED'
-
-
 class NodeResources:
     INPUT = 'inputs'
     OUTPUT = 'outputs'

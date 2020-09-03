@@ -60,6 +60,8 @@ class API {
     .then(response => {
       cookie.save('access_token', response.data.access_token, { path: '/' });
       cookie.save('refresh_token', response.data.refresh_token, { path: '/' });
+      cookie.save('user', response.data.user, { path: '/' });
+      cookie.save('settings', response.data.settings, { path: '/' });
       console.log("Successfully updated token");
       isSuccessfull = true;
     })
@@ -75,9 +77,13 @@ const plynxApi = new API({ url: API_ENDPOINT });
 plynxApi.createEntity({ name: COLLECTIONS.TEMPLATES });
 plynxApi.createEntity({ name: COLLECTIONS.RUNS });
 plynxApi.createEntity({ name: COLLECTIONS.GROUPS });
+plynxApi.createEntity({ name: COLLECTIONS.USERS });
 plynxApi.createEntity({ name: 'resource' });
 plynxApi.createEntity({ name: 'token' });
+plynxApi.createEntity({ name: 'register' });
 plynxApi.createEntity({ name: 'demo' });
+plynxApi.createEntity({ name: 'user_settings' });
+plynxApi.createEntity({ name: 'pull_settings' });
 plynxApi.createEntity({ name: 'worker_states' });
 plynxApi.createEntity({ name: `search_${COLLECTIONS.TEMPLATES}` });
 plynxApi.createEntity({ name: `search_${COLLECTIONS.RUNS}` });

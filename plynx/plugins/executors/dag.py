@@ -248,6 +248,7 @@ class DAG(plynx.base.executor.BaseExecutor):
     def _execute_node(self, node):
         if NodeRunningStatus.is_finished(node.node_running_status):     # NodeRunningStatus.SPECIAL
             return
+        node.author = self.node.author                                  # Change it to the author that runs it
         node.save(collection=Collections.RUNS)
 
         self.monitoring_node_ids.add(node._id)

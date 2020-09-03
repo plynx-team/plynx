@@ -3,14 +3,17 @@ import { NavLink } from 'react-router-dom';
 import { separator } from './common';
 import cookie from 'react-cookies';
 import { VIRTUAL_COLLECTIONS } from '../../constants';
+import { UserMenuContext } from '../../contexts';
 
 import './style.css';
 
 class Navigation extends Component {
+  static contextType = UserMenuContext;
+
   constructor(props) {
     super(props);
     this.state = {
-      refreshTokenExists: !!cookie.load('refresh_token')
+      refreshTokenExists: !!cookie.load('refresh_token'),
     };
   }
 

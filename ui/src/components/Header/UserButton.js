@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import cookie from 'react-cookies';
+import { UserMenuContext } from '../../contexts';
+import { User } from 'react-feather';
 
 import './style.css';
 
@@ -9,19 +11,11 @@ export default class UserButton extends Component {
   constructor(props) {
     super(props);
     const refreshTokenExists = !!cookie.load('refresh_token');
-    const username = cookie.load('username');
+    const user = cookie.load('user');
     this.state = {
-      username: username,
+      user: user,
       refreshTokenExists: refreshTokenExists,
     };
-  }
-
-  handleLogOut() {
-    console.log("Log out");
-    cookie.remove('username');
-    cookie.remove('access_token');
-    cookie.remove('refresh_token');
-    window.location = "/login";
   }
 
   handleLogIn() {
@@ -30,18 +24,33 @@ export default class UserButton extends Component {
   }
 
   render() {
+    let username = '';
+    if (this.state.user) {
+      if (this.state.user.settings && this.state.user.settings.display_name) {
+        username = this.state.user.settings.display_name;
+      } else {
+        username = this.state.user.username;
+      }
+    }
+
     return (
       <div className="UserButton">
         {this.state.refreshTokenExists &&
-          <div className="inner-user-button">
-            <div className="username">
-              {this.state.username}
-            </div>
-            -
-            <div className="action" onClick={() => this.handleLogOut()}>
-              LogOut
-            </div>
-          </div>
+          <UserMenuContext.Consumer>{(context) => {
+            return (
+                <div className="inner-user-button">
+                  <a className="user-menu" href={`/users/${this.state.user.username}`} onClick={(e) => {
+                    context.toggleModal();
+                    e.preventDefault();
+                  }}>
+                    <User/>
+                    <div className="username">
+                      {username}
+                    </div>
+                  </a>
+                </div>
+            );
+          }}</UserMenuContext.Consumer>
         }
         {!this.state.refreshTokenExists &&
           <div className="inner-user-button">

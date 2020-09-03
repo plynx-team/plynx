@@ -1,83 +1,111 @@
 .Login {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background-color: #111111;
-  border-top: 1px solid #333;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #111111;
+    border-top: 1px solid #333;
 }
 
 .LoginBlock {
-  background-color: #404040;
-  color: #eee;
-  width: 300px;
-  margin: 5px;
-  padding: 15px;
-  left: 50%;
-  top: 50%;
-  margin-right: -50%;
-  position: absolute;
-  transform: translate(-50%, -50%);
-  border: 1px solid #2557ec;
-  border-radius: 10px;
+    background-color: #404040;
+    color: #eee;
+    width: 300px;
+    margin: 5px;
+    padding: 15px;
+    left: 50%;
+    top: 50%;
+    margin-right: -50%;
+    position: absolute;
+    transform: translate(-50%, -50%);
+    border: 1px solid #000;
+    -webkit-box-shadow: 0px 0px 5px 1px rgba(0, 0, 0, 0.75);
+    -moz-box-shadow: 0px 0px 5px 1px rgba(0, 0, 0, 0.75);
+    box-shadow: 0px 0px 5px 1px rgba(0, 0, 0, 0.75);
+    border-radius: 5px;
 }
 
-.Login .Items .Item {
-  display: grid;
-  width: 100%;
-  grid-template-columns: 30% 70%;
-  padding: 5px 0 5px 0;
+.Items .Item .buttons .Item>* {
+    width: 100%;
 }
 
-.Login .Items .Item .NameCell {
-  float: left;
-  padding-left: 10px;
+.NameCell {
+    margin: 7px 2px 7px;
+    font-size: 17px;
+    color: #ccc;
 }
 
-.Login .Items .Item .ValueCell {
-  float: right;
+.ValueCell>input {
+    width: 100%;
+    padding: 5px 10px;
+    font-size: 15px;
 }
 
-.Login .Items .Item .ValueCell input {
-  width: 100%;
-  font-size: 13px;
+.ErrorCell {
+    font-size: 13px;
+    color: rgb(225, 0, 0);
+    margin-left: 2px;
+    margin-top: 5px
 }
 
-.Login .buttons {
-  padding-top: 10px;
-  text-align: center;
+.loginButton,
+.toggleState,
+.forgotPassword {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
-.Login .loginButton {
-  display: block;
-  margin: 0 auto;
-  width: 80px;
-  color: white;
-  background-color: #12a772;
-  padding: 2px 10px 2px 10px;
-  text-align: center;
-  cursor: pointer;
-  font-family: 'Source Sans Pro', sans-serif;
-  font-size: 15pt;
-  border-radius: 3px;
-
-  -moz-transition: all .1s ease-in;
-  -o-transition: all .1s ease-in;
-  -webkit-transition: all .1s ease-in;
-  transition: all .1s ease-in;
-
-  -webkit-touch-callout: none; /* iOS Safari */
-  -webkit-user-select: none; /* Safari */
-   -khtml-user-select: none; /* Konqueror HTML */
-     -moz-user-select: none; /* Firefox */
-      -ms-user-select: none; /* Internet Explorer/Edge */
-          user-select: none; /* Non-prefixed version, currently
-                                supported by Chrome and Opera */
+.loginButton {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    margin: 15px 0px;
+    color: white;
+    background-color: #12a772;
+    border-radius: 2px;
+    padding: 5px;
+    text-align: center;
+    cursor: pointer;
+    font-family: 'Source Sans Pro', sans-serif;
+    font-size: 15pt;
+    -moz-transition: all .1s ease-in;
+    -o-transition: all .1s ease-in;
+    -webkit-transition: all .1s ease-in;
+    transition: all .1s ease-in;
+    border: none;
 }
 
-.Login .loginButton:hover {
+.loginButton:hover {
   background-color: #12ccc8;
 }
 
 .Login .loginButton:active {
   background-color: #2196F3;
+}
+
+.toggleState,
+.forgotPassword {
+    margin-top: -5px;
+    cursor: pointer;
+    transition: 100ms;
+    font-size: 15px;
+    color: rgb(225, 225, 225);
+}
+
+.toggleState:hover,
+.forgotPassword:hover {
+    color: rgb(100, 150, 256);
+}
+
+.toggleState {
+    float: left;
+    margin-left: 1px;
+}
+
+.forgotPassword {
+    float: right;
+    margin-right: 1px;
 }

@@ -92,7 +92,6 @@ export const NODE_RUNNING_STATUS = Object.freeze({
 });
 
 export const ACTIVE_NODE_RUNNING_STATUSES = Object.freeze(new Set([
-  NODE_RUNNING_STATUS.CREATED,
   NODE_RUNNING_STATUS.READY,
   NODE_RUNNING_STATUS.IN_QUEUE,
   NODE_RUNNING_STATUS.RUNNING,
@@ -163,6 +162,7 @@ export const COLLECTIONS = Object.freeze({
   TEMPLATES: 'templates',
   RUNS: 'runs',
   GROUPS: 'groups',
+  USERS: 'users',
 });
 
 export const VIRTUAL_COLLECTIONS = Object.freeze({
@@ -175,4 +175,51 @@ export const VIRTUAL_COLLECTIONS = Object.freeze({
 export const SPECIAL_NODE_IDS = Object.freeze({
   INPUT: new ObjectID('2419f9500000000000000000').toString(),
   OUTPUT: new ObjectID('56274ccc0000000000000000').toString(),
+});
+
+export const IAM_POLICIES = Object.freeze({
+  CAN_VIEW_OTHERS_OPERATIONS: 'CAN_VIEW_OTHERS_OPERATIONS',
+  CAN_VIEW_OTHERS_WORKFLOWS: 'CAN_VIEW_OTHERS_WORKFLOWS',
+  CAN_VIEW_OPERATIONS: 'CAN_VIEW_OPERATIONS',
+  CAN_VIEW_WORKFLOWS: 'CAN_VIEW_WORKFLOWS',
+
+  CAN_CREATE_OPERATIONS: 'CAN_CREATE_OPERATIONS',
+  CAN_CREATE_WORKFLOWS: 'CAN_CREATE_WORKFLOWS',
+
+  CAN_MODIFY_OTHERS_WORKFLOWS: 'CAN_MODIFY_OTHERS_WORKFLOWS',
+
+  CAN_RUN_WORKFLOWS: 'CAN_RUN_WORKFLOWS',
+
+  IS_ADMIN: 'IS_ADMIN',
+});
+
+export const OPERATION_VIEW_SETTING = Object.freeze({
+  KIND_AND_TITLE: 'KIND_AND_TITLE',
+  TITLE_AND_DESCRIPTION: 'TITLE_AND_DESCRIPTION',
+});
+
+export const USER_POST_ACTION = Object.freeze({
+  CREATE: 'CREATE',
+  MODIFY: 'MODIFY',
+});
+
+export const REGISTER_USER_EXCEPTION_CODE = Object.freeze({
+  EMPTY_USERNAME: {
+    username: 'Username required',
+  },
+  EMPTY_PASSWORD: {
+    password: 'Password required',
+  },
+  USERNAME_ALREADY_EXISTS: {
+    username: 'Username already taken',
+  },
+  EMAIL_ALREADY_EXISTS: {
+    email: 'Email already taken',
+  },
+  INVALID_EMAIL: {
+    email: 'Invalid email',
+  },
+  INVALID_LENGTH_OF_USERNAME: {
+    username: 'Plese use 6 to 22 characters',
+  },
 });

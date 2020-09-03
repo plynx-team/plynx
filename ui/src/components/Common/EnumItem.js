@@ -65,7 +65,7 @@ export default class EnumItem extends Component {
             name='index'
             value={this.state.index}
             onChange={this.handleChange}
-            readOnly={this.state.readOnly}
+            disabled={this.state.readOnly}
           >
             {
               this.state.values.map((value, index) => <option
@@ -86,7 +86,7 @@ export default class EnumItem extends Component {
                   name='values'
                   items={this.state.values}
                   onChange={this.handleChange}
-                  readOnly={this.state.readOnly}
+                  // readOnly={this.state.readOnly}
                   parameterType="str"
                   />
           </div>

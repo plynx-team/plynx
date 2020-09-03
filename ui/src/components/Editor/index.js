@@ -89,7 +89,7 @@ export default class Editor extends Component {
       node: this.node,
       editable: !this.node._readonly && this.props.collection === COLLECTIONS.TEMPLATES && this.node.node_status.toUpperCase() === NODE_STATUS.CREATED,
       collection: this.props.collection,
-      activeStatus: ACTIVE_NODE_RUNNING_STATUSES.has(this.node.node_running_status),
+      activeStatus: this.props.collection === COLLECTIONS.RUNS && ACTIVE_NODE_RUNNING_STATUSES.has(this.node.node_running_status),
     });
     if (this.graphComponent) {
       if (force) {
@@ -189,6 +189,10 @@ export default class Editor extends Component {
       console.error('-----------');
       if (!error.response) {
         self.setState({error_message: error});
+      } else if (error.response.status === 403) {
+        self.props.history.replace("/permission_denied");
+        window.location.reload(false);
+        loading = false;
       } else if (error.response.status === 404) {
         self.props.history.replace("/not_found");
         window.location.reload(false);
@@ -770,7 +774,7 @@ export default class Editor extends Component {
                       <RunList
                         ref={a => this.runsComponent = a}
                         showControlls={false}
-                        search={"original_node_id:" + this.state.node._id}
+                        search={"original_node_id:" + (this.props.collection === COLLECTIONS.RUNS ? this.state.node.original_node_id : this.state.node._id)}
                       />
                   }
               </div>

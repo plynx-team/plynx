@@ -6,7 +6,7 @@ import { PLynxApi } from '../../API';
 import List from './List';
 import ReactPaginate from 'react-paginate';
 import LoadingScreen from '../LoadingScreen';
-import { ALERT_OPTIONS } from '../../constants';
+import { ALERT_OPTIONS, IAM_POLICIES, VIRTUAL_COLLECTIONS } from '../../constants';
 import SearchBar from '../Common/SearchBar';
 import { makeControlPanel, makeControlLink, makeControlButton, makeControlSeparator } from '../Common/controlButton';
 import {PluginsProvider, PluginsConsumer} from '../../contexts';
@@ -35,11 +35,20 @@ export default class ListPage extends Component {
 
   constructor(props) {
     super(props);
-    const username = cookie.load('username');
+    const user = cookie.load('user');
+    let username = '';
+    if (user) {
+      username = user.username;
+    }
+
     let search = username ? 'author:' + username + ' ' : '';
     if (this.props.search) {
       search = this.props.search;
     }
+
+    this.canCreateOperations = user.policies.indexOf(IAM_POLICIES.CAN_CREATE_OPERATIONS) > -1;
+    this.canCreateWorkflows = user.policies.indexOf(IAM_POLICIES.CAN_CREATE_WORKFLOWS) > -1;
+
     this.state = {
       items: [],
       loading: true,
@@ -166,6 +175,12 @@ export default class ListPage extends Component {
 
   generateCreateDefs(plugins_info) {
     if (!plugins_info || !this.props.virtualCollection) {
+      return [];
+    }
+    if (this.props.virtualCollection === VIRTUAL_COLLECTIONS.OPERATIONS && !this.canCreateOperations) {
+      return [];
+    }
+    if (this.props.virtualCollection === VIRTUAL_COLLECTIONS.WORKFLOWS && !this.canCreateWorkflows) {
       return [];
     }
     const result = [];

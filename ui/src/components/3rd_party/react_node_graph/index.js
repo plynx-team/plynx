@@ -97,7 +97,7 @@ class ReactBlockGraph extends React.Component {
       dragging: false,
       editable: this.props.editable,
       selectedNIDs: this.selectedNIDs,
-      graphId: this.props.graphId
+      graphId: this.props.graphId,
     };
 
     this.onMouseMove = this.onMouseMove.bind(this);
