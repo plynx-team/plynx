@@ -157,7 +157,8 @@ def post_node(collection):
     if db_node:
         if not node.author:
             node.author = db_node['author']
-        assert node.author == db_node['author'], "Author of the node does not match the one in the database"
+        if node.author != db_node['author']:
+            raise Exception("Author of the node does not match the one in the database")
         is_author = db_node['author'] == g.user._id
     else:
         # assign the author
