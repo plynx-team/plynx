@@ -58,7 +58,7 @@ def post_demo_user():
             return make_fail_response(str(e)), 500
 
     access_token = user.generate_access_token(expiration=1800)
-    user_obj = g.user.to_dict()
+    user_obj = user.to_dict()
     user_obj['hash_password'] = ''
     return JSONEncoder().encode({
         'access_token': access_token.decode('ascii'),
