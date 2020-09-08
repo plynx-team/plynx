@@ -72,7 +72,7 @@ def register_user(username, password, email):
             'Missing username',
             error_code=RegisterUserExceptionCode.EMPTY_USERNAME
         )
-    if not password:
+    if username != DEFAULT_USERNAME and not password:
         raise RegisterUserException(
             'Missing password',
             error_code=RegisterUserExceptionCode.EMPTY_PASSWORD
@@ -82,12 +82,12 @@ def register_user(username, password, email):
             'Username is taken',
             error_code=RegisterUserExceptionCode.USERNAME_ALREADY_EXISTS
         )
-    if not re.match(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", email):
+    if username != DEFAULT_USERNAME and not re.match(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", email):
         raise RegisterUserException(
             'Invalid email: `{}`'.format(email),
             error_code=RegisterUserExceptionCode.INVALID_EMAIL
         )
-    if UserCollectionManager.find_user_by_email(email):
+    if username != DEFAULT_USERNAME and UserCollectionManager.find_user_by_email(email):
         raise RegisterUserException(
             'Email already exists',
             error_code=RegisterUserExceptionCode.EMAIL_ALREADY_EXISTS
@@ -107,14 +107,8 @@ def register_user(username, password, email):
 
 
 def _init_default_user():
-    logging.info('%' * 100)
-    create_default_templates(1)
     if not UserCollectionManager.find_user_by_name(DEFAULT_USERNAME):
-        message = register_user(DEFAULT_EMAIL, DEFAULT_USERNAME, DEFAULT_PASSWORD)
-        if message:
-            raise Exception(message)
-        user = UserCollectionManager.find_user_by_name(DEFAULT_USERNAME)
-
+        user = register_user(DEFAULT_USERNAME, DEFAULT_PASSWORD, DEFAULT_EMAIL)
         logging.info('Created default user `{}`'.format(DEFAULT_USERNAME))
         create_default_templates(user)
     else:

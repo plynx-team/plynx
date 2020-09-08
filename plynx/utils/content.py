@@ -10,12 +10,13 @@ def create_template(user, kind, cmd, title, description, inputs=None, parameters
     node = executor_manager.kind_to_executor_class[kind].get_default_node(
         is_workflow=kind in workflow_manager.kind_to_workflow_dict
     )
-    node.author = user
+    node.author = user._id
     node.title = title
     node.description = description
+    node.kind = kind
 
     cmd_parameter = next(filter(lambda parameter: parameter.name == '_cmd', node.parameters))
-    cmd_parameter.value = cmd
+    cmd_parameter.value.value = cmd
 
     node.inputs.extend(inputs or [])
     node.parameters.extend(parameters or [])
@@ -25,8 +26,35 @@ def create_template(user, kind, cmd, title, description, inputs=None, parameters
     from plynx.utils.common import JSONEncoder
     logging.info(JSONEncoder().encode(node.to_dict()))
 
+    validation_error = executor_manager.kind_to_executor_class[kind](node).validate()
+    if validation_error:
+        raise Exception('Validation failed')
+
+    node.node_status = plynx.constants.NodeStatus.READY
+
+    node.save(force=True)
+
 
 def create_default_templates(user):
+    create_template(
+        user=user,
+        kind='basic-bash-jinja2-operation',
+        cmd='cat {{inputs["in"] | join(" ")}} | paste -sd+ | bc >> {{outputs["out"]}}',
+        title='Sum of numbers',
+        description='sum',
+        inputs=[
+            plynx.db.node.Input({
+                'name': 'in',
+                'is_array': True,
+            }),
+        ],
+        outputs=[
+            plynx.db.node.Output({
+                'name': 'out',
+            }),
+        ],
+    )
+
     create_template(
         user=user,
         kind='basic-bash-jinja2-operation',
@@ -45,25 +73,6 @@ def create_default_templates(user):
                 'type': plynx.constants.ParameterTypes.INT,
                 'value': '100',
                 'widget': 'To',
-            }),
-        ],
-        outputs=[
-            plynx.db.node.Output({
-                'name': 'out',
-            }),
-        ],
-    )
-
-    create_template(
-        user=user,
-        kind='basic-bash-jinja2-operation',
-        cmd='cat {{inputs["in"]}} >> {{outputs["out"]}}',
-        title='Sum of numbers',
-        description='sum',
-        inputs=[
-            plynx.db.node.Input({
-                'name': 'in',
-                'is_array': True,
             }),
         ],
         outputs=[
