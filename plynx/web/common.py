@@ -8,6 +8,7 @@ from plynx.constants import ResponseStatus, RegisterUserExceptionCode
 from plynx.db.user import User, UserCollectionManager
 from plynx.utils.config import get_config
 from plynx.utils.common import JSONEncoder
+from plynx.utils.content import create_default_templates
 from plynx.utils.exceptions import RegisterUserException
 from plynx.utils.db_connector import check_connection
 
@@ -106,12 +107,16 @@ def register_user(username, password, email):
 
 
 def _init_default_user():
-
+    logging.info('%' * 100)
+    create_default_templates(1)
     if not UserCollectionManager.find_user_by_name(DEFAULT_USERNAME):
         message = register_user(DEFAULT_EMAIL, DEFAULT_USERNAME, DEFAULT_PASSWORD)
         if message:
             raise Exception(message)
+        user = UserCollectionManager.find_user_by_name(DEFAULT_USERNAME)
+
         logging.info('Created default user `{}`'.format(DEFAULT_USERNAME))
+        create_default_templates(user)
     else:
         logging.info('Default user `{}` already exists'.format(DEFAULT_USERNAME))
 
