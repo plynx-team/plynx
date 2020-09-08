@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { PLynxApi } from '../../API';
 import {SimpleLoader} from '../LoadingScreen';
-import { SPECIAL_USERS } from '../../constants';
+import { SPECIAL_USERS, DEFAULT_WORKFLOW_KIND } from '../../constants';
 import cookie from 'react-cookies';
 
 import './style.css';
@@ -70,11 +70,15 @@ export default class LogInRedirect extends Component {
         }
       });
       handleResponse = response => {
+        window.location = '/workflows';
+        if (!cookie.load('access_token')) {
+          cookie.save('showTour', true, { path: '/' });
+          window.location = `/templates/${DEFAULT_WORKFLOW_KIND}`;
+        }
         cookie.save('access_token', response.data.access_token, { path: '/' });
         cookie.save('refresh_token', response.data.refresh_token, { path: '/' });
         cookie.save('user', response.data.user, { path: '/' });
         cookie.save('settings', response.data.settings, { path: '/' });
-        window.location = '/workflows';
       };
     }
 

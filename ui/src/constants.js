@@ -223,3 +223,5 @@ export const REGISTER_USER_EXCEPTION_CODE = Object.freeze({
     username: 'Plese use 6 to 22 characters',
   },
 });
+
+export const DEFAULT_WORKFLOW_KIND = 'basic-dag-workflow';
