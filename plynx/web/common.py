@@ -108,7 +108,7 @@ def register_user(username, password, email):
 def _init_default_user():
 
     if not UserCollectionManager.find_user_by_name(DEFAULT_USERNAME):
-        message = register_user(DEFAULT_EMAIL, DEFAULT_USERNAME, DEFAULT_PASSWORD)
+        message = register_user(DEFAULT_USERNAME, DEFAULT_PASSWORD, DEFAULT_EMAIL)
         if message:
             raise Exception(message)
         logging.info('Created default user `{}`'.format(DEFAULT_USERNAME))
