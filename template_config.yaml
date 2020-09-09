@@ -145,17 +145,13 @@ plugins:
       hubs:
         - db-hub
 
-settings:
-  Node Display:
-    type: list
-    default choice: Type and title
-    values: [Type and title, Title and description]
-    variable: true
-  Github:
-    type: boolean
-    default choice: true
-    variable: true
-  Docs:
-    type: boolean
-    default choice: true
-    variable: true
+default_policies:
+  - CAN_VIEW_OTHERS_OPERATIONS
+  - CAN_VIEW_OTHERS_WORKFLOWS
+  - CAN_VIEW_OPERATIONS
+  - CAN_VIEW_WORKFLOWS
+  - CAN_CREATE_OPERATIONS
+  - CAN_CREATE_WORKFLOWS
+  - CAN_MODIFY_OTHERS_WORKFLOWS
+  - CAN_RUN_WORKFLOWS
+  - IS_ADMIN
