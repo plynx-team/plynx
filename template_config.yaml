@@ -134,6 +134,7 @@ plugins:
       cls: plynx.plugins.hubs.collection.CollectionHub
       args:
         operations:
+          - basic-file
           - basic-bash-jinja2-operation
           - basic-python-node-operation
           - basic-dag-operation
