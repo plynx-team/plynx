@@ -1,4 +1,4 @@
-FROM node:13.11-alpine
+FROM node:16-alpine
 
 # Set the working directory to /app
 WORKDIR /app
@@ -15,6 +15,7 @@ ADD ./ui/src                        /app/src
 ADD ./LICENSE /app
 
 # Build
+ENV NODE_OPTIONS "--max-old-space-size=8192"
 RUN npm install
 RUN npm run build
 

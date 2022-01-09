@@ -12,7 +12,7 @@ REST API
 
 The PLynx REST API allows you to perform most of the actions with Graphs, Operations and Files.
 The API is hosted under the ``/plynx/api/v0`` route on the PLynx server.
-For example, to list latest Graphs on backend server hosted at ``http://localhost:5000``, make GET request: ``http://localhost:5000/plynx/api/v0/graphs``.
+For example, to list latest Graphs on backend server hosted at ``http://localhost:5005``, make GET request: ``http://localhost:5005/plynx/api/v0/graphs``.
 
 .. contents:: Table of Contents
     :local:
@@ -116,7 +116,7 @@ Example
 .. code-block:: bash
 
     curl -X POST \
-        'http://localhost:5000/plynx/api/v0/search_graphs' \
+        'http://localhost:5005/plynx/api/v0/search_graphs' \
         -u default: -H "Content-Type: application/json" \
         -d '{"per_page":1, "search":"author:default"}'
 
@@ -140,7 +140,7 @@ Get a single Graph in :ref:`plynx-internal-graph` format.
 
 Parameter ``graph_id`` is required.
 
-When ``graph_id == "new"`` (i.e. ``curl 'http://localhost:5000/plynx/api/v0/graphs/new' -u default:``) PLynx backend will generate a default empty Graph.
+When ``graph_id == "new"`` (i.e. ``curl 'http://localhost:5005/plynx/api/v0/graphs/new' -u default:``) PLynx backend will generate a default empty Graph.
 Please note this new Graph will not be saved in the database. Use POST request instead :ref:`plynx-rest-post_graph:`
 
 
@@ -165,7 +165,7 @@ Example
 
 .. code-block:: bash
 
-    curl 'http://localhost:5000/plynx/api/v0/graphs/5d1b8469705c1865e288a664' -u default:
+    curl 'http://localhost:5005/plynx/api/v0/graphs/5d1b8469705c1865e288a664' -u default:
 
 
 
@@ -295,20 +295,20 @@ Example
 
     # Clone existing Graph
     curl -X POST \
-        'http://localhost:5000/plynx/api/v0/graphs/5d1b8469705c1865e288a664/clone' \
+        'http://localhost:5005/plynx/api/v0/graphs/5d1b8469705c1865e288a664/clone' \
         -u default:
     # {"status": "SUCCESS", "message": "Actions completed with Graph(_id=`5d1b8469705c1865e288a664`)", "graph": {"_id": "5d291e57713b286094d4ad85", "title": "hello world", "description": "Description", "graph_running_status": "CREATED", "author": "5d0686aa52691468eaef391c", "nodes": [{"_id": "5d27e3bd0f432b5e3693314c", "title": "Sum", "description": "Sum values", "base_node_name": "python", "parent_node": "5d27b8dd50e56dbbce063449", "successor_node": null, "inputs": [{"name": "input", "file_types": ["file"], "values": [], "min_count": 1, "max_count": -1}], "outputs": [{"name": "output", "file_type": "file", "resource_id": null}], "parameters": [{"name": "cmd", "parameter_type": "code", "value": {"value": "s = 0\nfor filename in input[\"input\"]:\n    with open(filename) as fi:\n        s += sum([int(line) for line in fi])\nwith open(output[\"output\"], \"w\") as fo:\n    fo.write(\"{}\\n\".format(s))\n", "mode": "python"}, "mutable_type": false, "removable": false, "publicable": false, "widget": null}, {"name": "cacheable", "parameter_type": "bool", "value": true, "mutable_type": false, "removable": false, "publicable": false, "widget": null}], "logs": [{"name": "stderr", "file_type": "file", "resource_id": null}, {"name": "stdout", "file_type": "file", "resource_id": null}, {"name": "worker", "file_type": "file", "resource_id": null}], "node_running_status": "CREATED", "node_status": "READY", "cache_url": "", "x": 190, "y": 143, "author": "5d0686aa52691468eaef391c", "starred": false}]}, "url": "http://localhost:3001/graphs/5d291e57713b286094d4ad85", "new_graph_id": "5d291e57713b286094d4ad85"}
 
     # Change Title and Description
     # Note "new_graph_id": "5d291e57713b286094d4ad85"
     curl -X PATCH \
-        'http://localhost:5000/plynx/api/v0/graphs/5d1b8469705c1865e288a664/update' \
+        'http://localhost:5005/plynx/api/v0/graphs/5d1b8469705c1865e288a664/update' \
         -u default: -H "Content-Type: application/json" \
         -d '{"title": "Custom title", "description":"Custom Description"}'
 
     # Execute the Graph:
     curl -X POST \
-        'http://localhost:5000/plynx/api/v0/graphs/5d1b8469705c1865e288a664/approve' \
+        'http://localhost:5005/plynx/api/v0/graphs/5d1b8469705c1865e288a664/approve' \
         -u default:
 
 
@@ -388,7 +388,7 @@ Example
 .. code-block:: bash
 
     curl -X POST \
-        'http://localhost:5000/plynx/api/v0/search_nodes' \
+        'http://localhost:5005/plynx/api/v0/search_nodes' \
         -u default: -H "Content-Type: application/json" \
         -d '{"per_page":1, "search":"author:default"}'
 
@@ -411,7 +411,7 @@ Get single Node
 
 Get a single Graph in :ref:`plynx-internal-node` format.
 
-There are special cases when `node_id` is `base_node_name`, i.e. ``curl 'http://localhost:5000/plynx/api/v0/nodes/python'`` or ``curl 'http://localhost:5000/plynx/api/v0/nodes/bash_jinja2'``.
+There are special cases when `node_id` is `base_node_name`, i.e. ``curl 'http://localhost:5005/plynx/api/v0/nodes/python'`` or ``curl 'http://localhost:5005/plynx/api/v0/nodes/bash_jinja2'``.
 Backend will generate a default Operation.
 
 
@@ -438,7 +438,7 @@ Example
 
 .. code-block:: bash
 
-    curl 'http://localhost:5000/plynx/api/v0/nodes/5d27b8dd50e56dbbce063449' -u default:
+    curl 'http://localhost:5005/plynx/api/v0/nodes/5d27b8dd50e56dbbce063449' -u default:
 
 
 
@@ -557,7 +557,7 @@ Example
 
     curl \
         -X POST \
-        'http://localhost:5000/plynx/api/v0/upload_file' \
+        'http://localhost:5005/plynx/api/v0/upload_file' \
         -u default: \
         -H "Content-Type: multipart/form-data" \
         -F data=@/tmp/a.csv \
@@ -625,19 +625,19 @@ Example
 
 .. code-block:: bash
 
-    curl -X POST 'http://localhost:5000/plynx/api/v0/graphs/5d292406713b286094d4ad87/nodes/insert_node' \
+    curl -X POST 'http://localhost:5005/plynx/api/v0/graphs/5d292406713b286094d4ad87/nodes/insert_node' \
         -u default: -H "Content-Type: application/json" \
         -d '{"node_id": "5d2d4b1dc36682386f559eae", "x": 100, "y": 100}'
 
-    curl -X POST 'http://localhost:5000/plynx/api/v0/graphs/5d292406713b286094d4ad87/nodes/remove_node' \
+    curl -X POST 'http://localhost:5005/plynx/api/v0/graphs/5d292406713b286094d4ad87/nodes/remove_node' \
         -u default: -H "Content-Type: application/json" \
         -d '{"node_id": "5d27e3bd0f432b5e3693314c"}'
 
-    curl -X POST 'http://localhost:5000/plynx/api/v0/graphs/5d292406713b286094d4ad87/nodes/create_link' \
+    curl -X POST 'http://localhost:5005/plynx/api/v0/graphs/5d292406713b286094d4ad87/nodes/create_link' \
         -u default: -H "Content-Type: application/json" \
         -d '{"from": {"node_id": "5d2fbdf3373d3b7ce6e69043", "resource": "out"}, "to": {"node_id": "5d3081ea99d54c7b6b8ff56b", "resource": "input"}}'
 
-    curl -X POST 'http://localhost:5000/plynx/api/v0/graphs/5d292406713b286094d4ad87/nodes/change_parameter' \
+    curl -X POST 'http://localhost:5005/plynx/api/v0/graphs/5d292406713b286094d4ad87/nodes/change_parameter' \
         -u default: -H "Content-Type: application/json" \
         -d '{"node_id": "5d30b7eb88fb6a42caf0c565", "parameter_name": "template", "parameter_value": "abc"}'
 
@@ -694,4 +694,4 @@ Example
 
 .. code-block:: bash
 
-    curl 'http://localhost:5000/plynx/api/v0/master_state' -u default:
+    curl 'http://localhost:5005/plynx/api/v0/master_state' -u default:

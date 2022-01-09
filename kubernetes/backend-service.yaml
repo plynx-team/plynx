@@ -11,8 +11,8 @@ metadata:
 spec:
   type: LoadBalancer
   ports:
-  - name: "5000"
-    port: 5000
-    targetPort: 5000
+  - name: "5005"
+    port: 5005
+    targetPort: 5005
   selector:
     io.kompose.service: backend

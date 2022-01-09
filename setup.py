@@ -3,7 +3,7 @@ import plynx
 from setuptools import setup, find_packages
 
 install_requires = [
-    'pymongo>=3.9.0',
+    'pymongo>=4.0.1',
     'pyyaml>=5.1.2',
     'passlib>=1.7.1',
     'itsdangerous>=0.24',

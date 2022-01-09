@@ -107,7 +107,7 @@ def register_user(username, password, email):
 
 
 def _init_default_user():
-    if not UserCollectionManager.find_user_by_name(DEFAULT_USERNAME):
+    if UserCollectionManager.find_user_by_name(DEFAULT_USERNAME) is None:
         user = register_user(DEFAULT_USERNAME, DEFAULT_PASSWORD, DEFAULT_EMAIL)
         logging.info('Created default user `{}`'.format(DEFAULT_USERNAME))
         create_default_templates(user)

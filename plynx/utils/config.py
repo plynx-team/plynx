@@ -86,7 +86,7 @@ def get_auth_config():
 def get_web_config():
     return WebConfig(
         host=_config.get('web', {}).get('host', '0.0.0.0'),
-        port=int(_config.get('web', {}).get('port', 5000)),
+        port=int(_config.get('web', {}).get('port', 5005)),
         endpoint=_config.get('web', {}).get('endpoint', '/').rstrip('/'),
         debug=bool(_config.get('web', {}).get('debug', False)),
     )
