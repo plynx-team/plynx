@@ -38,7 +38,7 @@ def init_indexes():
 
 def get_db_connector():
     global _db
-    if _db:
+    if _db is not None:
         return _db
     connectionConfig = get_db_config()
     client = pymongo.MongoClient(connectionConfig.host, connectionConfig.port, read_preference=pymongo.read_preferences.PrimaryPreferred())

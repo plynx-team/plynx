@@ -10,8 +10,7 @@ RUN apt-get install -y \
     build-essential \
     iputils-ping \
     curl \
-    bc \
-    mongo-tools
+    bc
 
 # Copy the current directory contents into the container at /app
 ADD ./wsgi.py /app/wsgi.py
@@ -26,7 +25,7 @@ ADD ./docker/backend/tests /app/tests
 EXPOSE 17011
 
 # backend port
-EXPOSE 5000
+EXPOSE 5005
 
 # Create worker user
 RUN useradd -c "Worker" worker  -s /bin/bash

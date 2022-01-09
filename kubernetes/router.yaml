@@ -9,7 +9,7 @@ spec:
       - path: /plynx/api/v0/*
         backend:
           serviceName: backend
-          servicePort: 5000
+          servicePort: 5005
       - path: /*
         backend:
           serviceName: frontend

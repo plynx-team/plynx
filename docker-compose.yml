@@ -1,7 +1,7 @@
 version: "3.3"
 services:
     mongodb:
-        image: mongo:3.6-jessie
+        image: mongo:4.2.8
         container_name: "mongodb"
         environment:
             - MONGO_DATA_DIR=/data/db
@@ -10,7 +10,7 @@ services:
             - ./data/db:/data/db
         ports:
             - 27017:27017
-        command: mongod --smallfiles --logpath=/dev/null # --quiet
+        command: mongod --logpath=/dev/null # --quiet
 
     master:
         image: plynxteam/backend:latest
@@ -43,7 +43,7 @@ services:
         image: plynxteam/backend:latest
         container_name: "api"
         ports:
-            - "5000:5000"
+            - "5005:5005"
         depends_on:
             - mongodb
         links:

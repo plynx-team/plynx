@@ -16,7 +16,7 @@ run_tests:
 
 up:
 	python -m webbrowser "http://localhost:3001/"
-	docker-compose -f $(DOCKER_COMPOSE_FILE) up --scale workers=3 --scale test=0
+	docker-compose -f $(DOCKER_COMPOSE_FILE) up --scale workers=3
 
 up_local_service:
 	python -m webbrowser "http://localhost:3001/"

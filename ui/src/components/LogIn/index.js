@@ -259,7 +259,6 @@ export default class LogIn extends Component {
       ];
     }
 
-
     return (
       <div className='Login'>
         <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
