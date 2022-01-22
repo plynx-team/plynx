@@ -10,7 +10,7 @@ install_requires = [
     'Flask>=1.0.2',
     'Flask-Cors>=3.0.3',
     'Flask-HTTPAuth>=3.2.3',
-    'gevent==1.3.7',
+    'gevent>=21.12.0',
     'requests>=2.18.4',
     'future>=0.17.1',
 ]
