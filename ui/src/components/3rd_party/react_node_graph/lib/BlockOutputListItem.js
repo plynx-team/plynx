@@ -22,10 +22,11 @@ export default class BlockOutputListItem extends React.Component {
     this.props.onMouseDown(this.props.index);
   }
 
-  onClick(e) {
+  onClick(e, displayRaw) {
     e.stopPropagation();
     e.preventDefault();
-    this.props.onClick(this.props.index);
+    console.log('oooooo', displayRaw);
+    this.props.onClick(this.props.index, displayRaw);
   }
 
   render() {
@@ -33,9 +34,9 @@ export default class BlockOutputListItem extends React.Component {
 
     return (
       <li onMouseDown={(e) => this.onMouseDown(e)}
-          onClick={(e) => this.onClick(e)}
+          onClick={(e) => this.onClick(e, type_descriptor.display_raw)}
           className={this.props.item.file_type}>
-        <div onClick={(e) => this.onClick(e)}>
+        <div onClick={(e) => this.onClick(e, type_descriptor.display_raw)}>
           {this.props.item.name + (this.props.item.is_array ? '[...]' : '')}
           <Icon
             type_descriptor={type_descriptor}

@@ -12,7 +12,8 @@ const FileDownload = require('react-file-download');
 export default class PreviewDialog extends Component {
   static propTypes = {
     title: PropTypes.string.isRequired,
-    resource_id: PropTypes.string.isRequired,
+    values:  PropTypes.array.isRequired,
+    display_raw: PropTypes.bool.isRequired,
     download_name: PropTypes.string.isRequired,
     file_type: PropTypes.string.isRequired,
     onClose: PropTypes.func.isRequired,
@@ -23,34 +24,41 @@ export default class PreviewDialog extends Component {
     this.state = {
       title: props.title,
       file_type: props.file_type,
-      resource_id: props.resource_id,
+      values: props.values,
+      display_raw: props.display_raw,
       download_name: props.download_name,
       content: "",
       loading: true
     };
 
-    const self = this;
-    PLynxApi.endpoints.resource.getCustom({
-      method: 'get',
-      // Hack: "?"... is needed for life logs. Otherwise the result is cached and logs do not update
-      url: API_ENDPOINT + '/resource/' + props.resource_id + '?' + Math.random(),
-      params: {
-        preview: true,
-        file_type: props.file_type,
-      },
-    }).then((response) => {
-      self.setState({
-        content: response.data,
-        loading: false
-      });
-    })
-      .catch((error) => {
-        console.error(error);
-        self.setState({
-          content: error,
-          loading: false
-        });
-      });
+    if (!props.display_raw)
+    {
+        const self = this;
+        PLynxApi.endpoints.resource.getCustom({
+          method: 'get',
+          // Hack: "?"... is needed for life logs. Otherwise the result is cached and logs do not update
+          url: API_ENDPOINT + '/resource/' + props.values[0] + '?' + Math.random(),
+          params: {
+            preview: true,
+            file_type: props.file_type,
+          },
+        }).then((response) => {
+          self.setState({
+            content: response.data,
+            loading: false
+          });
+        })
+          .catch((error) => {
+            console.error(error);
+            self.setState({
+              content: error,
+              loading: false
+            });
+          });
+      } else {
+          this.state.content = props.values;
+          this.state.loading = false;
+      }
   }
 
   download(resource_id, download_name) {
@@ -99,7 +107,7 @@ export default class PreviewDialog extends Component {
         }
         <div className="PreviewBoxContent selectable">
           <div>
-            {this.previewMessage(this.state.resource_id, this.state.download_name)}
+            {!this.state.display_raw && this.previewMessage(this.state.values[0], this.state.download_name)}
             <div
               dangerouslySetInnerHTML={{ __html: this.state.content }}           // eslint-disable-line react/no-danger
             />

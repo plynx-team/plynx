@@ -3,6 +3,7 @@ import plynx
 from setuptools import setup, find_packages
 
 install_requires = [
+    'cloudpickle>=2.0.0',
     'pymongo>=4.0.1',
     'pyyaml>=5.1.2',
     'passlib>=1.7.1',
@@ -11,6 +12,7 @@ install_requires = [
     'Flask-Cors>=3.0.3',
     'Flask-HTTPAuth>=3.2.3',
     'gevent>=21.12.0',
+    'smart-open>=5.2.1',
     'requests>=2.18.4',
     'future>=0.17.1',
 ]

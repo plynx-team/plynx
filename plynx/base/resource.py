@@ -13,6 +13,8 @@ def _force_decode(byte_array):
 
 
 class BaseResource(object):
+    DISPLAY_RAW = False
+
     def __init__(self):
         pass
 

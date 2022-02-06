@@ -492,7 +492,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
     this.props.onNodeChange(this.graph_node);
   }
 
-  onOutputClick(nid, outputIndex) {
+  onOutputClick(nid, outputIndex, displayRaw) {
     if (!this.node_lookup.hasOwnProperty(nid)) {
       console.error("Cannot find node with id " + nid);
       return;
@@ -503,8 +503,9 @@ ENDPOINT = '` + API_ENDPOINT + `'
       this.handlePreview({
         title: output.name,
         file_type: output.file_type,
-        resource_id: output.values[0],
+        values: output.values,
         download_name: output.name,
+        display_raw: displayRaw,
       });
     } else {
       console.log("Resource is not ready yet");
@@ -851,7 +852,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
           <PreviewDialog className="PreviewDialog"
             title={this.state.previewData.title}
             file_type={this.state.previewData.file_type}
-            resource_id={this.state.previewData.resource_id}
+            values={this.state.previewData.values}
+            display_raw={this.state.previewData.display_raw}
             download_name={this.state.previewData.download_name}
             onClose={() => this.handleClosePreview()}
           />
@@ -903,7 +905,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
           onBlockMove={(nid, pos) => this.onBlockMove(nid, pos)}
           onNewConnector={(n1, o, n2, i) => this.onNewConnector(n1, o, n2, i)}
           onRemoveConnector={(connector) => this.onRemoveConnector(connector)}
-          onOutputClick={(nid, outputIndex) => this.onOutputClick(nid, outputIndex)}
+          onOutputClick={(nid, outputIndex, displayRaw) => this.onOutputClick(nid, outputIndex, displayRaw)}
           onSpecialParameterClick={(nid, specialParameterIndex) => this.onSpecialParameterClick(nid, specialParameterIndex)}
           onRemoveBlock={(nid) => this.onRemoveBlock(nid)}
           onCopyBlock={(copyList, offset) => this.onCopyBlock(copyList, offset)}

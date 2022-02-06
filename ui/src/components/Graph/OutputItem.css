@@ -4,6 +4,7 @@
 }
 
 .OutputNameCell {
+  display: contents;
   float: left;
   padding-left: 10px;
   white-space: nowrap;
