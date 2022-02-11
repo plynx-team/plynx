@@ -84,3 +84,8 @@ class NodeVirtualCollection:
 class SpecialNodeId:
     INPUT = ObjectId('2419f9500000000000000000')
     OUTPUT = ObjectId('56274ccc0000000000000000')
+
+
+class NodeOrigin:
+    DB = "DB"
+    BUILT_IN_HUBS = "BUILT_IN_HUBS"

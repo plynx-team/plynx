@@ -1,7 +1,27 @@
+"""DO NOT COMMIT"""
+"""DO NOT COMMIT"""
+"""DO NOT COMMIT"""
+"""DO NOT COMMIT"""
+"""DO NOT COMMIT"""
+"""DO NOT COMMIT"""
+"""DO NOT COMMIT"""
+"""DO NOT COMMIT"""
+"""DO NOT COMMIT"""
+"""DO NOT COMMIT"""
+"""DO NOT COMMIT"""
+"""DO NOT COMMIT"""
+"""DO NOT COMMIT"""
+"""DO NOT COMMIT"""
+"""DO NOT COMMIT"""
+
+
 import json
 from plynx.db.node import Node
 from plynx.base import hub
 from plynx.utils.common import parse_search_string
+from plynx.utils.hub_node_registry import registry
+from plynx.abc import COLLECTION
+import plynx.node
 
 
 def _enhance_list_item(raw_item):
@@ -22,11 +42,12 @@ class StaticListHub(hub.BaseHub):
         super(StaticListHub, self).__init__()
 
         self.list_of_nodes = []
-
-        with open(filename) as f:
-            data_list = json.load(f)
-            for raw_item in data_list:
-                self.list_of_nodes.append(_enhance_list_item(raw_item))
+        for func in COLLECTION:
+            obj_dict = plynx.node.utils.func_to_dict(func)
+            obj = Node.from_dict(obj_dict)
+            # print(json.dumps(obj, indent=4, sort_keys=True))
+            registry.register_node(obj)
+            self.list_of_nodes.append(obj_dict)
 
     def search(self, query):
         # TODO use search_parameters

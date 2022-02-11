@@ -1,0 +1,2 @@
+Int = "int"
+Str = "str"
