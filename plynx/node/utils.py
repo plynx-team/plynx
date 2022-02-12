@@ -12,10 +12,11 @@ class VersionData:
     hash_value: int
 
 
-def func_to_version_data(func):
-    hash_value = hashlib.md5(inspect.getsource(func).encode()).hexdigest()
+def callable_to_version_data(callable):
+    hash_value = hashlib.md5(inspect.getsource(callable).encode()).hexdigest()
+    filename = inspect.getfile(callable)
     return VersionData(
-        unique_name=f"{func.__code__.co_filename}:{func.__name__}",
+        unique_name=f"{filename}:{callable.__name__}",
         hash_value=hash_value,
     )
 
@@ -23,7 +24,7 @@ def func_to_version_data(func):
 def func_to_dict(func):
     plynx_params = func.plynx_params
 
-    version_data = func_to_version_data(func)
+    version_data = callable_to_version_data(func)
     return {
         "_id": str(ObjectId()),
         "_type": "Node",

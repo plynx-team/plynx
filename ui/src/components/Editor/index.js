@@ -754,6 +754,7 @@ export default class Editor extends Component {
                         onNodeChange={(node) => this.handleNodeChange(node)}
                         editable={this.state.editable}
                         showAlert={(message, type) => this.showAlert(message, type)}
+                        onSave={() => this.handleSave()}
                         selectedNode={this.state.selectedNode}
                       />
                   }
