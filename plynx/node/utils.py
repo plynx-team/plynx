@@ -5,8 +5,6 @@ from dataclasses import dataclass
 from plynx.constants import NodeStatus, NodeRunningStatus, NodeOrigin
 from plynx.utils.common import ObjectId
 
-import plynx.node
-
 
 @dataclass
 class VersionData:

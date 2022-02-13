@@ -12,6 +12,7 @@ def get_driver(storage_config=None):
         _driver = _get_driver_handler(storage_config)
     return _driver
 
+
 def get_global_storage_config():
     global _global_storage_config
     if not _global_storage_config:

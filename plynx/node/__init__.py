@@ -1,8 +1,9 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Any, List, Optional
 import cloudpickle
 import plynx.node.typing as typings
-import plynx.node.utils as utils
+
+import plynx.node.utils as utils    # noqa
 
 
 @dataclass
@@ -41,7 +42,7 @@ class OutputItem:
 class ParamItem:
     name: str
     parameter_type: str
-    value: "typing.Any"
+    value: Any
     widget: Optional[str]
 
     def to_dict(self):

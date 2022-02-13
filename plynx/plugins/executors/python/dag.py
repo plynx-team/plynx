@@ -9,7 +9,6 @@ import sys
 import os
 import contextlib
 import threading
-from plynx.db.node import Node
 from plynx.constants import NodeRunningStatus, Collections
 from plynx.utils.common import to_object_id
 import plynx.utils.remote
@@ -108,7 +107,7 @@ def worker_main(job_run_queue, job_complete_queue):
             with redirect_to_plynx_logs(node, "stdout", "stderr"):
                 res = fn(**prep_args(node))
 
-        except Exception as e:
+        except Exception:
             error_str = traceback.format_exc()
             logging.error(f"Job failed with traceback: {error_str}")
             node.node_running_status = NodeRunningStatus.FAILED

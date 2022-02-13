@@ -151,7 +151,6 @@ class NodeCollectionManager(object):
                 if sub_node_dict['code_hash'] != function_location_to_updated_node_dict[sub_node_dict[reference_node_id]]["code_hash"]:
                     sub_node_dict['node_status'] = NodeStatus.DEPRECATED
 
-
     def get_db_node(self, node_id, user_id=None):
         """Get dict representation of a Node.
 
