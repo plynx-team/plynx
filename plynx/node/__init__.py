@@ -81,6 +81,7 @@ def input(
         return func_or_class
     return decorator
 
+
 def output(
     name=None,
     var_type=None,
@@ -139,6 +140,7 @@ def operation(node_type=None, title=None, description="", kind=None):
 
 
 parameter = param   # Alias
+
 
 class Node:
     pass
