@@ -73,7 +73,7 @@ def input(
     def decorator(func_or_class):
         func_or_class.plynx_params.inputs.insert(0, InputItem(
             name=name,
-            file_type=var_type,
+            file_type=typings.type_to_str(var_type),
             is_array=is_array,
             min_count=min_count,
         ))
@@ -89,7 +89,7 @@ def output(
     def decorator(func_or_class):
         func_or_class.plynx_params.outputs.insert(0, OutputItem(
             name=name,
-            file_type=var_type,
+            file_type=typings.type_to_str(var_type),
             is_array=is_array,
             min_count=min_count,
         ))
@@ -106,7 +106,7 @@ def param(
     def decorator(func_or_class):
         func_or_class.plynx_params.params.insert(0, ParamItem(
             name=name,
-            parameter_type=var_type,
+            parameter_type=typings.type_to_str(var_type),
             value=default,
             widget=None if widget is None else widget or name,
         ))

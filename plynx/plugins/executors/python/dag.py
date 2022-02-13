@@ -40,6 +40,8 @@ def prep_args(node):
 
 
 def assign_outputs(node, output_dict):
+    if not output_dict:
+        return
     for key, value in output_dict.items():
         node_output = node.get_output_by_name(key)
         node_output.values = value if node_output.is_array else [value]
