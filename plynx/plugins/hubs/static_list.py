@@ -1,3 +1,4 @@
+import copy
 import pydoc
 
 from plynx.db.node import Node
@@ -21,6 +22,18 @@ def _enhance_list_item(raw_item):
     return node.to_dict()
 
 
+def _recursive_filter(search_string, list_of_nodes):
+    res = []
+    for raw_node in list_of_nodes:
+        if raw_node["_type"] == "Group":
+            raw_group = copy.deepcopy(raw_node)
+            raw_group['items'] = _recursive_filter(search_string, raw_group['items'])
+            res.append(raw_group)
+        elif len(search_string) == 0 or search_string.upper() in raw_node['title'].upper():
+            res.append(raw_node)
+    return res
+
+
 class StaticListHub(hub.BaseHub):
     def __init__(self, list_module):
         super(StaticListHub, self).__init__()
@@ -39,13 +52,7 @@ class StaticListHub(hub.BaseHub):
         # TODO should parse_search_string be removed from nodes_collection?
         _, search_string = parse_search_string(query.search)
 
-        def filter_func(raw_node):
-            return len(search_string) == 0 or \
-                search_string.upper() in raw_node['title'].upper()
-        res = list(filter(
-            filter_func,
-            self.list_of_nodes
-        ))
+        res = _recursive_filter(search_string, self.list_of_nodes)
         return {
             'list': res,
             'metadata': [
