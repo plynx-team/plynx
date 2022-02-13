@@ -134,7 +134,7 @@ class NodeCollectionManager(object):
         reference_collection = reference_collection or self.collection
         id_to_updated_node_dict = {}
         function_location_to_updated_node_dict = {}
-        upd_node_ids = set(map(lambda node_dict: node_dict[reference_node_id], sub_nodes_dicts))
+        upd_node_ids = set(map(lambda node_dict: node_dict.get(reference_node_id, "unknown"), sub_nodes_dicts))
         for upd_node_dict in self.get_db_objects_by_ids(upd_node_ids, collection=reference_collection):
             id_to_updated_node_dict[upd_node_dict['_id']] = upd_node_dict
             function_location_to_updated_node_dict[upd_node_dict.get("code_function_location", "unknown")] = upd_node_dict
