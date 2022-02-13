@@ -15,8 +15,8 @@ export default class BlockOutputList extends React.Component {
     this.props.onStartConnector(i);
   }
 
-  onClick(i) {
-    this.props.onClick(i);
+  onClick(i, displayRaw) {
+    this.props.onClick(i, displayRaw);
   }
 
   render() {
@@ -29,7 +29,7 @@ export default class BlockOutputList extends React.Component {
             return (
               <BlockOutputListItem
                 onMouseDown={(idx) => this.onMouseDown(idx)}
-                onClick={(idx) => this.onClick(idx)}
+                onClick={(idx, displayRaw) => this.onClick(idx, displayRaw)}
                 key={i}
                 index={i++}
                 item={item}

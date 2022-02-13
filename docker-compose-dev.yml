@@ -38,7 +38,7 @@ services:
             - ./plynx:/app/plynx
             - ./config.yaml:/app/config.yaml
         environment:
-            - PLYNX_MODE=worker -e basic-bash-jinja2-operation -e basic-python-node-operation -e basic-dag-operation
+            - PLYNX_MODE=worker -e basic-bash-jinja2-operation -e basic-python-node-operation -e basic-dag-operation -e python-workflow
             - PLYNX_CONFIG=/app/config.yaml
         command: sh /app/watch.sh
 

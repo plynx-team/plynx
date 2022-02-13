@@ -82,8 +82,8 @@ class Block extends React.Component {
     this.props.onStartConnector(this.props.node._id, index);
   }
 
-  onOutputClick(index) {
-    this.props.onOutputClick(this.props.node._id, index);
+  onOutputClick(index, displayRaw) {
+    this.props.onOutputClick(this.props.node._id, index, displayRaw);
   }
 
   onSpecialParameterClick(index) {
@@ -180,7 +180,7 @@ class Block extends React.Component {
                     <BlockOuputList
                                   items={this.props.node.outputs}
                                   onStartConnector={(index) => this.onStartConnector(index)}
-                                  onClick={(index) => this.onOutputClick(index)}
+                                  onClick={(index, displayRaw) => this.onOutputClick(index, displayRaw)}
                                   resources_dict={plugins_dict.resources_dict}
                                   />
 

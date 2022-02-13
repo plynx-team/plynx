@@ -19,6 +19,30 @@ def _RESOURCE_MERGER_FUNC():
     return defaultdict(list)
 
 
+def prepare_parameters_for_python(parameters):
+    res = {}
+    for parameter in parameters:
+        value = None
+        if parameter.parameter_type == ParameterTypes.ENUM:
+            index = max(0, min(len(parameter.value.values) - 1, int(parameter.value.index)))
+            value = parameter.value.values[index]
+        elif parameter.parameter_type in [ParameterTypes.LIST_STR, ParameterTypes.LIST_INT]:
+            if parameter.parameter_type == ParameterTypes.LIST_INT:
+                value = list(map(int, parameter.value))
+            else:
+                value = parameter.value
+        elif parameter.parameter_type == ParameterTypes.CODE:
+            value = parameter.value.value
+        elif parameter.parameter_type == ParameterTypes.INT:
+            value = int(parameter.value)
+        elif parameter.parameter_type == ParameterTypes.FLOAT:
+            value = float(parameter.value)
+        else:
+            value = parameter.value
+        res[parameter.name] = value
+    return res
+
+
 class ResourceMerger(object):
     def __init__(self, init_level_0=None, init_level_1=None):
         self._dict = defaultdict(_RESOURCE_MERGER_FUNC)
@@ -259,27 +283,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
         return os.path.join(self.workdir, "exec{}".format(extension))
 
     def _prepare_parameters(self):
-        res = {}
-        for parameter in self.node.parameters:
-            value = None
-            if parameter.parameter_type == ParameterTypes.ENUM:
-                index = max(0, min(len(parameter.value.values) - 1, int(parameter.value.index)))
-                value = parameter.value.values[index]
-            elif parameter.parameter_type in [ParameterTypes.LIST_STR, ParameterTypes.LIST_INT]:
-                if parameter.parameter_type == ParameterTypes.LIST_INT:
-                    value = list(map(int, parameter.value))
-                else:
-                    value = parameter.value
-            elif parameter.parameter_type == ParameterTypes.CODE:
-                value = parameter.value.value
-            elif parameter.parameter_type == ParameterTypes.INT:
-                value = int(parameter.value)
-            elif parameter.parameter_type == ParameterTypes.FLOAT:
-                value = float(parameter.value)
-            else:
-                value = parameter.value
-            res[parameter.name] = value
-        return res
+        return prepare_parameters_for_python(self.node.parameters)
 
     def _postprocess_outputs(self, outputs):
         for key, filename in outputs.items():

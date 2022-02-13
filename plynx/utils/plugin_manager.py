@@ -26,6 +26,8 @@ class _ResourceManager(object):
         self.kind_to_resource_dict = {
             resource.kind: resource._asdict() for resource in self.resources
         }
+        for kind, resource_class in self.kind_to_resource_class.items():
+            self.kind_to_resource_dict[kind]['display_raw'] = resource_class.DISPLAY_RAW
 
 
 class _ExecutorManager(object):

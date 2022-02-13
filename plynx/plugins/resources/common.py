@@ -10,6 +10,10 @@ from plynx.utils.config import get_web_config
 WEB_CONFIG = get_web_config()
 
 
+class Raw(resource.BaseResource):
+    DISPLAY_RAW = True
+
+
 class File(resource.BaseResource):
     pass
 

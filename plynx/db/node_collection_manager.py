@@ -1,3 +1,4 @@
+import logging
 from pymongo import ReturnDocument
 from past.builtins import basestring
 from collections import OrderedDict
@@ -5,6 +6,7 @@ from plynx.db.node import Node
 from plynx.constants import NodeRunningStatus, Collections, NodeStatus
 from plynx.utils.common import to_object_id, parse_search_string
 from plynx.utils.db_connector import get_db_connector
+from plynx.utils.hub_node_registry import registry
 
 _PROPERTIES_TO_GET_FROM_SUBS = ['node_running_status', 'logs', 'outputs', 'cache_url']
 
@@ -115,11 +117,14 @@ class NodeCollectionManager(object):
         Args:
             ids    (list of ObjectID):  Object Ids
         """
-        db_objects = get_db_connector()[collection or self.collection].find({
-            '_id': {
-                '$in': list(ids)
-            }
-        })
+        if collection == Collections.HUB_NODE_REGISTRY:
+            db_objects = map(lambda node: node.to_dict(), registry.find_nodes(ids))
+        else:
+            db_objects = get_db_connector()[collection or self.collection].find({
+                '_id': {
+                    '$in': list(ids)
+                }
+            })
 
         return list(db_objects)
 
@@ -128,14 +133,27 @@ class NodeCollectionManager(object):
             return
         reference_collection = reference_collection or self.collection
         id_to_updated_node_dict = {}
+        function_location_to_updated_node_dict = {}
         upd_node_ids = set(map(lambda node_dict: node_dict[reference_node_id], sub_nodes_dicts))
         for upd_node_dict in self.get_db_objects_by_ids(upd_node_ids, collection=reference_collection):
             id_to_updated_node_dict[upd_node_dict['_id']] = upd_node_dict
+            function_location_to_updated_node_dict[upd_node_dict['code_function_location']] = upd_node_dict
         for sub_node_dict in sub_nodes_dicts:
             if sub_node_dict[reference_node_id] not in id_to_updated_node_dict:
                 continue
             for prop in target_props:
                 sub_node_dict[prop] = id_to_updated_node_dict[sub_node_dict[reference_node_id]][prop]
+
+        if reference_collection == Collections.HUB_NODE_REGISTRY:
+            # special case: we need to compare not target_props, but rather assign it
+            assert len(target_props) == 1, "Only node_status can be assigned"
+            assert target_props[0] == 'node_status', "Only node_status can be assigned"
+            for sub_node_dict in sub_nodes_dicts:
+                if sub_node_dict[reference_node_id] not in function_location_to_updated_node_dict:
+                    logging.warn(f"`{sub_node_dict[reference_node_id]}` is not found in the list of operation locations")
+                    continue
+                if sub_node_dict['code_hash'] != function_location_to_updated_node_dict[sub_node_dict[reference_node_id]]["code_hash"]:
+                    sub_node_dict['node_status'] = NodeStatus.DEPRECATED
 
     def get_db_node(self, node_id, user_id=None):
         """Get dict representation of a Node.
@@ -161,6 +179,7 @@ class NodeCollectionManager(object):
         if self.collection == Collections.RUNS:
             self._update_sub_nodes_fields(sub_nodes_dicts, '_id', _PROPERTIES_TO_GET_FROM_SUBS)
         self._update_sub_nodes_fields(sub_nodes_dicts, 'original_node_id', ['node_status'], reference_collection=Collections.TEMPLATES)
+        self._update_sub_nodes_fields(sub_nodes_dicts, 'code_function_location', ['node_status'], reference_collection=Collections.HUB_NODE_REGISTRY)
 
         return res
 

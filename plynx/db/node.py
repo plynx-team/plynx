@@ -1,6 +1,6 @@
 from past.builtins import basestring
 from collections import defaultdict, deque
-from plynx.constants import Collections, NodeClonePolicy
+from plynx.constants import Collections, NodeClonePolicy, NodeOrigin
 from plynx.db.db_object import DBObject, DBObjectField
 from plynx.utils.common import ObjectId
 from plynx.constants import NodeStatus, NodeRunningStatus, SpecialNodeId
@@ -196,6 +196,24 @@ class Node(DBObject):
         # A Run refers to original node
         'original_node_id': DBObjectField(
             type=ObjectId,
+            default=None,
+            is_list=False,
+            ),
+        'origin': DBObjectField(
+            type=str,
+            default=NodeOrigin.DB,
+            is_list=False,
+            ),
+        # The following `code_*` values defined when the operation declared outside of plynx DB
+        # code_hash is a hash value of the code
+        'code_hash': DBObjectField(
+            type=str,
+            default='',
+            is_list=False,
+            ),
+        # code_function_location refers to the location of the function
+        'code_function_location': DBObjectField(
+            type=str,
             default=None,
             is_list=False,
             ),

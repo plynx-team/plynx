@@ -17,7 +17,6 @@ node_collection_manager = plynx.db.node_collection_manager.NodeCollectionManager
 run_cancellation_manager = plynx.db.run_cancellation_manager.RunCancellationManager()
 node_cache_manager = plynx.db.node_cache_manager.NodeCacheManager()
 
-_GRAPH_ITERATION_SLEEP = 1
 _WAIT_STATUS_BEFORE_FAILED = {
     NodeRunningStatus.RUNNING,
     NodeRunningStatus.IN_QUEUE,
@@ -37,6 +36,7 @@ class DAG(plynx.base.executor.BaseExecutor):
 
     """
     IS_GRAPH = True
+    GRAPH_ITERATION_SLEEP = 1
 
     def __init__(self, node_dict):
         super(DAG, self).__init__(node_dict)
@@ -257,7 +257,7 @@ class DAG(plynx.base.executor.BaseExecutor):
         while not self.finished():
             new_jobs = self.pop_jobs()
             if len(new_jobs) == 0:
-                time.sleep(_GRAPH_ITERATION_SLEEP)
+                time.sleep(self.GRAPH_ITERATION_SLEEP)
                 continue
 
             for node in new_jobs:

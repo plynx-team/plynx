@@ -26,40 +26,45 @@ export default class OutputItem extends Component {
       });
   }
 
-  handleClick() {
+  handleClick(display_raw) {
     if (this.props.onPreview) {
       this.props.onPreview({
         title: this.props.item.name,
         file_type: this.props.item.file_type,
-        resource_id: this.props.item.values[0],
+        values: this.props.item.values,
         download_name: this.props.item.name,
+        display_raw: display_raw,
       });
     }
   }
 
   render() {
     return (
+      <PluginsConsumer>
+      {
+        plugins_dict =>
       <div className='OutputItem'>
         <div className='OutputNameCell'>
 
           <div className="OutputItemPreview"
-            onClick={() => this.handleClick()}>
-            <PluginsConsumer>
-            {
-                plugins_dict => <Icon
+            onClick={() => this.handleClick(plugins_dict.resources_dict[this.props.item.file_type].display_raw)}>
+
+                <Icon
                   type_descriptor={plugins_dict.resources_dict[this.props.item.file_type]}
                 />
-            }
-            </PluginsConsumer>
             {this.props.item.name}
           </div>
-        </div>
+        {!plugins_dict.resources_dict[this.props.item.file_type].display_raw &&
         <div className='OutputValueCell' onClick={() => {
           this.download();
         }}>
           <img src="/icons/download.svg" alt="download" /> {this.props.item.values[0]}
         </div>
+        }
       </div>
+      </div>
+      }
+      </PluginsConsumer>
     );
   }
 }

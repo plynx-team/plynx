@@ -285,13 +285,13 @@ class ReactBlockGraph extends React.Component {
     this.props.onRemoveConnector(connector);
   }
 
-  handleOutputClick(nid, outputIndex) {
+  handleOutputClick(nid, outputIndex, displayRaw) {
     const nodes = this.state.data.nodes;
     const block = this.getBlockbyId(nodes, nid);
     if (block.node_running_status !== NODE_RUNNING_STATUS.STATIC && this.state.editable) {
       return;
     }
-    this.props.onOutputClick(nid, outputIndex);
+    this.props.onOutputClick(nid, outputIndex, displayRaw);
   }
 
   handleSpecialParameterClick(nid, specialParameterIndex) {
@@ -487,7 +487,7 @@ class ReactBlockGraph extends React.Component {
 
                       onStartConnector={(nid, outputIndex) => this.handleStartConnector(nid, outputIndex)}
                       onCompleteConnector={(nid, inputIndex) => this.handleCompleteConnector(nid, inputIndex)}
-                      onOutputClick={(nid, outputIndex) => this.handleOutputClick(nid, outputIndex)}
+                      onOutputClick={(nid, outputIndex, displayRaw) => this.handleOutputClick(nid, outputIndex, displayRaw)}
                       onSpecialParameterClick={(nid, outputIndex) => this.handleSpecialParameterClick(nid, outputIndex)}
 
                       onBlockSelect={(nid) => {
