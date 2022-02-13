@@ -140,7 +140,3 @@ def operation(node_type=None, title=None, description="", kind=None):
 
 
 parameter = param   # Alias
-
-
-class Node:
-    pass

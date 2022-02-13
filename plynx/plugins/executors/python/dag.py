@@ -94,16 +94,17 @@ def worker_main(job_run_queue, job_complete_queue):
     while True:
         node = job_run_queue.get()
 
-        pickled_fn_parameter = node.get_parameter_by_name("_pickled_fn")
-
-        fn = materialize_fn(pickled_fn_parameter.value)
-        if inspect.isclass(fn):
-            with stateful_init_mutex:
-                if node.code_hash not in stateful_class_registry:
-                    with redirect_to_plynx_logs(node, "init_stdout", "init_stderr"):
-                        stateful_class_registry[node.code_hash] = fn()
-                fn = stateful_class_registry[node.code_hash]
         try:
+            pickled_fn_parameter = node.get_parameter_by_name("_pickled_fn")
+
+            fn = materialize_fn(pickled_fn_parameter.value)
+            if inspect.isclass(fn):
+                with stateful_init_mutex:
+                    if node.code_hash not in stateful_class_registry:
+                        with redirect_to_plynx_logs(node, "init_stdout", "init_stderr"):
+                            stateful_class_registry[node.code_hash] = fn()
+                    fn = stateful_class_registry[node.code_hash]
+
             with redirect_to_plynx_logs(node, "stdout", "stderr"):
                 res = fn(**prep_args(node))
 

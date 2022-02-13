@@ -1,8 +1,9 @@
+import pydoc
+
 from plynx.db.node import Node
 from plynx.base import hub
 from plynx.utils.common import parse_search_string
 from plynx.utils.hub_node_registry import registry
-from plynx.abc import COLLECTION
 import plynx.node
 
 
@@ -21,11 +22,15 @@ def _enhance_list_item(raw_item):
 
 
 class StaticListHub(hub.BaseHub):
-    def __init__(self, filename):
+    def __init__(self, list_module):
         super(StaticListHub, self).__init__()
 
+        collection = pydoc.locate(list_module)
+
+        assert collection is not None, "Module `{list_module}` not found"
+
         self.list_of_nodes = []
-        for func_or_group in COLLECTION:
+        for func_or_group in collection:
             raw_item = plynx.node.utils.func_or_group_to_dict(func_or_group)
             self.list_of_nodes.append(_enhance_list_item(raw_item))
 

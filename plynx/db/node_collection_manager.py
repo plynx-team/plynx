@@ -1,3 +1,4 @@
+import logging
 from pymongo import ReturnDocument
 from past.builtins import basestring
 from collections import OrderedDict
@@ -148,6 +149,9 @@ class NodeCollectionManager(object):
             assert len(target_props) == 1, "Only node_status can be assigned"
             assert target_props[0] == 'node_status', "Only node_status can be assigned"
             for sub_node_dict in sub_nodes_dicts:
+                if sub_node_dict[reference_node_id] not in function_location_to_updated_node_dict:
+                    logging.warn(f"`{sub_node_dict[reference_node_id]}` is not found in the list of operation locations")
+                    continue
                 if sub_node_dict['code_hash'] != function_location_to_updated_node_dict[sub_node_dict[reference_node_id]]["code_hash"]:
                     sub_node_dict['node_status'] = NodeStatus.DEPRECATED
 
