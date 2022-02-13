@@ -36,7 +36,7 @@ def print_int(foo):
 
 @plynx.node.input(name='foo', var_type=str)
 @plynx.node.operation(
-    title="Print Float value",
+    title="Print String value",
 )
 def print_str(foo):
     print_any(foo)

@@ -12,6 +12,7 @@ import threading
 from plynx.constants import NodeRunningStatus, Collections
 from plynx.utils.common import to_object_id
 import plynx.utils.remote
+import plynx.plugins.executors.dag
 
 stateful_init_mutex = threading.Lock()
 stateful_class_registry = {}

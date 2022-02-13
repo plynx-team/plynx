@@ -63,6 +63,33 @@ plugins:
       cls: plynx.plugins.resources.cloud_resources.CloudStorage
       icon: feathericons.hard-drive
       color: '#5ed1ff'
+
+    - kind: int
+      title: int
+      cls: plynx.plugins.resources.common.Raw
+      icon: plynx.python-int
+    - kind: str
+      title: str
+      cls: plynx.plugins.resources.common.Raw
+      icon: feathericons.type
+      color: '#f44'
+    - kind: dict
+      title: dict
+      cls: plynx.plugins.resources.common.Raw
+      icon: plynx.json
+    - kind: float
+      title: float
+      cls: plynx.plugins.resources.common.Raw
+      icon: plynx.python-float
+    - kind: list
+      title: list
+      cls: plynx.plugins.resources.common.Raw
+      icon: plynx.python-list
+    - kind: bool
+      title: bool
+      cls: plynx.plugins.resources.common.Raw
+      icon: plynx.python-bool
+
   operations:
     - kind: basic-file
       title: File
@@ -110,6 +137,17 @@ plugins:
         - executable
         - directory
         - cloud-storage
+    - kind: python-code-operation
+      title: Python Code Operation
+      executor: plynx.plugins.executors.local.PythonNode
+      icon: plynx.python-logo-notext
+      color: ''
+      resources:
+        - int
+        - str
+        - dict
+        - float
+        - bool
     - kind: basic-dag-operation
       title: Composite Operation
       executor: plynx.plugins.executors.dag.DAG
@@ -139,11 +177,18 @@ plugins:
           - basic-python-node-operation
           - basic-dag-operation
         collection: templates
+    - kind: static-hub
+      title: Static hub
+      icon: feathericons.file
+      cls: plynx.plugins.hubs.static_list.StaticListHub
+      args:
+        list_module: plynx.demo.COLLECTION
   workflows:
-    - kind: basic-dag-workflow
-      title: Basic DAG Workflow
-      executor: plynx.plugins.executors.dag.DAG
+    - kind: python-workflow
+      title: Python Workflow
+      executor: plynx.plugins.executors.python.dag.DAG
       hubs:
+        - static-hub
         - db-hub
 
 default_policies:
