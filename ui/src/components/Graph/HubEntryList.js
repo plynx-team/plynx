@@ -58,7 +58,7 @@ class HubEntryListGroup extends Component {
   }
 
   render() {
-    const arrowClass = this.state.open ? "hub-arrow down" : "hub-arrow arrow-right";
+    const arrowClass = this.state.open ? "hub-arrow arrow-down" : "hub-arrow arrow-right";
     return (
       <div className="hub-entry-group noselect">
         <div className="hub-item hub-entry-group-title" onClick={() => this.setState({open: !this.state.open})}>

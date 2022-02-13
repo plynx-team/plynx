@@ -5,11 +5,27 @@ from dataclasses import dataclass
 from plynx.constants import NodeStatus, NodeRunningStatus, NodeOrigin
 from plynx.utils.common import ObjectId
 
+import plynx.node
+
 
 @dataclass
 class VersionData:
     unique_name: str
     hash_value: int
+
+
+@dataclass
+class Group:
+    title: str
+    items: list
+
+    def to_dict(self):
+        return {
+            "_id": str(ObjectId()),
+            "_type": "Group",
+            "title": self.title,
+            "items": list(map(func_or_group_to_dict, self.items)),
+        }
 
 
 def callable_to_version_data(callable):
@@ -21,10 +37,12 @@ def callable_to_version_data(callable):
     )
 
 
-def func_to_dict(func):
-    plynx_params = func.plynx_params
+def func_or_group_to_dict(func_or_group):
+    if isinstance(func_or_group, Group):
+        return func_or_group.to_dict()
+    plynx_params = func_or_group.plynx_params
 
-    version_data = callable_to_version_data(func)
+    version_data = callable_to_version_data(func_or_group)
     return {
         "_id": str(ObjectId()),
         "_type": "Node",

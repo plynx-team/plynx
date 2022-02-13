@@ -91,24 +91,25 @@
   border-width: 0 3px 3px 0;
   display: inline-block;
   padding: 3px;
+  margin: 0 5px 0 0;
 }
 
-.hub-arrow .arrow-right {
+.hub-arrow.arrow-right {
   transform: rotate(-45deg);
   -webkit-transform: rotate(-45deg);
 }
 
-.hub-arrow .arrow-left {
+.hub-arrow.arrow-left {
   transform: rotate(135deg);
   -webkit-transform: rotate(135deg);
 }
 
-.hub-arrow .arrow-up {
+.hub-arrow.arrow-up {
   transform: rotate(-135deg);
   -webkit-transform: rotate(-135deg);
 }
 
-.hub-arrow .arrow-down {
+.hub-arrow.arrow-down {
   transform: rotate(45deg);
   -webkit-transform: rotate(45deg);
 }
@@ -119,6 +120,11 @@
 
 .hub-entry-group-title {
   cursor: pointer;
+  background-color: #2b2b2b;
+}
+
+.hub-entry-group-title:hover {
+  background-color: #584;
 }
 
 .hub-entry-group-title-text {

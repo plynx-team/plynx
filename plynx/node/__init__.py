@@ -113,17 +113,6 @@ def param(
         return func_or_class
     return decorator
 
-"""
-def run_func(func_or_class, node_type=None):
-    def decorator(func_or_class):
-        func_or_class.node_type = node_type or "hello worrld"
-        func_or_class._plynx_inputs = []
-        func_or_class._plynx_outputs = []
-        func_or_class._plynx_params = []
-        return func_or_class
-    func_or_class.node_type = node_type or "hel"
-    return func_or_class
-"""
 
 def operation(node_type=None, title=None, description="", kind=None):
     def decorator(func_or_class):
@@ -146,6 +135,7 @@ def operation(node_type=None, title=None, description="", kind=None):
         ))
         return func_or_class
     return decorator
+
 
 parameter = param   # Alias
 

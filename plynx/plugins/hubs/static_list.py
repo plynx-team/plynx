@@ -34,6 +34,7 @@ def _enhance_list_item(raw_item):
         return raw_item
     # check if the node is valid
     node = Node.from_dict(raw_item)
+    registry.register_node(node)
     return node.to_dict()
 
 
@@ -42,12 +43,9 @@ class StaticListHub(hub.BaseHub):
         super(StaticListHub, self).__init__()
 
         self.list_of_nodes = []
-        for func in COLLECTION:
-            obj_dict = plynx.node.utils.func_to_dict(func)
-            obj = Node.from_dict(obj_dict)
-            # print(json.dumps(obj, indent=4, sort_keys=True))
-            registry.register_node(obj)
-            self.list_of_nodes.append(obj_dict)
+        for func_or_group in COLLECTION:
+            raw_item = plynx.node.utils.func_or_group_to_dict(func_or_group)
+            self.list_of_nodes.append(_enhance_list_item(raw_item))
 
     def search(self, query):
         # TODO use search_parameters
