@@ -139,20 +139,20 @@ class NodeCollectionManager(object):
             id_to_updated_node_dict[upd_node_dict['_id']] = upd_node_dict
             function_location_to_updated_node_dict[upd_node_dict.get("code_function_location", "unknown")] = upd_node_dict
         for sub_node_dict in sub_nodes_dicts:
-            if sub_node_dict[reference_node_id] not in id_to_updated_node_dict:
+            if sub_node_dict.get(reference_node_id, "unknown") not in id_to_updated_node_dict:
                 continue
             for prop in target_props:
-                sub_node_dict[prop] = id_to_updated_node_dict[sub_node_dict[reference_node_id]][prop]
+                sub_node_dict[prop] = id_to_updated_node_dict[sub_node_dict.get(reference_node_id, "unknown")][prop]
 
         if reference_collection == Collections.HUB_NODE_REGISTRY:
             # special case: we need to compare not target_props, but rather assign it
             assert len(target_props) == 1, "Only node_status can be assigned"
             assert target_props[0] == 'node_status', "Only node_status can be assigned"
             for sub_node_dict in sub_nodes_dicts:
-                if sub_node_dict[reference_node_id] not in function_location_to_updated_node_dict:
-                    logging.warn(f"`{sub_node_dict[reference_node_id]}` is not found in the list of operation locations")
+                if sub_node_dict.get(reference_node_id, "unknown") not in function_location_to_updated_node_dict:
+                    logging.warn(f"`{sub_node_dict.get(reference_node_id, 'unknown')}` is not found in the list of operation locations")
                     continue
-                if sub_node_dict['code_hash'] != function_location_to_updated_node_dict[sub_node_dict[reference_node_id]]["code_hash"]:
+                if sub_node_dict['code_hash'] != function_location_to_updated_node_dict[sub_node_dict.get(reference_node_id, "unknown")]["code_hash"]:
                     sub_node_dict['node_status'] = NodeStatus.DEPRECATED
 
     def get_db_node(self, node_id, user_id=None):
