@@ -167,7 +167,7 @@ class Block extends React.Component {
                   }
                 </header>
                 <div className="node-title">
-                    {this.kindAndTitle ? this.props.node.title : this.props.node.description}
+                    {(this.kindAndTitle ? this.props.node.title : this.props.node.description) || "*"}
                 </div>
                 <div className="node-content" onClick={(e) => {
                   this.handleClick(e);
