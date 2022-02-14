@@ -40,7 +40,7 @@ class StaticListHub(hub.BaseHub):
 
         collection = pydoc.locate(list_module)
 
-        assert collection is not None, "Module `{list_module}` not found"
+        assert collection is not None, f"Module `{list_module}` not found"
 
         self.list_of_nodes = []
         for func_or_group in collection:
