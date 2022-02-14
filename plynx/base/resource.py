@@ -35,6 +35,5 @@ class BaseResource(object):
 
     @classmethod
     def preview(cls, preview_object):
-        preview_object.fp.truncate(1024 ** 2)  # 1 MB
         # TODO escape html code for security reasons
         return '<pre>{}</pre>'.format(_force_decode(preview_object.fp.read()))

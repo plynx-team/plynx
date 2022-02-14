@@ -37,7 +37,7 @@ services:
             - ./config.yaml:/app/config.yaml
         environment:
             - PLYNX_CONFIG=/app/config.yaml
-        command: plynx worker -vvv -e basic-bash-jinja2-operation -e basic-python-node-operation -e basic-dag-operation
+        command: plynx worker -vvv -e basic-bash-jinja2-operation -e basic-python-node-operation -e basic-dag-operation -e python-workflow
 
     api:
         image: plynxteam/backend:latest

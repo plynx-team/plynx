@@ -11,7 +11,6 @@ import contextlib
 import threading
 from plynx.constants import NodeRunningStatus, Collections
 from plynx.utils.common import to_object_id
-import plynx.utils.remote
 import plynx.plugins.executors.dag
 
 stateful_init_mutex = threading.Lock()
@@ -83,7 +82,7 @@ class redirect_to_plynx_logs:
 
         for filename, logs_name in self.names_map:
             if os.stat(filename).st_size > 0:
-                with plynx.utils.remote.open(filename, "w") as f:
+                with plynx.utils.file_handler.open(filename, "w") as f:
                     with open(filename) as fi:
                         f.write(fi.read())
                 output = self.node.get_log_by_name(name=logs_name)
@@ -115,7 +114,7 @@ def worker_main(job_run_queue, job_complete_queue):
             node.node_running_status = NodeRunningStatus.FAILED
 
             err_filename = str(uuid.uuid4())
-            with plynx.utils.remote.open(err_filename, "w") as f:
+            with plynx.utils.file_handler.open(err_filename, "w") as f:
                 f.write(error_str)
             output = node.get_log_by_name(name="traceback")
             output.values = [err_filename]
