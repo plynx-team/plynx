@@ -28,5 +28,5 @@ def upload_file_stream(fp, file_path=None, seek=True):
     if file_path is None:
         file_path = str(uuid.uuid1())
     with open(file_path, "wb") as fo:
-        fo.write(fp)
+        fo.write(fp.read())
     return file_path
