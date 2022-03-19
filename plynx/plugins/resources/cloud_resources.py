@@ -1,10 +1,10 @@
-import os
 import json
+import os
 import uuid
-from plynx.constants import NodeResources
-from plynx.base import resource
-from plynx.utils.config import get_cloud_service_config
 
+from plynx.base import resource
+from plynx.constants import NodeResources
+from plynx.utils.config import get_cloud_service_config
 
 CLOUD_SERVICE_CONFIG = get_cloud_service_config()
 

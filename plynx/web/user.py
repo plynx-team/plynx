@@ -1,14 +1,15 @@
-from flask import g, request
 import json
+
+from flask import g, request
+
 import plynx.db.node_collection_manager
+from plynx.constants import Collections, IAMPolicies, NodeClonePolicy, UserPostAction
 from plynx.db.db_object import get_class
 from plynx.db.demo_user_manager import DemoUserManager
-from plynx.db.user import UserCollectionManager
-from plynx.web.common import app, register_user, requires_auth, make_success_response, make_fail_response, handle_errors
+from plynx.db.user import User, UserCollectionManager
 from plynx.utils.common import JSONEncoder, to_object_id
 from plynx.utils.exceptions import RegisterUserException
-from plynx.constants import Collections, NodeClonePolicy, IAMPolicies, UserPostAction
-from plynx.db.user import User
+from plynx.web.common import app, handle_errors, make_fail_response, make_success_response, register_user, requires_auth
 
 demo_user_manager = DemoUserManager()
 template_collection_manager = plynx.db.node_collection_manager.NodeCollectionManager(collection=Collections.TEMPLATES)

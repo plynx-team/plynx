@@ -3,8 +3,9 @@ The class defines `DBObject` and `DBObjectField`. This is an abstraction of all 
 """
 import datetime
 from collections import namedtuple
-from plynx.utils.db_connector import get_db_connector
+
 from plynx.utils.common import ObjectId
+from plynx.utils.db_connector import get_db_connector
 
 DBObjectField = namedtuple('DBObjectField', ['type', 'default', 'is_list'])
 

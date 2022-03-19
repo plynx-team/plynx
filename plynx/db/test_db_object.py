@@ -1,5 +1,5 @@
-from plynx.db.node import Node, Input, Parameter, Output
 from plynx.constants import ParameterTypes
+from plynx.db.node import Input, Node, Output, Parameter
 
 
 def get_test_node():

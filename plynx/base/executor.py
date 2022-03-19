@@ -1,9 +1,10 @@
 import os
 import shutil
 from abc import abstractmethod
-from plynx.db.node import Node, Parameter, ParameterTypes, NodeRunningStatus
+
+from plynx.constants import NodeStatus, SpecialNodeId, ValidationCode, ValidationTargetType
+from plynx.db.node import Node, NodeRunningStatus, Parameter, ParameterTypes
 from plynx.db.validation_error import ValidationError
-from plynx.constants import NodeStatus, SpecialNodeId, ValidationTargetType, ValidationCode
 
 TMP_DIR = '/tmp/plx'
 

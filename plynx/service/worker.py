@@ -1,18 +1,20 @@
+import logging
 import os
+import socket
 import sys
 import threading
-import logging
-import six
 import traceback
 import uuid
-import socket
-from plynx.constants import NodeRunningStatus, Collections
+
+import six
+
 import plynx.db.node_collection_manager
 import plynx.db.run_cancellation_manager
+import plynx.utils.executor
+from plynx.constants import Collections, NodeRunningStatus
 from plynx.db.worker_state import WorkerState
 from plynx.utils.config import get_worker_config
 from plynx.utils.db_connector import check_connection
-import plynx.utils.executor
 from plynx.utils.file_handler import upload_file_stream
 
 

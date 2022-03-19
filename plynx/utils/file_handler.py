@@ -1,5 +1,6 @@
-import smart_open
 import uuid
+
+import smart_open
 
 from plynx.utils.config import get_storage_config
 

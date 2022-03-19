@@ -1,4 +1,5 @@
 from collections import namedtuple
+
 from plynx.constants import NodeResources
 
 PreviewObject = namedtuple('PreviewObject', ['fp', 'resource_id'])

@@ -1,16 +1,18 @@
-import re
 import logging
+import re
 import traceback
-from flask import Flask, request, g, Response
-from flask_cors import CORS
 from functools import wraps
-from plynx.constants import ResponseStatus, RegisterUserExceptionCode
+
+from flask import Flask, Response, g, request
+from flask_cors import CORS
+
+from plynx.constants import RegisterUserExceptionCode, ResponseStatus
 from plynx.db.user import User, UserCollectionManager
-from plynx.utils.config import get_config
 from plynx.utils.common import JSONEncoder
+from plynx.utils.config import get_config
 from plynx.utils.content import create_default_templates
-from plynx.utils.exceptions import RegisterUserException
 from plynx.utils.db_connector import check_connection
+from plynx.utils.exceptions import RegisterUserException
 
 app = Flask(__name__)
 

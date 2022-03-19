@@ -1,18 +1,19 @@
-from subprocess import Popen
+import logging
 import os
 import signal
-import logging
 import threading
+from collections import defaultdict
+from subprocess import Popen
+
 import jinja2
 from past.builtins import basestring
-from collections import defaultdict
-from plynx.constants import NodeRunningStatus, ParameterTypes
-from plynx.db.node import Parameter, Output
-from plynx.utils.file_handler import get_file_stream, upload_file_stream
-import plynx.utils.plugin_manager
-from plynx.plugins.resources.common import FILE_KIND
+
 import plynx.base.executor
-from plynx.constants import NodeResources
+import plynx.utils.plugin_manager
+from plynx.constants import NodeResources, NodeRunningStatus, ParameterTypes
+from plynx.db.node import Output, Parameter
+from plynx.plugins.resources.common import FILE_KIND
+from plynx.utils.file_handler import get_file_stream, upload_file_stream
 
 
 def _RESOURCE_MERGER_FUNC():

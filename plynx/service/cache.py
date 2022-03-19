@@ -1,14 +1,15 @@
-import sys
 import csv
 import logging
-from datetime import datetime
-import dateutil.parser
+import sys
 from collections import namedtuple
+from datetime import datetime
+
+import dateutil.parser
+
 from plynx.db.node_cache import NodeCache
 from plynx.db.node_cache_manager import NodeCacheManager
-from plynx.utils.common import query_yes_no
 from plynx.utils import file_handler
-
+from plynx.utils.common import query_yes_no
 
 OutputListTuple = namedtuple('OutputListTuple', ['node_cache_id', 'insertion_date', 'resource_type', 'name', 'file_type', 'resource_id', 'protected'])
 

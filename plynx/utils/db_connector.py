@@ -1,5 +1,7 @@
 import logging
+
 import pymongo
+
 from plynx.constants import Collections
 from plynx.utils.config import get_db_config
 

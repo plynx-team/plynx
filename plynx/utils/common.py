@@ -1,9 +1,10 @@
-import os
-import sys
-import json
-import re
 import collections
+import json
+import os
+import re
+import sys
 from datetime import datetime
+
 from bson import ObjectId
 
 SearchParameter = collections.namedtuple('SearchParameter', ['key', 'value'])

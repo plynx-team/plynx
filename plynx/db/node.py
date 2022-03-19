@@ -1,11 +1,11 @@
-from past.builtins import basestring
 from collections import defaultdict, deque
-from plynx.constants import Collections, NodeClonePolicy, NodeOrigin
+
+from past.builtins import basestring
+
+from plynx.constants import Collections, NodeClonePolicy, NodeOrigin, NodeRunningStatus, NodeStatus, ParameterTypes, SpecialNodeId
 from plynx.db.db_object import DBObject, DBObjectField
-from plynx.utils.common import ObjectId
-from plynx.constants import NodeStatus, NodeRunningStatus, SpecialNodeId
 from plynx.plugins.resources.common import FILE_KIND
-from plynx.constants import ParameterTypes
+from plynx.utils.common import ObjectId
 
 
 def _clone_update_in_place(node, node_clone_policy):

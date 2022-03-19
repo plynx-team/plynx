@@ -1,17 +1,19 @@
+import contextlib
+import inspect
 import logging
-import queue
-import cloudpickle
 import multiprocessing
+import os
+import queue
+import sys
+import threading
 import traceback
 import uuid
-import inspect
-import sys
-import os
-import contextlib
-import threading
-from plynx.constants import NodeRunningStatus, Collections
-from plynx.utils.common import to_object_id
+
+import cloudpickle
+
 import plynx.plugins.executors.dag
+from plynx.constants import Collections, NodeRunningStatus
+from plynx.utils.common import to_object_id
 
 stateful_init_mutex = threading.Lock()
 stateful_class_registry = {}

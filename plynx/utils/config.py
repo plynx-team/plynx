@@ -1,7 +1,9 @@
 import logging
-import yaml
 import os
 from collections import namedtuple
+
+import yaml
+
 import plynx.constants
 
 PLYNX_CONFIG_PATH = os.getenv('PLYNX_CONFIG_PATH', 'config.yaml')

@@ -1,17 +1,19 @@
-from subprocess import Popen
+import collections
+import logging
 import os
-import time
-import uuid
+import random
 import shutil
 import string
-import random
-import logging
-import collections
-import kubernetes
+import time
+import uuid
 from enum import Enum
-from plynx.constants import NodeRunningStatus, ParameterTypes
-from plynx.db.node import Parameter, Output
+from subprocess import Popen
+
+import kubernetes
+
 import plynx.plugins.executors.local as local
+from plynx.constants import NodeRunningStatus, ParameterTypes
+from plynx.db.node import Output, Parameter
 from plynx.plugins.resources.common import FILE_KIND
 
 NAMESPACE = 'plynx-worker'

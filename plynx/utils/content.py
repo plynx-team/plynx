@@ -23,6 +23,7 @@ def create_template(user, kind, cmd, title, description, inputs=None, parameters
     node.outputs.extend(outputs or [])
 
     import logging
+
     from plynx.utils.common import JSONEncoder
     logging.info(JSONEncoder().encode(node.to_dict()))
 

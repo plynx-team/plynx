@@ -1,6 +1,5 @@
 from plynx.db.user import User, UserCollectionManager
 
-
 LIST_USERS = 'list_users'
 CREATE_USER = 'create_user'
 ACTIVATE_USER = 'activate_user'

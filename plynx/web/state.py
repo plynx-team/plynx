@@ -1,7 +1,6 @@
-from plynx.db.worker_state import get_worker_states
 import plynx.utils.plugin_manager
-from plynx.web.common import app, requires_auth, make_success_response, make_fail_response, handle_errors
-
+from plynx.db.worker_state import get_worker_states
+from plynx.web.common import app, handle_errors, make_fail_response, make_success_response, requires_auth
 
 PLUGINS_DICT = plynx.utils.plugin_manager.get_plugins_dict()
 

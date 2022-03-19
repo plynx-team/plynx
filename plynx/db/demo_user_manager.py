@@ -1,5 +1,6 @@
-import string
 import random
+import string
+
 from plynx.db.user import User
 from plynx.utils.config import get_demo_config
 

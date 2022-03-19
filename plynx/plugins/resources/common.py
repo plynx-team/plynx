@@ -1,9 +1,10 @@
+import json
 import os
 import stat
-import json
 import zipfile
-from plynx.constants import NodeResources
+
 from plynx.base import resource
+from plynx.constants import NodeResources
 from plynx.utils.common import zipdir
 from plynx.utils.config import get_web_config
 

@@ -1,5 +1,5 @@
-from collections import namedtuple
 from abc import abstractmethod
+from collections import namedtuple
 
 _QUERY_FIELDS = (
     ('status', ''),

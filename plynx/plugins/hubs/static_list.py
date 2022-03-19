@@ -1,11 +1,11 @@
 import copy
 import pydoc
 
-from plynx.db.node import Node
+import plynx.node
 from plynx.base import hub
+from plynx.db.node import Node
 from plynx.utils.common import parse_search_string
 from plynx.utils.hub_node_registry import registry
-import plynx.node
 
 
 def _enhance_list_item(raw_item):

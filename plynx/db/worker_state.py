@@ -1,8 +1,8 @@
 from plynx.constants import Collections
 from plynx.db.db_object import DBObject, DBObjectField
 from plynx.db.node import Node
-from plynx.utils.db_connector import get_db_connector
 from plynx.utils.common import ObjectId
+from plynx.utils.db_connector import get_db_connector
 
 
 class WorkerState(DBObject):
