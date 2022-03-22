@@ -154,16 +154,16 @@ class User(DBObject):
         Return:
             (User)   User object or None
         """
-        token = TimedSerializer(get_auth_config().secret_key)
+        serializer = TimedSerializer(get_auth_config().secret_key)
         try:
-            data = token.loads(token)
+            data = serializer.loads(token)
             if data['type'] != 'access':
                 raise Exception('Not access token')
         except (BadSignature, SignatureExpired):
             # access token is not valid or expired
-            token = Serializer(get_auth_config().secret_key)
+            serializer = Serializer(get_auth_config().secret_key)
             try:
-                data = token.loads(token)
+                data = serializer.loads(token)
                 if data['type'] != 'refresh':
                     raise Exception('No refresh token')     # pylint: disable=raise-missing-from
             except Exception:   # pylint: disable=broad-except

@@ -1,21 +1,18 @@
 """Templates for PLynx Hubs and utils."""
 
 from abc import abstractmethod
-from collections import namedtuple
+from dataclasses import dataclass
+from typing import Optional
 
-_QUERY_FIELDS = (
-    ('status', ''),
-    ('search', ''),
-    ('per_page', 30),
-    ('offset', 0),
-    ('user_id', None),
-)
 
-Query = namedtuple(
-    'Query',
-    field_names=[field[0] for field in _QUERY_FIELDS],
-    defaults=[field[1] for field in _QUERY_FIELDS],
-    )
+@dataclass
+class Query:
+    """Hub search query entry"""
+    status: str = ""
+    search: str = ""
+    per_page: int = 30
+    offset: int = 0
+    user_id: Optional[str] = None
 
 
 class BaseHub:

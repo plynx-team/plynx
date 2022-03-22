@@ -1,18 +1,13 @@
 """Validation Error DB Object and utils"""
-
-from past.builtins import basestring
+from typing import List, Optional
 
 
 # TODO use DBObject. The problem is that it will depend on itself recursively
 class ValidationError:
     """Basic Validation Error class."""
 
-    def __init__(self, target, object_id, validation_code, children=None):
+    def __init__(self, target: str, object_id: str, validation_code: str, children=Optional[List]):
         children = children or []
-        assert isinstance(target, basestring), "validation value error"
-        assert isinstance(object_id, basestring), "validation value error"
-        assert isinstance(validation_code, basestring), "validation value error"
-        assert isinstance(children, list), "validation value error"
         self.target = target
         self.object_id = object_id
         self.validation_code = validation_code
