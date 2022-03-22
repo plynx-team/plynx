@@ -1,3 +1,5 @@
+"""Commonly used Resource types."""
+
 import json
 import os
 import stat
@@ -12,91 +14,97 @@ WEB_CONFIG = get_web_config()
 
 
 class Raw(resource.BaseResource):
+    """Raw Resource that will be stored in jsonable format in the Node."""
     DISPLAY_RAW = True
 
 
 class File(resource.BaseResource):
-    pass
+    """Raw Resource that will be stored in the file format in the Node."""
 
 
 class PDF(resource.BaseResource):
+    """PDF file"""
     @classmethod
     def preview(cls, preview_object):
-        return '<iframe src="{}" title="preview" type="application/pdf" width="100%"/>'.format(
-            '{}/resource/{}'.format(
-                WEB_CONFIG.endpoint,
-                preview_object.resource_id),
-        )
+        """Generate preview html body"""
+        src_url = f"{WEB_CONFIG.endpoint}/resource/{preview_object.resource_id}"
+        return f'<iframe src="{src_url}" title="preview" type="application/pdf" width="100%"/>'
 
 
 class Image(resource.BaseResource):
+    """Image file"""
     @classmethod
     def preview(cls, preview_object):
-        return '<img src="{}" width="100%" alt="preview" />'.format(
-            '{}/resource/{}'.format(
-                WEB_CONFIG.endpoint,
-                preview_object.resource_id),
-        )
+        """Generate preview html body"""
+        src_url = f"{WEB_CONFIG.endpoint}/resource/{preview_object.resource_id}"
+        return f'<img src="{src_url}" width="100%" alt="preview" />'
 
 
 class _BaseSeparated(resource.BaseResource):
+    """Base Separated file, i.e. csv, tsv"""
     SEPARATOR = None
     _ROW_CLASSES = ['even', 'odd']
     _NUM_ROW_CLASSES = len(_ROW_CLASSES)
 
     @classmethod
     def preview(cls, preview_object):
+        """Generate preview html body"""
         preview_object.fp.truncate(1024 ** 2)
-        line_data = []
+        formated_lines = []
         for idx, line in enumerate(preview_object.fp.read().decode('utf-8').split('\n')):
-            line_data.append(
-                '<tr class="preview-table-row-{}">{}</tr>'.format(
-                    cls._ROW_CLASSES[idx % cls._NUM_ROW_CLASSES],
-                    ''.join(map(lambda s: '<td class="preview-table-col">{}</td>'.format(s), line.split(cls.SEPARATOR)))
-                )
-            )
-        return '<table class="preview-table">{}</table>'.format('\n'.join(line_data))
+            even_or_odd = cls._ROW_CLASSES[idx % cls._NUM_ROW_CLASSES]
+            formated_cells = ''.join(map(lambda s: f'<td class="preview-table-col">{s}</td>', line.split(cls.SEPARATOR)))
+            formated_line = f'<tr class="preview-table-row-{even_or_odd}">{formated_cells}</tr>'
+            formated_lines.append(formated_line)
+        all_lines = '\n'.join(formated_lines)
+        return f'<table class="preview-table">{all_lines}</table>'
 
 
 class CSV(_BaseSeparated):
+    """CSV file"""
     SEPARATOR = ','
 
 
 class TSV(_BaseSeparated):
+    """TSV file"""
     SEPARATOR = '\t'
 
 
 class Json(resource.BaseResource):
+    """JSON file"""
     @classmethod
     def preview(cls, preview_object):
+        """Generate preview html body"""
         if preview_object.fp.getbuffer().nbytes > 1024 ** 2:
             return super(Json, cls).preview(preview_object)
         try:
-            return '<pre>{}</pre>'.format(
-                json.dumps(json.loads(preview_object.fp.read().decode('utf-8')), indent=2)
-            )
-        except Exception as e:
-            return 'Failed to parse json: {}'.format(e)
+            readable_json = json.dumps(json.loads(preview_object.fp.read().decode('utf-8')), indent=2)
+            return f"<pre>{readable_json}</pre>"
+        except json.JSONDecodeError as e:
+            return f"Failed to parse json: {e}"
 
 
 class Executable(resource.BaseResource):
+    """Executable file, i.e. bash or python"""
     @staticmethod
-    def prepare_input(filename, preview):
+    def prepare_input(filename, preview=False):
+        """Generate preview html body"""
         # `chmod +x` to the executable file
         if preview:
             return {NodeResources.INPUT: filename}
-        st = os.stat(filename)
-        os.chmod(filename, st.st_mode | stat.S_IEXEC)
+        file_status = os.stat(filename)
+        os.chmod(filename, file_status.st_mode | stat.S_IEXEC)
         return {NodeResources.INPUT: filename}
 
 
 class Directory(resource.BaseResource):
+    """Directory file, i.e. zipfile"""
     @staticmethod
-    def prepare_input(filename, preview):
-        # extract zip file
+    def prepare_input(filename, preview=False):
+        """Extract zip file"""
         if preview:
             return {NodeResources.INPUT: filename}
-        zip_filename = '{}.zip'.format(filename)
+        zip_filename = f"{filename}.zip"
         os.rename(filename, zip_filename)
         os.mkdir(filename)
         with zipfile.ZipFile(zip_filename) as zf:
@@ -104,7 +112,8 @@ class Directory(resource.BaseResource):
         return {NodeResources.INPUT: filename}
 
     @staticmethod
-    def prepare_output(filename, preview):
+    def prepare_output(filename, preview=False):
+        """Create output folder"""
         if preview:
             return {NodeResources.OUTPUT: filename}
         os.mkdir(filename)
@@ -112,17 +121,19 @@ class Directory(resource.BaseResource):
 
     @staticmethod
     def postprocess_output(filename):
-        zip_filename = '{}.zip'.format(filename)
+        """Compress folder to a zip file"""
+        zip_filename = f"{filename}.zip"
         with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zf:
             zipdir(filename, zf)
         return zip_filename
 
     @classmethod
     def preview(cls, preview_object):
+        """Generate preview html body"""
         with zipfile.ZipFile(preview_object.fp, 'r') as zf:
             content_stream = '\n'.join(zf.namelist())
 
-        return '<pre>{}</pre>'.format(content_stream)
+        return f"<pre>{content_stream}</pre>"
 
 
 FILE_KIND = 'file'

@@ -1,6 +1,8 @@
+"""Global PLynx config"""
 import logging
 import os
 from collections import namedtuple
+from typing import Any, Dict, Optional
 
 import yaml
 
@@ -9,7 +11,7 @@ import plynx.constants
 PLYNX_CONFIG_PATH = os.getenv('PLYNX_CONFIG_PATH', 'config.yaml')
 DEFAULT_ICON = 'feathericons.x-square'
 DEFAULT_COLOR = '#ffffff'
-_config = None
+_CONFIG: Optional[Dict[Any, Any]] = None
 
 WorkerConfig = namedtuple('WorkerConfig', ['kinds'])
 MongoConfig = namedtuple('MongoConfig', ['user', 'password', 'host', 'port'])
@@ -43,85 +45,94 @@ Config = namedtuple(
 
 
 def __init__():
-    global _config
+    global _CONFIG  # pylint: disable=global-statement
     if os.path.exists(PLYNX_CONFIG_PATH):
         with open(PLYNX_CONFIG_PATH) as f:
-            logging.critical('Using config `{}`'.format(PLYNX_CONFIG_PATH))
-            _config = yaml.safe_load(f)
+            logging.critical(f"Using config `{PLYNX_CONFIG_PATH}`")
+            _CONFIG = yaml.safe_load(f)
     else:
-        logging.critical('PLYNX_CONFIG_PATH `{}` is not found'.format(PLYNX_CONFIG_PATH))
-        _config = {}
+        logging.critical(f"PLYNX_CONFIG_PATH `{PLYNX_CONFIG_PATH}` is not found")
+        _CONFIG = {}
 
 
 def get_worker_config():
+    """Generate worker config"""
     return WorkerConfig(
-        kinds=(_config.get('worker', {}).get('kinds', [])),
+        kinds=(_CONFIG.get('worker', {}).get('kinds', [])),
     )
 
 
 def get_db_config():
+    """Generate DB config"""
     return MongoConfig(
-        user=_config.get('mongodb', {}).get('user', ''),
-        password=_config.get('mongodb', {}).get('password', ''),
-        host=_config.get('mongodb', {}).get('host', '127.0.0.1'),
-        port=int(_config.get('mongodb', {}).get('port', 27017))
+        user=_CONFIG.get('mongodb', {}).get('user', ''),
+        password=_CONFIG.get('mongodb', {}).get('password', ''),
+        host=_CONFIG.get('mongodb', {}).get('host', '127.0.0.1'),
+        port=int(_CONFIG.get('mongodb', {}).get('port', 27017))
     )
 
 
 def get_storage_config():
+    """Generate Storage config"""
     return StorageConfig(
-        scheme=_config.get('storage', {}).get('scheme', 'file'),
-        prefix=_config.get('storage', {}).get(
+        scheme=_CONFIG.get('storage', {}).get('scheme', 'file'),
+        prefix=_CONFIG.get('storage', {}).get(
             'prefix',
             os.path.join(os.path.expanduser("~"), 'plynx', 'data')
         ),
-        credential_path=_config.get('storage', {}).get('credential_path', None),
+        credential_path=_CONFIG.get('storage', {}).get('credential_path', None),
     )
 
 
 def get_auth_config():
+    """Generate auth config"""
     return AuthConfig(
-        secret_key=_config.get('auth', {}).get('secret_key', '') or '',
+        secret_key=_CONFIG.get('auth', {}).get('secret_key', '') or '',
     )
 
 
 def get_web_config():
+    """Generate web config"""
     return WebConfig(
-        host=_config.get('web', {}).get('host', '0.0.0.0'),
-        port=int(_config.get('web', {}).get('port', 5005)),
-        endpoint=_config.get('web', {}).get('endpoint', '/').rstrip('/'),
-        debug=bool(_config.get('web', {}).get('debug', False)),
+        host=_CONFIG.get('web', {}).get('host', '0.0.0.0'),
+        port=int(_CONFIG.get('web', {}).get('port', 5005)),
+        endpoint=_CONFIG.get('web', {}).get('endpoint', '/').rstrip('/'),
+        debug=bool(_CONFIG.get('web', {}).get('debug', False)),
     )
 
 
 def get_demo_config():
+    """Generate web config"""
     return DemoConfig(
-        enabled=_config.get('demo', {}).get('enabled', False),
-        kind=_config.get('demo', {}).get('kind', None),
-        template_id=_config.get('demo', {}).get('template_id', None),
+        enabled=_CONFIG.get('demo', {}).get('enabled', False),
+        kind=_CONFIG.get('demo', {}).get('kind', None),
+        template_id=_CONFIG.get('demo', {}).get('template_id', None),
     )
 
 
 def get_cloud_service_config():
+    """Generate cloud config"""
     return CloudServiceConfig(
-        prefix=_config.get('cloud_service', {}).get('prefix', 'gs://sample'),
-        url_prefix=_config.get('cloud_service', {}).get('url_prefix', ''),
-        url_postfix=_config.get('cloud_service', {}).get('url_postfix', ''),
+        prefix=_CONFIG.get('cloud_service', {}).get('prefix', 'gs://sample'),
+        url_prefix=_CONFIG.get('cloud_service', {}).get('url_prefix', ''),
+        url_postfix=_CONFIG.get('cloud_service', {}).get('url_postfix', ''),
     )
 
 
 def get_iam_policies_config():
+    """Generate IAM policies config"""
     all_policies = [
         name for name, value in vars(plynx.constants.IAMPolicies).items() if not name.startswith('_')
     ]
-    default_policies = set(_config.get('default_policies', all_policies))
-    logging.info('Using default IAM policies for new users: {}'.format(default_policies))
+    default_policies = set(_CONFIG.get('default_policies', all_policies))
+    logging.info(f"Using default IAM policies for new users: {default_policies}")
     return IAMPoliciesConfig(
         default_policies=default_policies
     )
 
 
 def get_plugins():
+    """Generate kind config"""
     # resources
     kind_to_resource = {
         raw_resource['kind']: ResourceConfig(
@@ -131,17 +142,17 @@ def get_plugins():
             icon=raw_resource.get('icon', DEFAULT_ICON),
             color=raw_resource.get('color', DEFAULT_COLOR),
         )
-        for raw_resource in _config['plugins']['resources']
+        for raw_resource in _CONFIG.get('plugins')['resources']
     }
     # operations
     kind_to_operation = {}
-    raw_operations = _config['plugins']['operations']
+    raw_operations = _CONFIG.get('plugins')['operations']
     unique_operation_kinds = {raw_operation['kind'] for raw_operation in raw_operations}
     for raw_operation in raw_operations:
         operation_kind = raw_operation['kind']
         sub_operation_kinds = set(raw_operation.get('operations', []))
         if len(sub_operation_kinds - unique_operation_kinds) > 0:
-            raise Exception('Unknown operations: `{}`'.format(sub_operation_kinds - unique_operation_kinds))
+            raise Exception(f"Unknown operations: `{sub_operation_kinds - unique_operation_kinds}`")
         kind_to_operation[operation_kind] = OperationConfig(
             kind=operation_kind,
             title=raw_operation['title'],
@@ -155,7 +166,7 @@ def get_plugins():
 
     # hubs
     hubs = []
-    for raw_hub in _config['plugins']['hubs']:
+    for raw_hub in _CONFIG.get('plugins')['hubs']:
         hubs.append(HubConfig(
             kind=raw_hub['kind'],
             title=raw_hub['title'],
@@ -166,10 +177,10 @@ def get_plugins():
         ))
     # workflows
     workflows = []
-    for raw_workflow in _config['plugins']['workflows']:
+    for raw_workflow in _CONFIG.get('plugins')['workflows']:
         sub_operation_kinds = set(raw_workflow.get('operations', []))
         if len(sub_operation_kinds - unique_operation_kinds) > 0:
-            raise Exception('Unknown operations: `{}`'.format(sub_operation_kinds - unique_operation_kinds))
+            raise Exception(f"Unknown operations: `{sub_operation_kinds - unique_operation_kinds}`")
         workflows.append(WorkflowConfig(
             kind=raw_workflow['kind'],
             title=raw_workflow['title'],
@@ -199,6 +210,7 @@ def get_plugins():
 
 
 def get_config():
+    """Generate full config"""
     return Config(
         worker=get_worker_config(),
         db=get_db_config(),
@@ -218,11 +230,11 @@ def set_parameter(levels, value):
         levels  (list):     List of levels, i.e. ['mongodb', 'user']
         value   (value):    Value of the parameter
     """
-    sublevel = _config
+    sublevel = _CONFIG
     for level in levels[:-1]:
-        if level not in sublevel:
-            sublevel[level] = {}
-        sublevel = sublevel[level]
+        if level not in sublevel:   # pylint: disable=unsupported-membership-test
+            sublevel[level] = {}    # pylint: disable=unsupported-assignment-operation
+        sublevel = sublevel[level]  # pylint: disable=unsubscriptable-object
     sublevel[levels[-1]] = value
 
 

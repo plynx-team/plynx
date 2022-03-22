@@ -1,3 +1,5 @@
+"""Worker State DB Object and utils"""
+
 from plynx.constants import Collections
 from plynx.db.db_object import DBObject, DBObjectField
 from plynx.db.node import Node
@@ -40,6 +42,7 @@ class WorkerState(DBObject):
 
 
 def get_worker_states():
+    """Get all of the workers with latest states"""
     states = getattr(get_db_connector(), Collections.WORKER_STATE)\
            .find({}).sort('insertion_date', -1)
 

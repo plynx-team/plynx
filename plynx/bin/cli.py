@@ -1,3 +1,4 @@
+"""PLynx CLI parser"""
 from __future__ import print_function
 
 import argparse
@@ -21,37 +22,44 @@ _config = get_config()
 
 
 def api(args):
+    """Start web service."""
     # lazy load because web initializes too many variables
-    from plynx.web.common import run_api  # noqa: E402
+    from plynx.web.common import run_api  # noqa: E402  # pylint: disable=import-outside-toplevel
     set_logging_level(args.pop('verbose'))
     run_api(**args)
 
 
 def cache(args):
+    """Show cache options."""
     set_logging_level(args.pop('verbose'))
     run_cache(**args)
 
 
 def worker(args):
+    """Start worker service."""
     set_logging_level(args.pop('verbose'))
     run_worker(**args)
 
 
 def users(args):
+    """Show users options."""
     set_logging_level(args.pop('verbose'))
     run_users(**args)
 
 
-def version(args):
+def version(args):  # pylint: disable=unused-argument
+    """Print PLynx version"""
     print(__version__)
 
 
 def execute(args):
+    """Execute Operation."""
     set_logging_level(args.pop('verbose'))
     run_execute(**args)
 
 
-class CLIFactory(object):
+class CLIFactory:
+    """The class that generates PLynx CLI parser"""
     ARGS = {
         # Shared
         'verbose': Arg(
@@ -216,6 +224,7 @@ class CLIFactory(object):
 
     @classmethod
     def parse_global_config_parameters(cls, args):
+        """Parse parameters applied to all of the services."""
         remove = []
         for k, v in args.items():
             if cls.ARGS[k].levels:
@@ -228,6 +237,7 @@ class CLIFactory(object):
 
     @classmethod
     def get_parser(cls):
+        """Generate CLI parser"""
         parser = argparse.ArgumentParser()
         subparsers = parser.add_subparsers(
             help='sub-command help', dest='subcommand')
@@ -248,4 +258,5 @@ class CLIFactory(object):
 
 
 def get_parser():
+    """Generate CLI parser"""
     return CLIFactory.get_parser()

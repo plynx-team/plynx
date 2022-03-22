@@ -1,3 +1,5 @@
+"""Node collection manager and utils"""
+
 import logging
 from collections import OrderedDict
 
@@ -13,14 +15,15 @@ from plynx.utils.hub_node_registry import registry
 _PROPERTIES_TO_GET_FROM_SUBS = ['node_running_status', 'logs', 'outputs', 'cache_url']
 
 
-class NodeCollectionManager(object):
+class NodeCollectionManager:
     """NodeCollectionManager contains all the operations to work with Nodes in the database."""
 
     def __init__(self, collection):
-        super(NodeCollectionManager, self).__init__()
+        super().__init__()
 
         self.collection = collection
 
+    # pylint: disable=too-many-arguments
     def get_db_objects(
             self,
             status='',
@@ -59,7 +62,7 @@ class NodeCollectionManager(object):
             and_query['$text'] = {'$search': search_string}
         if 'original_node_id' in search_parameters:
             and_query['original_node_id'] = to_object_id(search_parameters['original_node_id'])
-        if len(and_query):
+        if len(and_query) > 0:
             aggregate_list.append({"$match": and_query})
 
         # Join with users
@@ -152,7 +155,7 @@ class NodeCollectionManager(object):
             assert target_props[0] == 'node_status', "Only node_status can be assigned"
             for sub_node_dict in sub_nodes_dicts:
                 if sub_node_dict.get(reference_node_id, "unknown") not in function_location_to_updated_node_dict:
-                    logging.warn(f"`{sub_node_dict.get(reference_node_id, 'unknown')}` is not found in the list of operation locations")
+                    logging.warning(f"`{sub_node_dict.get(reference_node_id, 'unknown')}` is not found in the list of operation locations")
                     continue
                 if sub_node_dict['code_hash'] != function_location_to_updated_node_dict[sub_node_dict.get(reference_node_id, "unknown")]["code_hash"]:
                     sub_node_dict['node_status'] = NodeStatus.DEPRECATED
@@ -223,9 +226,7 @@ class NodeCollectionManager(object):
         """
         assert self.collection == Collections.TEMPLATES
         sub_nodes = main_node.get_parameter_by_name('_nodes').value.value
-        node_ids = set(
-            [node.original_node_id for node in sub_nodes]
-        )
+        node_ids = {node.original_node_id for node in sub_nodes}
         db_nodes = self.get_db_objects_by_ids(node_ids)
         new_node_db_mapping = {}
 
@@ -234,9 +235,9 @@ class NodeCollectionManager(object):
             new_db_node = db_node
             if original_node_id not in new_node_db_mapping:
                 while new_db_node['node_status'] != NodeStatus.READY and 'successor_node_id' in new_db_node and new_db_node['successor_node_id']:
-                    n = self.get_db_node(new_db_node['successor_node_id'])
-                    if n:
-                        new_db_node = n
+                    tmp_node = self.get_db_node(new_db_node['successor_node_id'])
+                    if tmp_node:
+                        new_db_node = tmp_node
                     else:
                         break
                 new_node_db_mapping[original_node_id] = new_db_node
@@ -255,6 +256,7 @@ class NodeCollectionManager(object):
         return upgraded_nodes_count
 
     def pick_node(self, kinds):
+        """Get node and set status to RUNNING in atomic way"""
         node = get_db_connector()[self.collection].find_one_and_update(
             {
                 '$and': [

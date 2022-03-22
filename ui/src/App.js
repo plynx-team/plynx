@@ -12,11 +12,9 @@ import { COLLECTIONS, VIRTUAL_COLLECTIONS, SPECIAL_USERS } from './constants';
 
 import Editor from './components/Editor';
 import UserView from './components/UserView';
-// import Group from './Group';
 import OperationList from './components/NodeList/operationList';
 import WorkflowList from './components/NodeList/workflowList';
 import RunList from './components/NodeList/runList';
-// import GroupList from './NodeList/groupList';
 
 
 import './App.css';
@@ -82,12 +80,10 @@ class App extends Component {
                     <Route exact path={`/${VIRTUAL_COLLECTIONS.OPERATIONS}`} component={OperationList}/>
                     <Route exact path={`/${VIRTUAL_COLLECTIONS.WORKFLOWS}`} component={WorkflowList}/>
                     <Route exact path={`/${VIRTUAL_COLLECTIONS.RUNS}`} render={(props) => <RunList {...props} showControlls />}/>
-                    {/* <Route exact path={`/${VIRTUAL_COLLECTIONS.GROUPS}`} render={(props) => <GroupList {...props} showControlls />}/>*/}
                     <Route exact path={`/${COLLECTIONS.USERS}`} render={(props) => <RunList {...props} showControlls />}/>
 
                     <Route path={`/${COLLECTIONS.TEMPLATES}/:node_id`} render={(props) => <Editor {...props} collection={COLLECTIONS.TEMPLATES} />} />
                     <Route path={`/${COLLECTIONS.RUNS}/:node_id`} render={(props) => <Editor {...props} collection={COLLECTIONS.RUNS} />} />
-                    {/* <Route path={`/${COLLECTIONS.GROUPS}/:group_id`} render={(props) => <Group {...props} collection={COLLECTIONS.GROUPS} />} />*/}
                     <Route path={`/${COLLECTIONS.USERS}/:username`} render={(props) => <UserView {...props} />} />
 
                     <Route path="/permission_denied" render={(props) => <ErrorPage {...props} errorCode={403} />} />

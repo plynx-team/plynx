@@ -1,3 +1,5 @@
+"""A standard executor for DAGs."""
+
 import logging
 import time
 from collections import defaultdict
@@ -34,14 +36,17 @@ class DAG(plynx.base.executor.BaseExecutor):
         node_dict (dict)
 
     """
+    # pylint: disable=too-many-instance-attributes
+
     IS_GRAPH = True
     GRAPH_ITERATION_SLEEP = 1
 
     def __init__(self, node_dict):
-        super(DAG, self).__init__(node_dict)
+        # pylint: disable=too-many-branches
+        super().__init__(node_dict)
 
         self.subnodes = None
-        # TODO make a function to look for parameter
+        # TODO: make a function to look for parameter
         for parameter in self.node.parameters:
             if parameter.name == '_nodes':
                 self.subnodes = parameter.value.value
@@ -53,8 +58,8 @@ class DAG(plynx.base.executor.BaseExecutor):
         }
 
         # number of dependencies to ids
-        self.dependency_index_to_node_ids = defaultdict(lambda: set())
-        self.node_id_to_dependents = defaultdict(lambda: set())
+        self.dependency_index_to_node_ids = defaultdict(set)
+        self.node_id_to_dependents = defaultdict(set)
         self.node_id_to_dependency_index = defaultdict(lambda: 0)
         self.uncompleted_nodes_count = 0
 
@@ -65,12 +70,12 @@ class DAG(plynx.base.executor.BaseExecutor):
             if node_id == SpecialNodeId.INPUT:
                 updated_resources_count = 0
                 for output in node.outputs:
-                    for input in self.node.inputs:
+                    for input in self.node.inputs:  # pylint: disable=redefined-builtin
                         if input.name == output.name:
                             updated_resources_count += 1
                             output.values = input.values
                 if updated_resources_count != len(self.node.inputs):
-                    raise Exception('Used {} inputs for {} outputs'.format(updated_resources_count, len(self.node.inputs)))
+                    raise Exception(f"Used {updated_resources_count} inputs for {len(self.node.inputs)} outputs")
 
             # ignore nodes in finished statuses
             if NodeRunningStatus.is_finished(node.node_running_status) and node_id != SpecialNodeId.OUTPUT:
@@ -94,6 +99,7 @@ class DAG(plynx.base.executor.BaseExecutor):
             self._node_running_status = NodeRunningStatus.SUCCESS
 
     def finished(self):
+        """Return True or False depending on the running status of the DAG."""
         if self._node_running_status in _ACTIVE_WAITING_TO_STOP:
             # wait for the rest of the running jobs to finish
             # check running status of each of the nodes
@@ -125,7 +131,7 @@ class DAG(plynx.base.executor.BaseExecutor):
 
         cached_nodes = []
         for node_id in self.dependency_index_to_node_ids[0]:
-            """Get the node and init its inputs, i.e. filling its resource_ids"""
+            # Get the node and init its inputs, i.e. filling its resource_ids
             orig_node = self.node_id_to_node[node_id]
             for node_input in orig_node.inputs:
                 for input_reference in node_input.input_references:
@@ -144,14 +150,11 @@ class DAG(plynx.base.executor.BaseExecutor):
                         node.node_running_status = NodeRunningStatus.RESTORED
                         node.outputs = cache.outputs
                         node.logs = cache.logs
-                        node.cache_url = '/runs/{}?nid={}'.format(
-                            str(cache.run_id),
-                            str(cache.node_id),
-                        )
+                        node.cache_url = f"/runs/{cache.run_id}?nid={cache.node_id}"
                         cached_nodes.append(node)
                         continue
-                except Exception as err:
-                    logging.exception("Unable to update cache: `{}`".format(err))
+                except Exception as err:    # pylint: disable=broad-except
+                    logging.exception(f"Unable to update cache: `{err}`")
             res.append(node)
         del self.dependency_index_to_node_ids[0]
 
@@ -163,6 +166,9 @@ class DAG(plynx.base.executor.BaseExecutor):
         return res
 
     def update_node(self, node):
+        """
+        Update node_running_status and outputs if the state has changed.
+        """
         dest_node = self.node_id_to_node[node._id]
         if node.node_running_status == NodeRunningStatus.SUCCESS \
                 and dest_node.node_running_status != node.node_running_status \
@@ -183,7 +189,7 @@ class DAG(plynx.base.executor.BaseExecutor):
         node = self.node_id_to_node[node_id]
         node.node_running_status = node_running_status
 
-        logging.info("Node running status {} {}".format(node_running_status, node.title))
+        logging.info(f"Node running status {node_running_status} {node.title}")
 
         if node_running_status == NodeRunningStatus.FAILED:
             # TODO optional cancel based on parameter
@@ -252,7 +258,9 @@ class DAG(plynx.base.executor.BaseExecutor):
 
         self.monitoring_node_ids.add(node._id)
 
-    def run(self):
+    def run(self, preview=False):
+        if preview:
+            raise Exception("`preview` is not supported for the DAG")
         while not self.finished():
             new_jobs = self.pop_jobs()
             if len(new_jobs) == 0:
@@ -269,13 +277,13 @@ class DAG(plynx.base.executor.BaseExecutor):
                     continue
                 updated_resources_count = 0
                 for output in self.node.outputs:
-                    for input in node.inputs:
+                    for input in node.inputs:   # pylint: disable=redefined-builtin
                         if input.name == output.name:
                             output.values = input.values
                             updated_resources_count += 1
                             break
                 if updated_resources_count != len(node.inputs):
-                    raise Exception('Used {} inputs for {} outputs'.format(updated_resources_count, len(node.inputs)))
+                    raise Exception(f"Used {updated_resources_count} inputs for {node.inputs} outputs")
         return self._node_running_status
 
     def kill(self):

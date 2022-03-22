@@ -1,5 +1,8 @@
+"""Standard PLynx collections in DB"""
+
+
 class Collections:
-    GROUPS = 'groups'
+    """All basic collections used in DB"""
     NODE_CACHE = 'node_cache'
     RUN_CANCELLATIONS = 'run_cancellations'
     RUNS = 'runs'

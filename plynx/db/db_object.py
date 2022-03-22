@@ -13,24 +13,24 @@ _registry = {}
 
 
 def register_class(target_class):
+    """Register inherited from DB Object class"""
     _registry[target_class.__name__] = target_class
 
 
 def get_class(name):
+    """Get DB Object inherited class object by its name from the registry"""
     return _registry[name]
 
 
 class DBObjectNotFound(Exception):
     """Internal Exception."""
-    pass
 
 
 class ClassNotSavable(Exception):
     """Internal Exception."""
-    pass
 
 
-class _DBObject(object):
+class _DBObject:
     """DB Object.
     Abstraction of an object in the DB.
 
@@ -48,6 +48,7 @@ class _DBObject(object):
         self._dirty = True
 
     def is_dirty(self):
+        """Check if DB Object is synced with the DB"""
         return self._dirty
 
     def __setattr__(self, key, value):
@@ -80,12 +81,7 @@ class _DBObject(object):
         collection = collection or cls.DB_COLLECTION
         obj_dict = getattr(get_db_connector(), collection).find_one({'_id': ObjectId(_id)})
         if not obj_dict:
-            raise DBObjectNotFound(
-                'Object `{_id}` not found in `{collection}` collection'.format(
-                    _id=_id,
-                    collection=collection,
-                )
-            )
+            raise DBObjectNotFound(f"Object `{_id}` not found in `{collection}` collection")
         return cls.from_dict(obj_dict)
 
     def save(self, force=False, collection=None):
@@ -93,9 +89,7 @@ class _DBObject(object):
         collection = collection or self.__class__.DB_COLLECTION
         if not collection:
             raise ClassNotSavable(
-                "Class `{}` is not savable.".format(
-                    self.__class__.__name__
-                )
+                f"Class `{self.__class__.__name__}` is not savable."
             )
         if not self.is_dirty() and not force:
             return True
@@ -155,24 +149,27 @@ class _DBObject(object):
         return self.__class__(self.to_dict())
 
     def __str__(self):
-        return '{cls_name}({value})'.format(
-            cls_name=self.__class__.__name__,
-            value=self.__dict__.get('_id', str(self.to_dict()))
-        )
+        id_val = self.__dict__.get('_id', str(self.to_dict()))
+        return f"{self.__class__.__name__}({id_val})"
 
     def __repr__(self):
-        return '{cls_name}({value})'.format(
-            cls_name=self.__class__.__name__,
-            value=str(self.to_dict()),
-        )
+        value = str(self.to_dict())
+        return f"{self.__class__.__name__}({value})"
 
 
 class Meta(type):
-    def __new__(meta, name, bases, class_dict):
+    """Class Registry handle"""
+    def __new__(meta, name, bases, class_dict):     # pylint: disable=bad-mcs-classmethod-argument
         cls = type.__new__(meta, name, bases, class_dict)
         register_class(cls)
         return cls
 
 
 class DBObject(_DBObject, metaclass=Meta):
-    pass
+    """
+    DB Object.
+    Abstraction of an object in the DB.
+
+    Args:
+        obj_dict    (dict, None):   Representation of the object. If None, an object with default fields will be created.
+    """

@@ -1,3 +1,5 @@
+"""Main PLynx worker service and utils"""
+
 import logging
 import os
 import socket
@@ -18,7 +20,7 @@ from plynx.utils.db_connector import check_connection
 from plynx.utils.file_handler import upload_file_stream
 
 
-class TickThread(object):
+class TickThread:
     """
     This class is a Context Manager wrapper.
     It calls method `tick()` of the executor with a given interval
@@ -38,10 +40,11 @@ class TickThread(object):
         self._tick_thread.start()
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, type_cls, value, traceback_val):
         self._stop_event.set()
 
     def call_executor_tick(self):
+        """Run timed ticks"""
         while not self._stop_event.is_set():
             self._stop_event.wait(timeout=TickThread.TICK_TIMEOUT)
             if self.executor.is_updated():
@@ -52,7 +55,7 @@ class TickThread(object):
                     self.executor.node.save(collection=Collections.RUNS)
 
 
-class Worker(object):
+class Worker:
     """Worker main class.
 
     Args:
@@ -76,6 +79,7 @@ class Worker(object):
         * Update Graph's statuses.
         * Track worker status and last response.
     """
+    # pylint: disable=too-many-instance-attributes
 
     # Define sync with database timeout
     SDB_STATUS_UPDATE_TIMEOUT = 1
@@ -111,6 +115,7 @@ class Worker(object):
         self._stop_event.wait()
 
     def execute_job(self, executor):
+        """Run a single job in the executor"""
         try:
             try:
                 status = NodeRunningStatus.FAILED
@@ -118,29 +123,25 @@ class Worker(object):
                 executor.init_workdir()
                 with TickThread(executor):
                     status = executor.run()
-            except Exception:
+            except Exception:   # pylint: disable=broad-except
                 try:
                     f = six.BytesIO()
                     f.write(traceback.format_exc().encode())
                     executor.node.get_log_by_name('worker').resource_id = upload_file_stream(f)
                     logging.error(traceback.format_exc())
-                except Exception:
+                except Exception:   # pylint: disable=broad-except
                     # This case of `except` has happened before due to I/O failure
                     logging.critical(traceback.format_exc())
                     raise
             finally:
                 executor.clean_up()
 
-            logging.info('Node {node_id} `{title}` finished with status `{status}`'.format(
-                node_id=executor.node._id,
-                title=executor.node.title,
-                status=status,
-                ))
+            logging.info(f"Node {executor.node._id} `{executor.node.title}` finished with status `{status}`")
             executor.node.node_running_status = status
             if executor.node._id in self._killed_run_ids:
                 self._killed_run_ids.remove(executor.node._id)
-        except Exception as e:
-            logging.warning('Execution failed: {}'.format(e))
+        except Exception as e:  # pylint: disable=broad-except
+            logging.warning(f"Execution failed: {e}")
             executor.node.node_running_status = NodeRunningStatus.FAILED
         finally:
             with executor._lock:
@@ -154,7 +155,7 @@ class Worker(object):
             while not self._stop_event.is_set():
                 node = self.node_collection_manager.pick_node(kinds=self.kinds)
                 if node:
-                    logging.info('New node found: {} {} {}'.format(node['_id'], node['node_running_status'], node['title']))
+                    logging.info(f"New node found: {node['_id']} {node['node_running_status']} {node['title']}")
                     executor = plynx.utils.executor.materialize_executor(node)
                     executor._lock = threading.Lock()
 
@@ -169,7 +170,7 @@ class Worker(object):
             self.stop()
             raise
         finally:
-            logging.info("Exit {}".format(self._run_db_status_update.__name__))
+            logging.info(f"Exit {self._run_db_status_update.__name__}")
 
     def _run_worker_state_update(self):
         """Syncing with the database."""
@@ -198,7 +199,7 @@ class Worker(object):
             self.stop()
             raise
         finally:
-            logging.info("Exit {}".format(self._run_worker_state_update.__name__))
+            logging.info(f"Exit {self._run_worker_state_update.__name__}")
 
     def stop(self):
         """Stop worker."""

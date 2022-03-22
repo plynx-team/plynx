@@ -1,4 +1,8 @@
+"""Parameter enums"""
+
+
 class ParameterTypes:
+    """Standard parameter types"""
     STR = 'str'
     INT = 'int'
     FLOAT = 'float'

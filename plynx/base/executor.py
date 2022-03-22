@@ -1,3 +1,5 @@
+"""Templates for PLynx Executors and utils."""
+
 import os
 import shutil
 from abc import abstractmethod
@@ -10,6 +12,7 @@ TMP_DIR = '/tmp/plx'
 
 
 class BaseExecutor:
+    """Base Executor class"""
     IS_GRAPH = False
 
     def __init__(self, node):
@@ -17,7 +20,7 @@ class BaseExecutor:
         self.workdir = TMP_DIR
 
     @abstractmethod
-    def run(self):
+    def run(self, preview=False):
         """Main execution function.
 
         - Workdir has been initialized.
@@ -28,13 +31,6 @@ class BaseExecutor:
         Returns:
             enum: plynx.constants.NodeRunningStatus
         """
-        pass
-
-    @abstractmethod
-    def status(self):
-        """No currently used.
-        """
-        pass
 
     @abstractmethod
     def kill(self):
@@ -42,8 +38,8 @@ class BaseExecutor:
 
         The reason can be the fact it was working too long or parent executor canceled it.
         """
-        pass
 
+    # pylint: disable=no-self-use
     def is_updated(self):
         """Function that is regularly called by a Worker.
 
@@ -56,6 +52,7 @@ class BaseExecutor:
 
     @classmethod
     def get_default_node(cls, is_workflow):
+        """Generate a new default Node for this executor"""
         node = Node()
         if cls.IS_GRAPH:
             nodes_parameter = Parameter.from_dict({
@@ -94,10 +91,12 @@ class BaseExecutor:
         return node
 
     def init_workdir(self):
+        """Make tmp dir if it does not exist"""
         if not os.path.exists(self.workdir):
             os.makedirs(self.workdir)
 
     def clean_up(self):
+        """Remove tmp dir"""
         if os.path.exists(self.workdir):
             shutil.rmtree(self.workdir, ignore_errors=True)
 
@@ -118,7 +117,7 @@ class BaseExecutor:
 
         # Meaning the node is in the graph. Otherwise souldn't be in validation step
         if self.node.node_status != NodeStatus.CREATED:
-            for input in self.node.inputs:
+            for input in self.node.inputs:  # pylint: disable=redefined-builtin
                 min_count = input.min_count if input.is_array else 1
                 if len(input.input_references) < min_count:
                     violations.append(
@@ -148,18 +147,23 @@ class BaseExecutor:
 
 
 class Dummy(BaseExecutor):
+    """Dummy Executor. Used for static Operations"""
     def __init__(self, node=None):
-        super(Dummy, self).__init__(node)
+        super().__init__(node)
 
-    def run(self):
+    def run(self, preview=False):
+        """Not Implemented"""
         raise NotImplementedError()
 
     def status(self):
+        """Not Implemented"""
         raise NotImplementedError()
 
     def kill(self):
+        """Not Implemented"""
         raise NotImplementedError()
 
     @classmethod
     def get_default_node(cls, is_workflow):
+        """Not Implemented"""
         raise NotImplementedError()

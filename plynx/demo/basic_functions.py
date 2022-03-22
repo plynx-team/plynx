@@ -1,3 +1,4 @@
+"""PLynx Operations defined as python code. Using slighty more advanced functions than printing variables."""
 import math
 import random
 import sys
@@ -12,6 +13,7 @@ import plynx.node
     title="Make integer"
 )
 def make_int(value):
+    """Pass Integer value as output."""
     return {
         "x": value,
     }
@@ -26,6 +28,7 @@ def make_int(value):
     description="x * coef + y * pi",
 )
 def example_func(x, y, coef):
+    """Math expression"""
     print(f"x: {type(x)}")
     print(f"y: {type(y)}")
     print(f"coef {type(coef)}")
@@ -41,6 +44,7 @@ def example_func(x, y, coef):
     description="Sleep for timeout sec and add 1.",
 )
 def sleep(x, timeout):
+    """Sleep for timeout sec and add 1."""
     print(f"Sleeping for {timeout} sec")
     time.sleep(timeout)
     return {
@@ -55,10 +59,8 @@ def sleep(x, timeout):
     description="Always raise exception",
 )
 def error(x):
+    """Always raise exception"""
     raise Exception("Expected exception")
-    return {
-        "x": sum(x) + 1
-    }
 
 
 @plynx.node.input(name='x', var_type=int, is_array=True, min_count=0)
@@ -68,6 +70,7 @@ def error(x):
     description="Add 1 and keep the previous value",
 )
 class Statefull:
+    """Add 1 and keep the previous value"""
     def __init__(self):
         self.accum = 0
         self.random = random.random()

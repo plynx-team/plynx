@@ -1,3 +1,5 @@
+"""Cache Manager and utils."""
+
 import logging
 
 from plynx.constants import NodeRunningStatus
@@ -5,7 +7,7 @@ from plynx.db.node_cache import NodeCache
 from plynx.utils.db_connector import get_db_connector
 
 
-class NodeCacheManager(object):
+class NodeCacheManager:
     """The Node cache interface.
 
     The cache is defined by Node's
@@ -30,7 +32,7 @@ class NodeCacheManager(object):
             'removed': {'$ne': True}
         }).sort('insertion_date', -1).limit(1)
         caches = list(db_node_cache)
-        if len(caches):
+        if len(caches) > 0:
             return NodeCache.from_dict(caches[0])
         else:
             return None
@@ -51,8 +53,8 @@ class NodeCacheManager(object):
         node_cache = NodeCache.instantiate(node=node, run_id=run_id)
         try:
             node_cache.save()
-        except Exception as e:
-            logging.error('Could not save cache: `{}`'.format(e))
+        except Exception as e:  # pylint: disable=broad-except
+            logging.error(f"Could not save cache: `{e}`")
             return False
         return True
 

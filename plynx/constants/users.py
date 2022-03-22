@@ -1,4 +1,8 @@
+"""User based enums"""
+
+
 class IAMPolicies:
+    """Standard role policies"""
     CAN_VIEW_OTHERS_OPERATIONS = 'CAN_VIEW_OTHERS_OPERATIONS'
     CAN_VIEW_OTHERS_WORKFLOWS = 'CAN_VIEW_OTHERS_WORKFLOWS'
     CAN_VIEW_OPERATIONS = 'CAN_VIEW_OPERATIONS'
@@ -15,15 +19,18 @@ class IAMPolicies:
 
 
 class OperationViewSetting:
+    """Display settings in the graph builder"""
     KIND_AND_TITLE = 'KIND_AND_TITLE'
     TITLE_AND_DESCRIPTION = 'TITLE_AND_DESCRIPTION'
 
 
 class UserPostAction:
+    """HTTP POST action options"""
     MODIFY = 'MODIFY'
 
 
 class RegisterUserExceptionCode:
+    """Validation error codes"""
     EMPTY_USERNAME = 'EMPTY_USERNAME'
     EMPTY_PASSWORD = 'EMPTY_PASSWORD'
     USERNAME_ALREADY_EXISTS = 'USERNAME_ALREADY_EXISTS'

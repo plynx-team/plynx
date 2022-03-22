@@ -1,3 +1,4 @@
+"""PLynx Operations defined as python code."""
 import plynx.node
 
 
@@ -7,6 +8,7 @@ import plynx.node
     title="Get name",
 )
 def get_name(your_name):
+    """Pass `your_name` parameter as output."""
     return {
         "name": your_name,
     }
@@ -18,6 +20,7 @@ def get_name(your_name):
     title="Print message",
 )
 def print_message(name):
+    """Print greeting message."""
     res = f"Hello {name}!"
     print(res)
     return {

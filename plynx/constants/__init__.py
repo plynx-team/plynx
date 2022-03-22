@@ -1,3 +1,4 @@
+"""Main PLynx constants defined in this module"""
 # flake8: noqa
 from plynx.constants.collections import Collections
 from plynx.constants.node_enums import (NodeClonePolicy, NodeOrigin, NodePostAction, NodePostStatus, NodeRunningStatus, NodeStatus, NodeVirtualCollection,

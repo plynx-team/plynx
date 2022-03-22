@@ -1,3 +1,5 @@
+"""Standard PLynx types"""
+
 ANY = "any"
 
 STR_TO_CLASS = {
@@ -15,5 +17,6 @@ CLASS_TO_STR = {
 }
 
 
-def type_to_str(tp):
-    return CLASS_TO_STR[tp]
+def type_to_str(type_cls):
+    """Standard type to PLynx type"""
+    return CLASS_TO_STR[type_cls]

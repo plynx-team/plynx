@@ -1,8 +1,11 @@
+"""Test DB object"""
+
 from plynx.constants import ParameterTypes
 from plynx.db.node import Input, Node, Output, Parameter
 
 
 def get_test_node():
+    """Create test node"""
     node = Node()
     node.title = 'Command 1x1'
     node.description = 'Any command with 1 arg'
@@ -36,6 +39,7 @@ def get_test_node():
 
 
 def compare_dictionaries(dict1, dict2):
+    """Deep comparison of two dicts"""
     if dict1 is None or dict2 is None:
         return True
 
@@ -58,6 +62,7 @@ def compare_dictionaries(dict1, dict2):
 
 
 def test_serialization():
+    """Test serialization"""
     node1 = get_test_node()
     node1_dict = node1.to_dict()
     node2 = Node.from_dict(node1_dict)

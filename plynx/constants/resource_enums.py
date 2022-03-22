@@ -1,4 +1,8 @@
+"""Resource enums"""
+
+
 class NodeResources:
+    """Internal node elements"""
     INPUT = 'inputs'
     OUTPUT = 'outputs'
     CLOUD_INPUT = 'cloud_inputs'

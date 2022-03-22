@@ -1,5 +1,8 @@
+"""Node Cache and utils"""
+
 import hashlib
 from builtins import str
+from typing import List
 
 from plynx.constants import Collections
 from plynx.db.db_object import DBObject, DBObjectField
@@ -12,6 +15,12 @@ demo_config = get_demo_config()
 
 class NodeCache(DBObject):
     """Basic Node Cache with db interface."""
+
+    _id: ObjectId
+    node_id: ObjectId
+    run_id: ObjectId
+    outputs: List[Output]
+    logs: List[Output]
 
     FIELDS = {
         '_id': DBObjectField(
@@ -86,19 +95,13 @@ class NodeCache(DBObject):
 
         sorted_inputs = sorted(inputs, key=lambda x: x.name)
         inputs_hash = ','.join([
-            '{}:{}'.format(
-                input.name,
-                ','.join(sorted(input.values))
-            )
+            f"{input.name}:{','.join(sorted(input.values))}"
             for input in sorted_inputs
         ])
 
         sorted_parameters = sorted(parameters, key=lambda x: x.name)
         parameters_hash = ','.join([
-            '{}:{}'.format(
-                parameter.name,
-                parameter.value
-            )
+            f"{parameter.name}:{parameter.value}"
             for parameter in sorted_parameters if parameter.name not in NodeCache.IGNORED_PARAMETERS
         ])
 
@@ -111,7 +114,7 @@ class NodeCache(DBObject):
         ).hexdigest()
 
     def __str__(self):
-        return 'NodeCache(_id="{}")'.format(self._id)
+        return f'NodeCache(_id="{self._id}")'
 
     def __repr__(self):
-        return 'NodeCache({})'.format(str(self.to_dict()))
+        return f'NodeCache({str(self.to_dict())})'

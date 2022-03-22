@@ -1,3 +1,6 @@
+"""
+Service endpoints.
+"""
 # flake8: noqa
 from gevent.pywsgi import WSGIServer
 

@@ -1,3 +1,5 @@
+"""Cancelation DB Object and utils"""
+
 from plynx.constants import Collections
 from plynx.db.db_object import DBObject, DBObjectField
 from plynx.utils.common import ObjectId
@@ -23,8 +25,10 @@ class RunCancellation(DBObject):
     DB_COLLECTION = Collections.RUN_CANCELLATIONS
 
 
-class RunCancellationManager(object):
+class RunCancellationManager:
     """RunCancellationManager contains basic operations related to `runs_cancellations` collection."""
+
+    run_id: ObjectId
 
     @staticmethod
     def cancel_run(run_id):
@@ -33,7 +37,7 @@ class RunCancellationManager(object):
             run_id    (ObjectId, str) RunID
         """
         run_cancellation = RunCancellation()
-        run_cancellation.run_id = ObjectId(run_id)
+        run_cancellation.run_id = ObjectId(run_id)  # pylint: disable=attribute-defined-outside-init
         run_cancellation.save()
         return True
 

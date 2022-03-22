@@ -1,8 +1,10 @@
+"""Validation Error DB Object and utils"""
+
 from past.builtins import basestring
 
 
 # TODO use DBObject. The problem is that it will depend on itself recursively
-class ValidationError(object):
+class ValidationError:
     """Basic Validation Error class."""
 
     def __init__(self, target, object_id, validation_code, children=None):
@@ -17,6 +19,7 @@ class ValidationError(object):
         self.children = children
 
     def to_dict(self):
+        """Create dict version of the object"""
         return {
             'target': self.target,
             'object_id': self.object_id,
@@ -25,17 +28,13 @@ class ValidationError(object):
         }
 
     def __str__(self):
-        return 'ValidationError({}, {}, {}, {})'.format(
-            self.target,
-            self.object_id,
-            self.validation_code,
-            self.children
-        )
+        return f"ValidationError({self.target}, {self.object_id}, {self.validation_code}, {self.children})"
 
     def __repr__(self):
-        return 'ValidationError({})'.format(str(self.to_dict()))
+        return f"ValidationError({str(self.to_dict())})"
 
+    # pylint: disable=no-member
     def __getattr__(self, name):
         if name.startswith('__') and name.endswith('__'):
-            return super(ValidationError, self).__getattr__(name)
-        raise Exception("Can't get attribute '{}'".format(name))
+            return super(ValidationError, self).__getattr__(name)   # pylint: disable=super-with-arguments
+        raise Exception(f"Can't get attribute '{name}'")

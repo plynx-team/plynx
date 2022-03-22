@@ -1,3 +1,6 @@
+"""User DB Object and utils"""
+
+# TODO: replace itsdangerous with more moder solution
 from itsdangerous import BadSignature
 from itsdangerous import JSONWebSignatureSerializer as Serializer
 from itsdangerous import SignatureExpired
@@ -16,6 +19,8 @@ DEFAULT_POLICIES = get_iam_policies_config().default_policies
 class UserSettings(DBObject):
     """User Settings structure."""
 
+    display_name: str
+
     FIELDS = {
         # settings
         'node_view_mode': DBObjectField(
@@ -31,10 +36,10 @@ class UserSettings(DBObject):
     }
 
     def __str__(self):
-        return 'UserSettings(name="{}")'.format(self.name)
+        return f'UserSettings(name="{self.display_name}")'
 
     def __repr__(self):
-        return 'UserSettings({})'.format(str(self.to_dict()))
+        return f'UserSettings({str(self.to_dict())})'
 
 
 class User(DBObject):
@@ -87,7 +92,7 @@ class User(DBObject):
         Args:
             password    (str)   Real password string
         """
-        self.password_hash = pwd_context.encrypt(password)
+        self.password_hash = pwd_context.encrypt(password)  # pylint: disable=attribute-defined-outside-init
 
     def verify_password(self, password):
         """Verify password.
@@ -109,8 +114,8 @@ class User(DBObject):
         Return:
             (str)   Secured token
         """
-        s = TimedSerializer(get_auth_config().secret_key, expires_in=expiration)
-        return s.dumps({'username': self.username, 'type': 'access'})
+        token = TimedSerializer(get_auth_config().secret_key, expires_in=expiration)
+        return token.dumps({'username': self.username, 'type': 'access'})
 
     def generate_refresh_token(self):
         """Generate refresh token.
@@ -118,22 +123,25 @@ class User(DBObject):
         Return:
             (str)   Secured token
         """
-        s = Serializer(get_auth_config().secret_key)
-        return s.dumps({'username': self.username, 'type': 'refresh'})
+        token = Serializer(get_auth_config().secret_key)
+        return token.dumps({'username': self.username, 'type': 'refresh'})
 
     def check_role(self, role):
+        """Check if the user has a given role"""
         return role in self.policies
 
     def __str__(self):
-        return 'User(_id="{}", username={})'.format(self._id, self.username)
+        return f'User(_id="{self._id}", username={self.username})'
 
     def __repr__(self):
-        return 'User({})'.format(self.to_dict())
+        return f'User({self.to_dict()})'
 
     def __getattr__(self, name):
-        raise Exception("Can't get attribute '{}'".format(name))
+        raise Exception(f"Can't get attribute '{name}'")
 
+    @staticmethod
     def find_users():
+        """Get all the users"""
         return getattr(get_db_connector(), User.DB_COLLECTION).find({})
 
     @staticmethod
@@ -146,22 +154,22 @@ class User(DBObject):
         Return:
             (User)   User object or None
         """
-        s = TimedSerializer(get_auth_config().secret_key)
+        token = TimedSerializer(get_auth_config().secret_key)
         try:
-            data = s.loads(token)
+            data = token.loads(token)
             if data['type'] != 'access':
                 raise Exception('Not access token')
         except (BadSignature, SignatureExpired):
             # access token is not valid or expired
-            s = Serializer(get_auth_config().secret_key)
+            token = Serializer(get_auth_config().secret_key)
             try:
-                data = s.loads(token)
+                data = token.loads(token)
                 if data['type'] != 'refresh':
-                    raise Exception('Not refresh token')
-            except Exception:
+                    raise Exception('No refresh token')     # pylint: disable=raise-missing-from
+            except Exception:   # pylint: disable=broad-except
                 return None
-        except Exception as e:
-            print("Unexpected exception: {}".format(e))
+        except Exception as e:  # pylint: disable=broad-except
+            print(f"Unexpected exception: {e}")
             return None
         user = UserCollectionManager.find_user_by_name(data['username'])
         if not user.active:
@@ -169,7 +177,8 @@ class User(DBObject):
         return user
 
 
-class UserCollectionManager(object):
+class UserCollectionManager:
+    """User Manger"""
     @staticmethod
     def find_user_by_name(username):
         """Find User.
@@ -208,4 +217,5 @@ class UserCollectionManager(object):
             per_page=20,
             offset=0,
             ):
+        """Get a list of users"""
         raise NotImplementedError()

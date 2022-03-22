@@ -1,3 +1,5 @@
+"""Templates for PLynx Hubs and utils."""
+
 from abc import abstractmethod
 from collections import namedtuple
 
@@ -16,10 +18,11 @@ Query = namedtuple(
     )
 
 
-class BaseHub(object):
+class BaseHub:
+    """Base Hub class"""
     def __init__(self):
         pass
 
     @abstractmethod
     def search(self, query):
-        pass
+        """Search for items given a query"""

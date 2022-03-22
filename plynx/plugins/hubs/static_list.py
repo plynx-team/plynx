@@ -1,3 +1,5 @@
+"""Plynx standard Hub based on the fixed list of Operations"""
+
 import copy
 import pydoc
 
@@ -35,8 +37,9 @@ def _recursive_filter(search_string, list_of_nodes):
 
 
 class StaticListHub(hub.BaseHub):
+    """Plynx standard Hub based on the fixed list of Operations"""
     def __init__(self, list_module):
-        super(StaticListHub, self).__init__()
+        super().__init__()
 
         collection = pydoc.locate(list_module)
 

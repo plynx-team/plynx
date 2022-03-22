@@ -1,5 +1,8 @@
+"""Node DB Object and utils"""
+
 from collections import defaultdict, deque
 
+from typing import Any, List
 from past.builtins import basestring
 
 from plynx.constants import Collections, NodeClonePolicy, NodeOrigin, NodeRunningStatus, NodeStatus, ParameterTypes, SpecialNodeId
@@ -8,6 +11,7 @@ from plynx.plugins.resources.common import FILE_KIND
 from plynx.utils.common import ObjectId
 
 
+# pylint: disable=too-many-branches
 def _clone_update_in_place(node, node_clone_policy):
     if node.node_running_status == NodeRunningStatus.SPECIAL:
         for output in node.outputs:
@@ -27,7 +31,7 @@ def _clone_update_in_place(node, node_clone_policy):
         node.parent_node_id = node.original_node_id
         node.original_node_id = None
     else:
-        raise Exception('Unknown clone policy `{}`'.format(node_clone_policy))
+        raise Exception(f"Unknown clone policy `{node_clone_policy}`")
 
     if node.node_running_status == NodeRunningStatus.STATIC:
         return node
@@ -43,7 +47,7 @@ def _clone_update_in_place(node, node_clone_policy):
             object_id_mapping[prev_id] = sub_node._id
 
         for sub_node in sub_nodes.value.value:
-            for input in sub_node.inputs:
+            for input in sub_node.inputs:   # pylint: disable=redefined-builtin
                 input.values = []
                 for input_reference in input.input_references:
                     input_reference.node_id = object_id_mapping[ObjectId(input_reference.node_id)]
@@ -102,11 +106,13 @@ class Output(DBObject):
 
     FIELDS = RESOURCE_FIELDS
 
+    name: str
+
     def __str__(self):
-        return 'Output(name="{}")'.format(self.name)
+        return f'Output(name="{self.name}")'
 
     def __repr__(self):
-        return 'Output({})'.format(str(self.to_dict()))
+        return f'Output({str(self.to_dict())})'
 
 
 class InputReference(DBObject):
@@ -125,11 +131,14 @@ class InputReference(DBObject):
             ),
     }
 
+    node_id: str
+    output_id: str
+
     def __str__(self):
-        return 'InputReference({}, {})'.format(self.node_id, self.output_id)
+        return f'InputReference({self.node_id}, {self.output_id})'
 
     def __repr__(self):
-        return 'InputReference({})'.format(str(self.to_dict()))
+        return f'InputReference({self.to_dict()})'
 
 
 class Input(DBObject):
@@ -143,15 +152,25 @@ class Input(DBObject):
             ),
         }, **RESOURCE_FIELDS)
 
+    name: str
+
     def __str__(self):
-        return 'Input(name="{}")'.format(self.name)
+        return f'Input(name="{self.name}")'
 
     def __repr__(self):
-        return 'Input({})'.format(str(self.to_dict()))
+        return f'Input({self.to_dict()})'
 
 
 class Node(DBObject):
     """Basic Node with db interface."""
+    # pylint: disable=too-many-instance-attributes
+
+    _id: ObjectId
+    kind: str
+    inputs: List[Input]
+    parameters: List[Any]
+    outputs: List[Output]
+    logs: List[Output]
 
     FIELDS = {
         '_id': DBObjectField(
@@ -228,7 +247,7 @@ class Node(DBObject):
             is_list=True,
             ),
         'parameters': DBObjectField(
-            type=lambda object_dict: Parameter(object_dict),
+            type=lambda object_dict: Parameter(object_dict),    # pylint: disable=unnecessary-lambda
             default=list,
             is_list=True,
             ),
@@ -276,7 +295,8 @@ class Node(DBObject):
 
     DB_COLLECTION = Collections.TEMPLATES
 
-    def _DEFAULT_LOG(name):
+    @staticmethod
+    def _default_log(name):
         return Output.from_dict({
             'name': name,
             'file_type': FILE_KIND,
@@ -285,6 +305,7 @@ class Node(DBObject):
             'min_count': 1,
         })
 
+    # pylint: disable=attribute-defined-outside-init
     def apply_properties(self, other_node):
         """Apply Properties and Inputs of another Node.
         This method is used for updating nodes.
@@ -293,7 +314,7 @@ class Node(DBObject):
             other_node  (Node):     A node to copy Properties and Inputs from
         """
         for other_input in other_node.inputs:
-            for input in self.inputs:
+            for input in self.inputs:   # pylint: disable=redefined-builtin
                 if other_input.name == input.name and \
                    other_input.file_type == input.file_type and (
                             input.is_array or
@@ -315,40 +336,47 @@ class Node(DBObject):
         self.y = other_node.y
 
     def clone(self, node_clone_policy):
+        """Return a cloned copy of a Node"""
         node = _clone_update_in_place(self.copy(), node_clone_policy)
         return node
 
     def __str__(self):
-        return 'Node(_id="{}")'.format(self._id)
+        return f'Node(_id="{self._id}")'
 
     def __repr__(self):
-        return 'Node({})'.format(str(self.to_dict()))
+        return f'Node({self.to_dict()})'
 
     def _get_custom_element(self, arr, name, throw, default=None):
         for parameter in arr:
             if parameter.name == name:
                 return parameter
         if throw:
-            raise Exception('Parameter "{}" not found in {}'.format(name, self.title))
+            raise Exception(f'Parameter "{name}" not found in {self.title}')
         if default:
             arr.append(default(name))
             return arr[-1]
         return None
 
     def get_input_by_name(self, name, throw=True):
+        """Find Input object"""
         return self._get_custom_element(self.inputs, name, throw)
 
     def get_parameter_by_name(self, name, throw=True):
+        """Find Parameter object"""
         return self._get_custom_element(self.parameters, name, throw)
 
     def get_output_by_name(self, name, throw=True):
+        """Find Output object"""
         return self._get_custom_element(self.outputs, name, throw)
 
     def get_log_by_name(self, name, throw=False):
-        return self._get_custom_element(self.logs, name, throw, default=Node._DEFAULT_LOG)
+        """Find Log object"""
+        return self._get_custom_element(self.logs, name, throw, default=Node._default_log)
 
+    # pylint: disable=inconsistent-return-statements
     def arrange_auto_layout(self, readonly=False):
         """Use heuristic to rearange nodes."""
+        # pylint: disable=invalid-name,too-many-locals,too-many-statements
         HEADER_HEIGHT = 23
         TITLE_HEIGHT = 20
         FOOTER_HEIGHT = 10
@@ -372,11 +400,11 @@ class Node(DBObject):
         if len(sub_nodes) == 0:
             return
 
-        node_ids = set([node._id for node in sub_nodes])
+        node_ids = {node._id for node in sub_nodes}
         non_zero_node_ids = set()
         for node in sub_nodes:
             node_id_to_node[node._id] = node
-            for input in node.inputs:
+            for input in node.inputs:   # pylint: disable=redefined-builtin
                 for input_reference in input.input_references:
                     parent_node_id = ObjectId(input_reference.node_id)
                     non_zero_node_ids.add(parent_node_id)
@@ -385,7 +413,7 @@ class Node(DBObject):
         leaves = node_ids - non_zero_node_ids
         to_visit = deque()
         # Alwasy put Output Node in the end
-        push_special = True if SpecialNodeId.OUTPUT in leaves and len(leaves) > 1 else False
+        push_special = SpecialNodeId.OUTPUT in leaves and len(leaves) > 1
         for leaf_id in leaves:
             node_id_to_level[leaf_id] = 1 if push_special and leaf_id != SpecialNodeId.OUTPUT else 0
             to_visit.append(leaf_id)
@@ -395,7 +423,7 @@ class Node(DBObject):
             node = node_id_to_node[node_id]
             node_level = max([node_id_to_level[node_id]] + [node_id_to_level[child_id] + 1 for child_id in children_ids[node_id]])
             node_id_to_level[node_id] = node_level
-            for input in node.inputs:
+            for input in node.inputs:   # pylint: disable=redefined-builtin
                 for input_reference in input.input_references:
                     parent_node_id = ObjectId(input_reference.node_id)
                     parent_level = node_id_to_level[parent_node_id]
@@ -412,7 +440,7 @@ class Node(DBObject):
             if level < 0:
                 return 0
             parent_node_ids = set()
-            for input in node.inputs:
+            for input in node.inputs:   # pylint: disable=redefined-builtin
                 for input_reference in input.input_references:
                     parent_node_ids.add(ObjectId(input_reference.node_id))
 
@@ -422,6 +450,7 @@ class Node(DBObject):
             return -1
 
         def get_index(node, max_level, level):
+            # pylint: disable=consider-using-generator
             return tuple(
                 [get_index_helper(node, lvl) for lvl in range(max_level, level, -1)]
             )
@@ -467,7 +496,7 @@ class Node(DBObject):
             return level_to_node_ids, node_id_to_node
 
         cum_heights = [0]
-        for index in range(len(row_heights)):
+        for index, _ in enumerate(row_heights):
             cum_heights.append(cum_heights[-1] + row_heights[index] + SPACE_HEIGHT)
 
         max_height = max(cum_heights)
@@ -499,7 +528,7 @@ class ParameterEnum(DBObject):
     }
 
     def __repr__(self):
-        return 'ParameterEnum({})'.format(str(self.to_dict()))
+        return f'ParameterEnum({self.to_dict()})'
 
 
 class ParameterCode(DBObject):
@@ -519,7 +548,7 @@ class ParameterCode(DBObject):
     }
 
     def __repr__(self):
-        return 'ParameterCode({})'.format(str(self.to_dict()))
+        return f'ParameterCode({self.to_dict()})'
 
 
 class ParameterListOfNodes(DBObject):
@@ -534,9 +563,10 @@ class ParameterListOfNodes(DBObject):
     }
 
     def __repr__(self):
-        return 'ParameterListOfNodes({})'.format(str(self.to_dict()))
+        return f'ParameterListOfNodes({self.to_dict()})'
 
 
+# pylint: disable=too-many-return-statements
 def _get_default_by_type(parameter_type):
     if parameter_type == ParameterTypes.STR:
         return ''
@@ -568,13 +598,13 @@ def _value_is_valid(value, parameter_type):
     if parameter_type == ParameterTypes.INT:
         try:
             int(value)
-        except Exception:
+        except ValueError:
             return False
         return True
     if parameter_type == ParameterTypes.FLOAT:
         try:
             float(str(value))
-        except Exception:
+        except ValueError:
             return False
         return True
     if parameter_type == ParameterTypes.BOOL:
@@ -644,8 +674,12 @@ class Parameter(DBObject):
             ),
     }
 
+    name: str
+    parameter_type: str
+    value: Any
+
     def __init__(self, obj_dict=None):
-        super(Parameter, self).__init__(obj_dict)
+        super().__init__(obj_dict)
 
         # `value` field is a special case: the type depends on `parameter_type`
         if self.value is None:
@@ -657,10 +691,10 @@ class Parameter(DBObject):
         elif self.parameter_type == ParameterTypes.LIST_NODE:
             self.value = ParameterListOfNodes.from_dict(self.value)
         if not _value_is_valid(self.value, self.parameter_type):
-            raise ValueError("Invalid parameter value type: {}: {}".format(self.name, self.value))
+            raise ValueError(f"Invalid parameter value type: {self.name}: {self.value}")
 
     def __str__(self):
-        return 'Parameter(name="{}")'.format(self.name)
+        return f'Parameter(name="{self.name}")'
 
     def __repr__(self):
-        return 'Parameter({})'.format(str(self.to_dict()))
+        return f'Parameter({self.to_dict()})'
