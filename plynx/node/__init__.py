@@ -8,7 +8,7 @@ from typing import Any, List, Optional
 import cloudpickle
 
 import plynx.node.typing as typings
-import plynx.node.utils as utils    # noqa
+import plynx.node.utils as utils  # noqa
 
 
 @dataclass

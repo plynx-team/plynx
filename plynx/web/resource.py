@@ -9,7 +9,7 @@ import plynx.utils.plugin_manager
 from plynx.constants import NodeRunningStatus, NodeStatus
 from plynx.plugins.resources.common import FILE_KIND
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
-from plynx.web.common import app, logger, handle_errors, make_fail_response, make_success_response, requires_auth
+from plynx.web.common import app, handle_errors, logger, make_fail_response, make_success_response, requires_auth
 
 RESOURCE_TYPES = list(plynx.utils.plugin_manager.get_resource_manager().kind_to_resource_class.keys())
 

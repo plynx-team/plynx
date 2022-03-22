@@ -43,8 +43,7 @@ class WorkerState(DBObject):
 
 def get_worker_states():
     """Get all of the workers with latest states"""
-    states = getattr(get_db_connector(), Collections.WORKER_STATE)\
-           .find({}).sort('insertion_date', -1)
+    states = getattr(get_db_connector(), Collections.WORKER_STATE).find({}).sort('insertion_date', -1)
 
     unique_worker_states = {}
     for state in states:

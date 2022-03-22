@@ -1,7 +1,7 @@
 """Endpoints responsible for the dashboard"""
 import plynx.utils.plugin_manager
 from plynx.db.worker_state import get_worker_states
-from plynx.web.common import app, logger, handle_errors, make_fail_response, make_success_response, requires_auth
+from plynx.web.common import app, handle_errors, logger, make_fail_response, make_success_response, requires_auth
 
 PLUGINS_DICT = plynx.utils.plugin_manager.get_plugins_dict()
 
@@ -16,6 +16,6 @@ def worker_states():
             'items': get_worker_states(),
             'plugins_dict': PLUGINS_DICT,
         })
-    except Exception as e:  #pylint: disable=broad-except
+    except Exception as e:  # pylint: disable=broad-except
         logger.error(e)
         return make_fail_response(f'Internal error: "{e}"')

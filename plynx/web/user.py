@@ -2,8 +2,8 @@
 
 import json
 
-from flask import g, request
 from bson.objectid import InvalidId
+from flask import g, request
 
 import plynx.db.node_collection_manager
 from plynx.constants import Collections, IAMPolicies, NodeClonePolicy, UserPostAction
@@ -12,7 +12,7 @@ from plynx.db.demo_user_manager import DemoUserManager
 from plynx.db.user import User, UserCollectionManager
 from plynx.utils.common import JSONEncoder, to_object_id
 from plynx.utils.exceptions import RegisterUserException
-from plynx.web.common import app, logger, handle_errors, make_fail_response, make_success_response, register_user, requires_auth
+from plynx.web.common import app, handle_errors, logger, make_fail_response, make_success_response, register_user, requires_auth
 
 demo_user_manager = DemoUserManager()
 template_collection_manager = plynx.db.node_collection_manager.NodeCollectionManager(collection=Collections.TEMPLATES)

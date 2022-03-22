@@ -111,6 +111,8 @@ Plynx config location is can be set in env variable `PLYNX_CONFIG_PATH`. Default
 Run:
 ```
 pip install -e .
+
+pre-commit install
 ```
 
 ## External links

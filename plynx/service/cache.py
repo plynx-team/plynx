@@ -65,7 +65,7 @@ def run_clean_cache(start_datetime, end_datetime, yes):
                 for resource in getattr(node_cache, resource_type):
                     if resource.resource_id:
                         raise NotImplementedError()
-                        #file_handler.remove(resource.resource_id)
+                        # file_handler.remove(resource.resource_id)
         # TODO use more cache states, such as `attempted to remove`
         finally:
             node_cache.removed = True

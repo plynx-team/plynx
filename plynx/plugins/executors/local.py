@@ -443,7 +443,7 @@ class PythonNode(BaseBash):
     def _get_arguments_string(cls, var_name, arguments):
         res = [f"{var_name} = {{}}"]
         for key, value in arguments.items():
-            value=repr(cls._pythonize(value))
+            value = repr(cls._pythonize(value))
             res.append(f'{var_name}["{key}"] = {value}')
         return '\n'.join(res)
 
