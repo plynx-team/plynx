@@ -3,7 +3,7 @@ from __future__ import absolute_import
 
 import json
 
-from bson.objectid import InvalidId
+import bson.objectid
 from flask import g, request
 
 import plynx.base.hub
@@ -106,7 +106,7 @@ def get_nodes(collection, node_link=None):
         # when node_link is an id of the object
         try:
             node_id = to_object_id(node_link)
-        except InvalidId:
+        except bson.objectid.InvalidId:
             return make_fail_response('Invalid ID'), 404
         node = node_collection_managers[collection].get_db_node(node_id, user_id)
         logger.debug(node)

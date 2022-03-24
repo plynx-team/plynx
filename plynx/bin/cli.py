@@ -2,7 +2,8 @@
 from __future__ import print_function
 
 import argparse
-from collections import namedtuple
+from dataclasses import dataclass
+from typing import Any, List, Optional, Tuple, Type, Union
 
 from plynx import __version__
 from plynx.service.cache import run_cache
@@ -12,13 +13,19 @@ from plynx.service.worker import run_worker
 from plynx.utils.config import get_config, set_parameter
 from plynx.utils.logs import set_logging_level
 
-Arg = namedtuple(
-    'Arg',
-    ['flags', 'help', 'action', 'default', 'nargs', 'type', 'levels', 'required']
-)
-Arg.__new__.__defaults__ = (None, None, None, None, None, None)
-
 _config = get_config()
+
+
+@dataclass
+class Arg:
+    """Common argument tuple"""
+    flags: Union[Tuple[str], Tuple[str, str]]
+    help: str
+    action: Optional[str] = None
+    default: Optional[Any] = None
+    type: Optional[Type] = None
+    levels: Optional[List[str]] = None
+    required: bool = False
 
 
 def api(args):

@@ -2,7 +2,7 @@
 
 import json
 
-from bson.objectid import InvalidId
+import bson.objectid
 from flask import g, request
 
 import plynx.db.node_collection_manager
@@ -47,7 +47,7 @@ def post_demo_user():
     if DemoUserManager.demo_config.template_id:
         try:
             node_id = to_object_id(DemoUserManager.demo_config.template_id)
-        except InvalidId as e:
+        except bson.objectid.InvalidId as e:
             logger.error(f"node_id `{DemoUserManager.demo_config.template_id}` is invalid")
             logger.error(e)
             return make_fail_response('Failed to create a demo node')

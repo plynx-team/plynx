@@ -4,6 +4,7 @@ import json
 import os
 import stat
 import zipfile
+from typing import Optional
 
 from plynx.base import resource
 from plynx.constants import NodeResources
@@ -42,7 +43,7 @@ class Image(resource.BaseResource):
 
 class _BaseSeparated(resource.BaseResource):
     """Base Separated file, i.e. csv, tsv"""
-    SEPARATOR = None
+    SEPARATOR: Optional[str] = None
     _ROW_CLASSES = ['even', 'odd']
     _NUM_ROW_CLASSES = len(_ROW_CLASSES)
 

@@ -3,6 +3,7 @@ The class defines `DBObject` and `DBObjectField`. This is an abstraction of all 
 """
 import datetime
 from collections import namedtuple
+from typing import Dict
 
 from plynx.utils.common import ObjectId
 from plynx.utils.db_connector import get_db_connector
@@ -39,7 +40,7 @@ class _DBObject:
     """
 
     # Describe all the fields in the Object
-    FIELDS = {}
+    FIELDS: Dict[str, DBObjectField] = {}
     # Name of the collection in the database
     DB_COLLECTION = ''
 
