@@ -37,7 +37,7 @@ def verify_password(username_or_token, password):
         user = UserCollectionManager.find_user_by_name(username_or_token)
         if not user or not user.verify_password(password):
             return False
-    g.user = user
+    g.user = user   # pylint: disable=assigning-non-slot
     return True
 
 

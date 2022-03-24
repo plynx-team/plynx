@@ -166,6 +166,7 @@ class Node(DBObject):
     # pylint: disable=too-many-instance-attributes
 
     _id: ObjectId
+    title: str
     kind: str
     inputs: List[Input]
     parameters: List[Any]
