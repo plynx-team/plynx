@@ -256,7 +256,7 @@ class CLIFactory:
                 arg = cls.ARGS[arg]
                 kwargs = {
                     f: getattr(arg, f)
-                    for f in arg._fields if f not in ['flags', 'levels'] and getattr(arg, f) is not None
+                    for f in arg.__dataclass_fields__ if f not in ['flags', 'levels'] and getattr(arg, f) is not None
                 }
                 sp.add_argument(*arg.flags, **kwargs)
             sp.set_defaults(func=sub['func'], args=sub['args'])
