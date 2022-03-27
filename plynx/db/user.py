@@ -1,7 +1,7 @@
 """User DB Object and utils"""
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import Dict, List, Optional
 
 from dataclasses_json import dataclass_json
 # TODO: replace itsdangerous with more moder solution
@@ -36,13 +36,13 @@ class User(DBObject):
 
     _id: ObjectId = field(default_factory=ObjectId)
     username: str = ""
-    email: str = ""
+    email: Optional[str] = ""
     password_hash: str = ""
     active: bool = True
     policies: List[str] = field(default_factory=lambda: list(DEFAULT_POLICIES))
     settings: UserSettings = field(default_factory=UserSettings)
 
-    def hash_password(self, password):
+    def hash_password(self, password: str):
         """Change password.
 
         Args:
@@ -50,7 +50,7 @@ class User(DBObject):
         """
         self.password_hash = pwd_context.encrypt(password)  # pylint: disable=attribute-defined-outside-init
 
-    def verify_password(self, password):
+    def verify_password(self, password: str) -> bool:
         """Verify password.
 
         Args:
@@ -61,7 +61,7 @@ class User(DBObject):
         """
         return pwd_context.verify(password, self.password_hash)
 
-    def generate_access_token(self, expiration=600):
+    def generate_access_token(self, expiration: int = 600) -> str:
         """Generate access token.
 
         Args:
@@ -73,7 +73,7 @@ class User(DBObject):
         token = TimedSerializer(get_auth_config().secret_key, expires_in=expiration)
         return token.dumps({'username': self.username, 'type': 'access'})
 
-    def generate_refresh_token(self):
+    def generate_refresh_token(self) -> str:
         """Generate refresh token.
 
         Return:
@@ -82,17 +82,17 @@ class User(DBObject):
         token = Serializer(get_auth_config().secret_key)
         return token.dumps({'username': self.username, 'type': 'refresh'})
 
-    def check_role(self, role):
+    def check_role(self, role: str) -> bool:
         """Check if the user has a given role"""
         return role in self.policies
 
     @staticmethod
-    def find_users():
+    def find_users() -> List[Dict]:
         """Get all the users"""
         return getattr(get_db_connector(), User.DB_COLLECTION).find({})
 
     @staticmethod
-    def verify_auth_token(token):
+    def verify_auth_token(token: str) -> Optional["User"]:
         """Verify token.
 
         Args:
@@ -101,9 +101,9 @@ class User(DBObject):
         Return:
             (User)   User object or None
         """
-        serializer = TimedSerializer(get_auth_config().secret_key)
+        timed_serializer = TimedSerializer(get_auth_config().secret_key)
         try:
-            data = serializer.loads(token)
+            data = timed_serializer.loads(token)
             if data['type'] != 'access':
                 raise Exception('Not access token')
         except (BadSignature, SignatureExpired):
@@ -119,7 +119,7 @@ class User(DBObject):
             print(f"Unexpected exception: {e}")
             return None
         user = UserCollectionManager.find_user_by_name(data['username'])
-        if not user.active:
+        if not user or not user.active:
             return None
         return user
 
@@ -127,7 +127,7 @@ class User(DBObject):
 class UserCollectionManager:
     """User Manger"""
     @staticmethod
-    def find_user_by_name(username):
+    def find_user_by_name(username: str) -> Optional[User]:
         """Find User.
 
         Args:
@@ -143,7 +143,7 @@ class UserCollectionManager:
         return User.from_dict(user_dict)
 
     @staticmethod
-    def find_user_by_email(email):
+    def find_user_by_email(email: str) -> Optional[User]:
         """Find User.
 
         Args:
@@ -160,9 +160,9 @@ class UserCollectionManager:
 
     @staticmethod
     def get_users(
-            search='',
-            per_page=20,
-            offset=0,
+            search: str = "",
+            per_page: int = 20,
+            offset: int = 0,
             ):
         """Get a list of users"""
         raise NotImplementedError()

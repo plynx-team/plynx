@@ -39,7 +39,7 @@ def get_auth_token():
 @handle_errors
 def post_demo_user():
     """Create a demo user"""
-    user = demo_user_manager.create_demo_user()
+    user: User = demo_user_manager.create_demo_user()
     if not user:
         return make_fail_response('Failed to create a demo user')
 
@@ -77,7 +77,7 @@ def post_demo_user():
 @app.route('/plynx/api/v0/users/<username>', methods=['GET'])
 @handle_errors
 @requires_auth
-def get_user(username):
+def get_user(username: str):
     """Get user info by username"""
     user = UserCollectionManager.find_user_by_name(username)
     if not user:

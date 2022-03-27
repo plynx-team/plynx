@@ -16,7 +16,7 @@ RESOURCE_TYPES = list(plynx.utils.plugin_manager.get_resource_manager().kind_to_
 
 @app.route('/plynx/api/v0/resource/<resource_id>', methods=['GET'])
 @handle_errors
-def get_resource(resource_id):
+def get_resource(resource_id: str):
     """Get the data of the resource"""
     preview = json.loads(request.args.get('preview', 'false'))
     file_type = request.args.get('file_type', None)

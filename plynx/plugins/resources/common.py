@@ -4,19 +4,19 @@ import json
 import os
 import stat
 import zipfile
-from typing import Optional
+from typing import Dict, List, Optional
 
 from plynx.base import resource
 from plynx.constants import NodeResources
 from plynx.utils.common import zipdir
-from plynx.utils.config import get_web_config
+from plynx.utils.config import WebConfig, get_web_config
 
-WEB_CONFIG = get_web_config()
+WEB_CONFIG: WebConfig = get_web_config()
 
 
 class Raw(resource.BaseResource):
     """Raw Resource that will be stored in jsonable format in the Node."""
-    DISPLAY_RAW = True
+    DISPLAY_RAW: bool = True
 
 
 class File(resource.BaseResource):
@@ -26,7 +26,7 @@ class File(resource.BaseResource):
 class PDF(resource.BaseResource):
     """PDF file"""
     @classmethod
-    def preview(cls, preview_object):
+    def preview(cls, preview_object: resource.PreviewObject) -> str:
         """Generate preview html body"""
         src_url = f"{WEB_CONFIG.endpoint}/resource/{preview_object.resource_id}"
         return f'<iframe src="{src_url}" title="preview" type="application/pdf" width="100%"/>'
@@ -35,7 +35,7 @@ class PDF(resource.BaseResource):
 class Image(resource.BaseResource):
     """Image file"""
     @classmethod
-    def preview(cls, preview_object):
+    def preview(cls, preview_object: resource.PreviewObject) -> str:
         """Generate preview html body"""
         src_url = f"{WEB_CONFIG.endpoint}/resource/{preview_object.resource_id}"
         return f'<img src="{src_url}" width="100%" alt="preview" />'
@@ -44,11 +44,11 @@ class Image(resource.BaseResource):
 class _BaseSeparated(resource.BaseResource):
     """Base Separated file, i.e. csv, tsv"""
     SEPARATOR: Optional[str] = None
-    _ROW_CLASSES = ['even', 'odd']
-    _NUM_ROW_CLASSES = len(_ROW_CLASSES)
+    _ROW_CLASSES: List[str] = ['even', 'odd']
+    _NUM_ROW_CLASSES: int = len(_ROW_CLASSES)
 
     @classmethod
-    def preview(cls, preview_object):
+    def preview(cls, preview_object: resource.PreviewObject) -> str:
         """Generate preview html body"""
         preview_object.fp.truncate(1024 ** 2)
         formated_lines = []
@@ -63,18 +63,18 @@ class _BaseSeparated(resource.BaseResource):
 
 class CSV(_BaseSeparated):
     """CSV file"""
-    SEPARATOR = ','
+    SEPARATOR: str = ','
 
 
 class TSV(_BaseSeparated):
     """TSV file"""
-    SEPARATOR = '\t'
+    SEPARATOR: str = '\t'
 
 
 class Json(resource.BaseResource):
     """JSON file"""
     @classmethod
-    def preview(cls, preview_object):
+    def preview(cls, preview_object: resource.PreviewObject) -> str:
         """Generate preview html body"""
         if preview_object.fp.getbuffer().nbytes > 1024 ** 2:
             return super(Json, cls).preview(preview_object)
@@ -88,7 +88,7 @@ class Json(resource.BaseResource):
 class Executable(resource.BaseResource):
     """Executable file, i.e. bash or python"""
     @staticmethod
-    def prepare_input(filename, preview=False):
+    def prepare_input(filename, preview: bool = False) -> Dict[str, str]:
         """Generate preview html body"""
         # `chmod +x` to the executable file
         if preview:
@@ -101,7 +101,7 @@ class Executable(resource.BaseResource):
 class Directory(resource.BaseResource):
     """Directory file, i.e. zipfile"""
     @staticmethod
-    def prepare_input(filename, preview=False):
+    def prepare_input(filename, preview: bool = False) -> Dict[str, str]:
         """Extract zip file"""
         if preview:
             return {NodeResources.INPUT: filename}
@@ -113,7 +113,7 @@ class Directory(resource.BaseResource):
         return {NodeResources.INPUT: filename}
 
     @staticmethod
-    def prepare_output(filename, preview=False):
+    def prepare_output(filename, preview: bool = False) -> Dict[str, str]:
         """Create output folder"""
         if preview:
             return {NodeResources.OUTPUT: filename}
@@ -121,7 +121,7 @@ class Directory(resource.BaseResource):
         return {NodeResources.OUTPUT: filename}
 
     @staticmethod
-    def postprocess_output(filename):
+    def postprocess_output(filename: str) -> str:
         """Compress folder to a zip file"""
         zip_filename = f"{filename}.zip"
         with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zf:
@@ -129,7 +129,7 @@ class Directory(resource.BaseResource):
         return zip_filename
 
     @classmethod
-    def preview(cls, preview_object):
+    def preview(cls, preview_object: resource.PreviewObject) -> str:
         """Generate preview html body"""
         with zipfile.ZipFile(preview_object.fp, 'r') as zf:
             content_stream = '\n'.join(zf.namelist())

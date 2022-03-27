@@ -2,7 +2,7 @@
 
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from dataclasses_json import dataclass_json
 from past.builtins import basestring
@@ -14,7 +14,7 @@ from plynx.utils.common import ObjectId
 
 
 # pylint: disable=too-many-branches
-def _clone_update_in_place(node, node_clone_policy):
+def _clone_update_in_place(node: "Node", node_clone_policy: int):
     if node.node_running_status == NodeRunningStatus.SPECIAL:
         for output in node.outputs:
             output.values = []
@@ -70,7 +70,7 @@ def _clone_update_in_place(node, node_clone_policy):
                 log.values = []
 
     for output_or_log in node.outputs + node.logs:
-        output_or_log.resource_id = None
+        output_or_log.values = []
     return node
 
 
@@ -146,17 +146,17 @@ class Node(DBObject):
     logs: List[Output] = field(default_factory=list)
 
     @staticmethod
-    def _default_log(name):
-        return Output.from_dict({
-            'name': name,
-            'file_type': FILE_KIND,
-            'values': [],
-            'is_array': False,
-            'min_count': 1,
-        })
+    def _default_log(name: str) -> Output:
+        return Output(
+            name=name,
+            file_type=FILE_KIND,
+            values=[],
+            is_array=False,
+            min_count=1,
+        )
 
     # pylint: disable=attribute-defined-outside-init
-    def apply_properties(self, other_node):
+    def apply_properties(self, other_node: "Node"):
         """Apply Properties and Inputs of another Node.
         This method is used for updating nodes.
 
@@ -185,40 +185,46 @@ class Node(DBObject):
         self.x = other_node.x
         self.y = other_node.y
 
-    def clone(self, node_clone_policy):
+    def clone(self, node_clone_policy: int) -> "Node":
         """Return a cloned copy of a Node"""
-        node = _clone_update_in_place(self.copy(), node_clone_policy)
+        node = _clone_update_in_place(Node.from_dict(self.to_dict()), node_clone_policy)
         return node
 
-    def _get_custom_element(self, arr, name, throw, default=None):
-        for parameter in arr:
-            if parameter.name == name:
-                return parameter
+    def _get_custom_element(
+                self,
+                arr: Union[List[Input], List["Parameter"], List[Output]],
+                name: str,
+                throw: bool,
+                default: Optional[Callable[[str], Union[Input, "Parameter", Output]]] = None
+            ):
+        for obj in arr:
+            if obj.name == name:
+                return obj
         if throw:
-            raise Exception(f'Parameter "{name}" not found in {self.title}')
+            raise Exception(f'Object "{name}" not found in {self.title}')
         if default:
-            arr.append(default(name))
+            arr.append(default(name=name))  # type: ignore
             return arr[-1]
         return None
 
-    def get_input_by_name(self, name, throw=True):
+    def get_input_by_name(self, name: str, throw: bool = True):
         """Find Input object"""
         return self._get_custom_element(self.inputs, name, throw)
 
-    def get_parameter_by_name(self, name, throw=True):
+    def get_parameter_by_name(self, name: str, throw: bool = True):
         """Find Parameter object"""
         return self._get_custom_element(self.parameters, name, throw)
 
-    def get_output_by_name(self, name, throw=True):
+    def get_output_by_name(self, name: str, throw: bool = True):
         """Find Output object"""
         return self._get_custom_element(self.outputs, name, throw)
 
-    def get_log_by_name(self, name, throw=False):
+    def get_log_by_name(self, name: str, throw: bool = False):
         """Find Log object"""
         return self._get_custom_element(self.logs, name, throw, default=Node._default_log)
 
     # pylint: disable=inconsistent-return-statements
-    def arrange_auto_layout(self, readonly=False):
+    def arrange_auto_layout(self, readonly: bool = False):
         """Use heuristic to rearange nodes."""
         # pylint: disable=invalid-name,too-many-locals,too-many-statements
         HEADER_HEIGHT = 23
@@ -255,7 +261,7 @@ class Node(DBObject):
                     children_ids[parent_node_id].add(node._id)
 
         leaves = node_ids - non_zero_node_ids
-        to_visit = deque()
+        to_visit: deque = deque()
         # Alwasy put Output Node in the end
         push_special = SpecialNodeId.OUTPUT in leaves and len(leaves) > 1
         for leaf_id in leaves:
@@ -277,8 +283,8 @@ class Node(DBObject):
                         queued_node_ids.add(parent_node_id)
 
         max_level = max(node_id_to_level.values())
-        level_to_node_ids = defaultdict(list)
-        row_heights = defaultdict(lambda: 0)
+        level_to_node_ids: Dict[int, List[ObjectId]] = defaultdict(list)
+        row_heights: Dict[int, int] = defaultdict(lambda: 0)
 
         def get_index_helper(node, level):
             if level < 0:
@@ -379,7 +385,7 @@ class ParameterListOfNodes(DBObject):
 
 
 # pylint: disable=too-many-return-statements
-def _get_default_by_type(parameter_type):
+def _get_default_by_type(parameter_type: str):
     if parameter_type == ParameterTypes.STR:
         return ''
     if parameter_type == ParameterTypes.INT:
@@ -404,7 +410,7 @@ def _get_default_by_type(parameter_type):
         return None
 
 
-def _value_is_valid(value, parameter_type):
+def _value_is_valid(value, parameter_type: str):
     if parameter_type == ParameterTypes.STR:
         return isinstance(value, basestring)
     if parameter_type == ParameterTypes.INT:

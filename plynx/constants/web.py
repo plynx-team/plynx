@@ -3,5 +3,5 @@
 
 class ResponseStatus:
     """Returned response status"""
-    SUCCESS = 'SUCCESS'
-    FAILED = 'FAILED'
+    SUCCESS: str = 'SUCCESS'
+    FAILED: str = 'FAILED'

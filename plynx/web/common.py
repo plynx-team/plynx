@@ -4,6 +4,7 @@ import logging
 import re
 import traceback
 from functools import wraps
+from typing import Any, Dict, Optional
 
 from flask import Flask, Response, g, request
 from flask.logging import create_logger
@@ -27,7 +28,7 @@ DEFAULT_PASSWORD = ''
 _CONFIG = None
 
 
-def verify_password(username_or_token, password):
+def verify_password(username_or_token: str, password: str):
     """Veryfy password based on user"""
     if _CONFIG and _CONFIG.auth.secret_key and username_or_token == DEFAULT_USERNAME:
         return False
@@ -65,7 +66,7 @@ def requires_auth(f):
     return decorated
 
 
-def register_user(username, password, email):
+def register_user(username: str, password: str, email: str):
     """Register a new user.
 
     Args:
@@ -133,12 +134,12 @@ def make_fail_response(message, **kwargs):
     })
 
 
-def make_permission_denied(message='Permission denied'):
+def make_permission_denied(message: str = 'Permission denied'):
     """Return permission error"""
     return make_fail_response(message), 403
 
 
-def make_success_response(extra_response=None):
+def make_success_response(extra_response: Optional[Dict[str, Any]] = None):
     """Return successful response"""
     return JSONEncoder().encode(dict(
         {

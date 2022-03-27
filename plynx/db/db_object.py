@@ -3,16 +3,16 @@ The class defines `DBObject`. This is an abstraction of all of the objects in da
 """
 import datetime
 import inspect
-from typing import Any, Dict, Type, TypeVar
+from typing import Any, Dict, Optional, Type, TypeVar
 
 import typing_inspect
 
 from plynx.utils.common import ObjectId
 from plynx.utils.db_connector import get_db_connector
 
-_registry = {}
+DBObjectType = TypeVar('DBObjectType', bound='_DBObject')
 
-T = TypeVar('T', bound='_DBObject')     # pylint: disable=invalid-name
+_registry = {}
 
 
 def register_class(target_class):
@@ -20,7 +20,7 @@ def register_class(target_class):
     _registry[target_class.__name__] = target_class
 
 
-def get_class(name):
+def get_class(name: str) -> DBObjectType:
     """Get DB Object inherited class object by its name from the registry"""
     return _registry[name]
 
@@ -36,9 +36,6 @@ class ClassNotSavable(Exception):
 class _DBObject:
     """DB Object.
     Abstraction of an object in the DB.
-
-    Args:
-        obj_dict    (dict, None):   Representation of the object. If None, an object with default fields will be created.
     """
 
     # Name of the collection in the database
@@ -59,20 +56,20 @@ class _DBObject:
                 setattr(self, name, field_type(getattr(self, name)))
 
     @classmethod
-    def load(cls, _id, collection=None):
+    def load(cls, _id: ObjectId, collection: str = None) -> "_DBObject":
         """Load object from db.
 
         Args:
-            _id     (str, ObjectId):    ID of the object in DB
+            _id     (ObjectId):    ID of the object in DB
         """
         collection = collection or cls.DB_COLLECTION
-        obj_dict = getattr(get_db_connector(), collection).find_one({'_id': ObjectId(_id)})
+        obj_dict = getattr(get_db_connector(), collection).find_one({'_id': _id})
         if not obj_dict:
             raise DBObjectNotFound(f"Object `{_id}` not found in `{collection}` collection")
         return cls.from_dict(obj_dict)
 
     # TODO remove `force` argument or use it
-    def save(self, force=False, collection=None):   # pylint: disable=unused-argument
+    def save(self, force: bool = False, collection: Optional[str] = None):   # pylint: disable=unused-argument
         """Save Object in the database"""
         collection = collection or self.__class__.DB_COLLECTION
         if not collection:
@@ -96,7 +93,7 @@ class _DBObject:
 
         return True
 
-    def copy(self):
+    def copy(self) -> "_DBObject":
         """Make a copy
 
         Return:
@@ -105,18 +102,18 @@ class _DBObject:
         return self.__class__.from_dict(self.to_dict())
 
     @classmethod
-    def from_dict(cls: Type[T], dict_obj: Dict[str, Any]) -> T:
+    def from_dict(cls: Type[DBObjectType], dict_obj: Dict[str, Any]) -> DBObjectType:
         """Create a class based on dict_obj"""
 
-    def to_dict(self: T) -> Dict[str, Any]:     # pylint: disable=no-self-use
+    def to_dict(self: DBObjectType) -> Dict[str, Any]:     # pylint: disable=no-self-use
         """Create serialized object"""
         return {}
 
-    def __str__(self):
+    def __str__(self) -> str:
         id_val = self.__dict__.get('_id', str(self.to_dict()))
         return f"{self.__class__.__name__}({id_val})"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         value = str(self.to_dict())
         return f"{self.__class__.__name__}({value})"
 

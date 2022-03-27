@@ -1,5 +1,4 @@
 """An executor for the DAGs based on python backend."""
-
 import contextlib
 import inspect
 import logging
@@ -10,11 +9,13 @@ import sys
 import threading
 import traceback
 import uuid
+from typing import Any, Callable, Dict, List
 
 import cloudpickle
 
 import plynx.plugins.executors.dag
 from plynx.constants import Collections, NodeRunningStatus
+from plynx.db.node import Node
 from plynx.utils.common import to_object_id
 
 stateful_init_mutex = threading.Lock()
@@ -23,28 +24,28 @@ stateful_class_registry = {}
 POOL_SIZE = 3
 
 
-def materialize_fn(fn_str):
+def materialize_fn(fn_str: str) -> Callable:
     """Unpickle the function"""
     func_bytes = bytes.fromhex(fn_str)
     func = cloudpickle.loads(func_bytes)
     return func
 
 
-def prep_args(node):
+def prep_args(node: Node) -> Dict[str, Any]:
     """Pythonize inputs and parameters"""
     args = {}
     for input in node.inputs:   # pylint: disable=redefined-builtin
         args[input.name] = input.values if input.is_array else input.values[0]
 
     # TODO smater way to determine what parameters to pass
-    visible_parameters = filter(lambda param: param.widget is not None, node.parameters)
+    visible_parameters = list(filter(lambda param: param.widget is not None, node.parameters))
     args.update(
         plynx.plugins.executors.local.prepare_parameters_for_python(visible_parameters)
     )
     return args
 
 
-def assign_outputs(node, output_dict):
+def assign_outputs(node: Node, output_dict: Dict[str, Any]):
     """Apply output_dict to node's outputs."""
     if not output_dict:
         return
@@ -57,7 +58,7 @@ class redirect_to_plynx_logs:   # pylint: disable=invalid-name
     """Redirect stdout and stderr to standard PLynx Outputs"""
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, node, stdout, stderr):
+    def __init__(self, node: Node, stdout: str, stderr: str):
         self.stdout_filename = str(uuid.uuid4())
         self.stderr_filename = str(uuid.uuid4())
 
@@ -104,7 +105,7 @@ class redirect_to_plynx_logs:   # pylint: disable=invalid-name
                 output.values = [filename]
 
 
-def worker_main(job_run_queue, job_complete_queue):
+def worker_main(job_run_queue: queue.Queue, job_complete_queue: queue.Queue):
     """Main threaded function that serves Operations."""
     logging.info("Created pool worker")
     while True:
@@ -152,11 +153,11 @@ class DAG(plynx.plugins.executors.dag.DAG):
     IS_GRAPH = True
     GRAPH_ITERATION_SLEEP = 0
 
-    def __init__(self, node_dict):
-        super().__init__(node_dict)
+    def __init__(self, node: Node):
+        super().__init__(node)
 
-        self.job_run_queue = queue.Queue()
-        self.job_complete_queue = queue.Queue()
+        self.job_run_queue: queue.Queue = queue.Queue()
+        self.job_complete_queue: queue.Queue = queue.Queue()
 
         self.worker_pool = multiprocessing.pool.ThreadPool(
             POOL_SIZE, worker_main, (
@@ -165,9 +166,10 @@ class DAG(plynx.plugins.executors.dag.DAG):
             )
         )
 
-    def pop_jobs(self):
+    def pop_jobs(self) -> List[Node]:
         """Get a set of nodes with satisfied dependencies"""
-        res = []
+        assert self.node, "Attribute `node` is undefined"
+        res: List[Node] = []
 
         num_completed_jobs = 0
         while not self.job_complete_queue.empty():
@@ -204,7 +206,8 @@ class DAG(plynx.plugins.executors.dag.DAG):
 
         return res
 
-    def _execute_node(self, node):
+    def _execute_node(self, node: Node):
+        assert self.node, "Attribute `node` is undefined"
         if NodeRunningStatus.is_finished(node.node_running_status):     # NodeRunningStatus.SPECIAL
             return
 

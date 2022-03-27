@@ -3,6 +3,7 @@
 import os
 import shutil
 from abc import abstractmethod
+from typing import Union
 
 from plynx.constants import NodeStatus, SpecialNodeId, ValidationCode, ValidationTargetType
 from plynx.db.node import Node, NodeRunningStatus, Parameter, ParameterTypes
@@ -13,14 +14,14 @@ TMP_DIR = '/tmp/plx'
 
 class BaseExecutor:
     """Base Executor class"""
-    IS_GRAPH = False
+    IS_GRAPH: bool = False
 
-    def __init__(self, node: Node):
+    def __init__(self, node: Node = None):
         self.node = node
         self.workdir = TMP_DIR
 
     @abstractmethod
-    def run(self, preview: bool = False):
+    def run(self, preview: bool = False) -> str:
         """Main execution function.
 
         - Workdir has been initialized.
@@ -40,7 +41,7 @@ class BaseExecutor:
         """
 
     # pylint: disable=no-self-use
-    def is_updated(self):
+    def is_updated(self) -> bool:
         """Function that is regularly called by a Worker.
 
         The function is running in a separate thread and does not block execution of `run()`.
@@ -51,7 +52,7 @@ class BaseExecutor:
         return False
 
     @classmethod
-    def get_default_node(cls, is_workflow: bool):
+    def get_default_node(cls, is_workflow: bool) -> Node:
         """Generate a new default Node for this executor"""
         node = Node()
         if cls.IS_GRAPH:
@@ -99,13 +100,16 @@ class BaseExecutor:
         if os.path.exists(self.workdir):
             shutil.rmtree(self.workdir, ignore_errors=True)
 
-    def validate(self):
+    def validate(self) -> Union[ValidationError, None]:
         """Validate Node.
 
         Return:
             (ValidationError)   Validation error if found; else None
         """
+        assert self.node, "Attribute `node` is not assigned"
+
         violations = []
+
         if self.node.title == '':
             violations.append(
                 ValidationError(
@@ -147,10 +151,8 @@ class BaseExecutor:
 
 class Dummy(BaseExecutor):
     """Dummy Executor. Used for static Operations"""
-    def __init__(self, node=None):
-        super().__init__(node)
 
-    def run(self, preview=False):
+    def run(self, preview=False) -> str:
         """Not Implemented"""
         raise NotImplementedError()
 
@@ -163,6 +165,6 @@ class Dummy(BaseExecutor):
         raise NotImplementedError()
 
     @classmethod
-    def get_default_node(cls, is_workflow):
+    def get_default_node(cls, is_workflow: bool) -> Node:
         """Not Implemented"""
         raise NotImplementedError()

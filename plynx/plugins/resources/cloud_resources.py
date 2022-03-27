@@ -3,6 +3,7 @@
 import json
 import os
 import uuid
+from typing import Dict
 
 from plynx.base import resource
 from plynx.constants import NodeResources
@@ -14,7 +15,7 @@ CLOUD_SERVICE_CONFIG = get_cloud_service_config()
 class CloudStorage(resource.BaseResource):
     """Storage Resource, i.e. S3 bucket"""
     @staticmethod
-    def prepare_input(filename, preview=False):
+    def prepare_input(filename: str, preview: bool = False) -> Dict[str, str]:
         """Preprocess input"""
         if preview:
             uniq_id = str(uuid.uuid1())
@@ -31,7 +32,7 @@ class CloudStorage(resource.BaseResource):
         }
 
     @staticmethod
-    def prepare_output(filename, preview=False):
+    def prepare_output(filename: str, preview: bool = False) -> Dict[str, str]:
         """Postprocess output"""
         uniq_id = str(uuid.uuid1())
         cloud_filename = os.path.join(
@@ -47,7 +48,7 @@ class CloudStorage(resource.BaseResource):
             }
 
     @classmethod
-    def preview(cls, preview_object=False):
+    def preview(cls, preview_object: resource.PreviewObject) -> str:
         """Preview resource"""
         path = json.load(preview_object.fp)["path"]
         url = "".join([CLOUD_SERVICE_CONFIG.url_prefix, path.split("//")[1], CLOUD_SERVICE_CONFIG.url_postfix])

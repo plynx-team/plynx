@@ -2,7 +2,7 @@
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from dataclasses_json import dataclass_json
 
@@ -24,5 +24,5 @@ class BaseHub:
         pass
 
     @abstractmethod
-    def search(self, query):
+    def search(self, query: Query) -> Dict[str, Any]:
         """Search for items given a query"""

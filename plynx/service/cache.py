@@ -5,6 +5,7 @@ import logging
 import sys
 from collections import namedtuple
 from datetime import datetime
+from typing import Optional
 
 import dateutil.parser
 
@@ -21,10 +22,10 @@ MODES = [
     LIST_CACHE,
 ]
 
-node_cache_manager = NodeCacheManager()
+node_cache_manager: NodeCacheManager = NodeCacheManager()
 
 
-def run_list_cache(start_datetime, end_datetime):
+def run_list_cache(start_datetime: Optional[datetime], end_datetime: datetime):
     """Print all of the cache objects in a given time frame"""
     file_writer = csv.writer(sys.stdout)
     file_writer.writerow(OutputListTuple._fields)
@@ -46,7 +47,7 @@ def run_list_cache(start_datetime, end_datetime):
                     )
 
 
-def run_clean_cache(start_datetime, end_datetime, yes):
+def run_clean_cache(start_datetime: Optional[datetime], end_datetime: datetime, yes: bool):
     """Clean cache"""
     query = node_cache_manager.get_list(start_datetime, end_datetime, non_protected_only=True)
     query_count = query.count()
@@ -76,13 +77,13 @@ def run_clean_cache(start_datetime, end_datetime, yes):
     logging.info(f"Removed `{query_count}` objects")
 
 
-def run_cache(mode, start_datetime, end_datetime, yes):
+def run_cache(mode, start_datetime: str, end_datetime: str, yes: bool):
     """Cache CLI entrypoint"""
     if mode not in MODES:
         raise ValueError(f"`mode` must be one of `{MODES}`. Value `{mode}` is given")
-    start_datetime = dateutil.parser.parse(start_datetime) if start_datetime else None
-    end_datetime = dateutil.parser.parse(end_datetime) if end_datetime else datetime.now()
+    start_datetime_parsed = dateutil.parser.parse(start_datetime) if start_datetime else None
+    end_datetime_parsed = dateutil.parser.parse(end_datetime) if end_datetime else datetime.now()
     if mode == LIST_CACHE:
-        run_list_cache(start_datetime, end_datetime)
+        run_list_cache(start_datetime_parsed, end_datetime_parsed)
     elif mode == CLEAN_CACHE:
-        run_clean_cache(start_datetime, end_datetime, yes)
+        run_clean_cache(start_datetime_parsed, end_datetime_parsed, yes)

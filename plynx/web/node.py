@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 
 import json
+from typing import Optional
 
 import bson.objectid
 from flask import g, request
@@ -35,7 +36,7 @@ PLUGINS_DICT = plynx.utils.plugin_manager.get_plugins_dict()
 @app.route('/plynx/api/v0/search_<collection>', methods=['POST'])
 @handle_errors
 @requires_auth
-def post_search_nodes(collection):
+def post_search_nodes(collection: str):
     """Create a search request in templates or runs"""
     query = json.loads(request.data)
     logger.debug(request.data)
@@ -67,7 +68,7 @@ def post_search_nodes(collection):
 @app.route('/plynx/api/v0/<collection>/<node_link>', methods=['GET'])
 @handle_errors
 @requires_auth
-def get_nodes(collection, node_link=None):
+def get_nodes(collection: str, node_link: Optional[str] = None):
     """Get the Node based on its ID or kind"""
     # pylint: disable=too-many-locals,too-many-return-statements,too-many-branches
     user_id = to_object_id(g.user._id)
@@ -87,7 +88,7 @@ def get_nodes(collection, node_link=None):
             return make_permission_denied()
         if kind in operation_manager.kind_to_operation_dict and (not can_view_operations or not can_create_operations):
             return make_permission_denied()
-        node = executor_manager.kind_to_executor_class[kind].get_default_node(
+        node: Node = executor_manager.kind_to_executor_class[kind].get_default_node(
             is_workflow=kind in workflow_manager.kind_to_workflow_dict
         )
         if isinstance(node, tuple):
@@ -106,14 +107,14 @@ def get_nodes(collection, node_link=None):
         # when node_link is an id of the object
         try:
             node_id = to_object_id(node_link)
-        except bson.objectid.InvalidId:
+        except bson.objectid.InvalidId:     # type: ignore
             return make_fail_response('Invalid ID'), 404
-        node = node_collection_managers[collection].get_db_node(node_id, user_id)
-        logger.debug(node)
+        node_dict = node_collection_managers[collection].get_db_node(node_id, user_id)
+        logger.debug(node_dict)
 
-        if node:
-            is_owner = node['author'] == user_id
-            kind = node['kind']
+        if node_dict:
+            is_owner = node_dict['author'] == user_id
+            kind = node_dict['kind']
             if kind in workflow_manager.kind_to_workflow_dict and not can_view_workflows:
                 return make_permission_denied()
             if kind in operation_manager.kind_to_operation_dict and not can_view_operations:
@@ -123,7 +124,7 @@ def get_nodes(collection, node_link=None):
             if kind in operation_manager.kind_to_operation_dict and not can_view_others_operations and not is_owner:
                 return make_permission_denied()
             return make_success_response({
-                'node': node,
+                'node': node_dict,
                 'plugins_dict': PLUGINS_DICT,
                 })
         else:
@@ -133,7 +134,7 @@ def get_nodes(collection, node_link=None):
 @app.route('/plynx/api/v0/<collection>', methods=['POST'])
 @handle_errors
 @requires_auth
-def post_node(collection):
+def post_node(collection: str):
     """Post a Node with an action"""
     # TODO: fix disables
     # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements
@@ -141,7 +142,7 @@ def post_node(collection):
 
     data = json.loads(request.data)
 
-    node = Node.from_dict(data['node'])
+    node: Node = Node.from_dict(data['node'])
     node.starred = False
     action = data['action']
     db_node = node_collection_managers[collection].get_db_node(node._id, g.user._id)
@@ -230,11 +231,13 @@ def post_node(collection):
     elif action == NodePostAction.CLONE:
         if (is_workflow and not can_create_workflows) or (not is_workflow and not can_create_operations):
             return make_permission_denied('You do not have the role to create an object')
-        node_clone_policy = None
+        node_clone_policy: int
         if collection == Collections.TEMPLATES:
             node_clone_policy = NodeClonePolicy.NODE_TO_NODE
         elif collection == Collections.RUNS:
             node_clone_policy = NodeClonePolicy.RUN_TO_NODE
+        else:
+            raise ValueError(f"Unknown or unexpeted collection `{collection}`")
 
         node = node.clone(node_clone_policy)
         node.save(collection=Collections.TEMPLATES)

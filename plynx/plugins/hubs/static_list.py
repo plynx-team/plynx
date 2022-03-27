@@ -2,6 +2,7 @@
 
 import copy
 import pydoc
+from typing import Any, Callable, Dict, List, Union
 
 import plynx.node
 from plynx.base import hub
@@ -10,7 +11,7 @@ from plynx.utils.common import parse_search_string
 from plynx.utils.hub_node_registry import registry
 
 
-def _enhance_list_item(raw_item):
+def _enhance_list_item(raw_item: Dict) -> Dict:
     if raw_item['_type'] == 'Group':
         # TODO proper checking
         items = []
@@ -24,7 +25,7 @@ def _enhance_list_item(raw_item):
     return node.to_dict()
 
 
-def _recursive_filter(search_string, list_of_nodes):
+def _recursive_filter(search_string: str, list_of_nodes: List[Dict]):
     res = []
     for raw_node in list_of_nodes:
         if raw_node["_type"] == "Group":
@@ -38,10 +39,10 @@ def _recursive_filter(search_string, list_of_nodes):
 
 class StaticListHub(hub.BaseHub):
     """Plynx standard Hub based on the fixed list of Operations"""
-    def __init__(self, list_module):
+    def __init__(self, list_module: str):
         super().__init__()
 
-        collection = pydoc.locate(list_module)
+        collection: List[Union[Callable, plynx.node.utils.Group]] = pydoc.locate(list_module)   # type: ignore
 
         assert collection is not None, f"Module `{list_module}` not found"
 
@@ -50,7 +51,7 @@ class StaticListHub(hub.BaseHub):
             raw_item = plynx.node.utils.func_or_group_to_dict(func_or_group)
             self.list_of_nodes.append(_enhance_list_item(raw_item))
 
-    def search(self, query):
+    def search(self, query: hub.Query) -> Dict[str, Any]:
         # TODO use search_parameters
         # TODO should parse_search_string be removed from nodes_collection?
         _, search_string = parse_search_string(query.search)

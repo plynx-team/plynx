@@ -1,6 +1,6 @@
 """Cancelation DB Object and utils"""
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import List, Optional
 
 from dataclasses_json import dataclass_json
 
@@ -26,18 +26,19 @@ class RunCancellationManager:
     run_id: ObjectId
 
     @staticmethod
-    def cancel_run(run_id):
+    def cancel_run(run_id: ObjectId):
         """Cancel Run.
         Args:
-            run_id    (ObjectId, str) RunID
+            run_id    (ObjectId) RunID
         """
-        run_cancellation = RunCancellation()
-        run_cancellation.run_id = ObjectId(run_id)  # pylint: disable=attribute-defined-outside-init
+        run_cancellation = RunCancellation(
+            run_id=run_id,
+        )
         run_cancellation.save()
         return True
 
     @staticmethod
-    def get_run_cancellations():
+    def get_run_cancellations() -> List[RunCancellation]:
         """Get all Run Cancellation events"""
         res = []
         for runs_cancellation_dict in get_db_connector()[Collections.RUN_CANCELLATIONS].find():
@@ -47,7 +48,7 @@ class RunCancellationManager:
         return res
 
     @staticmethod
-    def remove(runs_cancellation_ids):
+    def remove(runs_cancellation_ids: List[ObjectId]):
         """Remove Run Cancellation events with given Ids
         Args:
             runs_cancellation_ids     (list of ObjectID)  List of Run IDs to remove

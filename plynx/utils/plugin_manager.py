@@ -2,15 +2,19 @@
 # pylint: disable=global-statement
 import logging
 import pydoc
+from typing import Any, Dict
 
-from plynx.utils.config import get_plugins
+from plynx.base.executor import BaseExecutor
+from plynx.base.hub import BaseHub
+from plynx.base.resource import BaseResource
+from plynx.utils.config import PluginsConfig, get_plugins
 
 
-def _isinstance_namedtuple(x):
+def _isinstance_namedtuple(x: Any) -> bool:
     return isinstance(x, tuple) and getattr(x, '_fields', None) is not None
 
 
-def _as_dict(obj):
+def _as_dict(obj: Any):
     if _isinstance_namedtuple(obj):
         return {
             key: _as_dict(getattr(obj, key)) for key in obj._fields
@@ -21,12 +25,13 @@ def _as_dict(obj):
 
 
 class _ResourceManager:
-    def __init__(self, plugins):
+    def __init__(self, plugins: PluginsConfig):
         self.resources = plugins.resources
-        self.kind_to_resource_class = {
-            resource.kind: pydoc.locate(resource.cls) for resource in self.resources
+        self.kind_to_resource_class: Dict[str, BaseResource] = {
+            resource.kind: pydoc.locate(resource.cls)   # type: ignore
+            for resource in self.resources
         }
-        self.kind_to_resource_dict = {
+        self.kind_to_resource_dict: Dict[str, Dict[str, Any]] = {
             resource.kind: resource._asdict() for resource in self.resources
         }
         for kind, resource_class in self.kind_to_resource_class.items():
@@ -34,13 +39,13 @@ class _ResourceManager:
 
 
 class _ExecutorManager:
-    def __init__(self, plugins):
-        self.kind_to_executor_class = {}
+    def __init__(self, plugins: PluginsConfig):
+        self.kind_to_executor_class: Dict[str, BaseExecutor] = {}
         self.kind_to_icon = {}
         self.kind_to_color = {}
         self.kind_to_title = {}
         for o_or_w in plugins.workflows + plugins.operations + plugins.dummy_operations:
-            self.kind_to_executor_class[o_or_w.kind] = pydoc.locate(o_or_w.executor)
+            self.kind_to_executor_class[o_or_w.kind] = pydoc.locate(o_or_w.executor)    # type: ignore
             if not self.kind_to_executor_class[o_or_w.kind]:
                 raise Exception(f"Executor `{o_or_w.executor}` not found")
             self.kind_to_icon[o_or_w.kind] = o_or_w.icon
@@ -59,7 +64,7 @@ class _ExecutorManager:
 
 
 class _OperationManager:
-    def __init__(self, plugins):
+    def __init__(self, plugins: PluginsConfig):
         self.operations = plugins.operations
         self.kind_to_operation_dict = {
             operation.kind: _as_dict(operation) for operation in self.operations
@@ -67,10 +72,11 @@ class _OperationManager:
 
 
 class _HubManager:
-    def __init__(self, plugins):
+    def __init__(self, plugins: PluginsConfig):
         self.hubs = plugins.hubs
-        self.kind_to_hub_class = {
-            hub.kind: pydoc.locate(hub.cls)(**hub.args) for hub in self.hubs
+        self.kind_to_hub_class: Dict[str, BaseHub] = {
+            hub.kind: pydoc.locate(hub.cls)(**hub.args)     # type: ignore
+            for hub in self.hubs
         }
         self.kind_to_hub_dict = {
             hub.kind: hub._asdict() for hub in self.hubs
@@ -78,14 +84,14 @@ class _HubManager:
 
 
 class _WorkflowManager:
-    def __init__(self, plugins):
+    def __init__(self, plugins: PluginsConfig):
         self.workflows = plugins.workflows
         self.kind_to_workflow_dict = {
             workflow.kind: workflow._asdict() for workflow in self.workflows
         }
 
 
-_plugins = get_plugins()
+_plugins: PluginsConfig = get_plugins()
 
 _RESOURCE_MANAGER = None
 _OPERATION_MANAGER = None
