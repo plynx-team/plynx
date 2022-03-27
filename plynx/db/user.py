@@ -1,5 +1,9 @@
 """User DB Object and utils"""
 
+from dataclasses import dataclass, field
+from typing import List
+
+from dataclasses_json import dataclass_json
 # TODO: replace itsdangerous with more moder solution
 from itsdangerous import BadSignature
 from itsdangerous import JSONWebSignatureSerializer as Serializer
@@ -8,7 +12,7 @@ from itsdangerous import TimedJSONWebSignatureSerializer as TimedSerializer
 from passlib.apps import custom_app_context as pwd_context
 
 from plynx.constants import Collections, OperationViewSetting
-from plynx.db.db_object import DBObject, DBObjectField
+from plynx.db.db_object import DBObject
 from plynx.utils.common import ObjectId
 from plynx.utils.config import get_auth_config, get_iam_policies_config
 from plynx.utils.db_connector import get_db_connector
@@ -16,75 +20,27 @@ from plynx.utils.db_connector import get_db_connector
 DEFAULT_POLICIES = get_iam_policies_config().default_policies
 
 
+@dataclass_json
+@dataclass
 class UserSettings(DBObject):
     """User Settings structure."""
-
-    display_name: str
-
-    FIELDS = {
-        # settings
-        'node_view_mode': DBObjectField(
-            type=str,
-            default=OperationViewSetting.KIND_AND_TITLE,
-            is_list=False,
-            ),
-        'display_name': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
-    }
-
-    def __str__(self):
-        return f'UserSettings(name="{self.display_name}")'
-
-    def __repr__(self):
-        return f'UserSettings({str(self.to_dict())})'
+    node_view_mode: str = OperationViewSetting.KIND_AND_TITLE
+    display_name: str = ""
 
 
+@dataclass_json
+@dataclass
 class User(DBObject):
     """Basic User class with db interface."""
-
-    FIELDS = {
-        '_id': DBObjectField(
-            type=ObjectId,
-            default=ObjectId,
-            is_list=False,
-            ),
-        'username': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
-        'email': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
-        'password_hash': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
-        'active': DBObjectField(
-            type=bool,
-            default=True,
-            is_list=False,
-            ),
-        'policies': DBObjectField(
-            type=str,
-            default=DEFAULT_POLICIES,
-            is_list=True,
-            ),
-
-        'settings': DBObjectField(
-            type=UserSettings,
-            default=UserSettings,
-            is_list=False,
-            ),
-    }
-
     DB_COLLECTION = Collections.USERS
+
+    _id: ObjectId = field(default_factory=ObjectId)
+    username: str = ""
+    email: str = ""
+    password_hash: str = ""
+    active: bool = True
+    policies: List[str] = field(default_factory=lambda: list(DEFAULT_POLICIES))
+    settings: UserSettings = field(default_factory=UserSettings)
 
     def hash_password(self, password):
         """Change password.
@@ -129,15 +85,6 @@ class User(DBObject):
     def check_role(self, role):
         """Check if the user has a given role"""
         return role in self.policies
-
-    def __str__(self):
-        return f'User(_id="{self._id}", username={self.username})'
-
-    def __repr__(self):
-        return f'User({self.to_dict()})'
-
-    def __getattr__(self, name):
-        raise Exception(f"Can't get attribute '{name}'")
 
     @staticmethod
     def find_users():
@@ -193,7 +140,7 @@ class UserCollectionManager:
         if not user_dict:
             return None
 
-        return User(user_dict)
+        return User.from_dict(user_dict)
 
     @staticmethod
     def find_user_by_email(email):

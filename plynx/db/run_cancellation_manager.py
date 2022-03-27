@@ -1,28 +1,23 @@
 """Cancelation DB Object and utils"""
+from dataclasses import dataclass, field
+from typing import Optional
+
+from dataclasses_json import dataclass_json
 
 from plynx.constants import Collections
-from plynx.db.db_object import DBObject, DBObjectField
+from plynx.db.db_object import DBObject
 from plynx.utils.common import ObjectId
 from plynx.utils.db_connector import get_db_connector
 
 
+@dataclass_json
+@dataclass
 class RunCancellation(DBObject):
     """RunCancellation represents Run Cancellation event in the database."""
-
-    FIELDS = {
-        '_id': DBObjectField(
-            type=ObjectId,
-            default=ObjectId,
-            is_list=False,
-            ),
-        "run_id": DBObjectField(
-            type=ObjectId,
-            default=None,
-            is_list=False,
-            ),
-    }
-
     DB_COLLECTION = Collections.RUN_CANCELLATIONS
+
+    _id: ObjectId = field(default_factory=ObjectId)
+    run_id: Optional[ObjectId] = None
 
 
 class RunCancellationManager:

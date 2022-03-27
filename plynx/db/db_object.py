@@ -1,16 +1,18 @@
 """
-The class defines `DBObject` and `DBObjectField`. This is an abstraction of all of the objects in database.
+The class defines `DBObject`. This is an abstraction of all of the objects in database.
 """
 import datetime
-from collections import namedtuple
-from typing import Dict
+import inspect
+from typing import Any, Dict, Type, TypeVar
+
+import typing_inspect
 
 from plynx.utils.common import ObjectId
 from plynx.utils.db_connector import get_db_connector
 
-DBObjectField = namedtuple('DBObjectField', ['type', 'default', 'is_list'])
-
 _registry = {}
+
+T = TypeVar('T', bound='_DBObject')     # pylint: disable=invalid-name
 
 
 def register_class(target_class):
@@ -39,38 +41,22 @@ class _DBObject:
         obj_dict    (dict, None):   Representation of the object. If None, an object with default fields will be created.
     """
 
-    # Describe all the fields in the Object
-    FIELDS: Dict[str, DBObjectField] = {}
     # Name of the collection in the database
     DB_COLLECTION = ''
 
-    def __init__(self, obj_dict=None):
-        self.__init_fields(obj_dict)
-        self._dirty = True
-
-    def is_dirty(self):
-        """Check if DB Object is synced with the DB"""
-        return self._dirty
-
-    def __setattr__(self, key, value):
-        self.__dict__['_dirty'] = True
-        self.__dict__[key] = value
-
-    def __init_fields(self, obj_dict):
-        obj_dict = obj_dict or {}
-        for field_name, object_field in self.FIELDS.items():
-            obj_value = obj_dict.get(field_name, None)
-            if obj_value is not None:
-                if object_field.is_list:
-                    value = [
-                        object_field.type(v) for v in obj_value
-                    ]
-                else:
-                    value = object_field.type(obj_value)
-            else:
-                # Use default value
-                value = object_field.default() if callable(object_field.default) else object_field.default
-            setattr(self, field_name, value)
+    def __post_init__(self):
+        for (name, field_type) in self.__annotations__.items():     # pylint: disable=no-member
+            value = self.__dict__[name]
+            if typing_inspect.is_optional_type(field_type) and value is not None:
+                # Process case of Optional[Cls]
+                types = typing_inspect.get_args(field_type)
+                assert len(types) == 2, "Must be exactly two classes: [CustomClass, None]"
+                type_cls = types[0]
+                setattr(self, name, type_cls(getattr(self, name)))
+            if inspect.isclass(field_type):
+                # Process external type, such as ObjectId
+                # dataclass_json should handle the rest dataclasses and primitive types
+                setattr(self, name, field_type(getattr(self, name)))
 
     @classmethod
     def load(cls, _id, collection=None):
@@ -85,15 +71,14 @@ class _DBObject:
             raise DBObjectNotFound(f"Object `{_id}` not found in `{collection}` collection")
         return cls.from_dict(obj_dict)
 
-    def save(self, force=False, collection=None):
+    # TODO remove `force` argument or use it
+    def save(self, force=False, collection=None):   # pylint: disable=unused-argument
         """Save Object in the database"""
         collection = collection or self.__class__.DB_COLLECTION
         if not collection:
             raise ClassNotSavable(
                 f"Class `{self.__class__.__name__}` is not savable."
             )
-        if not self.is_dirty() and not force:
-            return True
 
         now = datetime.datetime.utcnow()
 
@@ -109,37 +94,7 @@ class _DBObject:
             upsert=True,
         )
 
-        self._dirty = False
         return True
-
-    @classmethod
-    def from_dict(cls, obj_dict):
-        """Create object from dict representation.
-
-        Args:
-            obj_dict    (dict):     Representation of the object,
-                                    i.e. {'name': 'Obj Name', 'size': 12}
-        """
-        return cls(obj_dict)
-
-    @staticmethod
-    def __to_dict_single_element(value):
-        if isinstance(value, DBObject):
-            return value.to_dict()
-        return value
-
-    def to_dict(self):
-        """Create a dictionary from an object."""
-        res = {}
-        for field_name, object_field in self.FIELDS.items():
-            if object_field.is_list:
-                value = [
-                    self.__to_dict_single_element(element) for element in getattr(self, field_name)
-                ]
-            else:
-                value = self.__to_dict_single_element(getattr(self, field_name))
-            res[field_name] = value
-        return res
 
     def copy(self):
         """Make a copy
@@ -147,7 +102,15 @@ class _DBObject:
         Return:
             A copy of the Object
         """
-        return self.__class__(self.to_dict())
+        return self.__class__.from_dict(self.to_dict())
+
+    @classmethod
+    def from_dict(cls: Type[T], dict_obj: Dict[str, Any]) -> T:
+        """Create a class based on dict_obj"""
+
+    def to_dict(self: T) -> Dict[str, Any]:     # pylint: disable=no-self-use
+        """Create serialized object"""
+        return {}
 
     def __str__(self):
         id_val = self.__dict__.get('_id', str(self.to_dict()))

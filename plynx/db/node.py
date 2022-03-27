@@ -1,12 +1,14 @@
 """Node DB Object and utils"""
 
 from collections import defaultdict, deque
-from typing import Any, List
+from dataclasses import dataclass, field
+from typing import Any, List, Optional
 
+from dataclasses_json import dataclass_json
 from past.builtins import basestring
 
 from plynx.constants import Collections, NodeClonePolicy, NodeOrigin, NodeRunningStatus, NodeStatus, ParameterTypes, SpecialNodeId
-from plynx.db.db_object import DBObject, DBObjectField
+from plynx.db.db_object import DBObject
 from plynx.plugins.resources.common import FILE_KIND
 from plynx.utils.common import ObjectId
 
@@ -72,229 +74,76 @@ def _clone_update_in_place(node, node_clone_policy):
     return node
 
 
-RESOURCE_FIELDS = {
-    'name': DBObjectField(
-        type=str,
-        default='',
-        is_list=False,
-        ),
-    'file_type': DBObjectField(
-        type=str,
-        default=FILE_KIND,
-        is_list=False,
-        ),
-    'values': DBObjectField(
-        type=lambda object_dict: object_dict,
-        default=list,
-        is_list=True,
-        ),
-    'is_array': DBObjectField(
-        type=bool,
-        default=False,
-        is_list=False,
-        ),
-    'min_count': DBObjectField(
-        type=int,
-        default=1,
-        is_list=False,
-        ),
-}
+@dataclass_json
+@dataclass
+class _BaseResource(DBObject):
+    name: str = ""
+    file_type: str = FILE_KIND
+    values: List[Any] = field(default_factory=list)
+    is_array: bool = False
+    min_count: int = 1
 
 
-class Output(DBObject):
+@dataclass_json
+@dataclass
+class Output(_BaseResource):
     """Basic Output structure."""
 
-    FIELDS = RESOURCE_FIELDS
 
-    name: str
-
-    def __str__(self):
-        return f'Output(name="{self.name}")'
-
-    def __repr__(self):
-        return f'Output({str(self.to_dict())})'
-
-
+@dataclass_json
+@dataclass
 class InputReference(DBObject):
     """Basic Value of the Input structure."""
 
-    FIELDS = {
-        'node_id': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
-        'output_id': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
-    }
-
-    node_id: str
-    output_id: str
-
-    def __str__(self):
-        return f'InputReference({self.node_id}, {self.output_id})'
-
-    def __repr__(self):
-        return f'InputReference({self.to_dict()})'
+    node_id: str = ""
+    output_id: str = ""
 
 
-class Input(DBObject):
+@dataclass_json
+@dataclass
+class Input(_BaseResource):
     """Basic Input structure."""
 
-    FIELDS = dict({
-        'input_references': DBObjectField(
-            type=InputReference,
-            default=list,
-            is_list=True,
-            ),
-        }, **RESOURCE_FIELDS)
-
-    name: str
-
-    def __str__(self):
-        return f'Input(name="{self.name}")'
-
-    def __repr__(self):
-        return f'Input({self.to_dict()})'
+    input_references: List[InputReference] = field(default_factory=list)
 
 
+@dataclass_json
+@dataclass
 class Node(DBObject):
     """Basic Node with db interface."""
     # pylint: disable=too-many-instance-attributes
-
-    _id: ObjectId
-    title: str
-    kind: str
-    inputs: List[Input]
-    parameters: List[Any]
-    outputs: List[Output]
-    logs: List[Output]
-
-    FIELDS = {
-        '_id': DBObjectField(
-            type=ObjectId,
-            default=ObjectId,
-            is_list=False,
-            ),
-        '_type': DBObjectField(
-            type=str,
-            default='Node',
-            is_list=False,
-            ),
-        'title': DBObjectField(
-            type=str,
-            default='Title',
-            is_list=False,
-            ),
-        'description': DBObjectField(
-            type=str,
-            default='Description',
-            is_list=False,
-            ),
-        # Kind, such as plynx.plugins.executors.local.BashJinja2. Derived from from plynx.plugins.executors.BaseExecutor class.
-        'kind': DBObjectField(
-            type=str,
-            default='dummy',
-            is_list=False,
-            ),
-        # ID of previous version of the node, always refer to `nodes` collection.
-        'parent_node_id': DBObjectField(
-            type=ObjectId,
-            default=None,
-            is_list=False,
-            ),
-        # ID of next version of the node, always refer to `nodes` collection.
-        'successor_node_id': DBObjectField(
-            type=ObjectId,
-            default=None,
-            is_list=False,
-            ),
-        # ID of original node, used in `runs`, always refer to `nodes` collection.
-        # A Run refers to original node
-        'original_node_id': DBObjectField(
-            type=ObjectId,
-            default=None,
-            is_list=False,
-            ),
-        'origin': DBObjectField(
-            type=str,
-            default=NodeOrigin.DB,
-            is_list=False,
-            ),
-        # The following `code_*` values defined when the operation declared outside of plynx DB
-        # code_hash is a hash value of the code
-        'code_hash': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
-        # code_function_location refers to the location of the function
-        'code_function_location': DBObjectField(
-            type=str,
-            default=None,
-            is_list=False,
-            ),
-        'inputs': DBObjectField(
-            type=Input,
-            default=list,
-            is_list=True,
-            ),
-        'outputs': DBObjectField(
-            type=Output,
-            default=list,
-            is_list=True,
-            ),
-        'parameters': DBObjectField(
-            type=lambda object_dict: Parameter(object_dict),    # pylint: disable=unnecessary-lambda
-            default=list,
-            is_list=True,
-            ),
-        'logs': DBObjectField(
-            type=Output,
-            default=list,
-            is_list=True,
-            ),
-        'node_running_status': DBObjectField(
-            type=str,
-            default=NodeRunningStatus.CREATED,
-            is_list=False,
-            ),
-        'node_status': DBObjectField(
-            type=str,
-            default=NodeStatus.CREATED,
-            is_list=False,
-            ),
-        'cache_url': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
-        'x': DBObjectField(
-            type=int,
-            default=0,
-            is_list=False,
-            ),
-        'y': DBObjectField(
-            type=int,
-            default=0,
-            is_list=False,
-            ),
-        'author': DBObjectField(
-            type=ObjectId,
-            default=None,
-            is_list=False,
-            ),
-        'starred': DBObjectField(
-            type=bool,
-            default=False,
-            is_list=False,
-            ),
-    }
-
     DB_COLLECTION = Collections.TEMPLATES
+
+    _id: ObjectId = field(default_factory=ObjectId)
+    _type: str = "Node"
+    title: str = "Title"
+    description: str = "Description"
+    kind: str = "dummy"
+    # ID of previous version of the node, always refer to `nodes` collection.
+    parent_node_id: Optional[ObjectId] = None
+    # ID of next version of the node, always refer to `nodes` collection.
+    successor_node_id: Optional[ObjectId] = None
+    # ID of original node, used in `runs`, always refer to `nodes` collection.
+    # A Run refers to original node
+    original_node_id: Optional[ObjectId] = None
+    origin: str = NodeOrigin.DB
+    # The following `code_*` values defined when the operation declared outside of plynx DB
+    # code_hash is a hash value of the code
+    code_hash: str = ""
+    # code_function_location refers to the location of the function
+    code_function_location: Optional[str] = None
+    node_running_status: str = NodeRunningStatus.CREATED
+    node_status: str = NodeStatus.CREATED
+    cache_url: Optional[str] = None
+    x: int = 0
+    y: int = 0
+    author: Optional[ObjectId] = None
+    starred: bool = False
+
+    inputs: List[Input] = field(default_factory=list)
+    parameters: List["Parameter"] = field(default_factory=list)
+    outputs: List[Output] = field(default_factory=list)
+    logs: List[Output] = field(default_factory=list)
 
     @staticmethod
     def _default_log(name):
@@ -340,12 +189,6 @@ class Node(DBObject):
         """Return a cloned copy of a Node"""
         node = _clone_update_in_place(self.copy(), node_clone_policy)
         return node
-
-    def __str__(self):
-        return f'Node(_id="{self._id}")'
-
-    def __repr__(self):
-        return f'Node({self.to_dict()})'
 
     def _get_custom_element(self, arr, name, throw, default=None):
         for parameter in arr:
@@ -512,59 +355,27 @@ class Node(DBObject):
                 node.y = TOP_PADDING + level_padding + cum_heights[index]
 
 
+@dataclass_json
+@dataclass
 class ParameterEnum(DBObject):
     """Enum value."""
-
-    FIELDS = {
-        'values': DBObjectField(
-            type=str,
-            default=list,
-            is_list=True,
-            ),
-        'index': DBObjectField(
-            type=str,
-            default=-1,
-            is_list=False,
-            ),
-    }
-
-    def __repr__(self):
-        return f'ParameterEnum({self.to_dict()})'
+    values: List[str] = field(default_factory=list)
+    index: int = 0
 
 
+@dataclass_json
+@dataclass
 class ParameterCode(DBObject):
     """Code value."""
-
-    FIELDS = {
-        'value': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
-        'mode': DBObjectField(
-            type=str,
-            default='python',
-            is_list=False,
-            ),
-    }
-
-    def __repr__(self):
-        return f'ParameterCode({self.to_dict()})'
+    value: str = ""
+    mode: str = "python"
 
 
+@dataclass_json
+@dataclass
 class ParameterListOfNodes(DBObject):
     """List Of Nodes value."""
-
-    FIELDS = {
-        'value': DBObjectField(
-            type=Node,
-            default=list,
-            is_list=True,
-            ),
-    }
-
-    def __repr__(self):
-        return f'ParameterListOfNodes({self.to_dict()})'
+    value: List[Node] = field(default_factory=list)
 
 
 # pylint: disable=too-many-return-statements
@@ -627,61 +438,23 @@ def _value_is_valid(value, parameter_type):
         return False
 
 
+@dataclass_json
+@dataclass
 class Parameter(DBObject):
     """Basic Parameter structure."""
+    # pylint: disable=too-many-instance-attributes
 
-    FIELDS = {
-        'name': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
-        'parameter_type': DBObjectField(
-            type=str,
-            default=ParameterTypes.STR,
-            is_list=False,
-            ),
-        # TODO make type factory
-        'value': DBObjectField(
-            type=lambda x: x,   # Preserve type
-            default='',
-            is_list=False,
-            ),
-        'mutable_type': DBObjectField(
-            type=bool,
-            default=True,
-            is_list=False,
-            ),
-        'removable': DBObjectField(
-            type=bool,
-            default=True,
-            is_list=False,
-            ),
-        'publicable': DBObjectField(
-            type=bool,
-            default=True,
-            is_list=False,
-            ),
-        'widget': DBObjectField(
-            type=str,
-            default=None,
-            is_list=False,
-            ),
-        # Link to global parameter
-        'reference': DBObjectField(
-            type=str,
-            default=None,
-            is_list=False,
-            ),
-    }
+    name: str = ""
+    parameter_type: str = ParameterTypes.STR
+    # TODO make type factory
+    value: Any = ""
+    mutable_type: bool = True
+    removable: bool = True
+    publicable: bool = True
+    widget: Optional[str] = None
+    reference: Optional[str] = None
 
-    name: str
-    parameter_type: str
-    value: Any
-
-    def __init__(self, obj_dict=None):
-        super().__init__(obj_dict)
-
+    def __post_init__(self):
         # `value` field is a special case: the type depends on `parameter_type`
         if self.value is None:
             self.value = _get_default_by_type(self.parameter_type)
@@ -693,9 +466,3 @@ class Parameter(DBObject):
             self.value = ParameterListOfNodes.from_dict(self.value)
         if not _value_is_valid(self.value, self.parameter_type):
             raise ValueError(f"Invalid parameter value type: {self.name}: {self.value}")
-
-    def __str__(self):
-        return f'Parameter(name="{self.name}")'
-
-    def __repr__(self):
-        return f'Parameter({self.to_dict()})'

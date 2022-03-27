@@ -13,7 +13,7 @@ from past.builtins import basestring
 import plynx.base.executor
 import plynx.utils.plugin_manager
 from plynx.constants import NodeResources, NodeRunningStatus, ParameterTypes
-from plynx.db.node import Output, Parameter
+from plynx.db.node import Output, Parameter, ParameterCode
 from plynx.plugins.resources.common import FILE_KIND
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
 
@@ -187,50 +187,49 @@ class BaseBash(plynx.base.executor.BaseExecutor):
         node = super().get_default_node(is_workflow)
         node.parameters.extend(
             [
-                Parameter.from_dict({
-                    'name': '_cmd',
-                    'parameter_type': ParameterTypes.CODE,
-                    'value': {
-                        'mode': 'sh',
-                        'value': 'set -e\n\necho "hello world"\n',
-                    },
-                    'mutable_type': False,
-                    'publicable': False,
-                    'removable': False,
-                    }
+                Parameter(
+                    name='_cmd',
+                    parameter_type=ParameterTypes.CODE,
+                    value=ParameterCode(
+                        mode='sh',
+                        value='set -e\n\necho "hello world"\n',
+                    ),
+                    mutable_type=False,
+                    publicable=False,
+                    removable=False,
                 ),
-                Parameter.from_dict({
-                    'name': '_cacheable',
-                    'parameter_type': ParameterTypes.BOOL,
-                    'value': False,
-                    'mutable_type': False,
-                    'publicable': False,
-                    'removable': False,
-                }),
-                Parameter.from_dict({
-                    'name': '_timeout',
-                    'parameter_type': ParameterTypes.INT,
-                    'value': 600,
-                    'mutable_type': False,
-                    'publicable': True,
-                    'removable': False
-                }),
+                Parameter(
+                    name='_cacheable',
+                    parameter_type=ParameterTypes.BOOL,
+                    value=False,
+                    mutable_type=False,
+                    publicable=False,
+                    removable=False,
+                ),
+                Parameter(
+                    name='_timeout',
+                    parameter_type=ParameterTypes.INT,
+                    value=600,
+                    mutable_type=False,
+                    publicable=True,
+                    removable=False
+                ),
             ]
         )
         node.logs.extend(
             [
-                Output.from_dict({
-                    'name': 'stderr',
-                    'file_type': FILE_KIND,
-                }),
-                Output({
-                    'name': 'stdout',
-                    'file_type': FILE_KIND,
-                }),
-                Output({
-                    'name': 'worker',
-                    'file_type': FILE_KIND,
-                }),
+                Output(
+                    name='stderr',
+                    file_type=FILE_KIND,
+                ),
+                Output(
+                    name='stdout',
+                    file_type=FILE_KIND,
+                ),
+                Output(
+                    name='worker',
+                    file_type=FILE_KIND,
+                ),
             ]
         )
         return node

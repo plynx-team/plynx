@@ -15,12 +15,12 @@ class BaseExecutor:
     """Base Executor class"""
     IS_GRAPH = False
 
-    def __init__(self, node):
+    def __init__(self, node: Node):
         self.node = node
         self.workdir = TMP_DIR
 
     @abstractmethod
-    def run(self, preview=False):
+    def run(self, preview: bool = False):
         """Main execution function.
 
         - Workdir has been initialized.
@@ -51,37 +51,36 @@ class BaseExecutor:
         return False
 
     @classmethod
-    def get_default_node(cls, is_workflow):
+    def get_default_node(cls, is_workflow: bool):
         """Generate a new default Node for this executor"""
         node = Node()
         if cls.IS_GRAPH:
-            nodes_parameter = Parameter.from_dict({
-                'name': '_nodes',
-                'parameter_type': ParameterTypes.LIST_NODE,
-                'value': [],
-                'mutable_type': False,
-                'publicable': False,
-                'removable': False,
-                }
+            nodes_parameter = Parameter(
+                name='_nodes',
+                parameter_type=ParameterTypes.LIST_NODE,
+                value=[],
+                mutable_type=False,
+                publicable=False,
+                removable=False,
             )
             if not is_workflow:
                 # need to add inputs and outputs
                 nodes_parameter.value.value.extend(
                     [
-                        Node.from_dict({
-                            '_id': SpecialNodeId.INPUT,
-                            'title': 'Input',
-                            'kind': 'dummy',
-                            'node_running_status': NodeRunningStatus.SPECIAL,
-                            'node_status': NodeStatus.READY,
-                        }),
-                        Node.from_dict({
-                            '_id': SpecialNodeId.OUTPUT,
-                            'title': 'Output',
-                            'kind': 'dummy',
-                            'node_running_status': NodeRunningStatus.SPECIAL,
-                            'node_status': NodeStatus.READY,
-                        }),
+                        Node(
+                            _id=SpecialNodeId.INPUT,
+                            title='Input',
+                            kind='dummy',
+                            node_running_status=NodeRunningStatus.SPECIAL,
+                            node_status=NodeStatus.READY,
+                        ),
+                        Node(
+                            _id=SpecialNodeId.OUTPUT,
+                            title='Output',
+                            kind='dummy',
+                            node_running_status=NodeRunningStatus.SPECIAL,
+                            node_status=NodeStatus.READY,
+                        ),
                     ]
                 )
             node.parameters.extend([

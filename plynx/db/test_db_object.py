@@ -12,28 +12,40 @@ def get_test_node():
     node.kind = "dummy"
 
     node.inputs = []
-    node.inputs.append(Input())
-    node.inputs[-1].name = 'in'
-    node.inputs[-1].file_type = 'file'
-    node.inputs[-1].values = []
+    node.inputs.append(
+        Input(
+            name="in",
+            file_type="file",
+            values=[],
+        )
+    )
 
     node.outputs = []
-    node.outputs.append(Output())
-    node.outputs[-1].name = 'out'
-    node.outputs[-1].file_type = 'file'
+    node.outputs.append(
+        Output(
+            name="out",
+            file_type="file",
+        )
+    )
 
     node.parameters = []
-    node.parameters.append(Parameter())
-    node.parameters[-1].name = 'number'
-    node.parameters[-1].parameter_type = ParameterTypes.INT
-    node.parameters[-1].value = -1
-    node.parameters[-1].widget = 'Number'
+    node.parameters.append(
+        Parameter(
+            name="number",
+            parameter_type=ParameterTypes.INT,
+            value=-1,
+            widget="Number",
+        )
+    )
 
-    node.parameters.append(Parameter())
-    node.parameters[-1].name = 'cmd'
-    node.parameters[-1].parameter_type = ParameterTypes.STR
-    node.parameters[-1].value = 'cat ${input[in]} | grep ${param[text]} > ${output[out]}'
-    node.parameters[-1].widget = 'Command line'
+    node.parameters.append(
+        Parameter(
+            name="cmd",
+            parameter_type=ParameterTypes.STR,
+            value="cat ${input[in]} | grep ${param[text]} > ${output[out]}",
+            widget="Command line",
+        )
+    )
 
     return node
 

@@ -1,44 +1,28 @@
 """Worker State DB Object and utils"""
 
+from dataclasses import dataclass, field
+from typing import List
+
+from dataclasses_json import dataclass_json
+
 from plynx.constants import Collections
-from plynx.db.db_object import DBObject, DBObjectField
+from plynx.db.db_object import DBObject
 from plynx.db.node import Node
 from plynx.utils.common import ObjectId
 from plynx.utils.db_connector import get_db_connector
 
 
+@dataclass_json
+@dataclass
 class WorkerState(DBObject):
     """Worker statistics snapshot."""
-
-    FIELDS = {
-        '_id': DBObjectField(
-            type=ObjectId,
-            default=ObjectId,
-            is_list=False,
-            ),
-        'worker_id': DBObjectField(
-            type=str,
-            default=None,
-            is_list=False,
-            ),
-        'host': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
-        'runs': DBObjectField(
-            type=Node,
-            default=list,
-            is_list=True,
-            ),
-        'kinds': DBObjectField(
-            type=str,
-            default=list,
-            is_list=True,
-            ),
-    }
-
     DB_COLLECTION = Collections.WORKER_STATE
+
+    _id: ObjectId = field(default_factory=ObjectId)
+    worker_id: str = ""
+    host: str = ""
+    runs: List[Node] = field(default_factory=list)
+    kinds: List[str] = field(default_factory=list)
 
 
 def get_worker_states():

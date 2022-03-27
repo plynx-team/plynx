@@ -150,6 +150,9 @@ def post_node(collection):
         if not node.author:
             node.author = db_node['author']
         if node.author != db_node['author']:
+            logger.info(type(node.author))
+            logger.info(type(db_node['author']))
+            logger.info("%" * 100)
             raise Exception("Author of the node does not match the one in the database")
         is_author = db_node['author'] == g.user._id
     else:

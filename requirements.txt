@@ -10,3 +10,4 @@ gevent>=21.12.0
 smart-open>=5.2.1
 requests>=2.18.4
 future>=0.17.1
+dataclasses-json>=0.5.7

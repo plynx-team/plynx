@@ -2,10 +2,13 @@
 
 import hashlib
 from builtins import str
-from typing import List
+from dataclasses import dataclass, field
+from typing import List, Optional
+
+from dataclasses_json import dataclass_json
 
 from plynx.constants import Collections
-from plynx.db.db_object import DBObject, DBObjectField
+from plynx.db.db_object import DBObject
 from plynx.db.node import Output
 from plynx.utils.common import ObjectId
 from plynx.utils.config import get_demo_config
@@ -13,51 +16,20 @@ from plynx.utils.config import get_demo_config
 demo_config = get_demo_config()
 
 
+@dataclass_json
+@dataclass
 class NodeCache(DBObject):
     """Basic Node Cache with db interface."""
-
-    _id: ObjectId
-    node_id: ObjectId
-    run_id: ObjectId
-    outputs: List[Output]
-    logs: List[Output]
-
-    FIELDS = {
-        '_id': DBObjectField(
-            type=ObjectId,
-            default=ObjectId,
-            is_list=False,
-            ),
-        'key': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
-        'run_id': DBObjectField(
-            type=ObjectId,
-            default=None,
-            is_list=False,
-            ),
-        'node_id': DBObjectField(
-            type=ObjectId,
-            default=None,
-            is_list=False,
-            ),
-        'outputs': DBObjectField(
-            type=Output,
-            default=list,
-            is_list=True,
-            ),
-        'logs': DBObjectField(
-            type=Output,
-            default=list,
-            is_list=True,
-            ),
-    }
-
     DB_COLLECTION = Collections.NODE_CACHE
 
     IGNORED_PARAMETERS = {'cmd', '_timeout'}
+
+    _id: ObjectId = field(default_factory=ObjectId)
+    key: str = ""
+    node_id: Optional[ObjectId] = None
+    run_id: Optional[ObjectId] = None
+    outputs: List[Output] = field(default_factory=list)
+    logs: List[Output] = field(default_factory=list)
 
     @staticmethod
     def instantiate(node, run_id):
@@ -112,9 +84,3 @@ class NodeCache(DBObject):
                     parameters_hash,
                 ]).encode('utf-8')
         ).hexdigest()
-
-    def __str__(self):
-        return f'NodeCache(_id="{self._id}")'
-
-    def __repr__(self):
-        return f'NodeCache({str(self.to_dict())})'
