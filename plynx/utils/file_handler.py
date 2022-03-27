@@ -1,7 +1,7 @@
 """Smart file handeling"""
 
 import uuid
-from typing import IO, Optional
+from typing import BinaryIO, Optional
 
 import smart_open
 
@@ -23,13 +23,13 @@ def open(filename: str, mode: str = "rt"):  # pylint: disable=redefined-builtin
     return smart_open.open(cld_filename, mode)
 
 
-def get_file_stream(file_path: str, preview: bool = False, file_type=None) -> IO:  # pylint: disable=unused-argument
+def get_file_stream(file_path: str, preview: bool = False, file_type=None) -> BinaryIO:  # pylint: disable=unused-argument
     """Get file stream object (deprecated)"""
     # TODO: remove this function
     return open(file_path, "rb")
 
 
-def upload_file_stream(fp: IO, file_path: Optional[str] = None, seek: bool = True) -> str:  # pylint: disable=invalid-name
+def upload_file_stream(fp: BinaryIO, file_path: Optional[str] = None, seek: bool = True) -> str:  # pylint: disable=invalid-name
     """Upload file stream to a given path (deprecated)"""
     # TODO: remove this function
     if seek:
