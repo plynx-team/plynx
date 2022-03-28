@@ -10,7 +10,7 @@ import typing_inspect
 from plynx.utils.common import ObjectId
 from plynx.utils.db_connector import get_db_connector
 
-DBObjectType = TypeVar('DBObjectType', bound='_DBObject')
+DBObjectType = TypeVar('DBObjectType', bound='_DBObject')   # pylint: disable=invalid-name
 
 _registry = {}
 
