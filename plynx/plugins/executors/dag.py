@@ -225,24 +225,24 @@ class DAG(plynx.base.executor.BaseExecutor):
         node = super().get_default_node(is_workflow)
         if not is_workflow:
             node.parameters.append(
-                Parameter.from_dict({
-                    'name': '_cacheable',
-                    'parameter_type': ParameterTypes.BOOL,
-                    'value': False,
-                    'mutable_type': False,
-                    'publicable': False,
-                    'removable': False,
-                })
+                Parameter(
+                    name="_cacheable",
+                    parameter_type=ParameterTypes.BOOL,
+                    value=False,
+                    mutable_type=False,
+                    publicable=False,
+                    removable=False,
+                )
             )
         node.parameters.append(
-            Parameter.from_dict({
-                'name': '_timeout',
-                'parameter_type': ParameterTypes.INT,
-                'value': 600,
-                'mutable_type': False,
-                'publicable': True,
-                'removable': False
-            })
+            Parameter(
+                name="_timeout",
+                parameter_type=ParameterTypes.INT,
+                value=600,
+                mutable_type=False,
+                publicable=True,
+                removable=False
+            )
         )
         node.title = 'New DAG workflow'
         return node

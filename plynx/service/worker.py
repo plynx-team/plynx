@@ -184,12 +184,12 @@ class Worker:
                 with self._run_id_to_executor_lock:
                     for executor in self._run_id_to_executor.values():
                         runs.append(executor.node.to_dict())
-                worker_state = WorkerState.from_dict({
-                    'worker_id': self.worker_id,
-                    'host': self.host,
-                    'runs': runs,
-                    'kinds': self.kinds,
-                })
+                worker_state = WorkerState(
+                    worker_id=self.worker_id,
+                    host=self.host,
+                    runs=runs,
+                    kinds=self.kinds,
+                )
                 worker_state.save()
                 self._stop_event.wait(timeout=Worker.WORKER_STATE_UPDATE_TIMEOUT)
         except Exception:

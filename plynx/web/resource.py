@@ -63,19 +63,19 @@ def upload_file():
 
     resource_id = upload_file_stream(request.files['data'])
 
-    file = plynx.db.node.Node.from_dict({
-        'title': title,
-        'description': description,
-        'kind': node_kind,
-        'node_running_status': NodeRunningStatus.STATIC,
-        'node_status': NodeStatus.READY,
-    })
+    file = plynx.db.node.Node(
+        title=title,
+        description=description,
+        kind=node_kind,
+        node_running_status=NodeRunningStatus.STATIC,
+        node_status=NodeStatus.READY,
+    )
     file.outputs.append(
-        plynx.db.node.Output.from_dict({
-            'name': 'file',
-            'file_type': file_type,
-            'values': [resource_id],
-        })
+        plynx.db.node.Output(
+            name='file',
+            file_type=file_type,
+            values=[resource_id],
+        )
     )
 
     file.author = g.user._id
