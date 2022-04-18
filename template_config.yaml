@@ -177,6 +177,14 @@ plugins:
           - basic-python-node-operation
           - basic-dag-operation
         collection: templates
+    - kind: python-db-hub
+      title: Database hub
+      icon: feathericons.database
+      cls: plynx.plugins.hubs.collection.CollectionHub
+      args:
+        operations:
+          - python-code-operation
+        collection: templates
     - kind: static-hub
       title: Static hub
       icon: feathericons.file
@@ -189,7 +197,7 @@ plugins:
       executor: plynx.plugins.executors.python.dag.DAG
       hubs:
         - static-hub
-        - db-hub
+        - python-db-hub
 
 default_policies:
   - CAN_VIEW_OTHERS_OPERATIONS
