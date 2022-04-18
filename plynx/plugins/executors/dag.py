@@ -47,12 +47,7 @@ class DAG(plynx.base.executor.BaseExecutor):
         super().__init__(node)
         assert self.node, "Attribute `node` is not defined"
 
-        # TODO: make a function to look for parameter
-        for parameter in self.node.parameters:
-            if parameter.name == '_nodes':
-                self.subnodes: List[Node] = parameter.value.value
-
-        assert self.subnodes is not None, 'Could not find subnodes'
+        self.subnodes: List[Node] = self.node.get_parameter_by_name('_nodes', throw=True).value.value
 
         self.node_id_to_node: Dict[ObjectId, Node] = {
             node._id: node for node in self.subnodes

@@ -6,7 +6,7 @@ from abc import abstractmethod
 from typing import Union
 
 from plynx.constants import NodeStatus, SpecialNodeId, ValidationCode, ValidationTargetType
-from plynx.db.node import Node, NodeRunningStatus, Parameter, ParameterTypes
+from plynx.db.node import Node, NodeRunningStatus, Parameter, ParameterListOfNodes, ParameterTypes
 from plynx.db.validation_error import ValidationError
 
 TMP_DIR = '/tmp/plx'
@@ -59,7 +59,7 @@ class BaseExecutor:
             nodes_parameter = Parameter(
                 name='_nodes',
                 parameter_type=ParameterTypes.LIST_NODE,
-                value=[],
+                value=ParameterListOfNodes(),
                 mutable_type=False,
                 publicable=False,
                 removable=False,
