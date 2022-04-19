@@ -24,11 +24,24 @@ stateful_class_registry = {}
 POOL_SIZE = 3
 
 
-def materialize_fn(fn_str: str) -> Callable:
+def materialize_fn_or_cls(node: Node) -> Callable:
     """Unpickle the function"""
-    func_bytes = bytes.fromhex(fn_str)
-    func = cloudpickle.loads(func_bytes)
-    return func
+
+    pickled_fn_parameter = node.get_parameter_by_name("_pickled_fn", throw=False)
+    code_parameter = node.get_parameter_by_name("_cmd", throw=False)
+    assert not (pickled_fn_parameter and code_parameter), "`_pickled_fn` and `_cmd` cannot be both non-null"
+    if pickled_fn_parameter:
+        fn_str: str = pickled_fn_parameter.value
+
+        func_bytes = bytes.fromhex(fn_str)
+        func = cloudpickle.loads(func_bytes)
+        return func
+    elif code_parameter:
+        code = code_parameter.value.value
+        local_vars: Dict[str, Any] = {}
+        exec(code, globals(), local_vars)   # pylint: disable=W0122
+        return local_vars["operation"]
+    raise ValueError("No function to materialize")
 
 
 def prep_args(node: Node) -> Dict[str, Any]:
@@ -112,9 +125,7 @@ def worker_main(job_run_queue: queue.Queue, job_complete_queue: queue.Queue):
         node = job_run_queue.get()
 
         try:
-            pickled_fn_parameter = node.get_parameter_by_name("_pickled_fn")
-
-            func = materialize_fn(pickled_fn_parameter.value)
+            func = materialize_fn_or_cls(node)
             if inspect.isclass(func):
                 with stateful_init_mutex:
                     if node.code_hash not in stateful_class_registry:
