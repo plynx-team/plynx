@@ -1,56 +1,72 @@
+"""PLynx CLI parser"""
 from __future__ import print_function
+
 import argparse
-from collections import namedtuple
+from dataclasses import dataclass
+from typing import Any, List, Optional, Tuple, Type, Union
+
 from plynx import __version__
-from plynx.utils.config import get_config, set_parameter
-from plynx.service.worker import run_worker
-from plynx.service.users import run_users
 from plynx.service.cache import run_cache
 from plynx.service.execute import run_execute
+from plynx.service.users import run_users
+from plynx.service.worker import run_worker
+from plynx.utils.config import get_config, set_parameter
 from plynx.utils.logs import set_logging_level
-
-
-Arg = namedtuple(
-    'Arg',
-    ['flags', 'help', 'action', 'default', 'nargs', 'type', 'levels', 'required']
-)
-Arg.__new__.__defaults__ = (None, None, None, None, None, None)
 
 _config = get_config()
 
 
+@dataclass
+class Arg:
+    """Common argument tuple"""
+    flags: Union[Tuple[str], Tuple[str, str]]
+    help: str
+    action: Optional[str] = None
+    default: Optional[Any] = None
+    type: Optional[Type] = None
+    levels: Optional[List[str]] = None
+    required: bool = False
+
+
 def api(args):
+    """Start web service."""
     # lazy load because web initializes too many variables
-    from plynx.web.common import run_api    # noqa: E402
+    from plynx.web.common import run_api  # noqa: E402  # pylint: disable=import-outside-toplevel
     set_logging_level(args.pop('verbose'))
     run_api(**args)
 
 
 def cache(args):
+    """Show cache options."""
     set_logging_level(args.pop('verbose'))
     run_cache(**args)
 
 
 def worker(args):
+    """Start worker service."""
     set_logging_level(args.pop('verbose'))
     run_worker(**args)
 
 
 def users(args):
+    """Show users options."""
     set_logging_level(args.pop('verbose'))
     run_users(**args)
 
 
-def version(args):
+def version(args):  # pylint: disable=unused-argument
+    """Print PLynx version"""
     print(__version__)
 
 
 def execute(args):
+    """Execute Operation."""
     set_logging_level(args.pop('verbose'))
     run_execute(**args)
 
 
-class CLIFactory(object):
+class CLIFactory:
+    """The class that generates PLynx CLI parser"""
     ARGS = {
         # Shared
         'verbose': Arg(
@@ -215,6 +231,7 @@ class CLIFactory(object):
 
     @classmethod
     def parse_global_config_parameters(cls, args):
+        """Parse parameters applied to all of the services."""
         remove = []
         for k, v in args.items():
             if cls.ARGS[k].levels:
@@ -227,6 +244,7 @@ class CLIFactory(object):
 
     @classmethod
     def get_parser(cls):
+        """Generate CLI parser"""
         parser = argparse.ArgumentParser()
         subparsers = parser.add_subparsers(
             help='sub-command help', dest='subcommand')
@@ -238,7 +256,7 @@ class CLIFactory(object):
                 arg = cls.ARGS[arg]
                 kwargs = {
                     f: getattr(arg, f)
-                    for f in arg._fields if f not in ['flags', 'levels'] and getattr(arg, f) is not None
+                    for f in arg.__dataclass_fields__ if f not in ['flags', 'levels'] and getattr(arg, f) is not None   # pylint: disable=no-member
                 }
                 sp.add_argument(*arg.flags, **kwargs)
             sp.set_defaults(func=sub['func'], args=sub['args'])
@@ -247,4 +265,5 @@ class CLIFactory(object):
 
 
 def get_parser():
+    """Generate CLI parser"""
     return CLIFactory.get_parser()

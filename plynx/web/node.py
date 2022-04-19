@@ -1,21 +1,26 @@
+"""All of the endpoints related to the Nodes or simial DB structures"""
 from __future__ import absolute_import
+
 import json
-from flask import request, g
-from plynx.db.node import Node
-from plynx.db.group import Group
+from typing import Optional
+
+import bson.objectid
+from flask import g, request
+
+import plynx.base.hub
 import plynx.db.node_collection_manager
 import plynx.db.run_cancellation_manager
-import plynx.base.hub
 import plynx.utils.plugin_manager
-from plynx.web.common import app, requires_auth, make_success_response, make_fail_response, make_permission_denied, handle_errors
+from plynx.constants import Collections, IAMPolicies, NodeClonePolicy, NodePostAction, NodePostStatus, NodeStatus, NodeVirtualCollection
+from plynx.db.node import Node
 from plynx.utils.common import to_object_id
-from plynx.constants import NodeStatus, NodePostAction, NodePostStatus, Collections, NodeClonePolicy, NodeVirtualCollection, IAMPolicies
+from plynx.web.common import app, handle_errors, logger, make_fail_response, make_permission_denied, make_success_response, requires_auth
 
 PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'hub', 'node_kinds', 'search', 'user_id'}
 
 node_collection_managers = {
     collection: plynx.db.node_collection_manager.NodeCollectionManager(collection=collection)
-    for collection in [Collections.TEMPLATES, Collections.RUNS, Collections.GROUPS]
+    for collection in [Collections.TEMPLATES, Collections.RUNS]
 }
 run_cancellation_manager = plynx.db.run_cancellation_manager.RunCancellationManager()
 
@@ -31,16 +36,17 @@ PLUGINS_DICT = plynx.utils.plugin_manager.get_plugins_dict()
 @app.route('/plynx/api/v0/search_<collection>', methods=['POST'])
 @handle_errors
 @requires_auth
-def post_search_nodes(collection):
+def post_search_nodes(collection: str):
+    """Create a search request in templates or runs"""
     query = json.loads(request.data)
-    app.logger.debug(request.data)
+    logger.debug(request.data)
 
     query['user_id'] = to_object_id(g.user._id)
 
     virtual_collection = query.pop('virtual_collection', None)
 
     if len(query.keys() - PAGINATION_QUERY_KEYS):
-        return make_fail_response('Unknown keys: `{}`'.format(query.keys() - PAGINATION_QUERY_KEYS)), 400
+        return make_fail_response(f"Unknown keys: `{query.keys() - PAGINATION_QUERY_KEYS}`"), 400
 
     if collection == 'in_hubs':
         hub = query.pop('hub')
@@ -62,7 +68,9 @@ def post_search_nodes(collection):
 @app.route('/plynx/api/v0/<collection>/<node_link>', methods=['GET'])
 @handle_errors
 @requires_auth
-def get_nodes(collection, node_link=None):
+def get_nodes(collection: str, node_link: Optional[str] = None):
+    """Get the Node based on its ID or kind"""
+    # pylint: disable=too-many-locals,too-many-return-statements,too-many-branches
     user_id = to_object_id(g.user._id)
 
     can_view_others_operations = g.user.check_role(IAMPolicies.CAN_VIEW_OTHERS_OPERATIONS)
@@ -80,7 +88,7 @@ def get_nodes(collection, node_link=None):
             return make_permission_denied()
         if kind in operation_manager.kind_to_operation_dict and (not can_view_operations or not can_create_operations):
             return make_permission_denied()
-        node = executor_manager.kind_to_executor_class[kind].get_default_node(
+        node: Node = executor_manager.kind_to_executor_class[kind].get_default_node(
             is_workflow=kind in workflow_manager.kind_to_workflow_dict
         )
         if isinstance(node, tuple):
@@ -95,36 +103,18 @@ def get_nodes(collection, node_link=None):
             'tour_steps': tour_steps,
             'plugins_dict': PLUGINS_DICT,
             })
-    elif node_link in workflow_manager.kind_to_workflow_dict and collection == Collections.GROUPS:
-        # TODO move group to a separate class
-        group_dict = Group().to_dict()
-        group_dict['kind'] = node_link
-        return make_success_response({
-            'group': group_dict,
-            'plugins_dict': PLUGINS_DICT,
-            })
     else:
         # when node_link is an id of the object
         try:
             node_id = to_object_id(node_link)
-        except Exception:
+        except bson.objectid.InvalidId:     # type: ignore
             return make_fail_response('Invalid ID'), 404
-        if collection == Collections.GROUPS:
-            # TODO move group to a separate class
-            group = node_collection_managers[collection].get_db_object(node_id, user_id)
-            if group:
-                return make_success_response({
-                    'group': group,
-                    'plugins_dict': PLUGINS_DICT,
-                    })
-            else:
-                make_fail_response('Group `{}` was not found'.format(node_link)), 404
-        node = node_collection_managers[collection].get_db_node(node_id, user_id)
-        app.logger.debug(node)
+        node_dict = node_collection_managers[collection].get_db_node(node_id, user_id)
+        logger.debug(node_dict)
 
-        if node:
-            is_owner = node['author'] == user_id
-            kind = node['kind']
+        if node_dict:
+            is_owner = node_dict['author'] == user_id
+            kind = node_dict['kind']
             if kind in workflow_manager.kind_to_workflow_dict and not can_view_workflows:
                 return make_permission_denied()
             if kind in operation_manager.kind_to_operation_dict and not can_view_operations:
@@ -134,22 +124,25 @@ def get_nodes(collection, node_link=None):
             if kind in operation_manager.kind_to_operation_dict and not can_view_others_operations and not is_owner:
                 return make_permission_denied()
             return make_success_response({
-                'node': node,
+                'node': node_dict,
                 'plugins_dict': PLUGINS_DICT,
                 })
         else:
-            return make_fail_response('Node `{}` was not found'.format(node_link)), 404
+            return make_fail_response(f"Node `{node_link}` was not found"), 404
 
 
 @app.route('/plynx/api/v0/<collection>', methods=['POST'])
 @handle_errors
 @requires_auth
-def post_node(collection):
-    app.logger.debug(request.data)
+def post_node(collection: str):
+    """Post a Node with an action"""
+    # TODO: fix disables
+    # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements
+    logger.debug(request.data)
 
     data = json.loads(request.data)
 
-    node = Node.from_dict(data['node'])
+    node: Node = Node.from_dict(data['node'])
     node.starred = False
     action = data['action']
     db_node = node_collection_managers[collection].get_db_node(node._id, g.user._id)
@@ -158,6 +151,9 @@ def post_node(collection):
         if not node.author:
             node.author = db_node['author']
         if node.author != db_node['author']:
+            logger.info(type(node.author))
+            logger.info(type(db_node['author']))
+            logger.info("%" * 100)
             raise Exception("Author of the node does not match the one in the database")
         is_author = db_node['author'] == g.user._id
     else:
@@ -178,7 +174,7 @@ def post_node(collection):
             return make_permission_denied('You do not have permission to save this object')
 
         if node.node_status != NodeStatus.CREATED:
-            return make_fail_response('Cannot save node with status `{}`'.format(node.node_status))
+            return make_fail_response(f"Cannot save node with status `{node.node_status}`")
 
         if is_author or is_admin or (is_workflow and can_modify_others_workflows):
             node.save(force=True)
@@ -189,7 +185,7 @@ def post_node(collection):
         if is_workflow:
             return make_fail_response('Invalid action for a workflow'), 400
         if node.node_status != NodeStatus.CREATED:
-            return make_fail_response('Node status `{}` expected. Found `{}`'.format(NodeStatus.CREATED, node.node_status))
+            return make_fail_response(f"Node status `{NodeStatus.CREATED}` expected. Found `{node.node_status}`")
         validation_error = executor_manager.kind_to_executor_class[node.kind](node).validate()
         if validation_error:
             return make_success_response({
@@ -209,7 +205,7 @@ def post_node(collection):
         if not is_workflow:
             return make_fail_response('Invalid action for an operation'), 400
         if node.node_status != NodeStatus.CREATED:
-            return make_fail_response('Node status `{}` expected. Found `{}`'.format(NodeStatus.CREATED, node.node_status))
+            return make_fail_response(f"Node status `{NodeStatus.CREATED}` expected. Found `{node.node_status}`")
         validation_error = executor_manager.kind_to_executor_class[node.kind](node).validate()
         if validation_error:
             return make_success_response({
@@ -227,27 +223,29 @@ def post_node(collection):
 
         return make_success_response({
                 'status': NodePostStatus.SUCCESS,
-                'message': 'Run(_id=`{}`) successfully created'.format(str(node._id)),
+                'message': f"Run(_id=`{node._id}`) successfully created",
                 'run_id': str(node._id),
-                'url': '/{}/{}'.format(Collections.RUNS, node._id),
+                'url': f"/{Collections.RUNS}/{node._id}",
             })
 
     elif action == NodePostAction.CLONE:
         if (is_workflow and not can_create_workflows) or (not is_workflow and not can_create_operations):
             return make_permission_denied('You do not have the role to create an object')
-        node_clone_policy = None
+        node_clone_policy: int
         if collection == Collections.TEMPLATES:
             node_clone_policy = NodeClonePolicy.NODE_TO_NODE
         elif collection == Collections.RUNS:
             node_clone_policy = NodeClonePolicy.RUN_TO_NODE
+        else:
+            raise ValueError(f"Unknown or unexpeted collection `{collection}`")
 
         node = node.clone(node_clone_policy)
         node.save(collection=Collections.TEMPLATES)
 
         return make_success_response({
-                'message': 'Node(_id=`{}`) successfully created'.format(str(node._id)),
+                'message': f"Node(_id=`{node._id}`) successfully created",
                 'node_id': str(node._id),
-                'url': '/{}/{}'.format(Collections.TEMPLATES, node._id),
+                'url': f"/{Collections.TEMPLATES}/{node._id}",
             })
 
     elif action == NodePostAction.VALIDATE:
@@ -261,7 +259,7 @@ def post_node(collection):
             })
     elif action == NodePostAction.DEPRECATE:
         if node.node_status == NodeStatus.CREATED:
-            return make_fail_response('Node status `{}` not expected.'.format(node.node_status))
+            return make_fail_response(f"Node status `{node.node_status}` not expected.")
 
         node.node_status = NodeStatus.DEPRECATED
 
@@ -272,7 +270,7 @@ def post_node(collection):
 
     elif action == NodePostAction.MANDATORY_DEPRECATE:
         if node.node_status == NodeStatus.CREATED:
-            return make_fail_response('Node status `{}` not expected.'.format(node.node_status))
+            return make_fail_response(f"Node status `{node.node_status}` not expected.")
 
         node.node_status = NodeStatus.MANDATORY_DEPRECATED
 
@@ -311,31 +309,8 @@ def post_node(collection):
     elif action == NodePostAction.GENERATE_CODE:
         raise NotImplementedError()
     else:
-        return make_fail_response('Unknown action `{}`'.format(action))
+        return make_fail_response(f"Unknown action `{action}`")
 
     return make_success_response({
-            'message': 'Node(_id=`{}`) successfully updated'.format(str(node._id))
-        })
-
-
-@app.route('/plynx/api/v0/groups', methods=['POST'])
-@handle_errors
-@requires_auth
-def post_group():
-    app.logger.debug(request.data)
-
-    data = json.loads(request.data)
-
-    group = Group.from_dict(data['group'])
-    group.author = g.user._id
-    db_group = node_collection_managers[Collections.GROUPS].get_db_object(group._id, g.user._id)
-    action = data['action']
-    if db_group and db_group['_readonly']:
-        return make_fail_response('Permission denied'), 403
-
-    if action == NodePostAction.SAVE:
-        group.save(force=True)
-
-    return make_success_response({
-            'message': 'Group(_id=`{}`) successfully updated'.format(str(group._id))
+            'message': f"Node(_id=`{node._id}`) successfully updated"
         })

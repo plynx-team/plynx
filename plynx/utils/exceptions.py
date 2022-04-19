@@ -1,9 +1,13 @@
-class NodeNotFound(ImportError):
-    pass
+"""Standard PLynx Exceptions"""
+
+
+class ExecutorNotFound(ImportError):
+    """Executor not imported"""
 
 
 class RegisterUserException(Exception):
-    def __init__(self, message, error_code):
+    """Failed to register the user"""
+    def __init__(self, message: str, error_code: str):
         super().__init__(message)
         self.message = message
         self.error_code = error_code

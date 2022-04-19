@@ -1,3 +1,7 @@
+"""Web constants"""
+
+
 class ResponseStatus:
-    SUCCESS = 'SUCCESS'
-    FAILED = 'FAILED'
+    """Returned response status"""
+    SUCCESS: str = 'SUCCESS'
+    FAILED: str = 'FAILED'

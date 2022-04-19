@@ -1,9 +1,12 @@
+"""Utils to work with executors"""
+from typing import Any, Dict
+
 import plynx.db.node
 import plynx.utils.exceptions
 import plynx.utils.plugin_manager
 
 
-def materialize_executor(node_dict):
+def materialize_executor(node_dict: Dict[str, Any]):
     """
     Create a Node object from a dictionary
 
@@ -13,10 +16,10 @@ def materialize_executor(node_dict):
     Returns:
     Node: Derived from plynx.nodes.base.Node class
     """
-    kind = node_dict['kind']
-    cls = plynx.utils.plugin_manager.get_executor_manager().kind_to_executor_class.get(kind)
+    node = plynx.db.node.Node.from_dict(node_dict)
+    cls = plynx.utils.plugin_manager.get_executor_manager().kind_to_executor_class.get(node.kind)
     if not cls:
-        raise plynx.utils.exceptions.NodeNotFound(
-            'Node kind `{}` not found'.format(kind)
+        raise plynx.utils.exceptions.ExecutorNotFound(
+            f"Node kind `{node.kind}` not found"
         )
-    return cls(plynx.db.node.Node.from_dict(node_dict))
+    return cls(node)

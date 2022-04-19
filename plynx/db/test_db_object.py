@@ -1,41 +1,57 @@
-from plynx.db.node import Node, Input, Parameter, Output
+"""Test DB object"""
+
 from plynx.constants import ParameterTypes
+from plynx.db.node import Input, Node, Output, Parameter
 
 
 def get_test_node():
+    """Create test node"""
     node = Node()
     node.title = 'Command 1x1'
     node.description = 'Any command with 1 arg'
     node.kind = "dummy"
 
     node.inputs = []
-    node.inputs.append(Input())
-    node.inputs[-1].name = 'in'
-    node.inputs[-1].file_type = 'file'
-    node.inputs[-1].values = []
+    node.inputs.append(
+        Input(
+            name="in",
+            file_type="file",
+            values=[],
+        )
+    )
 
     node.outputs = []
-    node.outputs.append(Output())
-    node.outputs[-1].name = 'out'
-    node.outputs[-1].file_type = 'file'
+    node.outputs.append(
+        Output(
+            name="out",
+            file_type="file",
+        )
+    )
 
     node.parameters = []
-    node.parameters.append(Parameter())
-    node.parameters[-1].name = 'number'
-    node.parameters[-1].parameter_type = ParameterTypes.INT
-    node.parameters[-1].value = -1
-    node.parameters[-1].widget = 'Number'
+    node.parameters.append(
+        Parameter(
+            name="number",
+            parameter_type=ParameterTypes.INT,
+            value=-1,
+            widget="Number",
+        )
+    )
 
-    node.parameters.append(Parameter())
-    node.parameters[-1].name = 'cmd'
-    node.parameters[-1].parameter_type = ParameterTypes.STR
-    node.parameters[-1].value = 'cat ${input[in]} | grep ${param[text]} > ${output[out]}'
-    node.parameters[-1].widget = 'Command line'
+    node.parameters.append(
+        Parameter(
+            name="cmd",
+            parameter_type=ParameterTypes.STR,
+            value="cat ${input[in]} | grep ${param[text]} > ${output[out]}",
+            widget="Command line",
+        )
+    )
 
     return node
 
 
 def compare_dictionaries(dict1, dict2):
+    """Deep comparison of two dicts"""
     if dict1 is None or dict2 is None:
         return True
 
@@ -58,6 +74,7 @@ def compare_dictionaries(dict1, dict2):
 
 
 def test_serialization():
+    """Test serialization"""
     node1 = get_test_node()
     node1_dict = node1.to_dict()
     node2 = Node.from_dict(node1_dict)

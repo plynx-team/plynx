@@ -38,6 +38,8 @@ COPY ./scripts/watch.sh /app/watch.sh
 # Build PLynx package
 ADD ./plynx /tmp/plynx
 ADD ./setup.py /tmp/setup.py
+ADD ./requirements.txt /tmp/requirements.txt
+ADD ./requirements-dev.txt /tmp/requirements-dev.txt
 RUN cd /tmp && python setup.py install
 
 # install extra docker requirements

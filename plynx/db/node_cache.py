@@ -1,80 +1,65 @@
+"""Node Cache and utils"""
+
 import hashlib
 from builtins import str
+from dataclasses import dataclass, field
+from typing import List, Optional
+
+from dataclasses_json import dataclass_json
+
 from plynx.constants import Collections
-from plynx.db.db_object import DBObject, DBObjectField
-from plynx.db.node import Output
+from plynx.db.db_object import DBObject
+from plynx.db.node import Node, Output
 from plynx.utils.common import ObjectId
-from plynx.utils.config import get_demo_config
+from plynx.utils.config import DemoConfig, get_demo_config
 
-demo_config = get_demo_config()
+demo_config: DemoConfig = get_demo_config()
 
 
+@dataclass_json
+@dataclass
 class NodeCache(DBObject):
     """Basic Node Cache with db interface."""
-
-    FIELDS = {
-        '_id': DBObjectField(
-            type=ObjectId,
-            default=ObjectId,
-            is_list=False,
-            ),
-        'key': DBObjectField(
-            type=str,
-            default='',
-            is_list=False,
-            ),
-        'run_id': DBObjectField(
-            type=ObjectId,
-            default=None,
-            is_list=False,
-            ),
-        'node_id': DBObjectField(
-            type=ObjectId,
-            default=None,
-            is_list=False,
-            ),
-        'outputs': DBObjectField(
-            type=Output,
-            default=list,
-            is_list=True,
-            ),
-        'logs': DBObjectField(
-            type=Output,
-            default=list,
-            is_list=True,
-            ),
-    }
-
+    # pylint: disable=too-many-instance-attributes
     DB_COLLECTION = Collections.NODE_CACHE
-
     IGNORED_PARAMETERS = {'cmd', '_timeout'}
 
+    _id: ObjectId = field(default_factory=ObjectId)
+    key: str = ""
+    node_id: Optional[ObjectId] = None
+    run_id: Optional[ObjectId] = None
+    outputs: List[Output] = field(default_factory=list)
+    logs: List[Output] = field(default_factory=list)
+    # TODO check if those are working
+    removed: bool = False
+    protected: bool = False
+
     @staticmethod
-    def instantiate(node, run_id):
+    def instantiate(node: Node, run_id: ObjectId) -> "NodeCache":
         """Instantiate a Node Cache from Node.
 
         Args:
-            node        (Node):             Node object
-            run_id      (ObjectId, str):    Run ID
+            node    (Node):     Node object
+            run_id  (ObjectId): Run ID
 
         Return:
             (NodeCache)
         """
 
-        return NodeCache({
-            'key': NodeCache.generate_key(node),
-            'node_id': node._id,
-            'run_id': run_id,
-            'outputs': [output.to_dict() for output in node.outputs],
-            'logs': [log.to_dict() for log in node.logs],
-        })
+        return NodeCache(
+            key=NodeCache.generate_key(node),
+            node_id=node._id,
+            run_id=run_id,
+            outputs=node.outputs,
+            logs=node.logs,
+        )
 
     @staticmethod
-    def generate_key(node):
+    def generate_key(node: Node) -> str:
         """Generate hash.
 
         Args:
-            node        (Node):             Node object
+            node    (Node): Node object
 
         Return:
             (str)   Hash value
@@ -85,19 +70,13 @@ class NodeCache(DBObject):
 
         sorted_inputs = sorted(inputs, key=lambda x: x.name)
         inputs_hash = ','.join([
-            '{}:{}'.format(
-                input.name,
-                ','.join(sorted(input.values))
-            )
+            f"{input.name}:{','.join(sorted(input.values))}"
             for input in sorted_inputs
         ])
 
         sorted_parameters = sorted(parameters, key=lambda x: x.name)
         parameters_hash = ','.join([
-            '{}:{}'.format(
-                parameter.name,
-                parameter.value
-            )
+            f"{parameter.name}:{parameter.value}"
             for parameter in sorted_parameters if parameter.name not in NodeCache.IGNORED_PARAMETERS
         ])
 
@@ -108,9 +87,3 @@ class NodeCache(DBObject):
                     parameters_hash,
                 ]).encode('utf-8')
         ).hexdigest()
-
-    def __str__(self):
-        return 'NodeCache(_id="{}")'.format(self._id)
-
-    def __repr__(self):
-        return 'NodeCache({})'.format(str(self.to_dict()))

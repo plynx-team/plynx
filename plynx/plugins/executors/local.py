@@ -1,25 +1,30 @@
-from subprocess import Popen
+"""Standard Executors that support running on local machine."""
+import logging
 import os
 import signal
-import logging
 import threading
+from abc import abstractmethod
+from collections import defaultdict
+from subprocess import Popen
+from typing import Any, Dict, List, Optional, Union
+
 import jinja2
 from past.builtins import basestring
-from collections import defaultdict
-from plynx.constants import NodeRunningStatus, ParameterTypes
-from plynx.db.node import Parameter, Output
-from plynx.utils.file_handler import get_file_stream, upload_file_stream
-import plynx.utils.plugin_manager
-from plynx.plugins.resources.common import FILE_KIND
+
 import plynx.base.executor
-from plynx.constants import NodeResources
+import plynx.utils.plugin_manager
+from plynx.constants import NodeResources, NodeRunningStatus, ParameterTypes
+from plynx.db.node import Node, Output, Parameter, ParameterCode
+from plynx.plugins.resources.common import FILE_KIND
+from plynx.utils.file_handler import get_file_stream, upload_file_stream
 
 
-def _RESOURCE_MERGER_FUNC():
+def _resource_merger_func():
     return defaultdict(list)
 
 
-def prepare_parameters_for_python(parameters):
+def prepare_parameters_for_python(parameters: List[Parameter]) -> Dict[str, Any]:
+    """Pythonize parameters"""
     res = {}
     for parameter in parameters:
         value = None
@@ -43,24 +48,24 @@ def prepare_parameters_for_python(parameters):
     return res
 
 
-class ResourceMerger(object):
-    def __init__(self, init_level_0=None, init_level_1=None):
-        self._dict = defaultdict(_RESOURCE_MERGER_FUNC)
-        init_level_0 = init_level_0 or []
-        init_level_1 = init_level_1 or []
+class _ResourceMerger:
+    # TODO rename arguments
+    def __init__(self, init_level_0: List[str], init_level_1: List[str]):
+        self._dict: Dict[str, Dict[str, Union[List[str], str]]] = defaultdict(_resource_merger_func)
         for key in init_level_0:
-            self._dict[key] = _RESOURCE_MERGER_FUNC()
+            self._dict[key] = _resource_merger_func()
             for lev_1 in init_level_1:
                 self._dict[key][lev_1] = []
 
-    def append(self, resource_dict, resource_name, is_list):
+    def append(self, resource_dict: Dict[str, List[str]], resource_name: str, is_list: bool):
+        """Append values to the resource"""
         for key, value in resource_dict.items():
             if is_list:
-                self._dict[key][resource_name].append(value)
+                self._dict[key][resource_name].append(value)    # type: ignore
             else:
                 self._dict[key][resource_name] = value
 
-    def get_dict(self):
+    def get_dict(self) -> Dict[str, Dict[str, Union[List[str], str]]]:
         """
         Return original dict.
 
@@ -86,20 +91,23 @@ class ResourceMerger(object):
 
 
 class BaseBash(plynx.base.executor.BaseExecutor):
+    """Base Executor that will use unix bash as a backend."""
+    # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, node=None):
-        super(BaseBash, self).__init__(node)
-        self.sp = None
-        self.logs_sizes = {}
+    def __init__(self, node: Node = None):
+        super().__init__(node)
+        self.sp: Optional[Popen] = None
+        self.logs_sizes: Dict[str, int] = {}
         self.final_logs_uploaded = False
-        self.logs = {}
+        self.logs: Dict[str, str] = {}
         self.logs_lock = threading.Lock()
-        self.output_to_filename = {}
+        self.output_to_filename: Dict[str, str] = {}
         self._resource_manager = plynx.utils.plugin_manager.get_resource_manager()
         self._command = 'bash'
         self._node_running_status = NodeRunningStatus.READY
 
-    def exec_script(self, script_location):
+    def exec_script(self, script_location: str) -> str:
+        """Execute the script when inputs are initialized."""
         self._node_running_status = NodeRunningStatus.SUCCESS
 
         try:
@@ -113,25 +121,26 @@ class BaseBash(plynx.base.executor.BaseExecutor):
             env = os.environ.copy()
 
             # append running script to worker log
-            with open(script_location, 'r') as sf, open(self.logs['worker'], 'a') as wf:
-                wf.write(self._make_debug_text("Running script:"))
-                wf.write(sf.read())
-                wf.write('\n')
-                wf.write(self._make_debug_text("End script"))
+            with open(script_location, 'r') as script_f, open(self.logs['worker'], 'a') as worker_f:
+                worker_f.write(self._make_debug_text("Running script:"))
+                worker_f.write(script_f.read())
+                worker_f.write('\n')
+                worker_f.write(self._make_debug_text("End script"))
 
             with open(self.logs['stdout'], 'wb') as stdout_file, open(self.logs['stderr'], 'wb') as stderr_file:
-                self.sp = Popen(
+                self.sp = Popen(    # pylint: disable=subprocess-popen-preexec-fn,consider-using-with
                     [self._command, script_location],
                     stdout=stdout_file, stderr=stderr_file,
                     cwd=self.workdir, env=env,
                     preexec_fn=pre_exec)
 
+                assert self.sp, "Popen object was not initialized"
                 self.sp.wait()
 
             if self.sp.returncode:
                 raise Exception("Process returned non-zero value")
 
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             if self._node_running_status != NodeRunningStatus.CANCELED:
                 self._node_running_status = NodeRunningStatus.FAILED
             logging.exception("Job failed")
@@ -150,9 +159,9 @@ class BaseBash(plynx.base.executor.BaseExecutor):
         logging.info('Sending SIGTERM signal to bash process group')
         try:
             os.killpg(os.getpgid(self.sp.pid), signal.SIGTERM)
-            logging.info('Killed {}'.format(self.sp.pid))
+            logging.info(f"Killed %d{self.sp.pid}")
         except OSError as e:
-            logging.error('Error: {}'.format(e))
+            logging.error(f"Error: {e}")
 
     def is_updated(self):
         logging.info('Tick')
@@ -161,83 +170,81 @@ class BaseBash(plynx.base.executor.BaseExecutor):
     # Hack: do not pickle file
     def __getstate__(self):
         logging.critical('Run into `__getstate__`! Look ad `logs_lock` variable')
-        d = dict(self.__dict__)
-        if 'sp' in d:
-            del d['sp']
-        return d
+        dict_copy = dict(self.__dict__)
+        if 'sp' in dict_copy:
+            del dict_copy['sp']
+        return dict_copy
 
     @staticmethod
-    def _make_debug_text(text):
-        content = '\n'.join(['# {}'.format(line) for line in text.split('\n')])
-        return "{border}\n{content}\n{border}\n".format(
-            border='#' * 40,
-            content=content
-        )
+    def _make_debug_text(text: str) -> str:
+        content = "\n".join([f"# {line}" for line in text.split("\n")])
+        border = "#" * 40
+        return f"{border}\n{content}\n{border}\n"
 
     @classmethod
-    def get_default_node(cls, is_workflow):
+    def get_default_node(cls, is_workflow: bool) -> Node:
         if is_workflow:
             raise Exception('This class cannot be a workflow')
         node = super().get_default_node(is_workflow)
         node.parameters.extend(
             [
-                Parameter.from_dict({
-                    'name': '_cmd',
-                    'parameter_type': ParameterTypes.CODE,
-                    'value': {
-                        'mode': 'sh',
-                        'value': 'set -e\n\necho "hello world"\n',
-                    },
-                    'mutable_type': False,
-                    'publicable': False,
-                    'removable': False,
-                    }
+                Parameter(
+                    name='_cmd',
+                    parameter_type=ParameterTypes.CODE,
+                    value=ParameterCode(
+                        mode='sh',
+                        value='set -e\n\necho "hello world"\n',
+                    ),
+                    mutable_type=False,
+                    publicable=False,
+                    removable=False,
                 ),
-                Parameter.from_dict({
-                    'name': '_cacheable',
-                    'parameter_type': ParameterTypes.BOOL,
-                    'value': False,
-                    'mutable_type': False,
-                    'publicable': False,
-                    'removable': False,
-                }),
-                Parameter.from_dict({
-                    'name': '_timeout',
-                    'parameter_type': ParameterTypes.INT,
-                    'value': 600,
-                    'mutable_type': False,
-                    'publicable': True,
-                    'removable': False
-                }),
+                Parameter(
+                    name='_cacheable',
+                    parameter_type=ParameterTypes.BOOL,
+                    value=False,
+                    mutable_type=False,
+                    publicable=False,
+                    removable=False,
+                ),
+                Parameter(
+                    name='_timeout',
+                    parameter_type=ParameterTypes.INT,
+                    value=600,
+                    mutable_type=False,
+                    publicable=True,
+                    removable=False
+                ),
             ]
         )
         node.logs.extend(
             [
-                Output.from_dict({
-                    'name': 'stderr',
-                    'file_type': FILE_KIND,
-                }),
-                Output({
-                    'name': 'stdout',
-                    'file_type': FILE_KIND,
-                }),
-                Output({
-                    'name': 'worker',
-                    'file_type': FILE_KIND,
-                }),
+                Output(
+                    name='stderr',
+                    file_type=FILE_KIND,
+                ),
+                Output(
+                    name='stdout',
+                    file_type=FILE_KIND,
+                ),
+                Output(
+                    name='worker',
+                    file_type=FILE_KIND,
+                ),
             ]
         )
         return node
 
-    def _prepare_inputs(self, preview=False):
-        resource_merger = ResourceMerger(
+    def _prepare_inputs(self, preview: bool = False):
+        assert self.node, "Attribute `node` is undefined"
+        resource_merger = _ResourceMerger(
             [NodeResources.INPUT],
             [input.name for input in self.node.inputs if input.is_array],
         )
-        for input in self.node.inputs:
+        for input in self.node.inputs:  # pylint: disable=redefined-builtin
             if preview:
-                for i, value in enumerate(range(input.min_count)):
-                    filename = os.path.join(self.workdir, 'i_{}_{}'.format(i, input.name))
+                for i, _ in enumerate(range(input.min_count)):
+                    filename = os.path.join(self.workdir, f"i_{i}_{input.name}")
                     resource_merger.append(
                         self._resource_manager.kind_to_resource_class[input.file_type].prepare_input(filename, preview),
                         input.name,
@@ -245,7 +252,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
                     )
             else:
                 for i, value in enumerate(input.values):
-                    filename = os.path.join(self.workdir, 'i_{}_{}'.format(i, input.name))
+                    filename = os.path.join(self.workdir, f"i_{i}_{input.name}")
                     with open(filename, 'wb') as f:
                         f.write(get_file_stream(value).read())
                     resource_merger.append(
@@ -255,13 +262,14 @@ class BaseBash(plynx.base.executor.BaseExecutor):
                     )
         return resource_merger.get_dict()
 
-    def _prepare_outputs(self, preview=False):
-        resource_merger = ResourceMerger(
+    def _prepare_outputs(self, preview: bool = False):
+        assert self.node, "Attribute `node` is undefined"
+        resource_merger = _ResourceMerger(
             [NodeResources.OUTPUT],
             [output.name for output in self.node.outputs if output.is_array],
         )
         for output in self.node.outputs:
-            filename = os.path.join(self.workdir, 'o_{}'.format(output.name))
+            filename = os.path.join(self.workdir, f"o_{output.name}")
             self.output_to_filename[output.name] = filename
             resource_merger.append(
                 self._resource_manager.kind_to_resource_class[output.file_type].prepare_output(filename, preview),
@@ -274,24 +282,25 @@ class BaseBash(plynx.base.executor.BaseExecutor):
         with self.logs_lock:
             self.logs = {}
             for log in self.node.logs:
-                filename = os.path.join(self.workdir, 'l_{}'.format(log.name))
+                filename = os.path.join(self.workdir, f"l_{log.name}")
                 self.logs[log.name] = filename
                 self.logs_sizes[log.name] = 0
             return self.logs
 
-    def _get_script_fname(self, extension='.sh'):
-        return os.path.join(self.workdir, "exec{}".format(extension))
+    def _get_script_fname(self, extension: str = ".sh"):
+        return os.path.join(self.workdir, f"exec{extension}")
 
     def _prepare_parameters(self):
         return prepare_parameters_for_python(self.node.parameters)
 
-    def _postprocess_outputs(self, outputs):
+    def _postprocess_outputs(self, outputs: Dict[str, str]):
+        assert self.node, "Attribute `node` is undefined"
         for key, filename in outputs.items():
-            logging.info("Uploading output `{}` - `{}`".format(key, filename))
+            logging.info(f"Uploading output `{key}` - `{filename}`")
             if os.path.exists(filename):
                 logging.info('path exists')
-                matching_outputs = list(filter(lambda o: o.name == key, self.node.outputs))
-                assert len(matching_outputs) == 1, "Found more that 1 output with the same name `{}`".format(key)
+                matching_outputs = list(filter(lambda o: o.name == key, self.node.outputs))     # pylint: disable=cell-var-from-loop
+                assert len(matching_outputs) == 1, f"Found more that 1 output with the same name `{key}`"
                 filename = self._resource_manager.kind_to_resource_class[matching_outputs[0].file_type].postprocess_output(filename)
                 logging.info(filename)
                 with open(filename, 'rb') as f:
@@ -299,12 +308,13 @@ class BaseBash(plynx.base.executor.BaseExecutor):
                     self.node.get_output_by_name(key).values = [upload_file_stream(f)]
                     logging.info(self.node.get_output_by_name(key).to_dict())
             else:
-                raise IOError("Output `{}` (filename: `{}`) does not exist".format(key, filename))
+                raise IOError(f"Output `{key}` (filename: `{filename}`) does not exist")
 
-    def _postprocess_logs(self):
+    def _postprocess_logs(self) -> None:
         self.upload_logs(final=True)
 
-    def _extract_cmd_text(self):
+    def _extract_cmd_text(self) -> str:
+        assert self.node, "Attribute `node` is undefined"
         parameter = self.node.get_parameter_by_name('_cmd')
         if parameter.parameter_type == ParameterTypes.CODE:
             return parameter.value.value
@@ -313,7 +323,9 @@ class BaseBash(plynx.base.executor.BaseExecutor):
             return parameter.value
         raise TypeError("Process returned non-zero value")
 
-    def upload_logs(self, final=False):
+    def upload_logs(self, final: bool = False) -> bool:
+        """Upload logs to the storage. When Final is False, only upload on update"""
+        assert self.node, "Attribute `node` is undefined"
         is_dirty = False
         with self.logs_lock:
             if self.final_logs_uploaded:
@@ -333,29 +345,28 @@ class BaseBash(plynx.base.executor.BaseExecutor):
                         log.values = [upload_file_stream(f, log.values[0] if len(log.values) > 0 else None)]
         return is_dirty
 
+    @abstractmethod
+    def run(self, preview=False):
+        pass
+
 
 class BashJinja2(BaseBash):
-    HELP_TEMPLATE = '''# Use templates: {}
+    """Local executor that uses jinja2 template to format a bash script."""
+    HELP_TEMPLATE = """# Use templates: {}
 # For example `{{{{ '{{{{' }}}} param['_timeout'] {{{{ '}}}}' }}}}` or `{{{{ '{{{{' }}}} input['abc'] {{{{ '}}}}' }}}}`
 
-'''
+"""
 
-    def __init__(self, node=None):
-        super(BashJinja2, self).__init__(node)
-
-    def run(self, preview=False):
+    def run(self, preview: bool = False) -> str:
         inputs = self._prepare_inputs(preview)
         parameters = self._prepare_parameters()
         outputs = self._prepare_outputs(preview)
         logs = self._prepare_logs()
         if preview:
-            help = BashJinja2.HELP_TEMPLATE.format(list(inputs.keys()) + list(outputs.keys()) + [NodeResources.PARAM])
+            help_msg = BashJinja2.HELP_TEMPLATE.format(list(inputs.keys()) + list(outputs.keys()) + [NodeResources.PARAM])
         else:
-            help = ''
-        cmd = '{help}{cmd}'.format(
-            help=help,
-            cmd=self._extract_cmd_text()
-        )
+            help_msg = ""
+        cmd = f"{help_msg}{self._extract_cmd_text()}"
         cmd_template = jinja2.Template(cmd)
         resources = inputs
         resources.update(outputs)
@@ -380,22 +391,20 @@ class BashJinja2(BaseBash):
 
         return self._node_running_status
 
-    def status(self):
-        pass
-
     @classmethod
-    def get_default_node(cls, is_workflow):
+    def get_default_node(cls, is_workflow: bool) -> Node:
         node = super().get_default_node(is_workflow)
         node.title = 'New bash script'
         return node
 
 
 class PythonNode(BaseBash):
-    def __init__(self, node=None):
-        super(PythonNode, self).__init__(node)
+    """Local executor that uses python template to format a bash script."""
+    def __init__(self, node: Node = None):
+        super().__init__(node)
         self._command = 'python'
 
-    def run(self, preview=False):
+    def run(self, preview: bool = False) -> str:
         inputs = self._prepare_inputs(preview)
         parameters = self._prepare_parameters()
         outputs = self._prepare_outputs(preview)
@@ -435,30 +444,22 @@ class PythonNode(BaseBash):
 
         return res
 
-    def status(self):
-        """Temp"""
-        pass
-
     @classmethod
-    def _get_arguments_string(cls, var_name, arguments):
-        res = ['{} = {{}}'.format(var_name)]
+    def _get_arguments_string(cls, var_name: str, arguments: Dict[str, Any]) -> str:
+        res = [f"{var_name} = {{}}"]
         for key, value in arguments.items():
-            res.append('{var_name}["{key}"] = {value}'.format(
-                var_name=var_name,
-                key=key,
-                value=repr(cls._pythonize(value))
-                )
-            )
+            value = repr(cls._pythonize(value))
+            res.append(f'{var_name}["{key}"] = {value}')
         return '\n'.join(res)
 
     @staticmethod
-    def _pythonize(value):
+    def _pythonize(value: Any) -> Any:
         if isinstance(value, basestring):
             repr(value)
         return value
 
     @classmethod
-    def get_default_node(cls, is_workflow):
+    def get_default_node(cls, is_workflow: bool) -> Node:
         node = super().get_default_node(is_workflow)
         node.title = 'New python script'
         param = list(filter(lambda p: p.name == '_cmd', node.parameters))[0]
@@ -468,20 +469,16 @@ class PythonNode(BaseBash):
 
 
 class File(plynx.base.executor.BaseExecutor):
-    def __init__(self, node=None):
-        super(File, self).__init__(node)
+    """Dummy executor that represents STATIC Operations."""
 
-    def run(self, preview=False):
+    def run(self, preview: bool = False):
         if preview:
             return "Cannot preview the content. Please check the outputs."
-        raise NotImplementedError()
-
-    def status(self):
         raise NotImplementedError()
 
     def kill(self):
         raise NotImplementedError()
 
     @classmethod
-    def get_default_node(cls, is_workflow):
+    def get_default_node(cls, is_workflow: bool) -> Node:
         raise NotImplementedError()

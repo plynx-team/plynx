@@ -1,0 +1,33 @@
+fail_fast: true
+repos:
+-   repo: local
+    hooks:
+    - id: system
+      name: $ flake8
+      entry: flake8
+      pass_filenames: false
+      language: system
+
+-   repo: local
+    hooks:
+    - id: system
+      name: $ isort plynx
+      entry: isort plynx
+      pass_filenames: false
+      language: system
+
+-   repo: local
+    hooks:
+    - id: system
+      name: $ mypy plynx --ignore-missing-imports
+      entry: mypy plynx --ignore-missing-imports
+      pass_filenames: false
+      language: system
+
+-   repo: local
+    hooks:
+    - id: system
+      name: $ pylint plynx
+      entry: pylint plynx
+      pass_filenames: false
+      language: system

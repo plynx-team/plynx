@@ -1,23 +1,20 @@
 #!/usr/bin/env python
+import os
 import plynx
 from setuptools import setup, find_packages
 
-install_requires = [
-    'cloudpickle>=2.0.0',
-    'pymongo>=4.0.1',
-    'pyyaml>=5.1.2',
-    'passlib>=1.7.1',
-    'itsdangerous==2.0.1',
-    'Flask>=1.0.2',
-    'Flask-Cors>=3.0.3',
-    'Flask-HTTPAuth>=3.2.3',
-    'gevent>=21.12.0',
-    'smart-open>=5.2.1',
-    'requests>=2.18.4',
-    'future>=0.17.1',
-]
+
+def parse_requirements(filename):
+    """ load requirements from a pip requirements file """
+    lineiter = (line.strip() for line in open(filename))
+    return [line for line in lineiter if line and not line.startswith("#")]
+
+
+DIR = os.path.dirname(os.path.abspath(__file__))
+install_requires = parse_requirements(os.path.join(DIR, 'requirements.txt'))
 
 # Extra dependencies for storage
+dev_reqs = parse_requirements(os.path.join(DIR, 'requirements-dev.txt'))
 gs = [
     "google-cloud-storage>=1.13.0",
 ]
@@ -27,7 +24,7 @@ s3 = [
 ssh = [
     "paramiko>=2.4.2",
 ]
-all_remotes = gs + s3 + ssh
+all_reqs = dev_reqs + gs + s3 + ssh
 
 setup(
     name='plynx',
@@ -65,7 +62,8 @@ setup(
     packages=find_packages(exclude=['scripts', 'docker']),
     install_requires=install_requires,
     extras_require={
-        'all': all_remotes,
+        'all': all_reqs,
+        'dev': dev_reqs,
         'gs': gs,
         's3': s3,
         'ssh': ssh,

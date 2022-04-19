@@ -1,19 +1,26 @@
+"""
+PLynx API for generation user Nodes.
+"""
+# pylint: disable=consider-using-from-import
 from dataclasses import dataclass, field
 from typing import Any, List, Optional
-import cloudpickle
-import plynx.node.typing as typings
 
-import plynx.node.utils as utils    # noqa
+import cloudpickle
+
+import plynx.node.typing as typings
+import plynx.node.utils as utils  # noqa
 
 
 @dataclass
 class InputItem:
+    """Input item abstraction"""
     name: str
     file_type: str
     is_array: bool
     min_count: int
 
     def to_dict(self):
+        """Dict representation"""
         return {
             "name": self.name,
             "file_type": self.file_type,
@@ -24,12 +31,14 @@ class InputItem:
 
 @dataclass
 class OutputItem:
+    """Output item abstraction"""
     name: str
     file_type: str
     is_array: bool
     min_count: int
 
     def to_dict(self):
+        """Dict representation"""
         return {
             "name": self.name,
             "file_type": self.file_type,
@@ -40,12 +49,14 @@ class OutputItem:
 
 @dataclass
 class ParamItem:
+    """Parameter item abstraction"""
     name: str
     parameter_type: str
     value: Any
     widget: Optional[str]
 
     def to_dict(self):
+        """Dict representation"""
         return {
             "name": self.name,
             "parameter_type": self.parameter_type,
@@ -56,6 +67,7 @@ class ParamItem:
 
 @dataclass
 class PlynxParams:
+    """Internal PLynx Node params"""
     title: str
     description: str
     kind: str
@@ -65,12 +77,14 @@ class PlynxParams:
     outputs: List[OutputItem] = field(default_factory=list)
 
 
+# pylint: disable=redefined-builtin
 def input(
     name=None,
     var_type=None,
     is_array=False,
     min_count=1,
 ):
+    """PLynx Operation Input"""
     def decorator(func_or_class):
         func_or_class.plynx_params.inputs.insert(0, InputItem(
             name=name,
@@ -88,6 +102,7 @@ def output(
     is_array=False,
     min_count=1,
 ):
+    """PLynx Operation Output"""
     def decorator(func_or_class):
         func_or_class.plynx_params.outputs.insert(0, OutputItem(
             name=name,
@@ -105,6 +120,7 @@ def param(
     default=None,
     widget="",
 ):
+    """PLynx Operation Parameter"""
     def decorator(func_or_class):
         func_or_class.plynx_params.params.insert(0, ParamItem(
             name=name,
@@ -117,6 +133,7 @@ def param(
 
 
 def operation(node_type=None, title=None, description="", kind=None):
+    """PLynx user-defined Operation"""
     def decorator(func_or_class):
         func_or_class.plynx_params = PlynxParams(
             title=title or func_or_class.__name__,

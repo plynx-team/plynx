@@ -1,17 +1,19 @@
+"""A standard executor for DAGs."""
+
 import logging
 import time
 from collections import defaultdict
-from plynx.constants import ParameterTypes
+from typing import Dict, List, Optional
+
+import plynx.base.executor
+import plynx.db.node_cache_manager
+import plynx.db.node_collection_manager
+import plynx.db.run_cancellation_manager
+import plynx.utils.executor
+from plynx.constants import Collections, NodeRunningStatus, ParameterTypes, SpecialNodeId, ValidationCode, ValidationTargetType
 from plynx.db.node import Node, Parameter
 from plynx.db.validation_error import ValidationError
-from plynx.constants import NodeRunningStatus, ValidationTargetType, ValidationCode, SpecialNodeId, Collections
-from plynx.utils.common import to_object_id
-import plynx.base.executor
-import plynx.utils.executor
-import plynx.db.node_collection_manager
-import plynx.db.node_cache_manager
-import plynx.db.run_cancellation_manager
-
+from plynx.utils.common import ObjectId, to_object_id
 
 node_collection_manager = plynx.db.node_collection_manager.NodeCollectionManager(collection=Collections.RUNS)
 run_cancellation_manager = plynx.db.run_cancellation_manager.RunCancellationManager()
@@ -32,69 +34,68 @@ class DAG(plynx.base.executor.BaseExecutor):
     """ Main graph scheduler.
 
     Args:
-        node_dict (dict)
+        node (Node)
 
     """
+    # pylint: disable=too-many-instance-attributes
+
     IS_GRAPH = True
     GRAPH_ITERATION_SLEEP = 1
 
-    def __init__(self, node_dict):
-        super(DAG, self).__init__(node_dict)
+    def __init__(self, node: Node):
+        # pylint: disable=too-many-branches
+        super().__init__(node)
+        assert self.node, "Attribute `node` is not defined"
 
-        self.subnodes = None
-        # TODO make a function to look for parameter
-        for parameter in self.node.parameters:
-            if parameter.name == '_nodes':
-                self.subnodes = parameter.value.value
+        self.subnodes: List[Node] = self.node.get_parameter_by_name('_nodes', throw=True).value.value
 
-        assert self.subnodes is not None, 'Could not find subnodes'
-
-        self.node_id_to_node = {
+        self.node_id_to_node: Dict[ObjectId, Node] = {
             node._id: node for node in self.subnodes
         }
 
         # number of dependencies to ids
-        self.dependency_index_to_node_ids = defaultdict(lambda: set())
-        self.node_id_to_dependents = defaultdict(lambda: set())
+        self.dependency_index_to_node_ids = defaultdict(set)
+        self.node_id_to_dependents = defaultdict(set)
         self.node_id_to_dependency_index = defaultdict(lambda: 0)
         self.uncompleted_nodes_count = 0
 
         self._node_running_status = NodeRunningStatus.READY
 
-        for node in self.subnodes:
-            node_id = node._id
+        for subnode in self.subnodes:
+            node_id = subnode._id
             if node_id == SpecialNodeId.INPUT:
                 updated_resources_count = 0
-                for output in node.outputs:
-                    for input in self.node.inputs:
+                for output in subnode.outputs:
+                    for input in self.node.inputs:  # pylint: disable=redefined-builtin
                         if input.name == output.name:
                             updated_resources_count += 1
                             output.values = input.values
                 if updated_resources_count != len(self.node.inputs):
-                    raise Exception('Used {} inputs for {} outputs'.format(updated_resources_count, len(self.node.inputs)))
+                    raise Exception(f"Used {updated_resources_count} inputs for {len(self.node.inputs)} outputs")
 
             # ignore nodes in finished statuses
             if NodeRunningStatus.is_finished(node.node_running_status) and node_id != SpecialNodeId.OUTPUT:
                 continue
             dependency_index = 0
-            for node_input in node.inputs:
+            for node_input in subnode.inputs:
                 for input_reference in node_input.input_references:
                     dep_node_id = to_object_id(input_reference.node_id)
                     self.node_id_to_dependents[dep_node_id].add(node_id)
                     if not NodeRunningStatus.is_finished(self.node_id_to_node[dep_node_id].node_running_status):
                         dependency_index += 1
 
-            if not NodeRunningStatus.is_finished(node.node_running_status):
+            if not NodeRunningStatus.is_finished(subnode.node_running_status):
                 self.uncompleted_nodes_count += 1
             self.dependency_index_to_node_ids[dependency_index].add(node_id)
             self.node_id_to_dependency_index[node_id] = dependency_index
 
-        self.monitoring_node_ids = set()
+        self.monitoring_node_ids: List[ObjectId] = []
 
         if self.uncompleted_nodes_count == 0:
             self._node_running_status = NodeRunningStatus.SUCCESS
 
-    def finished(self):
+    def finished(self) -> bool:
+        """Return True or False depending on the running status of the DAG."""
         if self._node_running_status in _ACTIVE_WAITING_TO_STOP:
             # wait for the rest of the running jobs to finish
             # check running status of each of the nodes
@@ -108,9 +109,9 @@ class DAG(plynx.base.executor.BaseExecutor):
             return True
         return self._node_running_status in {NodeRunningStatus.SUCCESS, NodeRunningStatus.FAILED, NodeRunningStatus.CANCELED}
 
-    def pop_jobs(self):
+    def pop_jobs(self) -> List[Node]:
         """Get a set of nodes with satisfied dependencies"""
-        res = []
+        res: List[Node] = []
         logging.info("Pop jobs")
 
         for running_node_dict in node_collection_manager.get_db_objects_by_ids(self.monitoring_node_ids):
@@ -126,7 +127,7 @@ class DAG(plynx.base.executor.BaseExecutor):
 
         cached_nodes = []
         for node_id in self.dependency_index_to_node_ids[0]:
-            """Get the node and init its inputs, i.e. filling its resource_ids"""
+            # Get the node and init its inputs, i.e. filling its resource_ids
             orig_node = self.node_id_to_node[node_id]
             for node_input in orig_node.inputs:
                 for input_reference in node_input.input_references:
@@ -136,7 +137,7 @@ class DAG(plynx.base.executor.BaseExecutor):
                         ).values
                     )
             orig_node.node_running_status = NodeRunningStatus.IN_QUEUE
-            node = orig_node.copy()
+            node = orig_node.copy()   # type: ignore
 
             if DAG._cacheable(node):
                 try:
@@ -145,14 +146,11 @@ class DAG(plynx.base.executor.BaseExecutor):
                         node.node_running_status = NodeRunningStatus.RESTORED
                         node.outputs = cache.outputs
                         node.logs = cache.logs
-                        node.cache_url = '/runs/{}?nid={}'.format(
-                            str(cache.run_id),
-                            str(cache.node_id),
-                        )
+                        node.cache_url = f"/runs/{cache.run_id}?nid={cache.node_id}"
                         cached_nodes.append(node)
                         continue
-                except Exception as err:
-                    logging.exception("Unable to update cache: `{}`".format(err))
+                except Exception as err:    # pylint: disable=broad-except
+                    logging.exception(f"Unable to update cache: `{err}`")
             res.append(node)
         del self.dependency_index_to_node_ids[0]
 
@@ -163,7 +161,11 @@ class DAG(plynx.base.executor.BaseExecutor):
 
         return res
 
-    def update_node(self, node):
+    def update_node(self, node: Node):
+        """
+        Update node_running_status and outputs if the state has changed.
+        """
+        assert self.node, "Attribute `node` is unassigned"
         dest_node = self.node_id_to_node[node._id]
         if node.node_running_status == NodeRunningStatus.SUCCESS \
                 and dest_node.node_running_status != node.node_running_status \
@@ -180,11 +182,11 @@ class DAG(plynx.base.executor.BaseExecutor):
         dest_node.outputs = node.outputs
         dest_node.cache_url = node.cache_url
 
-    def _set_node_status(self, node_id, node_running_status):
+    def _set_node_status(self, node_id: ObjectId, node_running_status: str):
         node = self.node_id_to_node[node_id]
         node.node_running_status = node_running_status
 
-        logging.info("Node running status {} {}".format(node_running_status, node.title))
+        logging.info(f"Node running status {node_running_status} {node.title}")
 
         if node_running_status == NodeRunningStatus.FAILED:
             # TODO optional cancel based on parameter
@@ -212,48 +214,52 @@ class DAG(plynx.base.executor.BaseExecutor):
             self._node_running_status = NodeRunningStatus.SUCCESS
 
     @staticmethod
-    def _cacheable(node):
+    def _cacheable(node: Node) -> bool:
         for parameter in node.parameters:
             if parameter.name == '_cacheable':
                 return parameter.value
         return False
 
     @classmethod
-    def get_default_node(cls, is_workflow):
+    def get_default_node(cls, is_workflow: bool) -> Node:
         node = super().get_default_node(is_workflow)
         if not is_workflow:
             node.parameters.append(
-                Parameter.from_dict({
-                    'name': '_cacheable',
-                    'parameter_type': ParameterTypes.BOOL,
-                    'value': False,
-                    'mutable_type': False,
-                    'publicable': False,
-                    'removable': False,
-                })
+                Parameter(
+                    name="_cacheable",
+                    parameter_type=ParameterTypes.BOOL,
+                    value=False,
+                    mutable_type=False,
+                    publicable=False,
+                    removable=False,
+                )
             )
         node.parameters.append(
-            Parameter.from_dict({
-                'name': '_timeout',
-                'parameter_type': ParameterTypes.INT,
-                'value': 600,
-                'mutable_type': False,
-                'publicable': True,
-                'removable': False
-            })
+            Parameter(
+                name="_timeout",
+                parameter_type=ParameterTypes.INT,
+                value=600,
+                mutable_type=False,
+                publicable=True,
+                removable=False
+            )
         )
         node.title = 'New DAG workflow'
         return node
 
-    def _execute_node(self, node):
+    def _execute_node(self, node: Node):
+        assert self.node, "Attribute `node` is unassigned"
         if NodeRunningStatus.is_finished(node.node_running_status):     # NodeRunningStatus.SPECIAL
             return
         node.author = self.node.author                                  # Change it to the author that runs it
         node.save(collection=Collections.RUNS)
 
-        self.monitoring_node_ids.add(node._id)
+        self.monitoring_node_ids.append(node._id)
 
-    def run(self):
+    def run(self, preview: bool = False) -> str:
+        assert self.node, "Attribute `node` is unassigned"
+        if preview:
+            raise Exception("`preview` is not supported for the DAG")
         while not self.finished():
             new_jobs = self.pop_jobs()
             if len(new_jobs) == 0:
@@ -270,13 +276,13 @@ class DAG(plynx.base.executor.BaseExecutor):
                     continue
                 updated_resources_count = 0
                 for output in self.node.outputs:
-                    for input in node.inputs:
+                    for input in node.inputs:   # pylint: disable=redefined-builtin
                         if input.name == output.name:
                             output.values = input.values
                             updated_resources_count += 1
                             break
                 if updated_resources_count != len(node.inputs):
-                    raise Exception('Used {} inputs for {} outputs'.format(updated_resources_count, len(node.inputs)))
+                    raise Exception(f"Used {updated_resources_count} inputs for {node.inputs} outputs")
         return self._node_running_status
 
     def kill(self):
@@ -288,7 +294,8 @@ class DAG(plynx.base.executor.BaseExecutor):
         for node_id in list(self.monitoring_node_ids):
             run_cancellation_manager.cancel_run(node_id)
 
-    def validate(self):
+    def validate(self) -> Optional[ValidationError]:
+        assert self.node, "Attribute `node` is unassigned"
         validation_error = super().validate()
         if validation_error:
             return validation_error

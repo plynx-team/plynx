@@ -1,16 +1,21 @@
+"""Node validation enums"""
+
+
 class ValidationTargetType:
-    BLOCK = 'BLOCK'
-    GRAPH = 'GRAPH'
-    INPUT = 'INPUT'
-    NODE = 'NODE'
-    PARAMETER = 'PARAMETER'
-    PROPERTY = 'PROPERTY'
+    """Object Target"""
+    BLOCK: str = 'BLOCK'
+    GRAPH: str = 'GRAPH'
+    INPUT: str = 'INPUT'
+    NODE: str = 'NODE'
+    PARAMETER: str = 'PARAMETER'
+    PROPERTY: str = 'PROPERTY'
 
 
 class ValidationCode:
-    IN_DEPENDENTS = 'IN_DEPENDENTS'
-    MISSING_INPUT = 'MISSING_INPUT'
-    MISSING_PARAMETER = 'MISSING_PARAMETER'
-    INVALID_VALUE = 'INVALID_VALUE'
-    DEPRECATED_NODE = 'DEPRECATED_NODE'
-    EMPTY_GRAPH = 'EMPTY_GRAPH'
+    """Standard validation code"""
+    IN_DEPENDENTS: str = 'IN_DEPENDENTS'
+    MISSING_INPUT: str = 'MISSING_INPUT'
+    MISSING_PARAMETER: str = 'MISSING_PARAMETER'
+    INVALID_VALUE: str = 'INVALID_VALUE'
+    DEPRECATED_NODE: str = 'DEPRECATED_NODE'
+    EMPTY_GRAPH: str = 'EMPTY_GRAPH'

@@ -161,7 +161,6 @@ export const CODE_THEMES = [
 export const COLLECTIONS = Object.freeze({
   TEMPLATES: 'templates',
   RUNS: 'runs',
-  GROUPS: 'groups',
   USERS: 'users',
 });
 
@@ -169,7 +168,6 @@ export const VIRTUAL_COLLECTIONS = Object.freeze({
   OPERATIONS: 'operations',
   WORKFLOWS: 'workflows',
   RUNS: 'runs',
-  GROUPS: 'groups',
 });
 
 export const SPECIAL_NODE_IDS = Object.freeze({

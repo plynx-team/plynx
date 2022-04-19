@@ -1,28 +1,36 @@
-import re
+"""Common utils of the web service."""
+
 import logging
+import re
 import traceback
-from flask import Flask, request, g, Response
-from flask_cors import CORS
 from functools import wraps
-from plynx.constants import ResponseStatus, RegisterUserExceptionCode
+from typing import Any, Dict, Optional
+
+from flask import Flask, Response, g, request
+from flask.logging import create_logger
+from flask_cors import CORS
+
+from plynx.constants import RegisterUserExceptionCode, ResponseStatus
 from plynx.db.user import User, UserCollectionManager
-from plynx.utils.config import get_config
 from plynx.utils.common import JSONEncoder
+from plynx.utils.config import get_config
 from plynx.utils.content import create_default_templates
-from plynx.utils.exceptions import RegisterUserException
 from plynx.utils.db_connector import check_connection
+from plynx.utils.exceptions import RegisterUserException
 
 app = Flask(__name__)
+logger = create_logger(app)
 
 DEFAULT_EMAIL = ''
 DEFAULT_USERNAME = 'default'
 DEFAULT_PASSWORD = ''
 
-_config = None
+_CONFIG = None
 
 
-def verify_password(username_or_token, password):
-    if _config and _config.auth.secret_key and username_or_token == DEFAULT_USERNAME:
+def verify_password(username_or_token: str, password: str):
+    """Veryfy password based on user"""
+    if _CONFIG and _CONFIG.auth.secret_key and username_or_token == DEFAULT_USERNAME:
         return False
     user = User.verify_auth_token(username_or_token)
     if not user:
@@ -30,11 +38,12 @@ def verify_password(username_or_token, password):
         user = UserCollectionManager.find_user_by_name(username_or_token)
         if not user or not user.verify_password(password):
             return False
-    g.user = user
+    g.user = user   # pylint: disable=assigning-non-slot
     return True
 
 
 def authenticate():
+    """Return 401 message"""
     # 401 response
     return Response(
         'Could not verify your access level for that URL; You have to login with proper credentials',
@@ -44,6 +53,7 @@ def authenticate():
 
 
 def requires_auth(f):
+    """Auth wrapper"""
     @wraps(f)
     def decorated(*args, **kwargs):
         auth = request.authorization
@@ -56,7 +66,7 @@ def requires_auth(f):
     return decorated
 
 
-def register_user(username, password, email):
+def register_user(username: str, password: str, email: str):
     """Register a new user.
 
     Args:
@@ -84,7 +94,7 @@ def register_user(username, password, email):
         )
     if username != DEFAULT_USERNAME and not re.match(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", email):
         raise RegisterUserException(
-            'Invalid email: `{}`'.format(email),
+            f"Invalid email: `{email}`",
             error_code=RegisterUserExceptionCode.INVALID_EMAIL
         )
     if username != DEFAULT_USERNAME and UserCollectionManager.find_user_by_email(email):
@@ -109,13 +119,14 @@ def register_user(username, password, email):
 def _init_default_user():
     if UserCollectionManager.find_user_by_name(DEFAULT_USERNAME) is None:
         user = register_user(DEFAULT_USERNAME, DEFAULT_PASSWORD, DEFAULT_EMAIL)
-        logging.info('Created default user `{}`'.format(DEFAULT_USERNAME))
+        logging.info(f"Created default user `{DEFAULT_USERNAME}`")
         create_default_templates(user)
     else:
-        logging.info('Default user `{}` already exists'.format(DEFAULT_USERNAME))
+        logging.info(f"Default user `{DEFAULT_USERNAME}` already exists")
 
 
 def make_fail_response(message, **kwargs):
+    """Return basic fail response"""
     return JSONEncoder().encode({
         'status': ResponseStatus.FAILED,
         'message': message,
@@ -123,11 +134,13 @@ def make_fail_response(message, **kwargs):
     })
 
 
-def make_permission_denied(message='Permission denied'):
+def make_permission_denied(message: str = 'Permission denied'):
+    """Return permission error"""
     return make_fail_response(message), 403
 
 
-def make_success_response(extra_response=None):
+def make_success_response(extra_response: Optional[Dict[str, Any]] = None):
+    """Return successful response"""
     return JSONEncoder().encode(dict(
         {
             'status': ResponseStatus.SUCCESS,
@@ -137,24 +150,26 @@ def make_success_response(extra_response=None):
 
 
 def handle_errors(f):
+    """Handle errors wrapper"""
     @wraps(f)
     def decorated(*args, **kwargs):
         try:
             return f(*args, **kwargs)
-        except Exception as e:
-            app.logger.error(traceback.format_exc())
-            return make_fail_response('Internal error: "{}"'.format(repr(e))), 500
+        except Exception as e:  # pylint: disable=broad-except
+            logger.error(traceback.format_exc())
+            return make_fail_response(f'Internal error: "{repr(e)}"'), 500
     return decorated
 
 
 def run_api():
-    global _config
-    _config = get_config()
+    """Run web service"""
+    global _CONFIG  # pylint: disable=global-statement
+    _CONFIG = get_config()
 
     check_connection()
 
     # Create default user if in single user mode
-    if not _config.auth.secret_key:
+    if not _CONFIG.auth.secret_key:
         logging.info('Single user mode')
         _init_default_user()
     else:
@@ -162,8 +177,8 @@ def run_api():
 
     CORS(app, resources={r"/*": {"origins": "*"}})
     app.run(
-        host=_config.web.host,
-        port=_config.web.port,
-        debug=_config.web.debug,
+        host=_CONFIG.web.host,
+        port=_CONFIG.web.port,
+        debug=_CONFIG.web.debug,
         use_reloader=False,
     )

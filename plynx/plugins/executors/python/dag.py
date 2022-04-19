@@ -1,17 +1,22 @@
+"""An executor for the DAGs based on python backend."""
+import contextlib
+import inspect
 import logging
-import queue
-import cloudpickle
 import multiprocessing
+import os
+import queue
+import sys
+import threading
 import traceback
 import uuid
-import inspect
-import sys
-import os
-import contextlib
-import threading
-from plynx.constants import NodeRunningStatus, Collections
-from plynx.utils.common import to_object_id
+from typing import Any, Callable, Dict, List
+
+import cloudpickle
+
 import plynx.plugins.executors.dag
+from plynx.constants import Collections, NodeRunningStatus
+from plynx.db.node import Node
+from plynx.utils.common import to_object_id
 
 stateful_init_mutex = threading.Lock()
 stateful_class_registry = {}
@@ -19,26 +24,29 @@ stateful_class_registry = {}
 POOL_SIZE = 3
 
 
-def materialize_fn(fn_str):
-    fn_bytes = bytes.fromhex(fn_str)
-    fn = cloudpickle.loads(fn_bytes)
-    return fn
+def materialize_fn(fn_str: str) -> Callable:
+    """Unpickle the function"""
+    func_bytes = bytes.fromhex(fn_str)
+    func = cloudpickle.loads(func_bytes)
+    return func
 
 
-def prep_args(node):
+def prep_args(node: Node) -> Dict[str, Any]:
+    """Pythonize inputs and parameters"""
     args = {}
-    for input in node.inputs:
+    for input in node.inputs:   # pylint: disable=redefined-builtin
         args[input.name] = input.values if input.is_array else input.values[0]
 
     # TODO smater way to determine what parameters to pass
-    visible_parameters = filter(lambda param: param.widget is not None, node.parameters)
+    visible_parameters = list(filter(lambda param: param.widget is not None, node.parameters))
     args.update(
         plynx.plugins.executors.local.prepare_parameters_for_python(visible_parameters)
     )
     return args
 
 
-def assign_outputs(node, output_dict):
+def assign_outputs(node: Node, output_dict: Dict[str, Any]):
+    """Apply output_dict to node's outputs."""
     if not output_dict:
         return
     for key, value in output_dict.items():
@@ -46,8 +54,11 @@ def assign_outputs(node, output_dict):
         node_output.values = value if node_output.is_array else [value]
 
 
-class redirect_to_plynx_logs:
-    def __init__(self, node, stdout, stderr):
+class redirect_to_plynx_logs:   # pylint: disable=invalid-name
+    """Redirect stdout and stderr to standard PLynx Outputs"""
+    # pylint: disable=too-many-instance-attributes
+
+    def __init__(self, node: Node, stdout: str, stderr: str):
         self.stdout_filename = str(uuid.uuid4())
         self.stderr_filename = str(uuid.uuid4())
 
@@ -61,6 +72,12 @@ class redirect_to_plynx_logs:
             (self.stderr_filename, self.stderr),
         ]
 
+        self.stdout_file = None
+        self.stderr_file = None
+
+        self.stdout_redirect = None
+        self.stderr_redirect = None
+
     def __enter__(self):
         self.stdout_file = open(self.stdout_filename, 'w')
         self.stderr_file = open(self.stderr_filename, 'w')
@@ -70,7 +87,6 @@ class redirect_to_plynx_logs:
 
         self.stdout_redirect.__enter__()
         self.stderr_redirect.__enter__()
-        return None
 
     def __exit__(self, *args):
 
@@ -89,26 +105,27 @@ class redirect_to_plynx_logs:
                 output.values = [filename]
 
 
-def worker_main(job_run_queue, job_complete_queue):
-    logging.warn("Created pool worker")
+def worker_main(job_run_queue: queue.Queue, job_complete_queue: queue.Queue):
+    """Main threaded function that serves Operations."""
+    logging.info("Created pool worker")
     while True:
         node = job_run_queue.get()
 
         try:
             pickled_fn_parameter = node.get_parameter_by_name("_pickled_fn")
 
-            fn = materialize_fn(pickled_fn_parameter.value)
-            if inspect.isclass(fn):
+            func = materialize_fn(pickled_fn_parameter.value)
+            if inspect.isclass(func):
                 with stateful_init_mutex:
                     if node.code_hash not in stateful_class_registry:
                         with redirect_to_plynx_logs(node, "init_stdout", "init_stderr"):
-                            stateful_class_registry[node.code_hash] = fn()
-                    fn = stateful_class_registry[node.code_hash]
+                            stateful_class_registry[node.code_hash] = func()
+                    func = stateful_class_registry[node.code_hash]
 
             with redirect_to_plynx_logs(node, "stdout", "stderr"):
-                res = fn(**prep_args(node))
+                res = func(**prep_args(node))
 
-        except Exception:
+        except Exception:   # pylint: disable=broad-except
             error_str = traceback.format_exc()
             logging.error(f"Job failed with traceback: {error_str}")
             node.node_running_status = NodeRunningStatus.FAILED
@@ -124,7 +141,7 @@ def worker_main(job_run_queue, job_complete_queue):
             node.node_running_status = NodeRunningStatus.SUCCESS
         job_complete_queue.put(node)
 
-    logging.warn("Deleted pool worker")
+    logging.info("Deleted pool worker")
 
 
 class DAG(plynx.plugins.executors.dag.DAG):
@@ -136,11 +153,11 @@ class DAG(plynx.plugins.executors.dag.DAG):
     IS_GRAPH = True
     GRAPH_ITERATION_SLEEP = 0
 
-    def __init__(self, node_dict):
-        super(DAG, self).__init__(node_dict)
+    def __init__(self, node: Node):
+        super().__init__(node)
 
-        self.job_run_queue = queue.Queue()
-        self.job_complete_queue = queue.Queue()
+        self.job_run_queue: queue.Queue = queue.Queue()
+        self.job_complete_queue: queue.Queue = queue.Queue()
 
         self.worker_pool = multiprocessing.pool.ThreadPool(
             POOL_SIZE, worker_main, (
@@ -149,9 +166,10 @@ class DAG(plynx.plugins.executors.dag.DAG):
             )
         )
 
-    def pop_jobs(self):
+    def pop_jobs(self) -> List[Node]:
         """Get a set of nodes with satisfied dependencies"""
-        res = []
+        assert self.node, "Attribute `node` is undefined"
+        res: List[Node] = []
 
         num_completed_jobs = 0
         while not self.job_complete_queue.empty():
@@ -169,7 +187,7 @@ class DAG(plynx.plugins.executors.dag.DAG):
             return res
 
         for node_id in self.dependency_index_to_node_ids[0]:
-            """Get the node and init its inputs, i.e. filling its resource_ids"""
+            # Get the node and init its inputs, i.e. filling its resource_ids
             node = self.node_id_to_node[node_id]
             for node_input in node.inputs:
                 for input_reference in node_input.input_references:
@@ -188,7 +206,8 @@ class DAG(plynx.plugins.executors.dag.DAG):
 
         return res
 
-    def _execute_node(self, node):
+    def _execute_node(self, node: Node):
+        assert self.node, "Attribute `node` is undefined"
         if NodeRunningStatus.is_finished(node.node_running_status):     # NodeRunningStatus.SPECIAL
             return
 
@@ -204,6 +223,6 @@ class DAG(plynx.plugins.executors.dag.DAG):
 
         The reason can be the fact it was working too long or parent exectuter canceled it.
         """
-        logging.warn("Received kill request")
+        logging.info("Received kill request")
         self._node_running_status = NodeRunningStatus.CANCELED
         self.worker_pool.terminate()

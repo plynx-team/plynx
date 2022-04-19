@@ -1,10 +1,13 @@
+"""PLynx Operations defined as python code. Produce basic types."""
 import math
+
 import plynx.node
 
 
-def print_any(foo):
-    print(str(type(foo)).replace("<", "").replace(">", ""))
-    print(foo)
+def print_any(value):
+    """Format string to be html-friendly and print it."""
+    print(str(type(value)).replace("<", "").replace(">", ""))
+    print(value)
 
 
 @plynx.node.output(name='int', var_type=int)
@@ -17,6 +20,7 @@ def print_any(foo):
     description="Echo all types",
 )
 def all_types():
+    """Make basic values for each type."""
     return {
         "int": 42,
         "str": "Hello world",
@@ -26,44 +30,49 @@ def all_types():
     }
 
 
-@plynx.node.input(name='foo', var_type=int)
+@plynx.node.input(name='value', var_type=int)
 @plynx.node.operation(
     title="Print Int value",
 )
-def print_int(foo):
-    print_any(foo)
+def print_int(value):
+    """Print input value."""
+    print_any(value)
 
 
-@plynx.node.input(name='foo', var_type=str)
+@plynx.node.input(name='value', var_type=str)
 @plynx.node.operation(
     title="Print String value",
 )
-def print_str(foo):
-    print_any(foo)
+def print_str(value):
+    """Print input value."""
+    print_any(value)
 
 
-@plynx.node.input(name='foo', var_type=dict)
+@plynx.node.input(name='value', var_type=dict)
 @plynx.node.operation(
     title="Print Dict value",
 )
-def print_dict(foo):
-    print_any(foo)
+def print_dict(value):
+    """Print input value."""
+    print_any(value)
 
 
-@plynx.node.input(name='foo', var_type=float)
+@plynx.node.input(name='value', var_type=float)
 @plynx.node.operation(
     title="Print Float value",
 )
-def print_float(foo):
-    print_any(foo)
+def print_float(value):
+    """Print input value."""
+    print_any(value)
 
 
-@plynx.node.input(name='foo', var_type=bool)
+@plynx.node.input(name='value', var_type=bool)
 @plynx.node.operation(
     title="Print Bool value",
 )
-def print_bool(foo):
-    print_any(foo)
+def print_bool(value):
+    """Print input value."""
+    print_any(value)
 
 
 GROUP = plynx.node.utils.Group(

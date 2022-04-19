@@ -1,11 +1,14 @@
+"""Standard PLynx collections in DB"""
+
+
 class Collections:
-    GROUPS = 'groups'
-    NODE_CACHE = 'node_cache'
-    RUN_CANCELLATIONS = 'run_cancellations'
-    RUNS = 'runs'
-    TEMPLATES = 'templates'
-    USERS = 'users'
-    WORKER_STATE = 'worker_state'
+    """All basic collections used in DB"""
+    NODE_CACHE: str = 'node_cache'
+    RUN_CANCELLATIONS: str = 'run_cancellations'
+    RUNS: str = 'runs'
+    TEMPLATES: str = 'templates'
+    USERS: str = 'users'
+    WORKER_STATE: str = 'worker_state'
 
     # virtual collections:
-    HUB_NODE_REGISTRY = 'hub_node_registry'
+    HUB_NODE_REGISTRY: str = 'hub_node_registry'

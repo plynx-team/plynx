@@ -1,10 +1,16 @@
+"""Cache Manager and utils."""
+import datetime
 import logging
-from plynx.db.node_cache import NodeCache
-from plynx.utils.db_connector import get_db_connector
+from typing import Any, Dict, List, Optional, Union
+
 from plynx.constants import NodeRunningStatus
+from plynx.db.node import Node
+from plynx.db.node_cache import NodeCache
+from plynx.utils.common import ObjectId
+from plynx.utils.db_connector import get_db_connector
 
 
-class NodeCacheManager(object):
+class NodeCacheManager:
     """The Node cache interface.
 
     The cache is defined by Node's
@@ -14,7 +20,7 @@ class NodeCacheManager(object):
     """
 
     @staticmethod
-    def get(node):
+    def get(node: Node) -> Optional[NodeCache]:
         """Pull NodeCache if exists.
 
         Args:
@@ -29,13 +35,13 @@ class NodeCacheManager(object):
             'removed': {'$ne': True}
         }).sort('insertion_date', -1).limit(1)
         caches = list(db_node_cache)
-        if len(caches):
+        if len(caches) > 0:
             return NodeCache.from_dict(caches[0])
         else:
             return None
 
     @staticmethod
-    def post(node, run_id):
+    def post(node: Node, run_id: ObjectId) -> bool:
         """Create NodeCache instance in the database.
 
         Args:
@@ -50,13 +56,17 @@ class NodeCacheManager(object):
         node_cache = NodeCache.instantiate(node=node, run_id=run_id)
         try:
             node_cache.save()
-        except Exception as e:
-            logging.error('Could not save cache: `{}`'.format(e))
+        except Exception as e:  # pylint: disable=broad-except
+            logging.error(f"Could not save cache: `{e}`")
             return False
         return True
 
     @staticmethod
-    def _make_query(start_datetime=None, end_datetime=None, non_protected_only=False):
+    def _make_query(
+            start_datetime: Optional[datetime.datetime] = None,
+            end_datetime: Optional[datetime.datetime] = None,
+            non_protected_only: bool = False,
+            ) -> Dict[str, Any]:
         """Make sample query.
 
         Args:
@@ -66,9 +76,9 @@ class NodeCacheManager(object):
         Return:
             Iterator on the list of dict-like objects
         """
-        and_query = []
+        and_query: List[Dict[str, Dict[str, Union[bool, datetime.datetime]]]] = []
 
-        insertion_query = {}
+        insertion_query: Dict[str, Union[bool, datetime.datetime]] = {}
         if start_datetime:
             insertion_query['$gte'] = start_datetime
         if end_datetime:
@@ -82,7 +92,11 @@ class NodeCacheManager(object):
         return {'$and': and_query} if and_query else {}
 
     @staticmethod
-    def get_list(start_datetime=None, end_datetime=None, non_protected_only=False):
+    def get_list(
+            start_datetime: Optional[datetime.datetime] = None,
+            end_datetime: Optional[datetime.datetime] = None,
+            non_protected_only: bool = False
+            ):
         """List of NodeCache objects.
 
         Args:

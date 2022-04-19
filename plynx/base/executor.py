@@ -1,22 +1,27 @@
+"""Templates for PLynx Executors and utils."""
+
 import os
 import shutil
 from abc import abstractmethod
-from plynx.db.node import Node, Parameter, ParameterTypes, NodeRunningStatus
+from typing import Union
+
+from plynx.constants import NodeStatus, SpecialNodeId, ValidationCode, ValidationTargetType
+from plynx.db.node import Node, NodeRunningStatus, Parameter, ParameterListOfNodes, ParameterTypes
 from plynx.db.validation_error import ValidationError
-from plynx.constants import NodeStatus, SpecialNodeId, ValidationTargetType, ValidationCode
 
 TMP_DIR = '/tmp/plx'
 
 
 class BaseExecutor:
-    IS_GRAPH = False
+    """Base Executor class"""
+    IS_GRAPH: bool = False
 
-    def __init__(self, node):
+    def __init__(self, node: Node = None):
         self.node = node
         self.workdir = TMP_DIR
 
     @abstractmethod
-    def run(self):
+    def run(self, preview: bool = False) -> str:
         """Main execution function.
 
         - Workdir has been initialized.
@@ -27,13 +32,6 @@ class BaseExecutor:
         Returns:
             enum: plynx.constants.NodeRunningStatus
         """
-        pass
-
-    @abstractmethod
-    def status(self):
-        """No currently used.
-        """
-        pass
 
     @abstractmethod
     def kill(self):
@@ -41,9 +39,9 @@ class BaseExecutor:
 
         The reason can be the fact it was working too long or parent executor canceled it.
         """
-        pass
 
-    def is_updated(self):
+    # pylint: disable=no-self-use
+    def is_updated(self) -> bool:
         """Function that is regularly called by a Worker.
 
         The function is running in a separate thread and does not block execution of `run()`.
@@ -54,36 +52,36 @@ class BaseExecutor:
         return False
 
     @classmethod
-    def get_default_node(cls, is_workflow):
+    def get_default_node(cls, is_workflow: bool) -> Node:
+        """Generate a new default Node for this executor"""
         node = Node()
         if cls.IS_GRAPH:
-            nodes_parameter = Parameter.from_dict({
-                'name': '_nodes',
-                'parameter_type': ParameterTypes.LIST_NODE,
-                'value': [],
-                'mutable_type': False,
-                'publicable': False,
-                'removable': False,
-                }
+            nodes_parameter = Parameter(
+                name='_nodes',
+                parameter_type=ParameterTypes.LIST_NODE,
+                value=ParameterListOfNodes(),
+                mutable_type=False,
+                publicable=False,
+                removable=False,
             )
             if not is_workflow:
                 # need to add inputs and outputs
                 nodes_parameter.value.value.extend(
                     [
-                        Node.from_dict({
-                            '_id': SpecialNodeId.INPUT,
-                            'title': 'Input',
-                            'kind': 'dummy',
-                            'node_running_status': NodeRunningStatus.SPECIAL,
-                            'node_status': NodeStatus.READY,
-                        }),
-                        Node.from_dict({
-                            '_id': SpecialNodeId.OUTPUT,
-                            'title': 'Output',
-                            'kind': 'dummy',
-                            'node_running_status': NodeRunningStatus.SPECIAL,
-                            'node_status': NodeStatus.READY,
-                        }),
+                        Node(
+                            _id=SpecialNodeId.INPUT,
+                            title='Input',
+                            kind='dummy',
+                            node_running_status=NodeRunningStatus.SPECIAL,
+                            node_status=NodeStatus.READY,
+                        ),
+                        Node(
+                            _id=SpecialNodeId.OUTPUT,
+                            title='Output',
+                            kind='dummy',
+                            node_running_status=NodeRunningStatus.SPECIAL,
+                            node_status=NodeStatus.READY,
+                        ),
                     ]
                 )
             node.parameters.extend([
@@ -93,20 +91,25 @@ class BaseExecutor:
         return node
 
     def init_workdir(self):
+        """Make tmp dir if it does not exist"""
         if not os.path.exists(self.workdir):
             os.makedirs(self.workdir)
 
     def clean_up(self):
+        """Remove tmp dir"""
         if os.path.exists(self.workdir):
             shutil.rmtree(self.workdir, ignore_errors=True)
 
-    def validate(self):
+    def validate(self) -> Union[ValidationError, None]:
         """Validate Node.
 
         Return:
             (ValidationError)   Validation error if found; else None
         """
+        assert self.node, "Attribute `node` is not assigned"
+
         violations = []
+
         if self.node.title == '':
             violations.append(
                 ValidationError(
@@ -117,7 +120,7 @@ class BaseExecutor:
 
         # Meaning the node is in the graph. Otherwise souldn't be in validation step
         if self.node.node_status != NodeStatus.CREATED:
-            for input in self.node.inputs:
+            for input in self.node.inputs:  # pylint: disable=redefined-builtin
                 min_count = input.min_count if input.is_array else 1
                 if len(input.input_references) < min_count:
                     violations.append(
@@ -147,18 +150,21 @@ class BaseExecutor:
 
 
 class Dummy(BaseExecutor):
-    def __init__(self, node=None):
-        super(Dummy, self).__init__(node)
+    """Dummy Executor. Used for static Operations"""
 
-    def run(self):
+    def run(self, preview=False) -> str:
+        """Not Implemented"""
         raise NotImplementedError()
 
     def status(self):
+        """Not Implemented"""
         raise NotImplementedError()
 
     def kill(self):
+        """Not Implemented"""
         raise NotImplementedError()
 
     @classmethod
-    def get_default_node(cls, is_workflow):
+    def get_default_node(cls, is_workflow: bool) -> Node:
+        """Not Implemented"""
         raise NotImplementedError()

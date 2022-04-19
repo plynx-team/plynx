@@ -1,3 +1,6 @@
+"""Create default empty Operations"""
+# TODO: delete this file? Why do we need it?
+# pylint: disable-all
 import plynx.constants
 import plynx.db.node
 import plynx.utils.plugin_manager
@@ -21,10 +24,6 @@ def create_template(user, kind, cmd, title, description, inputs=None, parameters
     node.inputs.extend(inputs or [])
     node.parameters.extend(parameters or [])
     node.outputs.extend(outputs or [])
-
-    import logging
-    from plynx.utils.common import JSONEncoder
-    logging.info(JSONEncoder().encode(node.to_dict()))
 
     validation_error = executor_manager.kind_to_executor_class[kind](node).validate()
     if validation_error:

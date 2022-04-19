@@ -1,30 +1,37 @@
+"""Main PLynx worker service and utils"""
+
+import logging
 import os
+import socket
 import sys
 import threading
-import logging
-import six
 import traceback
 import uuid
-import socket
-from plynx.constants import NodeRunningStatus, Collections
+from typing import Dict, Optional, Set
+
+import six
+
 import plynx.db.node_collection_manager
 import plynx.db.run_cancellation_manager
-from plynx.db.worker_state import WorkerState
-from plynx.utils.config import get_worker_config
-from plynx.utils.db_connector import check_connection
 import plynx.utils.executor
+from plynx.base.executor import BaseExecutor
+from plynx.constants import Collections, NodeRunningStatus
+from plynx.db.worker_state import WorkerState
+from plynx.utils.common import ObjectId
+from plynx.utils.config import WorkerConfig, get_worker_config
+from plynx.utils.db_connector import check_connection
 from plynx.utils.file_handler import upload_file_stream
 
 
-class TickThread(object):
+class TickThread:
     """
     This class is a Context Manager wrapper.
     It calls method `tick()` of the executor with a given interval
     """
 
-    TICK_TIMEOUT = 1
+    TICK_TIMEOUT: int = 1
 
-    def __init__(self, executor):
+    def __init__(self, executor: BaseExecutor):
         self.executor = executor
         self._tick_thread = threading.Thread(target=self.call_executor_tick, args=())
         self._stop_event = threading.Event()
@@ -36,10 +43,11 @@ class TickThread(object):
         self._tick_thread.start()
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, type_cls, value, traceback_val):
         self._stop_event.set()
 
     def call_executor_tick(self):
+        """Run timed ticks"""
         while not self._stop_event.is_set():
             self._stop_event.wait(timeout=TickThread.TICK_TIMEOUT)
             if self.executor.is_updated():
@@ -50,16 +58,9 @@ class TickThread(object):
                     self.executor.node.save(collection=Collections.RUNS)
 
 
-class Worker(object):
+class Worker:
+    # TODO update docstring
     """Worker main class.
-
-    Args:
-        server_address      (tuple):        Define the server address (host, port).
-        RequestHandlerClass (TCP handler):  Class of socketserver.BaseRequestHandler.
-
-    Currently implemented as a TCP server.
-
-    Only a single instance of the Worker class in a cluster is allowed.
 
     On the high level Worker distributes Jobs over all available Workers
     and updates statuses of the Graphs in the database.
@@ -74,14 +75,15 @@ class Worker(object):
         * Update Graph's statuses.
         * Track worker status and last response.
     """
+    # pylint: disable=too-many-instance-attributes
 
     # Define sync with database timeout
-    SDB_STATUS_UPDATE_TIMEOUT = 1
+    SDB_STATUS_UPDATE_TIMEOUT: int = 1
 
     # Worker State update timeout
-    WORKER_STATE_UPDATE_TIMEOUT = 1
+    WORKER_STATE_UPDATE_TIMEOUT: int = 1
 
-    def __init__(self, worker_config, worker_id):
+    def __init__(self, worker_config: WorkerConfig, worker_id: Optional[str]):
         self.worker_id = worker_id if worker_id else str(uuid.uuid1())
         self.node_collection_manager = plynx.db.node_collection_manager.NodeCollectionManager(collection=Collections.RUNS)
         self.run_cancellation_manager = plynx.db.run_cancellation_manager.RunCancellationManager()
@@ -90,7 +92,7 @@ class Worker(object):
         self._stop_event = threading.Event()
 
         # Mapping keep track of Worker Status
-        self._run_id_to_executor = {}
+        self._run_id_to_executor: Dict[ObjectId, BaseExecutor] = {}
         self._run_id_to_executor_lock = threading.Lock()
 
         # Start new threads
@@ -100,7 +102,7 @@ class Worker(object):
         self._thread_worker_state_update = threading.Thread(target=self._run_worker_state_update, args=())
         self._thread_worker_state_update.start()
 
-        self._killed_run_ids = set()
+        self._killed_run_ids: Set[ObjectId] = set()
 
     def serve_forever(self):
         """
@@ -108,7 +110,9 @@ class Worker(object):
         """
         self._stop_event.wait()
 
-    def execute_job(self, executor):
+    def execute_job(self, executor: BaseExecutor):
+        """Run a single job in the executor"""
+        assert executor.node, "Executor has no `node` attribute defined"
         try:
             try:
                 status = NodeRunningStatus.FAILED
@@ -116,32 +120,28 @@ class Worker(object):
                 executor.init_workdir()
                 with TickThread(executor):
                     status = executor.run()
-            except Exception:
+            except Exception:   # pylint: disable=broad-except
                 try:
                     f = six.BytesIO()
                     f.write(traceback.format_exc().encode())
                     executor.node.get_log_by_name('worker').resource_id = upload_file_stream(f)
                     logging.error(traceback.format_exc())
-                except Exception:
+                except Exception:   # pylint: disable=broad-except
                     # This case of `except` has happened before due to I/O failure
                     logging.critical(traceback.format_exc())
                     raise
             finally:
                 executor.clean_up()
 
-            logging.info('Node {node_id} `{title}` finished with status `{status}`'.format(
-                node_id=executor.node._id,
-                title=executor.node.title,
-                status=status,
-                ))
+            logging.info(f"Node {executor.node._id} `{executor.node.title}` finished with status `{status}`")
             executor.node.node_running_status = status
             if executor.node._id in self._killed_run_ids:
                 self._killed_run_ids.remove(executor.node._id)
-        except Exception as e:
-            logging.warning('Execution failed: {}'.format(e))
+        except Exception as e:  # pylint: disable=broad-except
+            logging.warning(f"Execution failed: {e}")
             executor.node.node_running_status = NodeRunningStatus.FAILED
         finally:
-            with executor._lock:
+            with executor._lock:    # type: ignore
                 executor.node.save(collection=Collections.RUNS)
             with self._run_id_to_executor_lock:
                 del self._run_id_to_executor[executor.node._id]
@@ -152,7 +152,7 @@ class Worker(object):
             while not self._stop_event.is_set():
                 node = self.node_collection_manager.pick_node(kinds=self.kinds)
                 if node:
-                    logging.info('New node found: {} {} {}'.format(node['_id'], node['node_running_status'], node['title']))
+                    logging.info(f"New node found: {node['_id']} {node['node_running_status']} {node['title']}")
                     executor = plynx.utils.executor.materialize_executor(node)
                     executor._lock = threading.Lock()
 
@@ -167,7 +167,7 @@ class Worker(object):
             self.stop()
             raise
         finally:
-            logging.info("Exit {}".format(self._run_db_status_update.__name__))
+            logging.info(f"Exit {self._run_db_status_update.__name__}")
 
     def _run_worker_state_update(self):
         """Syncing with the database."""
@@ -184,26 +184,26 @@ class Worker(object):
                 with self._run_id_to_executor_lock:
                     for executor in self._run_id_to_executor.values():
                         runs.append(executor.node.to_dict())
-                worker_state = WorkerState.from_dict({
-                    'worker_id': self.worker_id,
-                    'host': self.host,
-                    'runs': runs,
-                    'kinds': self.kinds,
-                })
+                worker_state = WorkerState(
+                    worker_id=self.worker_id,
+                    host=self.host,
+                    runs=runs,
+                    kinds=self.kinds,
+                )
                 worker_state.save()
                 self._stop_event.wait(timeout=Worker.WORKER_STATE_UPDATE_TIMEOUT)
         except Exception:
             self.stop()
             raise
         finally:
-            logging.info("Exit {}".format(self._run_worker_state_update.__name__))
+            logging.info(f"Exit {self._run_worker_state_update.__name__}")
 
     def stop(self):
         """Stop worker."""
         self._stop_event.set()
 
 
-def run_worker(worker_id=None):
+def run_worker(worker_id: Optional[str] = None):
     """Run worker daemon. It will run in the same thread."""
     # Check connection to the db
     check_connection()

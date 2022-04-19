@@ -106,6 +106,15 @@ But we recommend to store the config in a separate file.
 Plynx config location is can be set in env variable `PLYNX_CONFIG_PATH`. Default value is `./config.yaml`.
 
 
+### Install PLynx with dev requirements
+
+Run:
+```
+pip install -e .[all]
+
+pre-commit install
+```
+
 ## External links
 - [PLynx.com](https://plynx.com) demo and main page.
 - [github](https://github.com/plynx-team/plynx) page.
