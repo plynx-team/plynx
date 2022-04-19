@@ -139,7 +139,7 @@ plugins:
         - cloud-storage
     - kind: python-code-operation
       title: Python Code Operation
-      executor: plynx.plugins.executors.local.PythonNode
+      executor: plynx.plugins.executors.python.local.PythonNode
       icon: plynx.python-logo-notext
       color: ''
       resources:
