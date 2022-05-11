@@ -38,11 +38,24 @@ def get_db_connector():
     global _DB  # pylint: disable=global-statement
     if _DB is not None:
         return _DB
-    connection_config = get_db_config()
-    client = pymongo.MongoClient(connection_config.host, connection_config.port, read_preference=pymongo.read_preferences.PrimaryPreferred())
-    _DB = client['plynx']
-    if connection_config.user:
-        _DB.authenticate(connection_config.user, connection_config.password)
+
+    PLYNX_DB = "plynx"
+    connection_config, auth_params = get_db_config(), {}
+
+    if connection_config.user and connection_config.password:
+        auth_params.update({
+            "username": connection_config.user,
+            "password": connection_config.password,
+            "authSource": PLYNX_DB
+        })
+
+    client = pymongo.MongoClient(connection_config.host,
+                                connection_config.port,
+                                read_preference=pymongo.read_preferences.PrimaryPreferred(),
+                                **auth_params)
+
+    _DB = client[PLYNX_DB]
+
     init_indexes()
     return _DB
 
