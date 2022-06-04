@@ -40,7 +40,6 @@ class BaseExecutor:
         The reason can be the fact it was working too long or parent executor canceled it.
         """
 
-    # pylint: disable=no-self-use
     def is_updated(self) -> bool:
         """Function that is regularly called by a Worker.
 

@@ -105,7 +105,7 @@ class _DBObject:
     def from_dict(cls: Type[DBObjectType], dict_obj: Dict[str, Any]) -> DBObjectType:
         """Create a class based on dict_obj"""
 
-    def to_dict(self: DBObjectType) -> Dict[str, Any]:     # pylint: disable=no-self-use
+    def to_dict(self: DBObjectType) -> Dict[str, Any]:
         """Create serialized object"""
         return {}
 

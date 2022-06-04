@@ -346,8 +346,8 @@ class Node(DBObject):
             return level_to_node_ids, node_id_to_node
 
         cum_heights = [0]
-        for index, _ in enumerate(row_heights):
-            cum_heights.append(cum_heights[-1] + row_heights[index] + SPACE_HEIGHT)
+        for row_height in row_heights:
+            cum_heights.append(cum_heights[-1] + row_height + SPACE_HEIGHT)
 
         max_height = max(cum_heights)
 
