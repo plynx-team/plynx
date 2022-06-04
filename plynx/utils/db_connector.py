@@ -6,6 +6,7 @@ import pymongo
 from plynx.constants import Collections
 from plynx.utils.config import get_db_config
 
+PLYNX_DB = "plynx"
 _DB = None
 
 
@@ -39,7 +40,6 @@ def get_db_connector():
     if _DB is not None:
         return _DB
 
-    PLYNX_DB = "plynx"
     connection_config, auth_params = get_db_config(), {}
 
     if connection_config.user and connection_config.password:
@@ -49,10 +49,12 @@ def get_db_connector():
             "authSource": PLYNX_DB
         })
 
-    client = pymongo.MongoClient(connection_config.host,
-                                connection_config.port,
-                                read_preference=pymongo.read_preferences.PrimaryPreferred(),
-                                **auth_params)
+    client = pymongo.MongoClient(
+        connection_config.host,
+        connection_config.port,
+        read_preference=pymongo.read_preferences.PrimaryPreferred(),
+        **auth_params
+    )
 
     _DB = client[PLYNX_DB]
 
