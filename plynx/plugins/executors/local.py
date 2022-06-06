@@ -90,7 +90,7 @@ class _ResourceMerger:
         return self._dict
 
 
-class BaseBash(plynx.base.executor.BaseExecutor):
+class BaseBash(plynx.base.executor.PLynxAsyncExecutorWithDirectory):
     """Base Executor that will use unix bash as a backend."""
     # pylint: disable=too-many-instance-attributes
 
@@ -468,7 +468,7 @@ class PythonNode(BaseBash):
         return node
 
 
-class File(plynx.base.executor.BaseExecutor):
+class File(plynx.base.executor.PLynxAsyncExecutor):
     """Dummy executor that represents STATIC Operations."""
 
     def run(self, preview: bool = False):

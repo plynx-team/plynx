@@ -137,7 +137,7 @@ def get_nodes(collection: str, node_link: Optional[str] = None):
 def post_node(collection: str):
     """Post a Node with an action"""
     # TODO: fix disables
-    # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements
+    # pylint: disable=too-many-return-statements,too-many-branches,too-many-statements,too-many-locals
     logger.debug(request.data)
 
     data = json.loads(request.data)
@@ -169,6 +169,8 @@ def post_node(collection: str):
     can_modify_others_workflows = g.user.check_role(IAMPolicies.CAN_MODIFY_OTHERS_WORKFLOWS)
     can_run_workflows = g.user.check_role(IAMPolicies.CAN_RUN_WORKFLOWS)
 
+    executor = executor_manager.kind_to_executor_class[node.kind](node)
+
     if action == NodePostAction.SAVE:
         if (is_workflow and not can_create_workflows) or (not is_workflow and not can_create_operations):
             return make_permission_denied('You do not have permission to save this object')
@@ -186,7 +188,7 @@ def post_node(collection: str):
             return make_fail_response('Invalid action for a workflow'), 400
         if node.node_status != NodeStatus.CREATED:
             return make_fail_response(f"Node status `{NodeStatus.CREATED}` expected. Found `{node.node_status}`")
-        validation_error = executor_manager.kind_to_executor_class[node.kind](node).validate()
+        validation_error = executor.validate()
         if validation_error:
             return make_success_response({
                 'status': NodePostStatus.VALIDATION_FAILED,
@@ -206,7 +208,7 @@ def post_node(collection: str):
             return make_fail_response('Invalid action for an operation'), 400
         if node.node_status != NodeStatus.CREATED:
             return make_fail_response(f"Node status `{NodeStatus.CREATED}` expected. Found `{node.node_status}`")
-        validation_error = executor_manager.kind_to_executor_class[node.kind](node).validate()
+        validation_error = executor.validate()
         if validation_error:
             return make_success_response({
                 'status': NodePostStatus.VALIDATION_FAILED,
@@ -216,8 +218,10 @@ def post_node(collection: str):
 
         node = node.clone(NodeClonePolicy.NODE_TO_RUN)
         node.author = g.user._id
+
         if is_admin or can_run_workflows:
-            node.save(collection=Collections.RUNS)
+            executor._update_node(node)
+            executor.launch()
         else:
             return make_permission_denied('You do not have CAN_RUN_WORKFLOWS role')
 
@@ -249,7 +253,7 @@ def post_node(collection: str):
             })
 
     elif action == NodePostAction.VALIDATE:
-        validation_error = executor_manager.kind_to_executor_class[node.kind](node).validate()
+        validation_error = executor.validate()
 
         if validation_error:
             return make_success_response({
@@ -283,7 +287,7 @@ def post_node(collection: str):
 
         return make_success_response({
                 'message': 'Successfully created preview',
-                'preview_text': executor_manager.kind_to_executor_class[node.kind](node).run(preview=True)
+                'preview_text': executor.run(preview=True)
             })
 
     elif action == NodePostAction.REARRANGE_NODES:

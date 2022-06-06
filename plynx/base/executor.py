@@ -1,24 +1,24 @@
 """Templates for PLynx Executors and utils."""
-
 import os
 import shutil
-from abc import abstractmethod
-from typing import Union
+import uuid
+from abc import ABC, abstractmethod
+from typing import Optional, Union
 
-from plynx.constants import NodeStatus, SpecialNodeId, ValidationCode, ValidationTargetType
+from plynx.constants import Collections, NodeStatus, SpecialNodeId, ValidationCode, ValidationTargetType
 from plynx.db.node import Node, NodeRunningStatus, Parameter, ParameterListOfNodes, ParameterTypes
 from plynx.db.validation_error import ValidationError
 
-TMP_DIR = '/tmp/plx'
 
-
-class BaseExecutor:
+class BaseExecutor(ABC):
     """Base Executor class"""
     IS_GRAPH: bool = False
 
     def __init__(self, node: Node = None):
         self.node = node
-        self.workdir = TMP_DIR
+
+    def _update_node(self, node):
+        self.node = node
 
     @abstractmethod
     def run(self, preview: bool = False) -> str:
@@ -32,6 +32,26 @@ class BaseExecutor:
         Returns:
             enum: plynx.constants.NodeRunningStatus
         """
+
+    @abstractmethod
+    def launch(self) -> None:
+        """Launch the Node on the backend.
+
+        The difference between `launch()` and `run()` is that:
+        - `run()` assumes synchronous execution.
+        - `launch()` does not necessary have this assumtion. Use `get_node_running_status` to get the status of the execution.
+
+        Returns:
+            TBD
+        """
+        raise NotImplementedError()
+
+    def get_node_running_status(self) -> str:
+        """Returns the status of the execution.
+
+        Async executions should sync with the remote and return the result immediately.
+        """
+        return self.node.node_running_status
 
     @abstractmethod
     def kill(self):
@@ -89,15 +109,11 @@ class BaseExecutor:
             node.arrange_auto_layout()
         return node
 
-    def init_workdir(self):
-        """Make tmp dir if it does not exist"""
-        if not os.path.exists(self.workdir):
-            os.makedirs(self.workdir)
+    def init_executor(self):
+        """Initialize environment for the executor"""
 
-    def clean_up(self):
-        """Remove tmp dir"""
-        if os.path.exists(self.workdir):
-            shutil.rmtree(self.workdir, ignore_errors=True)
+    def clean_up_executor(self):
+        """Clean up the environment created by executor"""
 
     def validate(self) -> Union[ValidationError, None]:
         """Validate Node.
@@ -146,6 +162,49 @@ class BaseExecutor:
             validation_code=ValidationCode.IN_DEPENDENTS,
             children=violations
         )
+
+
+class PLynxAsyncExecutor(BaseExecutor):
+    """Base Executor class that is using PLynx Async Inference backend"""
+
+    def launch(self) -> None:
+        """Launch the Node on the backend.
+
+        Returns:
+            TBD
+        """
+        assert self.node, "`node` in PLynxAsyncExecutor object is not defined"
+        self.node.save(collection=Collections.RUNS)
+
+
+class PLynxSyncExecutor(BaseExecutor):
+    """Base Executor class that is using PLynx Sync Inference backend"""
+
+    def launch(self) -> None:
+        """Launch the Node on the backend.
+
+        Returns:
+            TBD
+        """
+        self.run()
+
+
+class PLynxAsyncExecutorWithDirectory(PLynxAsyncExecutor):
+    """Base Executor class that is using PLynx Async Inference backend"""
+
+    def __init__(self, node):
+        super().__init__(node)
+        self.workdir = os.path.join('/tmp', str(uuid.uuid1()))
+
+    def init_executor(self):
+        """Make tmp dir if it does not exist"""
+        if not os.path.exists(self.workdir):
+            os.makedirs(self.workdir)
+
+    def clean_up_executor(self):
+        """Remove tmp dir"""
+        if os.path.exists(self.workdir):
+            shutil.rmtree(self.workdir, ignore_errors=True)
 
 
 class Dummy(BaseExecutor):

@@ -30,7 +30,7 @@ _ACTIVE_WAITING_TO_STOP = {
 }
 
 
-class DAG(plynx.base.executor.BaseExecutor):
+class DAG(plynx.base.executor.PLynxAsyncExecutor):
     """ Main graph scheduler.
 
     Args:
@@ -252,7 +252,9 @@ class DAG(plynx.base.executor.BaseExecutor):
         if NodeRunningStatus.is_finished(node.node_running_status):     # NodeRunningStatus.SPECIAL
             return
         node.author = self.node.author                                  # Change it to the author that runs it
-        node.save(collection=Collections.RUNS)
+
+        executor = plynx.utils.executor.materialize_executor(node)
+        executor.launch()
 
         self.monitoring_node_ids.append(node._id)
 
