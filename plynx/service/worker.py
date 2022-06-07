@@ -1,7 +1,6 @@
 """Main PLynx worker service and utils"""
 
 import logging
-import os
 import socket
 import sys
 import threading

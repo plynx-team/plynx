@@ -1,13 +1,17 @@
 """Templates for PLynx Executors and utils."""
-import os
-import shutil
-import uuid
 from abc import ABC, abstractmethod
-from typing import Optional, Union
+from dataclasses import dataclass
+from typing import Union
 
-from plynx.constants import Collections, NodeStatus, SpecialNodeId, ValidationCode, ValidationTargetType
+from plynx.constants import NodeStatus, SpecialNodeId, ValidationCode, ValidationTargetType
 from plynx.db.node import Node, NodeRunningStatus, Parameter, ParameterListOfNodes, ParameterTypes
 from plynx.db.validation_error import ValidationError
+
+
+@dataclass
+class RunningStatus:
+    """Async job running status"""
+    node_running_status: str
 
 
 class BaseExecutor(ABC):
@@ -34,7 +38,7 @@ class BaseExecutor(ABC):
         """
 
     @abstractmethod
-    def launch(self) -> None:
+    def launch(self) -> RunningStatus:
         """Launch the Node on the backend.
 
         The difference between `launch()` and `run()` is that:
@@ -42,16 +46,17 @@ class BaseExecutor(ABC):
         - `launch()` does not necessary have this assumtion. Use `get_node_running_status` to get the status of the execution.
 
         Returns:
-            TBD
+            RunningStatus
         """
         raise NotImplementedError()
 
-    def get_node_running_status(self) -> str:
+    def get_running_status(self) -> RunningStatus:
         """Returns the status of the execution.
 
         Async executions should sync with the remote and return the result immediately.
         """
-        return self.node.node_running_status
+        assert self.node, "Node must be difened by this stage"
+        return RunningStatus(self.node.node_running_status)
 
     @abstractmethod
     def kill(self):
@@ -162,49 +167,6 @@ class BaseExecutor(ABC):
             validation_code=ValidationCode.IN_DEPENDENTS,
             children=violations
         )
-
-
-class PLynxAsyncExecutor(BaseExecutor):
-    """Base Executor class that is using PLynx Async Inference backend"""
-
-    def launch(self) -> None:
-        """Launch the Node on the backend.
-
-        Returns:
-            TBD
-        """
-        assert self.node, "`node` in PLynxAsyncExecutor object is not defined"
-        self.node.save(collection=Collections.RUNS)
-
-
-class PLynxSyncExecutor(BaseExecutor):
-    """Base Executor class that is using PLynx Sync Inference backend"""
-
-    def launch(self) -> None:
-        """Launch the Node on the backend.
-
-        Returns:
-            TBD
-        """
-        self.run()
-
-
-class PLynxAsyncExecutorWithDirectory(PLynxAsyncExecutor):
-    """Base Executor class that is using PLynx Async Inference backend"""
-
-    def __init__(self, node):
-        super().__init__(node)
-        self.workdir = os.path.join('/tmp', str(uuid.uuid1()))
-
-    def init_executor(self):
-        """Make tmp dir if it does not exist"""
-        if not os.path.exists(self.workdir):
-            os.makedirs(self.workdir)
-
-    def clean_up_executor(self):
-        """Remove tmp dir"""
-        if os.path.exists(self.workdir):
-            shutil.rmtree(self.workdir, ignore_errors=True)
 
 
 class Dummy(BaseExecutor):

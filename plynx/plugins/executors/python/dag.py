@@ -19,16 +19,11 @@ def worker_main(job_run_queue: queue.Queue, job_complete_queue: queue.Queue):
     """Main threaded function that serves Operations."""
     logging.info("Created pool worker")
     while True:
-        logging.info(">>>>>>>>>>>>> A")
         node = job_run_queue.get()
-        logging.info(">>>>>>>>>>>>> B ")
         executor = plynx.utils.executor.materialize_executor(node)
-        logging.info(">>>>>>>>>>>>> C")
 
         try:
-            logging.info(">>>>>>>>>>>>> D")
             executor.launch()
-            logging.info(">>>>>>>>>>>>> E")
         except Exception:   # pylint: disable=broad-except
             error_str = traceback.format_exc()
             logging.error(f"Job failed with traceback: {error_str}")

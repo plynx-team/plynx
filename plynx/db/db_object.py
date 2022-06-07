@@ -56,7 +56,7 @@ class _DBObject:
                 setattr(self, name, field_type(getattr(self, name)))
 
     @classmethod
-    def load(cls, _id: ObjectId, collection: str = None) -> "_DBObject":
+    def load(cls: Type[DBObjectType], _id: ObjectId, collection: str = None) -> DBObjectType:
         """Load object from db.
 
         Args:
@@ -93,7 +93,7 @@ class _DBObject:
 
         return True
 
-    def copy(self) -> "_DBObject":
+    def copy(self: DBObjectType) -> DBObjectType:
         """Make a copy
 
         Return:

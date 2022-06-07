@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict
 
 import cloudpickle
 
-import plynx.base.executor
+import plynx.plugins.executors.bases
 import plynx.plugins.executors.local
 from plynx.constants import NodeRunningStatus, ParameterTypes
 from plynx.db.node import Input, Node, Output, Parameter, ParameterCode
@@ -122,7 +122,7 @@ def prep_args(node: Node) -> Dict[str, Any]:
     return args
 
 
-class PythonNode(plynx.base.executor.PLynxSyncExecutor):
+class PythonNode(plynx.plugins.executors.bases.PLynxSyncExecutor):
     """
     Class is used as a placeholder for local python executor
     """
