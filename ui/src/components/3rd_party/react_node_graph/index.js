@@ -144,6 +144,9 @@ class ReactBlockGraph extends React.Component {
     if (this.preventDrawingBox) {
       return;
     }
+    if (e.button === 2) {
+      return;
+    }
     const {svgComponent: {refs: {svg}}} = this.refs;
 
     // Get svg element position to substract offset top and left
@@ -241,7 +244,7 @@ class ReactBlockGraph extends React.Component {
     d.nodes[index].x = pos.x;
     d.nodes[index].y = pos.y;
 
-    if (pos.x - this.initialPos.x != 0 || pos.y - this.initialPos.y != 0) {
+    if (pos.x - this.initialPos.x !== 0 || pos.y - this.initialPos.y !== 0) {
       this.moveChangedPosition = true;
     }
 

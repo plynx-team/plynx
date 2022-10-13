@@ -74,6 +74,7 @@ export default class Editor extends Component {
     }
 
     this.tour_steps = [];
+    this.schedule = null;
     console.log(global.appVersion);
   }
 
@@ -404,17 +405,29 @@ export default class Editor extends Component {
     });
   }
 
+  scheduleUpdate(delay) {
+    if (this.schedule) {
+      return;
+    }
+    this.schedule = setTimeout(this.runScheduledUpdate, delay, this);
+  }
+
+  runScheduledUpdate(self) {
+      self.schedule = null;
+      self.postNode({
+        node: self.node,
+        action: ACTION.SAVE,
+        reloadOption: RELOAD_OPTIONS.NONE,
+        silent: true,
+      });
+  }
+
   handleNodeChange(node) {
     const shouldSave = this.node.auto_save || node.auto_save;
     this.node = node;
 
     if (shouldSave) {
-        this.postNode({
-          node: this.node,
-          action: ACTION.SAVE,
-          reloadOption: RELOAD_OPTIONS.NONE,
-          silent: true,
-        });
+      this.scheduleUpdate(100);
     }
   }
 
