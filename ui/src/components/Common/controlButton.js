@@ -136,6 +136,30 @@ makeControlSearchBar.propTypes = {
 };
 
 
+export function makeControlCheckbox(props) {
+  return (
+    <div
+       key={props.text}
+       className={[
+         "control-checkbox",
+           (props.className || ''),
+           (props.enabled !== false ? 'enabled' : 'disabled')
+       ].join(" ")}
+    >
+        <div className='control-checkbox-text'>{props.text}:</div>
+        <label class="switch">
+            <input
+                type="checkbox"
+                checked={props.checked}
+                onChange={props.func}
+                />
+            <span class="slider round"></span>
+        </label>
+    </div>
+  );
+}
+
+
 export function makeControlPanel({props, children_func} = {}) {
   return (
         <div

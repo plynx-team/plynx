@@ -209,6 +209,7 @@ class ReactBlockGraph extends React.Component {
       this.props.onBlockStartMove(nid, pos);
     }
     this.initialPos = pos;
+    this.moveChangedPosition = false;
     if (this.selectedNIDs.indexOf(nid) < 0) {
       this.moveOnlyCurrentBlock = true;
     } else {
@@ -226,7 +227,9 @@ class ReactBlockGraph extends React.Component {
           x: d.nodes[ii].x,
           y: d.nodes[ii].y,
         };
-        this.props.onBlockMove(d.nodes[ii]._id, blockPos);
+        if (this.moveChangedPosition) {
+          this.props.onBlockMove(d.nodes[ii]._id, blockPos);
+        }
       }
     }
   }
@@ -237,6 +240,10 @@ class ReactBlockGraph extends React.Component {
     // For some reason, we need to treat dragged object differently from selected
     d.nodes[index].x = pos.x;
     d.nodes[index].y = pos.y;
+
+    if (pos.x - this.initialPos.x != 0 || pos.y - this.initialPos.y != 0) {
+      this.moveChangedPosition = true;
+    }
 
     if (!this.moveOnlyCurrentBlock) {
       const dx = pos.x - this.initialPos.x;

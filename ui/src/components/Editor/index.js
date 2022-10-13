@@ -24,7 +24,7 @@ import RunList from '../NodeList/runList';
 import DeprecateDialog from '../Dialogs/DeprecateDialog';
 import TextViewDialog from '../Dialogs/TextViewDialog';
 import { PluginsProvider } from '../../contexts';
-import { makeControlPanel, makeControlToggles, makeControlButton, makeControlSeparator } from '../Common/controlButton';
+import { makeControlPanel, makeControlCheckbox, makeControlToggles, makeControlButton, makeControlSeparator } from '../Common/controlButton';
 import { addStyleToTourSteps } from '../../utils';
 import "./style.css";
 
@@ -268,13 +268,13 @@ export default class Editor extends Component {
     }
   }
 
-  postNode({node, reloadOption, action, retryOnAuth = true} = {}) {
+  postNode({node, reloadOption, action, retryOnAuth = true, silent = false} = {}) {
     /* action might be in {'save', 'validate', 'approve', 'deprecate'}*/
     const self = this;
-    self.setState({loading: true});
-
-    console.log(action, node);
-
+    if (!silent) {
+      self.setState({loading: true});
+      console.log(action, node);
+    }
 
     PLynxApi.endpoints[self.props.collection]
     .create({
@@ -296,7 +296,9 @@ export default class Editor extends Component {
         }
 
         if (action === ACTION.SAVE) {
-          self.showAlert("Saved", 'success');
+          if (!silent) {
+            self.showAlert("Saved", 'success');
+          }
         } else if (action === ACTION.VALIDATE) {
           self.showAlert("Valid", 'success');
         } else if (action === ACTION.PREVIEW_CMD) {
@@ -403,7 +405,17 @@ export default class Editor extends Component {
   }
 
   handleNodeChange(node) {
+    const shouldSave = this.node.auto_save || node.auto_save;
     this.node = node;
+
+    if (shouldSave) {
+        this.postNode({
+          node: this.node,
+          action: ACTION.SAVE,
+          reloadOption: RELOAD_OPTIONS.NONE,
+          silent: true,
+        });
+    }
   }
 
   handleSave() {
@@ -485,6 +497,14 @@ export default class Editor extends Component {
       action: ACTION.CLONE,
       reloadOption: RELOAD_OPTIONS.OPEN_NEW_LINK,
     });
+  }
+
+  handleChangeNodeParameter(parameterName, event) {
+    const target = event.target;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+
+    this.node[parameterName] = value;
+    this.updateNode(this.node, false);
   }
 
   handleDeprecateClick() {
@@ -633,7 +653,24 @@ export default class Editor extends Component {
           enabled: this.state.activeStatus,
           func: () => this.handleCancel(),
         },
+      }, {
+        render: makeControlCheckbox,
+        props: {
+          text: 'Auto save',
+          enabled: this.state.editable,
+          checked: this.state.node && this.state.node.auto_save,
+          func: (event) => this.handleChangeNodeParameter("auto_save", event),
+        },
+      }, {
+        render: makeControlCheckbox,
+        props: {
+          text: 'Auto run',
+          enabled: this.state.editable,
+          checked: this.state.node && this.state.node.auto_run,
+          func: (event) => this.handleChangeNodeParameter("auto_run", event),
+        },
       },
+
 
       {
         render: makeControlSeparator,

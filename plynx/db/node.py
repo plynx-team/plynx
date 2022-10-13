@@ -139,6 +139,8 @@ class Node(DBObject):
     y: int = 0
     author: Optional[ObjectId] = None
     starred: bool = False
+    auto_save: bool = True
+    auto_run: bool = True
 
     inputs: List[Input] = field(default_factory=list)
     parameters: List["Parameter"] = field(default_factory=list)

@@ -27,7 +27,7 @@ repos:
 -   repo: local
     hooks:
     - id: system
-      name: $ pylint plynx
-      entry: pylint plynx
+      name: $ pylint --disable=F0401 plynx
+      entry: pylint --disable=F0401 plynx
       pass_filenames: false
       language: system
