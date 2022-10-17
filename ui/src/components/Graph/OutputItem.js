@@ -42,8 +42,7 @@ export default class OutputItem extends Component {
     return (
       <PluginsConsumer>
       {
-        plugins_dict =>
-      <div className='OutputItem'>
+        plugins_dict => <div className='OutputItem'>
         <div className='OutputNameCell'>
 
           <div className="OutputItemPreview"

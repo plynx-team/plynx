@@ -68,10 +68,10 @@ function intToRGB(i) {
 }
 
 function getBlockRunningStatus(block) {
-    if (block._cached_node) {
-        return block._cached_node.node_running_status;
-    }
-    return block.node_running_status ? block.node_running_status : "static";
+  if (block._cached_node) {
+    return block._cached_node.node_running_status;
+  }
+  return block.node_running_status ? block.node_running_status : "static";
 }
 
 class ReactBlockGraph extends React.Component {

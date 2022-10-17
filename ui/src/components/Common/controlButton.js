@@ -159,6 +159,14 @@ export function makeControlCheckbox(props) {
   );
 }
 
+makeControlCheckbox.propTypes = {
+  func: PropTypes.func.isRequired,
+  className: PropTypes.string,
+  text: PropTypes.string.isRequired,
+  checked: PropTypes.bool,
+  enabled: PropTypes.bool.isRequired,
+};
+
 
 export function makeControlPanel({props, children_func} = {}) {
   return (

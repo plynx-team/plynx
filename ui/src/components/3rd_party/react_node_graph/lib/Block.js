@@ -15,6 +15,10 @@ class Block extends React.Component {
   static propTypes = {
     node: PropTypes.shape({
       _id: PropTypes.string.isRequired,
+      _cached_node: PropTypes.shape({
+        node_running_status: PropTypes.oneOf(Object.values(NODE_RUNNING_STATUS)).isRequired,
+        outputs: PropTypes.array.isRequired,
+      }),
       title: PropTypes.string.isRequired,
       description: PropTypes.string.isRequired,
       kind: PropTypes.string.isRequired,
@@ -100,11 +104,11 @@ class Block extends React.Component {
   }
 
   render() {
-    var node_running_status;
+    let node_running_status;
     if (this.props.node._cached_node) {
-        node_running_status = this.props.node._cached_node.node_running_status.toLowerCase();
+      node_running_status = this.props.node._cached_node.node_running_status.toLowerCase();
     } else {
-        node_running_status = this.props.node.node_running_status.toLowerCase();
+      node_running_status = this.props.node.node_running_status.toLowerCase();
     }
     const blockClass = [
       'node',

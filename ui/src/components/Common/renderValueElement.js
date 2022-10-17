@@ -6,11 +6,11 @@ import './ValueList.css';
 import './NumericInput.css';
 
 
-function defocusOnEnter(e){
-   if(e.keyCode === 13){
-     e.target.blur();
-     //Write you validation logic here
-   }
+function defocusOnEnter(e) {
+  if (e.keyCode === 13) {
+    e.target.blur();
+     // Write you validation logic here
+  }
 }
 
 
@@ -213,10 +213,12 @@ export class ValueList extends Component {
     }
   }
 
+  // eslint-disable-next-line no-unused-vars
   handleFocus(index, event) {
     this.prevVal = this.items[index];
   }
 
+  // eslint-disable-next-line no-unused-vars
   handleBlur(index, event) {
     if (this.prevVal !== this.items[index]) {
       this.notifySetItems();

@@ -12,7 +12,7 @@ const FileDownload = require('react-file-download');
 export default class PreviewDialog extends Component {
   static propTypes = {
     title: PropTypes.string.isRequired,
-    values:  PropTypes.array.isRequired,
+    values: PropTypes.array.isRequired,
     display_raw: PropTypes.bool.isRequired,
     download_name: PropTypes.string.isRequired,
     file_type: PropTypes.string.isRequired,
@@ -31,23 +31,22 @@ export default class PreviewDialog extends Component {
       loading: true
     };
 
-    if (!props.display_raw)
-    {
-        const self = this;
-        PLynxApi.endpoints.resource.getCustom({
-          method: 'get',
+    if (!props.display_raw) {
+      const self = this;
+      PLynxApi.endpoints.resource.getCustom({
+        method: 'get',
           // Hack: "?"... is needed for life logs. Otherwise the result is cached and logs do not update
-          url: API_ENDPOINT + '/resource/' + props.values[0] + '?' + Math.random(),
-          params: {
-            preview: true,
-            file_type: props.file_type,
-          },
-        }).then((response) => {
-          self.setState({
-            content: response.data,
-            loading: false
-          });
-        })
+        url: API_ENDPOINT + '/resource/' + props.values[0] + '?' + Math.random(),
+        params: {
+          preview: true,
+          file_type: props.file_type,
+        },
+      }).then((response) => {
+        self.setState({
+          content: response.data,
+          loading: false
+        });
+      })
           .catch((error) => {
             console.error(error);
             self.setState({
@@ -55,10 +54,10 @@ export default class PreviewDialog extends Component {
               loading: false
             });
           });
-      } else {
-          this.state.content = props.values;
-          this.state.loading = false;
-      }
+    } else {
+      this.state.content = props.values;
+      this.state.loading = false;
+    }
   }
 
   download(resource_id, download_name) {

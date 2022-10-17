@@ -296,29 +296,29 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   syncNodes(newNodes) {
-      var i;
-      var newNodesLookup = {};
+    let i;
+    const newNodesLookup = {};
 
-      for (i = 0; i < newNodes.length; ++i) {
-          newNodesLookup[newNodes[i]._id] = newNodes[i];
+    for (i = 0; i < newNodes.length; ++i) {
+      newNodesLookup[newNodes[i]._id] = newNodes[i];
+    }
+
+    for (i = 0; i < this.nodes.length; ++i) {
+      const newNode = newNodesLookup[this.nodes[i]._id];
+      if (newNode === undefined) {
+        continue;
       }
 
-      for (i = 0; i < this.nodes.length; ++i) {
-        var newNode = newNodesLookup[this.nodes[i]._id];
-        if (newNode === undefined) {
-            continue;
-        }
+      this.nodes[i]._cached_node = newNodesLookup[this.nodes[i]._id]._cached_node;
+    }
 
-        this.nodes[i]._cached_node = newNodesLookup[this.nodes[i]._id]._cached_node;
-      }
-
-      this.setState({
-        nodes: this.nodes,
-      });
+    this.setState({
+      nodes: this.nodes,
+    });
   }
 
   clearCacheNodes() {
-    var i;
+    let i;
     for (i = 0; i < this.nodes.length; ++i) {
       this.nodes[i]._cached_node = null;
     }

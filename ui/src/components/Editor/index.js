@@ -192,7 +192,7 @@ export default class Editor extends Component {
     };
 
     const syncNode = (response) => {
-      let node = response.data.node;
+      const node = response.data.node;
 
       self.node.latest_run_id = node.latest_run_id;
       self.last_run_is_in_finished_status = response.data.last_run_is_in_finished_status;
@@ -204,7 +204,7 @@ export default class Editor extends Component {
           break;
         }
       }
-      if (sub_nodes == null) {
+      if (sub_nodes === null) {
         return;
       }
 
@@ -257,23 +257,21 @@ export default class Editor extends Component {
     });
 
     self.syncInterval = setInterval(() => {
+      if (self.state.collection !== COLLECTIONS.TEMPLATES) {
+        return;
+      }
+      if (!self.state.node || !self.state.node.auto_sync) {
+        return;
+      }
+      if (self.last_run_is_in_finished_status === true) {
+        return;
+      }
 
-        if (self.state.collection !== COLLECTIONS.TEMPLATES) {
-          return;
-        }
-        if (!self.state.node || !self.state.node.auto_sync) {
-          return;
-        }
-        if (self.last_run_is_in_finished_status === true) {
-          return;
-        }
+      console.log("Run sync");
 
-        console.log("Run sync");
-
-        PLynxApi.endpoints[self.props.collection].getOne({ id: self.node._id})
+      PLynxApi.endpoints[self.props.collection].getOne({ id: self.node._id})
         .then(syncNode)
         .catch(handleError);
-
     }, 1000);
   }
 
@@ -465,14 +463,18 @@ export default class Editor extends Component {
     this.schedule = setTimeout(this.runScheduledUpdate, delay, this);
   }
 
+  disableScheduledUpdate() {
+    this.schedule = null;
+  }
+
   runScheduledUpdate(self) {
-      self.schedule = null;
-      self.postNode({
-        node: self.node,
-        action: ACTION.SAVE,
-        reloadOption: RELOAD_OPTIONS.NONE,
-        silent: true,
-      });
+    self.disableScheduledUpdate();
+    self.postNode({
+      node: self.node,
+      action: ACTION.SAVE,
+      reloadOption: RELOAD_OPTIONS.NONE,
+      silent: true,
+    });
   }
 
   handleNodeChange(node) {

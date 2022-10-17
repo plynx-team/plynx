@@ -42,7 +42,7 @@ export default class ParameterItem extends Component {
     this.setState({value: value});
   }
 
-  handleFocus(event) {
+  handleFocus() {
     this.prevVal = this.state.value;
   }
 
