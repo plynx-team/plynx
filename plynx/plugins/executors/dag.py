@@ -75,7 +75,7 @@ class DAG(plynx.plugins.executors.bases.PLynxAsyncExecutor):
                     raise Exception(f"Used {updated_resources_count} inputs for {len(self.node.inputs)} outputs")
 
             # ignore nodes in finished statuses
-            if NodeRunningStatus.is_finished(node.node_running_status) and node_id != SpecialNodeId.OUTPUT:
+            if NodeRunningStatus.is_finished(subnode.node_running_status) and node_id != SpecialNodeId.OUTPUT:
                 continue
             dependency_index = 0
             for node_input in subnode.inputs:

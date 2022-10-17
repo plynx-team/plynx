@@ -11,7 +11,7 @@ import plynx.base.hub
 import plynx.db.node_collection_manager
 import plynx.db.run_cancellation_manager
 import plynx.utils.plugin_manager
-from plynx.constants import Collections, IAMPolicies, NodeClonePolicy, NodePostAction, NodePostStatus, NodeStatus, NodeVirtualCollection
+from plynx.constants import Collections, IAMPolicies, NodeClonePolicy, NodePostAction, NodePostStatus, NodeRunningStatus, NodeStatus, NodeVirtualCollection
 from plynx.db.node import Node
 from plynx.utils.common import to_object_id
 from plynx.web.common import app, handle_errors, logger, make_fail_response, make_permission_denied, make_success_response, requires_auth
@@ -97,6 +97,9 @@ def get_nodes(collection: str, node_link: Optional[str] = None):
         else:
             data = node.to_dict()
             tour_steps = []
+
+        node.author = user_id
+        node.save()
         data['kind'] = kind
         return make_success_response({
             'node': data,
@@ -110,25 +113,39 @@ def get_nodes(collection: str, node_link: Optional[str] = None):
         except bson.objectid.InvalidId:     # type: ignore
             return make_fail_response('Invalid ID'), 404
         node_dict = node_collection_managers[collection].get_db_node(node_id, user_id)
-        logger.debug(node_dict)
-
-        if node_dict:
-            is_owner = node_dict['author'] == user_id
-            kind = node_dict['kind']
-            if kind in workflow_manager.kind_to_workflow_dict and not can_view_workflows:
-                return make_permission_denied()
-            if kind in operation_manager.kind_to_operation_dict and not can_view_operations:
-                return make_permission_denied()
-            if kind in workflow_manager.kind_to_workflow_dict and not can_view_others_workflows and not is_owner:
-                return make_permission_denied()
-            if kind in operation_manager.kind_to_operation_dict and not can_view_others_operations and not is_owner:
-                return make_permission_denied()
-            return make_success_response({
-                'node': node_dict,
-                'plugins_dict': PLUGINS_DICT,
-                })
-        else:
+        if not node_dict:
             return make_fail_response(f"Node `{node_link}` was not found"), 404
+
+        is_owner = node_dict['author'] == user_id
+        kind = node_dict['kind']
+        if kind in workflow_manager.kind_to_workflow_dict and not can_view_workflows:
+            return make_permission_denied()
+        if kind in operation_manager.kind_to_operation_dict and not can_view_operations:
+            return make_permission_denied()
+        if kind in workflow_manager.kind_to_workflow_dict and not can_view_others_workflows and not is_owner:
+            return make_permission_denied()
+        if kind in operation_manager.kind_to_operation_dict and not can_view_others_operations and not is_owner:
+            return make_permission_denied()
+
+        latest_run_id = node_dict.get("latest_run_id", None)
+        last_run_is_in_finished_status = None
+        if collection == Collections.TEMPLATES and latest_run_id:
+            node_in_run_dict = node_collection_managers[Collections.RUNS].get_db_node(latest_run_id, user_id)
+
+            if node_in_run_dict:
+                node = Node.from_dict(node_dict)
+                node_in_run = Node.from_dict(node_in_run_dict)
+                node.augment_node_with_cache(node_in_run)
+                node_dict = node.to_dict()
+                last_run_is_in_finished_status = NodeRunningStatus.is_finished(node_in_run.node_running_status)
+            else:
+                logger.warning(f"Failed to load a run with id `{latest_run_id}`")
+
+        return make_success_response({
+            "node": node_dict,
+            "plugins_dict": PLUGINS_DICT,
+            "last_run_is_in_finished_status": last_run_is_in_finished_status,
+            })
 
 
 @app.route('/plynx/api/v0/<collection>', methods=['POST'])
@@ -145,15 +162,13 @@ def post_node(collection: str):
     node: Node = Node.from_dict(data['node'])
     node.starred = False
     action = data['action']
-    db_node = node_collection_managers[collection].get_db_node(node._id, g.user._id)
+    user_id = g.user._id
+    db_node = node_collection_managers[collection].get_db_node(node._id, user_id)
 
     if db_node:
         if not node.author:
             node.author = db_node['author']
         if node.author != db_node['author']:
-            logger.info(type(node.author))
-            logger.info(type(db_node['author']))
-            logger.info("%" * 100)
             raise Exception("Author of the node does not match the one in the database")
         is_author = db_node['author'] == g.user._id
     else:
@@ -178,10 +193,41 @@ def post_node(collection: str):
         if node.node_status != NodeStatus.CREATED:
             return make_fail_response(f"Cannot save node with status `{node.node_status}`")
 
-        if is_author or is_admin or (is_workflow and can_modify_others_workflows):
-            node.save(force=True)
-        else:
+        if not(is_author or is_admin or (is_workflow and can_modify_others_workflows)):
             return make_permission_denied('Only the owners or users with CAN_MODIFY_OTHERS_WORKFLOWS role can save it')
+
+        if node.auto_run:
+            node_clone = Node.from_dict(node.to_dict())
+            if node.latest_run_id:
+                node_in_run_dict = node_collection_managers[Collections.RUNS].get_db_node(node.latest_run_id, user_id)
+
+                if node_in_run_dict:
+                    node_in_run = Node.from_dict(
+                        node_in_run_dict
+                    )
+                    node_clone.augment_node_with_cache(node_in_run)
+                    node_clone.apply_cache()
+                else:
+                    logger.warning(f"Failed to load a run with id `{node.latest_run_id}`")
+
+            new_node_in_run = node_clone.clone(NodeClonePolicy.NODE_TO_RUN, override_finished_state=False)
+            new_node_in_run.reset_failed_nodes()
+
+            if not new_node_in_run.is_all_cached_and_successful():
+                # TODO check permissions
+                executor._update_node(new_node_in_run)
+                validation_error = executor.validate()
+
+                if validation_error:
+                    logger.info("Validation failed. Won't start the run")
+                else:
+                    executor.launch()
+
+                    if node.latest_run_id:
+                        run_cancellation_manager.cancel_run(node.latest_run_id)
+                    node.latest_run_id = new_node_in_run._id
+
+        node.save(force=True)
 
     elif action == NodePostAction.APPROVE:
         if is_workflow:
@@ -216,20 +262,22 @@ def post_node(collection: str):
                 'validation_error': validation_error.to_dict()
             })
 
-        node = node.clone(NodeClonePolicy.NODE_TO_RUN)
-        node.author = g.user._id
+        node_in_run = node.clone(NodeClonePolicy.NODE_TO_RUN)
+        node_in_run.author = g.user._id
+        node.latest_run_id = node_in_run._id
+        node.save(force=True)
 
         if is_admin or can_run_workflows:
-            executor._update_node(node)
+            executor._update_node(node_in_run)
             executor.launch()
         else:
             return make_permission_denied('You do not have CAN_RUN_WORKFLOWS role')
 
         return make_success_response({
                 'status': NodePostStatus.SUCCESS,
-                'message': f"Run(_id=`{node._id}`) successfully created",
-                'run_id': str(node._id),
-                'url': f"/{Collections.RUNS}/{node._id}",
+                'message': f"Run(_id=`{node_in_run._id}`) successfully created",
+                'run_id': str(node_in_run._id),
+                'url': f"/{Collections.RUNS}/{node_in_run._id}",
             })
 
     elif action == NodePostAction.CLONE:

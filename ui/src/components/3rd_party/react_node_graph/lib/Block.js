@@ -108,10 +108,16 @@ class Block extends React.Component {
   }
 
   render() {
+    var node_running_status;
+    if (this.props.node._cached_node) {
+        node_running_status = this.props.node._cached_node.node_running_status.toLowerCase();
+    } else {
+        node_running_status = this.props.node.node_running_status.toLowerCase();
+    }
     const blockClass = [
       'node',
       this.state.selected ? 'selected' : '',
-      `running-status-${this.props.node.node_running_status.toLowerCase()}`,
+      `running-status-${node_running_status}`,
       `status-${this.props.node.node_status.toLowerCase()}`,
         (this.state.highlight ? 'error-highlight' : ''),
         (this.state.readonly ? 'readonly' : 'editable'),

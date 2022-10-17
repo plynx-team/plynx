@@ -103,3 +103,6 @@ class NodeOrigin:
     """Enum that indicates where the Node came from"""
     DB: str = "DB"
     BUILT_IN_HUBS: str = "BUILT_IN_HUBS"
+
+
+IGNORED_CACHE_PARAMETERS = {'cmd', '_timeout'}

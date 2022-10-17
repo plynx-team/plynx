@@ -67,6 +67,13 @@ function intToRGB(i) {
   return "00000".substring(0, 6 - c.length) + c;
 }
 
+function getBlockRunningStatus(block) {
+    if (block._cached_node) {
+        return block._cached_node.node_running_status;
+    }
+    return block.node_running_status ? block.node_running_status : "static";
+}
+
 class ReactBlockGraph extends React.Component {
   static propTypes = {
     data: PropTypes.object.isRequired,
@@ -296,11 +303,6 @@ class ReactBlockGraph extends React.Component {
   }
 
   handleOutputClick(nid, outputIndex, displayRaw) {
-    const nodes = this.state.data.nodes;
-    const block = this.getBlockbyId(nodes, nid);
-    if (block.node_running_status !== NODE_RUNNING_STATUS.STATIC && this.state.editable) {
-      return;
-    }
     this.props.onOutputClick(nid, outputIndex, displayRaw);
   }
 
@@ -485,7 +487,7 @@ class ReactBlockGraph extends React.Component {
                       key={graphId +
                         block._id +
                         (selectedBlock ? '1' : '0') +
-                        (block.node_running_status ? block.node_running_status : "static") +
+                        getBlockRunningStatus(block) +
                         block.highlight +
                         block._ts +
                         (block.cache_url ? 'c' : 'r') +

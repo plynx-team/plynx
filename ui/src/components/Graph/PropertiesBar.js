@@ -40,8 +40,7 @@ export default class PropertiesBar extends Component {
 
   getStateDict(nodes) {
     const commonParameters = JSON.parse(JSON.stringify(nodes.length > 0 ? nodes[0].parameters : []));
-    let ii,
-      jj;
+    let ii, jj;
     for (ii = 1; ii < nodes.length; ++ii) {
       const indexesToRemove = [];
       for (jj = 0; jj < commonParameters.length; ++jj) {
@@ -79,11 +78,13 @@ export default class PropertiesBar extends Component {
         _link_visibility: false,
       });
     }
+    var overridenOutputs = nodes.filter(node => node._cached_node !== null).map(node => node._cached_node.outputs).flat(1);
+    var overridenLogs = nodes.filter(node => node._cached_node !== null).map(node => node._cached_node.logs).flat(1);
     return {
       nodes: nodes,
       parameters: commonParameters,
-      outputs: nodes.map(node => node.outputs).flat(1),
-      logs: nodes.map(node => node.logs).flat(1),
+      outputs: overridenOutputs.length !== 0 ? overridenOutputs : nodes.map(node => node.outputs).flat(1),
+      logs: overridenLogs !== 0 ? overridenLogs : nodes.map(node => node.logs).flat(1),
       nodeId: nodes.map(node => node._id).join(),
       editable: this.props.editable,
     };

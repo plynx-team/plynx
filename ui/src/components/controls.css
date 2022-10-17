@@ -182,6 +182,10 @@
   transition: all .1s ease-in;
 }
 
+.control-checkbox.disabled {
+  display: none;
+}
+
 .control-checkbox-text {
   display: flex;
   justify-content: center; /* align horizontal */

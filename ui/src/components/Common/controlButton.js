@@ -147,13 +147,13 @@ export function makeControlCheckbox(props) {
        ].join(" ")}
     >
         <div className='control-checkbox-text'>{props.text}:</div>
-        <label class="switch">
+        <label className="switch">
             <input
                 type="checkbox"
                 checked={props.checked}
                 onChange={props.func}
                 />
-            <span class="slider round"></span>
+            <span className="slider round"></span>
         </label>
     </div>
   );

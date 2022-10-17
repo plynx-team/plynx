@@ -6,7 +6,16 @@ import './ValueList.css';
 import './NumericInput.css';
 
 
+function defocusOnEnter(e){
+   if(e.keyCode === 13){
+     e.target.blur();
+     //Write you validation logic here
+   }
+}
+
+
 function stopPropagation(e) {
+  defocusOnEnter(e);
   console.log(e);
   if (e.key === "ArrowUp" || e.key === "ArrowDown") {
     e.stopPropagation();
@@ -18,8 +27,9 @@ function stopPropagation(e) {
   return false;
 }
 
+
 export default function renderValueElement(args) {
-  const { parameterType, value, handleChange, readOnly } = args;
+  const { parameterType, value, handleChange, handleFocus, handleBlur, readOnly } = args;
   const className = args.className ? args.className : "";
   const showEnumOptions = args.showEnumOptions;
   const height = args.height;
@@ -32,6 +42,9 @@ export default function renderValueElement(args) {
               type="text"
               name="value"
               onChange={handleChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              onKeyDown={defocusOnEnter}
               value={value}
               readOnly={readOnly}
               key={parameterType}
@@ -43,6 +56,9 @@ export default function renderValueElement(args) {
                 type="password"
                 name="value"
                 onChange={handleChange}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                onKeyDown={defocusOnEnter}
                 value={value}
                 readOnly={readOnly}
                 key={parameterType}
@@ -53,6 +69,8 @@ export default function renderValueElement(args) {
               type="number"
               name="value"
               onChange={handleChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
               value={value}
               readOnly={readOnly}
               key={parameterType}
@@ -67,6 +85,8 @@ export default function renderValueElement(args) {
               step="any"
               name="value"
               onChange={handleChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
               value={value}
               readOnly={readOnly}
               key={parameterType}
@@ -81,6 +101,8 @@ export default function renderValueElement(args) {
                 type="checkbox"
                 name="value"
                 onChange={handleChange}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
                 checked={value}
                 disabled={readOnly}
                 key={parameterType}
@@ -96,6 +118,8 @@ export default function renderValueElement(args) {
               name="value"
               value={value}
               onChange={handleChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
               readOnly={readOnly}
               key={parameterType}
               />;
@@ -105,6 +129,8 @@ export default function renderValueElement(args) {
               name='value'
               value={value}
               onChange={handleChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
               readOnly={readOnly}
               key={parameterType}
               showEnumOptions={showEnumOptions || false}
@@ -115,6 +141,8 @@ export default function renderValueElement(args) {
               name='value'
               items={value}
               onChange={handleChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
               readOnly={readOnly}
               key={parameterType}
               parameterType="str"
@@ -125,6 +153,8 @@ export default function renderValueElement(args) {
               name='value'
               items={value}
               onChange={handleChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
               readOnly={readOnly}
               key={parameterType}
               parameterType="int"
@@ -135,6 +165,8 @@ export default function renderValueElement(args) {
               name='value'
               value={value}
               onChange={handleChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
               readOnly={readOnly}
               key={parameterType}
               height={height || "200px"}
@@ -151,7 +183,9 @@ export class ValueList extends Component {
     parameterType: PropTypes.string.isRequired,
     readOnly: PropTypes.bool.isRequired,
     items: PropTypes.array.isRequired,
+    onFocus: PropTypes.func,
     onChange: PropTypes.func,
+    onBlur: PropTypes.func,
   }
 
   constructor(props) {
@@ -161,38 +195,48 @@ export class ValueList extends Component {
       items: this.props.items
     };
 
+    this.items = this.props.items;
+    this.handleFocus = this.handleFocus.bind(this);
     this.handleChange = this.handleChange.bind(this);
+    this.handleBlur = this.handleBlur.bind(this);
   }
 
-  setItems(items) {
-    this.setState({items: items});
+  notifySetItems() {
     if (this.props.onChange) {
       this.props.onChange({
         target: {
           name: this.props.name,
-          value: items,
+          value: this.items,
           type: 'list'
         }
       });
     }
   }
 
+  handleFocus(index, event) {
+    this.prevVal = this.items[index];
+  }
+
+  handleBlur(index, event) {
+    if (this.prevVal !== this.items[index]) {
+      this.notifySetItems();
+    }
+  }
+
   handleChange(index, event) {
-    const items = this.state.items;
-    items[index] = event.target.value;
-    this.setItems(items);
+    this.items[index] = event.target.value;
+    this.setState({items: this.items});
   }
 
   handleAddItem() {
-    const items = this.state.items;
-    items.push("");
-    this.setItems(items);
+    this.items.push("");
+    this.setState({items: this.items});
+    this.notifySetItems(this.items);
   }
 
   handleRemoveItem(index) {
-    const items = this.state.items;
-    items.splice(index, 1);
-    this.setItems(items);
+    this.items.splice(index, 1);
+    this.notifySetItems(this.items);
   }
 
   render() {

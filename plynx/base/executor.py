@@ -138,17 +138,15 @@ class BaseExecutor(ABC):
                     validation_code=ValidationCode.MISSING_PARAMETER
                 ))
 
-        # Meaning the node is in the graph. Otherwise souldn't be in validation step
-        if self.node.node_status != NodeStatus.CREATED:
-            for input in self.node.inputs:  # pylint: disable=redefined-builtin
-                min_count = input.min_count if input.is_array else 1
-                if len(input.input_references) < min_count:
-                    violations.append(
-                        ValidationError(
-                            target=ValidationTargetType.INPUT,
-                            object_id=input.name,
-                            validation_code=ValidationCode.MISSING_INPUT
-                        ))
+        for input in self.node.inputs:  # pylint: disable=redefined-builtin
+            min_count = input.min_count if input.is_array else 1
+            if len(input.input_references) < min_count:
+                violations.append(
+                    ValidationError(
+                        target=ValidationTargetType.INPUT,
+                        object_id=input.name,
+                        validation_code=ValidationCode.MISSING_INPUT
+                    ))
 
             if self.node.node_status == NodeStatus.MANDATORY_DEPRECATED:
                 violations.append(

@@ -295,6 +295,38 @@ ENDPOINT = '` + API_ENDPOINT + `'
     });
   }
 
+  syncNodes(newNodes) {
+      var i;
+      var newNodesLookup = {};
+
+      for (i = 0; i < newNodes.length; ++i) {
+          newNodesLookup[newNodes[i]._id] = newNodes[i];
+      }
+
+      for (i = 0; i < this.nodes.length; ++i) {
+        var newNode = newNodesLookup[this.nodes[i]._id];
+        if (newNode === undefined) {
+            continue;
+        }
+
+        this.nodes[i]._cached_node = newNodesLookup[this.nodes[i]._id]._cached_node;
+      }
+
+      this.setState({
+        nodes: this.nodes,
+      });
+  }
+
+  clearCacheNodes() {
+    var i;
+    for (i = 0; i < this.nodes.length; ++i) {
+      this.nodes[i]._cached_node = null;
+    }
+    this.setState({
+      nodes: this.nodes,
+    });
+  }
+
   onNewConnector(from_nid, from_pin, to_nid, to_pin) {
     const from_node = this.node_lookup[from_nid];
     const node_output = from_node.outputs.find(
@@ -498,7 +530,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
       return;
     }
     const node = this.node_lookup[nid];
-    const output = node.outputs[outputIndex];
+    const output = node._cached_node ? node._cached_node.outputs[outputIndex] : node.outputs[outputIndex];
     if (output.values.length > 0) {
       this.handlePreview({
         title: output.name,

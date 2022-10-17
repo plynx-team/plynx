@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from dataclasses_json import dataclass_json
 
-from plynx.constants import Collections
+from plynx.constants import IGNORED_CACHE_PARAMETERS, Collections
 from plynx.db.db_object import DBObject
 from plynx.db.node import Node, Output
 from plynx.utils.common import ObjectId
@@ -22,7 +22,6 @@ class NodeCache(DBObject):
     """Basic Node Cache with db interface."""
     # pylint: disable=too-many-instance-attributes
     DB_COLLECTION = Collections.NODE_CACHE
-    IGNORED_PARAMETERS = {'cmd', '_timeout'}
 
     _id: ObjectId = field(default_factory=ObjectId)
     key: str = ""
@@ -70,14 +69,14 @@ class NodeCache(DBObject):
 
         sorted_inputs = sorted(inputs, key=lambda x: x.name)
         inputs_hash = ','.join([
-            f"{input.name}:{','.join(sorted(input.values))}"
+            f"{input.name}:{','.join(sorted(map(str, input.values)))}"
             for input in sorted_inputs
         ])
 
         sorted_parameters = sorted(parameters, key=lambda x: x.name)
         parameters_hash = ','.join([
             f"{parameter.name}:{parameter.value}"
-            for parameter in sorted_parameters if parameter.name not in NodeCache.IGNORED_PARAMETERS
+            for parameter in sorted_parameters if parameter.name not in IGNORED_CACHE_PARAMETERS
         ])
 
         return hashlib.sha256(

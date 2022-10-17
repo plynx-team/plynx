@@ -32,13 +32,25 @@ export default class ParameterItem extends Component {
       parameterType: this.props.parameterType,
     };
 
+    this.handleFocus = this.handleFocus.bind(this);
     this.handleChange = this.handleChange.bind(this);
+    this.handleBlur = this.handleBlur.bind(this);
   }
 
   handleChange(event) {
     const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
     this.setState({value: value});
-    this.props.onParameterChanged(this.props.name, value);
+  }
+
+  handleFocus(event) {
+    this.prevVal = this.state.value;
+  }
+
+  handleBlur(event) {
+    const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
+    if (value !== this.prevVal) {
+      this.props.onParameterChanged(this.props.name, value);
+    }
   }
 
   handleLinkClick() {
@@ -56,7 +68,9 @@ export default class ParameterItem extends Component {
                 renderValueElement({
                   parameterType: this.state.parameterType,
                   value: this.state.value,
+                  handleFocus: this.handleFocus,
                   handleChange: this.handleChange,
+                  handleBlur: this.handleBlur,
                   readOnly: this.state.readOnly,
                   className: 'parameter-value',
                 }
