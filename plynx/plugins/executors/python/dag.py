@@ -124,3 +124,8 @@ class DAG(plynx.plugins.executors.dag.DAG):
         logging.info("Received kill request")
         self._node_running_status = NodeRunningStatus.CANCELED
         self.worker_pool.terminate()
+
+    def finished(self) -> bool:
+        """Return True or False depending on the running status of the DAG."""
+        # TODO wait for the canceled nodes to complete
+        return self._node_running_status in {NodeRunningStatus.SUCCESS, NodeRunningStatus.FAILED, NodeRunningStatus.CANCELED}
