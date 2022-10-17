@@ -11,8 +11,14 @@ The roadmap will be posted here [Project](https://github.com/plynx-team/plynx/pr
 Please join the discussions in the [Discord](https://discord.gg/ZC3wY2J).
 
 ### Added
-- [(Release 1.8.x) New scalable execution model](https://github.com/plynx-team/plynx/projects/3)
-- [(Release 1.9.x) Create API Builder](https://github.com/plynx-team/plynx/projects/4)
+- [(Release 1.9.x) New scalable execution model](https://github.com/plynx-team/plynx/projects/3)
+- [(Release 1.10.x) Create API Builder](https://github.com/plynx-team/plynx/projects/4)
+
+## [1.8.0] - 2022-10-17
+
+- Auto-sync and auto-run flags for interactive DAGs.
+- Interactive DAG editor: subnode status is updated in the edit mode.
+- UI: using only kind-title in the nodes.
 
 ## [1.7.9] - 2022-04-19
 
