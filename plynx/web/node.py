@@ -193,7 +193,7 @@ def post_node(collection: str):
         if node.node_status != NodeStatus.CREATED:
             return make_fail_response(f"Cannot save node with status `{node.node_status}`")
 
-        if not(is_author or is_admin or (is_workflow and can_modify_others_workflows)):
+        if not (is_author or is_admin or (is_workflow and can_modify_others_workflows)):
             return make_permission_denied('Only the owners or users with CAN_MODIFY_OTHERS_WORKFLOWS role can save it')
 
         if node.auto_run:
