@@ -41,20 +41,6 @@ class _DBObject:
     # Name of the collection in the database
     DB_COLLECTION = ''
 
-    def __post_init__(self):
-        for (name, field_type) in self.__annotations__.items():     # pylint: disable=no-member
-            value = self.__dict__[name]
-            if typing_inspect.is_optional_type(field_type) and value is not None:
-                # Process case of Optional[Cls]
-                types = typing_inspect.get_args(field_type)
-                assert len(types) == 2, "Must be exactly two classes: [CustomClass, None]"
-                type_cls = types[0]
-                setattr(self, name, type_cls(getattr(self, name)))
-            if inspect.isclass(field_type):
-                # Process external type, such as ObjectId
-                # dataclass_json should handle the rest dataclasses and primitive types
-                setattr(self, name, field_type(getattr(self, name)))
-
     @classmethod
     def load(cls: Type[DBObjectType], _id: ObjectId, collection: str = None) -> DBObjectType:
         """Load object from db.
@@ -134,3 +120,17 @@ class DBObject(_DBObject, metaclass=Meta):
     Args:
         obj_dict    (dict, None):   Representation of the object. If None, an object with default fields will be created.
     """
+
+    def __post_init__(self):
+        for (name, field_type) in self.__annotations__.items():     # pylint: disable=no-member
+            value = self.__dict__[name]
+            if typing_inspect.is_optional_type(field_type) and value is not None:
+                # Process case of Optional[Cls]
+                types = typing_inspect.get_args(field_type)
+                assert len(types) == 2, "Must be exactly two classes: [CustomClass, None]"
+                type_cls = types[0]
+                setattr(self, name, type_cls(getattr(self, name)))
+            if inspect.isclass(field_type) and not isinstance(value, _DBObject):
+                # Process external type, such as ObjectId
+                # dataclass_json should handle the rest dataclasses and primitive types
+                setattr(self, name, field_type(getattr(self, name)))
