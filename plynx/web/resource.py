@@ -31,7 +31,7 @@ def get_resource(resource_id: str):
         return plynx.utils.plugin_manager.get_resource_manager().kind_to_resource_class[file_type].preview(preview_object)
     return send_file(
         file_stream,
-        attachment_filename=resource_id)
+        attachment_filename=resource_id)    # type: ignore
 
 
 @app.route('/plynx/api/v0/resource', methods=['POST'])

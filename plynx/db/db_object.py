@@ -3,7 +3,7 @@ The class defines `DBObject`. This is an abstraction of all of the objects in da
 """
 import datetime
 import inspect
-from typing import Any, Dict, Optional, Type, TypeVar
+from typing import Any, Dict, Optional, Type, TypeVar, no_type_check
 
 import typing_inspect
 
@@ -20,6 +20,7 @@ def register_class(target_class):
     _registry[target_class.__name__] = target_class
 
 
+@no_type_check
 def get_class(name: str) -> DBObjectType:
     """Get DB Object inherited class object by its name from the registry"""
     return _registry[name]
