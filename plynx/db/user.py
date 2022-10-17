@@ -11,7 +11,7 @@ from itsdangerous import SignatureExpired
 from itsdangerous import TimedJSONWebSignatureSerializer as TimedSerializer
 from passlib.apps import custom_app_context as pwd_context
 
-from plynx.constants import Collections, OperationViewSetting
+from plynx.constants import Collections
 from plynx.db.db_object import DBObject
 from plynx.utils.common import ObjectId
 from plynx.utils.config import get_auth_config, get_iam_policies_config
@@ -24,7 +24,6 @@ DEFAULT_POLICIES = get_iam_policies_config().default_policies
 @dataclass
 class UserSettings(DBObject):
     """User Settings structure."""
-    node_view_mode: str = OperationViewSetting.KIND_AND_TITLE
     display_name: str = ""
 
 

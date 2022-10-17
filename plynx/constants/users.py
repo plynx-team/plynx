@@ -18,12 +18,6 @@ class IAMPolicies:
     IS_ADMIN: str = 'IS_ADMIN'
 
 
-class OperationViewSetting:
-    """Display settings in the graph builder"""
-    KIND_AND_TITLE: str = 'KIND_AND_TITLE'
-    TITLE_AND_DESCRIPTION: str = 'TITLE_AND_DESCRIPTION'
-
-
 class UserPostAction:
     """HTTP POST action options"""
     MODIFY: str = 'MODIFY'
