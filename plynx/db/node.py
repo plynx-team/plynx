@@ -168,7 +168,7 @@ class Node(DBObject):
     y: int = 0
     author: Optional[ObjectId] = None
     starred: bool = False
-    auto_save: bool = True
+    auto_sync: bool = True
     auto_run: bool = True
     # latest_run_id would be used in Templates to refer to the current run
     latest_run_id: Optional[ObjectId] = None

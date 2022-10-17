@@ -186,7 +186,7 @@ export default class Editor extends Component {
         cookie.remove('showTour', { path: '/' });
       }
 
-      if (!self.node.auto_save || self.state.collection !== COLLECTIONS.TEMPLATES) {
+      if (!self.node.auto_sync || self.state.collection !== COLLECTIONS.TEMPLATES) {
         self.graphComponent.ref.current.clearCacheNodes();
       }
     };
@@ -261,7 +261,7 @@ export default class Editor extends Component {
         if (self.state.collection !== COLLECTIONS.TEMPLATES) {
           return;
         }
-        if (!self.state.node || !self.state.node.auto_save) {
+        if (!self.state.node || !self.state.node.auto_sync) {
           return;
         }
         if (self.last_run_is_in_finished_status === true) {
@@ -372,7 +372,7 @@ export default class Editor extends Component {
           });
         } else if (action === ACTION.CREATE_RUN) {
           self.showAlert("Created new run with id: " + response.data.run_id, 'success');
-          if (this.state.node.auto_save) {
+          if (this.state.node.auto_sync) {
             self.last_run_is_in_finished_status = false;
           } else {
             window.open(`/${COLLECTIONS.RUNS}/${response.data.run_id}`, '_blank');
@@ -476,7 +476,7 @@ export default class Editor extends Component {
   }
 
   handleNodeChange(node) {
-    const shouldSave = this.node.auto_save || node.auto_save;
+    const shouldSave = this.node.auto_sync || node.auto_sync;
 
     if (this.state.collection !== COLLECTIONS.TEMPLATES) {
       return;
@@ -577,7 +577,7 @@ export default class Editor extends Component {
     this.node[parameterName] = value;
     this.updateNode(this.node, false);
 
-    if (parameterName === "auto_save") {
+    if (parameterName === "auto_sync") {
       if (value === false) {
         this.graphComponent.ref.current.clearCacheNodes();
       }
@@ -736,8 +736,8 @@ export default class Editor extends Component {
         props: {
           text: 'Sync',
           enabled: this.state.editable && this.state.collection === COLLECTIONS.TEMPLATES,
-          checked: this.state.node && this.state.node.auto_save,
-          func: (event) => this.handleChangeNodeParameter("auto_save", event),
+          checked: this.state.node && this.state.node.auto_sync,
+          func: (event) => this.handleChangeNodeParameter("auto_sync", event),
         },
       }, {
         render: makeControlCheckbox,
