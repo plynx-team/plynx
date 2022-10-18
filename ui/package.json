@@ -59,7 +59,7 @@
     "sshpk": "^1.16.1",
     "styled-components": "^5.0.1",
     "stylus": "^0.54.5",
-    "url-parse": "^1.4.7"
+    "url-parse": "^1.5.9"
   },
   "scripts": {
     "start": "react-scripts start",
