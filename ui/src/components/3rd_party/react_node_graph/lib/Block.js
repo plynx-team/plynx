@@ -10,7 +10,6 @@ import Icon from '../../../Common/Icon';
 
 const Draggable = require('react-draggable');
 
-
 class Block extends React.Component {
   static propTypes = {
     node: PropTypes.shape({
@@ -45,7 +44,7 @@ class Block extends React.Component {
     onOutputClick: PropTypes.func.isRequired,
     onSpecialParameterClick: PropTypes.func.isRequired,
     onStartConnector: PropTypes.func.isRequired,
-  }
+  };
 
   constructor(props) {
     super(props);

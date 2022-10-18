@@ -21,7 +21,6 @@ const BORDERS_HEIGHT = 2;
 const ITEM_HEIGHT = 20;
 const COMMON_HEIGHT = HEADER_HEIGHT + DESCRIPTION_HEIGHT + FOOTER_HEIGHT + BORDERS_HEIGHT;
 
-
 const getScrollOffset = () => {
   const el = document.getElementsByClassName('GraphRoot')[0];
   return {
@@ -91,7 +90,8 @@ class ReactBlockGraph extends React.Component {
     onRemoveConnector: PropTypes.func.isRequired,
     onSavePressed: PropTypes.func.isRequired,
     onSpecialParameterClick: PropTypes.func.isRequired,
-  }
+    connectDropTarget: PropTypes.func.isRequired,
+  };
 
   constructor(props) {
     super(props);
@@ -111,12 +111,6 @@ class ReactBlockGraph extends React.Component {
     this.onMouseUp = this.onMouseUp.bind(this);
     this.commandPressed = false;
     this.recalcSize();
-  }
-
-  static propTypes = {
-    connectDropTarget: PropTypes.func.isRequired,
-    isOver: PropTypes.bool.isRequired,
-    canDrop: PropTypes.bool.isRequired,
   }
 
   componentDidMount() {
@@ -365,7 +359,6 @@ class ReactBlockGraph extends React.Component {
     } else {  // !this.commandPressed
       this.selectedNIDs = nids;
     }
-
 
     this.setState({
       selectedNIDs: this.selectedNIDs

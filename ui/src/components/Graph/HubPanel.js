@@ -5,7 +5,6 @@ import Icon from '../Common/Icon';
 import {PluginsConsumer} from '../../contexts';
 import './HubPanel.css';
 
-
 export default class HubPanel extends Component {
   constructor(props) {
     super(props);
@@ -16,7 +15,7 @@ export default class HubPanel extends Component {
 
   static propTypes = {
     kind: PropTypes.string.isRequired,
-  }
+  };
 
   render() {
     return (
@@ -52,7 +51,6 @@ export default class HubPanel extends Component {
                     key={this.state.index}
                 />
             </div>
-
 
         </div>
         }

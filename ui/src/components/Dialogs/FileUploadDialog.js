@@ -8,7 +8,6 @@ import Icon from '../Common/Icon';
 import { RESPONCE_STATUS } from '../../constants';
 import './FileUploadDialog.css';
 
-
 const DEFAULT_TITLE = 'File';
 
 export default class FileUploadDialog extends Component {
@@ -17,7 +16,7 @@ export default class FileUploadDialog extends Component {
     uploadOperation: PropTypes.shape({
       resources: PropTypes.array.isRequired,
     }),
-  }
+  };
 
   constructor(props) {
     super(props);

@@ -1,21 +1,21 @@
+/* eslint max-classes-per-file: 0 */
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import HubEntryListNode from './HubEntryListNode';
 import Icon from '../Common/Icon';
 import './style.css';
 
-
 export default class HubEntryList extends Component {
   static propTypes = {
     items: PropTypes.array.isRequired,
     extraClassName: PropTypes.string,
     level: PropTypes.number.isRequired,
-  }
+  };
 
   static defaultProps = {
     extraClassName: "open",
     level: 0,
-  }
+  };
 
   render() {
     const listItems = this.props.items.map(
@@ -43,12 +43,11 @@ export default class HubEntryList extends Component {
   }
 }
 
-
 class HubEntryListGroup extends Component {
   static propTypes = {
     group: PropTypes.object.isRequired,
     level: PropTypes.number.isRequired,
-  }
+  };
 
   constructor(props) {
     super(props);

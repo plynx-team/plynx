@@ -18,7 +18,7 @@ export default class LogIn extends Component {
         username: PropTypes.string.isRequired
       }),
     }),
-  }
+  };
 
   constructor(props) {
     super(props);

@@ -6,11 +6,10 @@ import renderValueElement from '../Common/renderValueElement';
 import { API_ENDPOINT } from '../../configConsts';
 import './APIDialog.css';
 
-
 export default class APIDialog extends Component {
   static propTypes = {
     onClose: PropTypes.func.isRequired,
-  }
+  };
 
   constructor(props) {
     super(props);

@@ -20,7 +20,7 @@ export default class ParameterItem extends Component {
       PropTypes.number,
       PropTypes.array,
     ]),
-  }
+  };
 
   constructor(props) {
     super(props);
@@ -94,7 +94,6 @@ export default class ParameterItem extends Component {
             </div>
             }
         </div>
-
 
       </div>
     );

@@ -1,3 +1,4 @@
+/* eslint max-classes-per-file: 0 */
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import './LoadingScreen.css';
@@ -25,7 +26,6 @@ export class SimpleLoader extends Component {
     );
   }
 }
-
 
 LoadingScreen.propTypes = {
   style: PropTypes.object,

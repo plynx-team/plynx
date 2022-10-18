@@ -11,7 +11,7 @@
   border: 0px;
   font-size: 13pt;
   padding-left: 30px;
-  background: url(/icons/search.svg) no-repeat scroll 2px 2px;
+  background: url("../../../public/icons/search.svg") no-repeat scroll 2px 2px;
   width: 100%;
   color: #fff;
 }

@@ -8,7 +8,6 @@ import './PreviewDialog.css';
 
 const FileDownload = require('react-file-download');
 
-
 export default class PreviewDialog extends Component {
   static propTypes = {
     title: PropTypes.string.isRequired,
@@ -17,7 +16,7 @@ export default class PreviewDialog extends Component {
     download_name: PropTypes.string.isRequired,
     file_type: PropTypes.string.isRequired,
     onClose: PropTypes.func.isRequired,
-  }
+  };
 
   constructor(props) {
     super(props);
@@ -86,7 +85,6 @@ export default class PreviewDialog extends Component {
       </div>
     );
   }
-
 
   render() {
     return (

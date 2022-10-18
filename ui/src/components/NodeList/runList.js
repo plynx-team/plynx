@@ -6,7 +6,6 @@ import { COLLECTIONS } from '../../constants';
 import { renderNodeItem, NODE_ITEM_HEADER } from './common';
 import { addStyleToTourSteps } from '../../utils';
 
-
 const renderItem = renderNodeItem(COLLECTIONS.RUNS, 'node_running_status');
 
 const TOUR_STEPS = [
@@ -23,7 +22,7 @@ const TOUR_STEPS = [
 export default class RunListPage extends Component {
   static propTypes = {
     search: PropTypes.string,
-  }
+  };
 
   constructor(props) {
     super(props);

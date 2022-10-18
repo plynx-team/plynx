@@ -3,7 +3,6 @@ import PropTypes from 'prop-types';
 import ParameterItem from '../Common/ParameterItem';
 import Dialog from './Dialog';
 
-
 export default class ParameterSelectionDialog extends Component {
   static propTypes = {
     index: PropTypes.number.isRequired,
@@ -12,7 +11,7 @@ export default class ParameterSelectionDialog extends Component {
     parameters: PropTypes.array.isRequired,
     readOnly: PropTypes.bool.isRequired,
     onIndexChanged: PropTypes.func.isRequired,
-  }
+  };
 
   constructor(props) {
     super(props);

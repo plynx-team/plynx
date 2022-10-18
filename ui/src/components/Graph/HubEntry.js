@@ -1,3 +1,4 @@
+/* eslint max-classes-per-file: 0 */
 import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
 import PropTypes from 'prop-types';
@@ -8,12 +9,11 @@ import LoadingScreen from '../LoadingScreen';
 import SearchBar from '../Common/SearchBar';
 import './style.css';
 
-
 class HubEntryHeader extends Component {
   static propTypes = {
     search: PropTypes.string.isRequired,
     onUpdateFilter: PropTypes.func.isRequired,
-  }
+  };
 
   constructor(props) {
     super(props);
@@ -43,11 +43,10 @@ class HubEntryHeader extends Component {
   }
 }
 
-
 export default class HubEntry extends Component {
   static propTypes = {
     hub: PropTypes.string.isRequired,
-  }
+  };
 
   constructor(props) {
     super(props);

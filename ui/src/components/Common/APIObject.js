@@ -6,11 +6,10 @@ import cookie from 'react-cookies';
 import LoadingScreen from '../LoadingScreen';
 import { ALERT_OPTIONS } from '../../constants';
 
-
 export default class APIObject extends Component {
   static propTypes = {
     object_id: PropTypes.string.isRequired,
-  }
+  };
 
   constructor(props) {
     super(props);
@@ -35,6 +34,7 @@ export default class APIObject extends Component {
   }
 
   sleep(ms) {
+    // eslint-disable-next-line no-promise-executor-return
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
@@ -86,7 +86,7 @@ export default class APIObject extends Component {
         .then(loadObject)
         .catch(handleError);
       if (loading) {
-        await self.sleep(sleepPeriod);
+        self.sleep(sleepPeriod);
         sleepPeriod = Math.min(sleepPeriod + sleepStep, sleepMaxPeriod);
       }
     }

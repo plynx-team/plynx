@@ -2,7 +2,7 @@ import { API_ENDPOINT } from './configConsts';
 import { COLLECTIONS } from './constants';
 import cookie from 'react-cookies';
 
-const axios = require('axios');
+import axios from 'axios';
 
 class API {
   constructor({ url }) {

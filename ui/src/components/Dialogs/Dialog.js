@@ -16,7 +16,7 @@ export default class Dialog extends Component {
     title: PropTypes.string.isRequired,
     width: PropTypes.number.isRequired,
     className: PropTypes.string.isRequired,
-  }
+  };
 
   constructor(props) {
     super(props);

@@ -7,7 +7,7 @@ import './style.css';
 export default class NotFound extends Component {
   static propTypes = {
     errorCode: PropTypes.number.isRequired,
-  }
+  };
 
   constructor(props) {
     super(props);

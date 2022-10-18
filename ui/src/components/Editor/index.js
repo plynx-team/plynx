@@ -28,7 +28,6 @@ import { makeControlPanel, makeControlCheckbox, makeControlToggles, makeControlB
 import { addStyleToTourSteps } from '../../utils';
 import "./style.css";
 
-
 export const VIEW_MODE = Object.freeze({
   NONE: 'none',
   GRAPH: 0,
@@ -36,10 +35,8 @@ export const VIEW_MODE = Object.freeze({
   RUNS: 2,
 });
 
-
 const FIRST_TIME_APPROVED_STATE = 'first_time_approved_state';
 const UPDATE_TIMEOUT = 1000;
-
 
 export default class Editor extends Component {
   static propTypes = {
@@ -51,7 +48,7 @@ export default class Editor extends Component {
         node_id: PropTypes.string,
       }),
     }),
-  }
+  };
 
   constructor(props) {
     super(props);
@@ -751,7 +748,6 @@ export default class Editor extends Component {
         },
       },
 
-
       {
         render: makeControlSeparator,
         props: {key: 'separator_2'}
@@ -792,7 +788,6 @@ export default class Editor extends Component {
           func: () => this.handleShowNodeDialog(),
         },
       },
-
 
       {
         render: makeControlSeparator,

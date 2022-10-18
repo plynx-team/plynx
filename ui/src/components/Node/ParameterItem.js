@@ -5,7 +5,6 @@ import renderValueElement from '../Common/renderValueElement';
 
 import './ParameterItem.css';
 
-
 function getDefaultParameterValue(parameter_type) {
   switch (parameter_type) {
     case 'str':

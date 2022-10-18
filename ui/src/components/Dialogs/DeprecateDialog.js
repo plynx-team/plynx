@@ -6,7 +6,6 @@ import NodeItem from '../Common/NodeItem';
 import { PLynxApi } from '../../API';
 import { ACTION, COLLECTIONS } from '../../constants';
 
-
 import './DeprecateDialog.css';
 
 export default class DeprecateDialog extends Component {
@@ -24,7 +23,7 @@ export default class DeprecateDialog extends Component {
     onClose: PropTypes.func.isRequired,
     onDeprecate: PropTypes.func.isRequired,
     onNo: PropTypes.bool,
-  }
+  };
 
   constructor(props) {
     super(props);

@@ -2,13 +2,12 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import BlockInputListItem from './BlockInputListItem';
 
-
 export default class BlockInputList extends React.Component {
   static propTypes = {
     items: PropTypes.array.isRequired,
     onCompleteConnector: PropTypes.func.isRequired,
     resources_dict: PropTypes.object.isRequired,
-  }
+  };
 
   onMouseUp(i) {
     this.props.onCompleteConnector(i);

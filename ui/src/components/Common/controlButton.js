@@ -2,7 +2,6 @@ import React from 'react';
 import SearchBar from './SearchBar';
 import PropTypes from 'prop-types';
 
-
 export function makeControlButton(props) {
   return (
     <div
@@ -37,7 +36,6 @@ makeControlButton.propTypes = {
   extraClassName: PropTypes.object,
 };
 
-
 // TODO make a single function makeControlButton and makeControlLink
 export function makeControlLink(props) {
   return (
@@ -62,7 +60,6 @@ makeControlLink.propTypes = {
   enabled: PropTypes.bool.isRequired,
 };
 
-
 export function makeControlSeparator(props) {
   return (
         <div
@@ -76,7 +73,6 @@ makeControlSeparator.propTypes = {
   key: PropTypes.string.isRequired,
 };
 
-
 export function makeControlToggles(props) {
   return (
         <div
@@ -85,7 +81,7 @@ export function makeControlToggles(props) {
         >
             {props.items.map(
                 (item, index) => {
-                  const buttonItem = Object.assign({}, item);
+                  const buttonItem = { ...item};
                   if (index === props.index) {
                     buttonItem["selected"] = true;
                   }
@@ -122,7 +118,6 @@ makeControlToggles.propTypes = {
   index: PropTypes.number.isRequired,
 };
 
-
 export function makeControlSearchBar(props) {
   return <SearchBar
         onSearchUpdate={(search) => props.func(search)}
@@ -134,7 +129,6 @@ makeControlSearchBar.propTypes = {
   func: PropTypes.func.isRequired,
   search: PropTypes.string.isRequired,
 };
-
 
 export function makeControlCheckbox(props) {
   return (
@@ -166,7 +160,6 @@ makeControlCheckbox.propTypes = {
   checked: PropTypes.bool,
   enabled: PropTypes.bool.isRequired,
 };
-
 
 export function makeControlPanel({props, children_func} = {}) {
   return (

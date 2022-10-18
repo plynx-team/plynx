@@ -6,7 +6,6 @@ import { utcTimeToLocal } from '../../utils';
 import '../controls.css';
 import './items.css';
 
-
 function getAuthorText(node) {
   if (node._user.length > 0) {
     if (node._user[0].settings && node._user[0].settings.display_name) {
@@ -16,7 +15,6 @@ function getAuthorText(node) {
   }
   return 'Unknown';
 }
-
 
 export function renderNodeItem(hrefPrefix, statusName) {
   return (node) => {

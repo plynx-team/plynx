@@ -3,14 +3,13 @@ import PropTypes from 'prop-types';
 import { makeControlPanel, makeControlButton } from '../Common/controlButton';
 import Dialog from './Dialog';
 
-
 export default class TextViewDialog extends Component {
   static propTypes = {
     text: PropTypes.string.isRequired,
     title: PropTypes.string.isRequired,
     showAlert: PropTypes.func.isRequired,
     onClose: PropTypes.func.isRequired,
-  }
+  };
 
   constructor(props) {
     super(props);

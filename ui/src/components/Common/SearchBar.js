@@ -8,7 +8,7 @@ export default class SearchBar extends Component {
   static propTypes = {
     search: PropTypes.string.isRequired,
     onSearchUpdate: PropTypes.func.isRequired,
-  }
+  };
 
   constructor(props) {
     super(props);

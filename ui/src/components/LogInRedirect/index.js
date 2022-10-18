@@ -11,7 +11,7 @@ export default class LogInRedirect extends Component {
   static propTypes = {
     specialUser: PropTypes.string.isRequired,
     maxTry: PropTypes.number.isRequired,
-  }
+  };
 
   constructor(props) {
     super(props);

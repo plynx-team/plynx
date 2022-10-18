@@ -9,7 +9,6 @@ import { API_ENDPOINT } from '../../configConsts';
 
 const FileDownload = require('react-file-download');
 
-
 export default class FileDialog extends Component {
   static propTypes = {
     fileObj: PropTypes.shape({
@@ -25,7 +24,7 @@ export default class FileDialog extends Component {
     onClose: PropTypes.func.isRequired,
     onDeprecate: PropTypes.func.isRequired,
     onPreview: PropTypes.func.isRequired,
-  }
+  };
 
   handlePreviewClick(e) {
     e.preventDefault();

@@ -4,7 +4,6 @@ import Icon from '../Common/Icon';
 import { PluginsConsumer } from '../../contexts';
 import OutputItem from '../Graph/OutputItem';
 
-
 export default class InOutItem extends Component {
   static propTypes = {
     index: PropTypes.number,

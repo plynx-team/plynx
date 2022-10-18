@@ -7,9 +7,7 @@ import makePropertiesBox from '../Common/makePropertiesBox';
 import { COLLECTIONS, IAM_POLICIES } from '../../constants';
 import './style.css';
 
-
 const allEqual = arr => arr.every(v => v === arr[0]);
-
 
 const renderLinkRow = (title, href, text) => {
   return (
@@ -103,7 +101,6 @@ export default class PropertiesBar extends Component {
   }
   /* eslint-enable no-param-reassign */
   /* eslint-enable max-params */
-
 
   handleParameterChanged(name, value) {
     this.props.onParameterChanged(this.state.nodes.map(node => node._id), name, value);

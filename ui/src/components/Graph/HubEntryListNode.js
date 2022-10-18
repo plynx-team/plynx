@@ -5,7 +5,6 @@ import ItemTypes from '../../DragAndDropsItemTypes';
 import Icon from '../Common/Icon';
 import {PluginsConsumer} from '../../contexts';
 
-
 const nodeSource = {
   beginDrag(props) {
     return {
@@ -28,7 +27,7 @@ class HubEntryListNode extends Component {
     connectDragSource: PropTypes.func.isRequired,
     isDragging: PropTypes.bool.isRequired,
     nodeContent: PropTypes.object.isRequired,
-  }
+  };
 
   render() {
     const { connectDragSource } = this.props;

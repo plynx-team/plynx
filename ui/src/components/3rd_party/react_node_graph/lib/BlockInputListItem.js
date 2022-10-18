@@ -2,7 +2,6 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import Icon from '../../../Common/Icon';
 
-
 export default class BlockInputListItem extends React.Component {
   static propTypes = {
     index: PropTypes.number.isRequired,
@@ -13,7 +12,7 @@ export default class BlockInputListItem extends React.Component {
     }).isRequired,
     onMouseUp: PropTypes.func.isRequired,
     resources_dict: PropTypes.object.isRequired,
-  }
+  };
 
   onMouseUp(e) {
     e.stopPropagation();

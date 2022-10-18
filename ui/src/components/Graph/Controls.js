@@ -4,7 +4,6 @@ import { NODE_RUNNING_STATUS } from '../../constants';
 import { makeControlButton } from '../Common/controlButton';
 import './OutputItem.css';
 
-
 export default class Controls extends Component {
   static propTypes = {
     className: PropTypes.string.isRequired,
@@ -18,7 +17,7 @@ export default class Controls extends Component {
     onUpgradeNodes: PropTypes.func.isRequired,
     onValidate: PropTypes.func.isRequired,
     readonly: PropTypes.bool.isRequired,
-  }
+  };
 
   render() {
     return (
