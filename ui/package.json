@@ -18,7 +18,7 @@
     "eslint-plugin-chai-friendly": "^0.4.1",
     "feather-icons": "^4.24.0",
     "hoek": "^6.1.3",
-    "lodash": "^4.17.19",
+    "lodash": "^4.17.21",
     "macaddress": "^0.2.9",
     "merge": "^1.2.1",
     "prop-types": "^15.7.2",
