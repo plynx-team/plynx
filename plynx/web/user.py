@@ -6,7 +6,7 @@ import bson.objectid
 from flask import g, request
 
 import plynx.db.node_collection_manager
-from plynx.constants import Collections, IAMPolicies, NodeClonePolicy, UserPostAction
+from plynx.constants import Collections, IAMPolicies, NodeClonePolicy, TokenType, UserPostAction
 from plynx.db.db_object import get_class
 from plynx.db.demo_user_manager import DemoUserManager
 from plynx.db.user import User, UserCollectionManager
@@ -23,14 +23,14 @@ template_collection_manager = plynx.db.node_collection_manager.NodeCollectionMan
 @handle_errors
 def get_auth_token():
     """Generate access and refresh tokens"""
-    access_token = g.user.generate_access_token()
-    refresh_token = g.user.generate_refresh_token()
+    access_token = g.user.generate_token(TokenType.ACCESS_TOKEN)
+    refresh_token = g.user.generate_token(TokenType.REFRESH_TOKEN)
 
     user_obj = g.user.to_dict()
     user_obj['hash_password'] = ''
     return make_success_response({
-        'access_token': access_token.decode('ascii'),
-        'refresh_token': refresh_token.decode('ascii'),
+        'access_token': access_token,
+        'refresh_token': refresh_token,
         'user': user_obj,
     })
 
@@ -63,11 +63,12 @@ def post_demo_user():
             logger.error(e)
             return make_fail_response(str(e)), 500
 
-    access_token = user.generate_access_token(expiration=1800)
+    access_token = user.generate_token(TokenType.ACCESS_TOKEN, expiration=1800)
+
     user_obj = user.to_dict()
     user_obj['hash_password'] = ''
     return JSONEncoder().encode({
-        'access_token': access_token.decode('ascii'),
+        'access_token': access_token,
         'refresh_token': 'Not assigned',
         'user': user_obj,
         'url': f'/{Collections.TEMPLATES}/{template_id}',
@@ -166,13 +167,13 @@ def post_register():
         ), 400
 
     g.user = user   # pylint: disable=assigning-non-slot
-    access_token = user.generate_access_token()
-    refresh_token = user.generate_refresh_token()
+    access_token = user.generate_token(TokenType.ACCESS_TOKEN)
+    refresh_token = user.generate_token(TokenType.REFRESH_TOKEN)
 
     user_obj = user.to_dict()
     user_obj['hash_password'] = ''
     return make_success_response({
-        'access_token': access_token.decode('ascii'),
-        'refresh_token': refresh_token.decode('ascii'),
+        'access_token': access_token,
+        'refresh_token': refresh_token,
         'user': user_obj,
     })

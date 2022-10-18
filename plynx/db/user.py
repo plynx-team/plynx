@@ -1,23 +1,21 @@
 """User DB Object and utils"""
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Dict, List, Optional, Union
 
+import jwt
 from dataclasses_json import dataclass_json
-# TODO: replace itsdangerous with more moder solution
-from itsdangerous import BadSignature
-from itsdangerous import JSONWebSignatureSerializer as Serializer
-from itsdangerous import SignatureExpired
-from itsdangerous import TimedJSONWebSignatureSerializer as TimedSerializer
 from passlib.apps import custom_app_context as pwd_context
 
-from plynx.constants import Collections
+from plynx.constants import Collections, TokenType
 from plynx.db.db_object import DBObject
 from plynx.utils.common import ObjectId
 from plynx.utils.config import get_auth_config, get_iam_policies_config
 from plynx.utils.db_connector import get_db_connector
 
 DEFAULT_POLICIES = get_iam_policies_config().default_policies
+JWT_ENCODE_ALGORITHM = "HS256"
 
 
 @dataclass_json
@@ -60,27 +58,6 @@ class User(DBObject):
         """
         return pwd_context.verify(password, self.password_hash)
 
-    def generate_access_token(self, expiration: int = 600) -> str:
-        """Generate access token.
-
-        Args:
-            expiration  (int)   Time to Live (TTL) in sec
-
-        Return:
-            (str)   Secured token
-        """
-        token = TimedSerializer(get_auth_config().secret_key, expires_in=expiration)
-        return token.dumps({'username': self.username, 'type': 'access'})
-
-    def generate_refresh_token(self) -> str:
-        """Generate refresh token.
-
-        Return:
-            (str)   Secured token
-        """
-        token = Serializer(get_auth_config().secret_key)
-        return token.dumps({'username': self.username, 'type': 'refresh'})
-
     def check_role(self, role: str) -> bool:
         """Check if the user has a given role"""
         return role in self.policies
@@ -89,6 +66,32 @@ class User(DBObject):
     def find_users() -> List[Dict]:
         """Get all the users"""
         return getattr(get_db_connector(), User.DB_COLLECTION).find({})
+
+    def generate_token(self, token_type: str, expiration: int = 10) -> str:
+        """Generate a token.
+
+        Args:
+            token_type  (str)   Either TokenType.ACCESS_TOKEN, or TokenType.REFRESH_TOKEN
+            expiration  (int)   Time to Live (TTL) in sec
+
+        Return:
+            (str)   Secured token
+        """
+        payload: Dict[str, Union[str, datetime]] = {
+            "username": self.username,
+            "type": token_type,
+        }
+
+        if token_type == TokenType.ACCESS_TOKEN:
+            payload["exp"] = datetime.now(tz=timezone.utc) + timedelta(seconds=expiration)
+        elif token_type == TokenType.REFRESH_TOKEN:
+            payload["exp"] = datetime.now(tz=timezone.utc) + timedelta(hours=720)
+        else:
+            raise ValueError(f"`token_type` is unknown value `{token_type}`")
+
+        token = jwt.encode(payload, get_auth_config().secret_key, algorithm=JWT_ENCODE_ALGORITHM)
+
+        return token
 
     @staticmethod
     def verify_auth_token(token: str) -> Optional["User"]:
@@ -100,24 +103,15 @@ class User(DBObject):
         Return:
             (User)   User object or None
         """
-        timed_serializer = TimedSerializer(get_auth_config().secret_key)
         try:
-            data = timed_serializer.loads(token)
-            if data['type'] != 'access':
-                raise Exception('Not access token')
-        except (BadSignature, SignatureExpired):
-            # access token is not valid or expired
-            serializer = Serializer(get_auth_config().secret_key)
-            try:
-                data = serializer.loads(token)
-                if data['type'] != 'refresh':
-                    raise Exception('No refresh token')     # pylint: disable=raise-missing-from
-            except Exception:   # pylint: disable=broad-except
-                return None
+            payload = jwt.decode(token, get_auth_config().secret_key, algorithms=[JWT_ENCODE_ALGORITHM])
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+            return None
         except Exception as e:  # pylint: disable=broad-except
             print(f"Unexpected exception: {e}")
             return None
-        user = UserCollectionManager.find_user_by_name(data['username'])
+
+        user = UserCollectionManager.find_user_by_name(payload['username'])
         if not user or not user.active:
             return None
         return user
