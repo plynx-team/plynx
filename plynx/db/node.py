@@ -1,5 +1,6 @@
 """Node DB Object and utils"""
 
+import hashlib
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -7,19 +8,20 @@ from typing import Any, Callable, Dict, List, Optional, Union
 from dataclasses_json import dataclass_json
 from past.builtins import basestring
 
-from plynx.constants import Collections, NodeClonePolicy, NodeOrigin, NodeRunningStatus, NodeStatus, ParameterTypes, SpecialNodeId
+from plynx.constants import IGNORED_CACHE_PARAMETERS, Collections, NodeClonePolicy, NodeOrigin, NodeRunningStatus, NodeStatus, ParameterTypes, SpecialNodeId
 from plynx.db.db_object import DBObject
 from plynx.plugins.resources.common import FILE_KIND
-from plynx.utils.common import ObjectId
+from plynx.utils.common import ObjectId, to_object_id
 
 
 # pylint: disable=too-many-branches
-def _clone_update_in_place(node: "Node", node_clone_policy: int):
+def _clone_update_in_place(node: "Node", node_clone_policy: int, override_finished_state: bool):
     if node.node_running_status == NodeRunningStatus.SPECIAL:
         for output in node.outputs:
             output.values = []
         return node
     old_node_id = node._id
+    node.template_node_id = node._id
     node._id = ObjectId()
     node.successor_node_id = None
 
@@ -37,7 +39,9 @@ def _clone_update_in_place(node: "Node", node_clone_policy: int):
 
     if node.node_running_status == NodeRunningStatus.STATIC:
         return node
-    node.node_running_status = NodeRunningStatus.READY
+
+    if override_finished_state or not NodeRunningStatus.is_succeeded(node.node_running_status):
+        node.node_running_status = NodeRunningStatus.READY
     node.node_status = NodeStatus.CREATED
 
     sub_nodes = node.get_parameter_by_name('_nodes', throw=False)
@@ -45,7 +49,7 @@ def _clone_update_in_place(node: "Node", node_clone_policy: int):
         object_id_mapping = {}
         for sub_node in sub_nodes.value.value:
             prev_id = ObjectId(sub_node._id)
-            _clone_update_in_place(sub_node, node_clone_policy)
+            _clone_update_in_place(sub_node, node_clone_policy, override_finished_state)
             object_id_mapping[prev_id] = sub_node._id
 
         for sub_node in sub_nodes.value.value:
@@ -63,14 +67,16 @@ def _clone_update_in_place(node: "Node", node_clone_policy: int):
                 # do not copy the rest of the elements because they don't change
                 continue
 
-            for output in sub_node.outputs:
-                output.values = []
+            if override_finished_state or not NodeRunningStatus.is_succeeded(sub_node.node_running_status):
+                for output in sub_node.outputs:
+                    output.values = []
 
-            for log in sub_node.logs:
-                log.values = []
+                for log in sub_node.logs:
+                    log.values = []
 
-    for output_or_log in node.outputs + node.logs:
-        output_or_log.values = []
+    if override_finished_state or not NodeRunningStatus.is_succeeded(node.node_running_status):
+        for output_or_log in node.outputs + node.logs:
+            output_or_log.values = []
     return node
 
 
@@ -107,6 +113,27 @@ class Input(_BaseResource):
     input_references: List[InputReference] = field(default_factory=list)
 
 
+class _GraphVertex:
+    """Used for internal purposes."""
+
+    def __init__(self):
+        self.edges = []
+        self.num_connections = 0
+
+
+class GraphError(Exception):
+    """Generic Graph topology exception"""
+
+
+@dataclass_json
+@dataclass
+class CachedNode(DBObject):
+    """Values to override Node on display"""
+    node_running_status: str = NodeRunningStatus.CREATED
+    outputs: List[Output] = field(default_factory=list)
+    logs: List[Output] = field(default_factory=list)
+
+
 @dataclass_json
 @dataclass
 class Node(DBObject):
@@ -116,6 +143,7 @@ class Node(DBObject):
 
     _id: ObjectId = field(default_factory=ObjectId)
     _type: str = "Node"
+    _cached_node: Optional[CachedNode] = None
     title: str = "Title"
     description: str = "Description"
     kind: str = "dummy"
@@ -126,6 +154,7 @@ class Node(DBObject):
     # ID of original node, used in `runs`, always refer to `nodes` collection.
     # A Run refers to original node
     original_node_id: Optional[ObjectId] = None
+    template_node_id: Optional[ObjectId] = None
     origin: str = NodeOrigin.DB
     # The following `code_*` values defined when the operation declared outside of plynx DB
     # code_hash is a hash value of the code
@@ -139,6 +168,10 @@ class Node(DBObject):
     y: int = 0
     author: Optional[ObjectId] = None
     starred: bool = False
+    auto_sync: bool = True
+    auto_run: bool = True
+    # latest_run_id would be used in Templates to refer to the current run
+    latest_run_id: Optional[ObjectId] = None
 
     inputs: List[Input] = field(default_factory=list)
     parameters: List["Parameter"] = field(default_factory=list)
@@ -185,9 +218,9 @@ class Node(DBObject):
         self.x = other_node.x
         self.y = other_node.y
 
-    def clone(self, node_clone_policy: int) -> "Node":
+    def clone(self, node_clone_policy: int, override_finished_state: bool = True) -> "Node":
         """Return a cloned copy of a Node"""
-        node = _clone_update_in_place(Node.from_dict(self.to_dict()), node_clone_policy)
+        node = _clone_update_in_place(Node.from_dict(self.to_dict()), node_clone_policy, override_finished_state)
         return node
 
     def _get_custom_element(
@@ -346,8 +379,8 @@ class Node(DBObject):
             return level_to_node_ids, node_id_to_node
 
         cum_heights = [0]
-        for index, _ in enumerate(row_heights):
-            cum_heights.append(cum_heights[-1] + row_heights[index] + SPACE_HEIGHT)
+        for row_height in row_heights:
+            cum_heights.append(cum_heights[-1] + row_height + SPACE_HEIGHT)
 
         max_height = max(cum_heights)
 
@@ -359,6 +392,209 @@ class Node(DBObject):
                 node = node_id_to_node[node_id]
                 node.x = LEFT_PADDING + (max_level - level) * LEVEL_WIDTH
                 node.y = TOP_PADDING + level_padding + cum_heights[index]
+
+    # pylint: disable=too-many-locals
+    def augment_node_with_cache(self, other_node: "Node") -> None:
+        """
+        Augment the Node in templates with a Node in Run.
+        Results will be stored in `_cached_node` fields of the subnodes and not applied directly.
+        """
+        # TODO optimize function and remove too-many-locals
+        self._cached_node = None
+        sub_nodes_parameter = self.get_parameter_by_name('_nodes', throw=False)
+        if not sub_nodes_parameter:
+            # TODO check if cacheable
+            # TODO probably never called.
+            # TODO Update when run augmentation recursevely
+            raise NotImplementedError("Subnodes are not found")
+
+        sub_nodes = sub_nodes_parameter.value.value
+        other_sub_nodes = other_node.get_parameter_by_name('_nodes').value.value
+        other_node_id_to_original_id = {}
+        for other_sub_node in other_sub_nodes:
+            other_node_id_to_original_id[other_sub_node._id] = other_sub_node.template_node_id
+
+        id_to_node = {}
+        for sub_node in sub_nodes:
+            sub_node._cached_node = None
+            obj_id = to_object_id(sub_node._id)
+            id_to_node[obj_id] = sub_node
+
+        for other_subnode in other_node.traverse_in_order():
+            if other_subnode.template_node_id not in id_to_node:
+                continue
+            sub_node = id_to_node[other_subnode.template_node_id]
+
+            # TODO: check is final state
+            this_cache = _generate_parameters_key(sub_node)
+            other_node_cache = _generate_parameters_key(other_subnode)
+
+            if this_cache != other_node_cache:
+                continue
+
+            tmp_inputs = []
+            for input in sub_node.inputs:   # pylint: disable=redefined-builtin
+                for input_reference in input.input_references:
+                    tmp_inputs.append(f"{input_reference.node_id}-{input_reference.output_id}")
+            sub_node_inputs_hash = ",".join(tmp_inputs)
+
+            tmp_inputs = []
+            for input in other_subnode.inputs:  # pylint: disable=redefined-builtin
+                for input_reference in input.input_references:
+                    orig_idx = other_node_id_to_original_id.get(to_object_id(input_reference.node_id), 'none')
+                    tmp_inputs.append(f"{orig_idx}-{input_reference.output_id}")
+            other_subnode_inputs_hash = ",".join(tmp_inputs)
+
+            if sub_node_inputs_hash != other_subnode_inputs_hash:
+                continue
+
+            tmp_refs_is_cached = False
+            for input in sub_node.inputs:
+                for input_reference in input.input_references:
+                    ref_node_id = input_reference.node_id
+                    if id_to_node[to_object_id(ref_node_id)]._cached_node is None:
+                        tmp_refs_is_cached = True
+            if tmp_refs_is_cached:
+                continue
+
+            sub_node._cached_node = CachedNode(
+                node_running_status=other_subnode.node_running_status,
+                outputs=other_subnode.outputs,
+                logs=other_subnode.logs,
+            )
+
+            sub_node.node_running_status = NodeRunningStatus.READY
+
+    def reset_failed_nodes(self):
+        """
+        Reset the statuses of the failed subnodes.
+
+        Resetting means node_running_status as well as the outputs and the logs.
+        """
+        sub_nodes_parameter = self.get_parameter_by_name('_nodes', throw=False)
+        if not sub_nodes_parameter:
+            # TODO check if cacheable
+            raise NotImplementedError("Subnodes not found. Do we want to be here?")
+
+        sub_nodes = sub_nodes_parameter.value.value
+        for sub_node in sub_nodes:
+            if not NodeRunningStatus.is_failed(sub_node.node_running_status):
+                continue
+            sub_node.node_running_status = NodeRunningStatus.READY
+            for resource in sub_node.outputs + sub_node.logs:
+                resource.values = []
+
+    def apply_cache(self):
+        """Apply cache values to outputs and logs"""
+        sub_nodes_parameter = self.get_parameter_by_name('_nodes', throw=False)
+        if not sub_nodes_parameter:
+            # TODO check if cacheable
+            raise NotImplementedError("Subnodes not found. Do we want to be here?")
+
+        sub_nodes = sub_nodes_parameter.value.value
+
+        for sub_node in sub_nodes:
+            if not sub_node._cached_node:
+                continue
+            sub_node.node_running_status = sub_node._cached_node.node_running_status
+            sub_node.outputs = sub_node._cached_node.outputs
+            sub_node.logs = sub_node._cached_node.logs
+
+            sub_node._cached_node = None
+
+    def is_all_cached_and_successful(self):
+        """
+        Check if the Node in a run needs recomputing at all.
+        """
+        sub_nodes_parameter = self.get_parameter_by_name('_nodes', throw=False)
+        if not sub_nodes_parameter:
+            # TODO check if cacheable
+            raise NotImplementedError("Subnodes not found. Do we want to be here?")
+
+        sub_nodes = sub_nodes_parameter.value.value
+
+        for sub_node in sub_nodes:
+            if not sub_node._cached_node:
+                return False
+            if NodeRunningStatus.is_failed(sub_node._cached_node.node_running_status):
+                return False
+        return True
+
+    def traverse_reversed(self):
+        """
+        Traverse the subnodes in a reversed from the topoligical order.
+        """
+        sub_nodes_parameter = self.get_parameter_by_name('_nodes', throw=False)
+        if not sub_nodes_parameter:
+            yield self
+            return
+
+        sub_nodes = sub_nodes_parameter.value.value
+        if len(sub_nodes) == 0:
+            return
+
+        id_to_vertex = {sub_node._id: _GraphVertex() for sub_node in sub_nodes}
+        dfs_queue = deque()
+        node_index = {}
+
+        for sub_node in sub_nodes:
+            node_index[sub_node._id] = sub_node
+            for input in sub_node.inputs:   # pylint: disable=redefined-builtin
+                for input_reference in input.input_references:
+                    ref_node_id = to_object_id(input_reference.node_id)
+                    id_to_vertex[sub_node._id].edges.append(ref_node_id)
+                    id_to_vertex[ref_node_id].num_connections += 1
+
+        for vertex_id, vertex in id_to_vertex.items():
+            if vertex.num_connections == 0:
+                dfs_queue.append(vertex_id)
+
+        if len(dfs_queue) == 0:
+            raise GraphError("No node without outgoing output found")
+
+        while dfs_queue:
+            node_id = dfs_queue.popleft()
+            yield node_index[node_id]
+            for vertex_id in id_to_vertex[node_id].edges:
+                id_to_vertex[vertex_id].num_connections -= 1
+                if id_to_vertex[vertex_id].num_connections == 0:
+                    dfs_queue.append(vertex_id)
+
+        for vertex_id, vertex in id_to_vertex.items():
+            if vertex.num_connections != 0:
+                raise GraphError("Unresolved connections")
+
+    def traverse_in_order(self):
+        """
+        Traverse the subnodes in a topoligical order.
+        """
+        nodes = list(self.traverse_reversed())
+        return reversed(nodes)
+
+
+def _generate_parameters_key(node: Node) -> str:
+    """Generate hash key based on parameters only.
+
+    Args:
+        node    (Node): Node object
+
+    Return:
+        (str)   Hash value
+    """
+
+    parameters = node.parameters
+
+    sorted_parameters = sorted(parameters, key=lambda x: x.name)
+    parameters_hash = ','.join([
+        f"{parameter.name}:{parameter.value}"
+        for parameter in sorted_parameters if parameter.name not in IGNORED_CACHE_PARAMETERS
+    ])
+
+    return hashlib.sha256(
+        ';'.join([
+                parameters_hash,
+            ]).encode('utf-8')
+    ).hexdigest()
 
 
 @dataclass_json

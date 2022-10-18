@@ -109,19 +109,19 @@
 }
 
 .node.running-status-in_queue {
-  background-color: rgba(100, 100, 100, 0.7);
+  background-color: rgba(70, 70, 70, 0.7);
 }
 
 .node.running-status-running {
-  background-color: rgba(0, 100, 100, 0.6);
+  background-color: rgba(0, 70, 70, 0.7);
 }
 
 .node.running-status-failed {
-  background-color: rgba(100, 0, 0, 0.7);
+  background-color: rgba(80, 0, 0, 0.7);
 }
 
 .node.running-status-success {
-  background-color: rgba(0, 100, 0, 0.7);
+  background-color: rgba(0, 70, 0, 0.7);
 }
 
 .node.running-status-static {

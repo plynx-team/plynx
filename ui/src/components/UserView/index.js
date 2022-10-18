@@ -4,14 +4,12 @@ import PropTypes from 'prop-types';
 import makePropertiesBox from '../Common/makePropertiesBox';
 import ParameterItem from '../Common/ParameterItem';
 import { makeControlPanel, makeControlButton } from '../Common/controlButton';
-import { COLLECTIONS, IAM_POLICIES, USER_POST_ACTION, OPERATION_VIEW_SETTING, RESPONCE_STATUS } from '../../constants';
+import { COLLECTIONS, IAM_POLICIES, USER_POST_ACTION, RESPONCE_STATUS } from '../../constants';
 import { validatePassword } from '../Common/passwordUtils';
 import { User } from 'react-feather';
 import cookie from 'react-cookies';
 
 import './style.css';
-
-const NODE_VIEW_MODES = [OPERATION_VIEW_SETTING.KIND_AND_TITLE, OPERATION_VIEW_SETTING.TITLE_AND_DESCRIPTION];
 
 export default class LogIn extends Component {
   static propTypes = {
@@ -28,7 +26,6 @@ export default class LogIn extends Component {
     this.user = {
       username: '',
       settings: {
-        node_view_mode: OPERATION_VIEW_SETTING.KIND_AND_TITLE,
         display_name: '',
       },
       policies: [],
@@ -197,20 +194,6 @@ export default class LogIn extends Component {
             readOnly={this.state.user._readonly}
             onParameterChanged={(name, value) => this.handleSettingsChange(name, value)}
             />,
-      <ParameterItem
-            name={'node_view_mode'}
-            widget={'Node view settings'}
-            value={{
-              values: NODE_VIEW_MODES,
-              index: NODE_VIEW_MODES.indexOf(this.state.user.settings.node_view_mode),
-            }}
-            parameterType={'enum'}
-            key={[(++keyCounter), this.state.user._readonly, this.state.user.settings.node_view_mode].join('')}
-            readOnly={this.state.user._readonly}
-            onParameterChanged={(name, value) => {
-              this.handleSettingsChange(name, value.values[value.index]);
-            }}
-          />,
     ];
     const iamSettingsList = Object.entries(IAM_POLICIES).map((policy_tuple) => <ParameterItem
             name={policy_tuple[0]}

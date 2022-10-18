@@ -1,5 +1,5 @@
 """A standard executor for DAGs."""
-
+import functools
 import logging
 import time
 from collections import defaultdict
@@ -7,17 +7,12 @@ from typing import Dict, List, Optional
 
 import plynx.base.executor
 import plynx.db.node_cache_manager
-import plynx.db.node_collection_manager
-import plynx.db.run_cancellation_manager
+import plynx.plugins.executors.bases
 import plynx.utils.executor
 from plynx.constants import Collections, NodeRunningStatus, ParameterTypes, SpecialNodeId, ValidationCode, ValidationTargetType
 from plynx.db.node import Node, Parameter
 from plynx.db.validation_error import ValidationError
 from plynx.utils.common import ObjectId, to_object_id
-
-node_collection_manager = plynx.db.node_collection_manager.NodeCollectionManager(collection=Collections.RUNS)
-run_cancellation_manager = plynx.db.run_cancellation_manager.RunCancellationManager()
-node_cache_manager = plynx.db.node_cache_manager.NodeCacheManager()
 
 _WAIT_STATUS_BEFORE_FAILED = {
     NodeRunningStatus.RUNNING,
@@ -30,7 +25,13 @@ _ACTIVE_WAITING_TO_STOP = {
 }
 
 
-class DAG(plynx.base.executor.BaseExecutor):
+@functools.lru_cache()
+def node_cache_manager():
+    """Lazy NodeCacheManager definition"""
+    return plynx.db.node_cache_manager.NodeCacheManager()
+
+
+class DAG(plynx.plugins.executors.bases.PLynxAsyncExecutor):
     """ Main graph scheduler.
 
     Args:
@@ -74,7 +75,7 @@ class DAG(plynx.base.executor.BaseExecutor):
                     raise Exception(f"Used {updated_resources_count} inputs for {len(self.node.inputs)} outputs")
 
             # ignore nodes in finished statuses
-            if NodeRunningStatus.is_finished(node.node_running_status) and node_id != SpecialNodeId.OUTPUT:
+            if NodeRunningStatus.is_finished(subnode.node_running_status) and node_id != SpecialNodeId.OUTPUT:
                 continue
             dependency_index = 0
             for node_input in subnode.inputs:
@@ -89,7 +90,7 @@ class DAG(plynx.base.executor.BaseExecutor):
             self.dependency_index_to_node_ids[dependency_index].add(node_id)
             self.node_id_to_dependency_index[node_id] = dependency_index
 
-        self.monitoring_node_ids: List[ObjectId] = []
+        self.monitoring_executors: List[plynx.base.executor.BaseExecutor] = []
 
         if self.uncompleted_nodes_count == 0:
             self._node_running_status = NodeRunningStatus.SUCCESS
@@ -114,12 +115,16 @@ class DAG(plynx.base.executor.BaseExecutor):
         res: List[Node] = []
         logging.info("Pop jobs")
 
-        for running_node_dict in node_collection_manager.get_db_objects_by_ids(self.monitoring_node_ids):
+        finished_node_ids = set()
+        for executor in self.monitoring_executors:
+            assert executor.node, "executor node must be defined at this point"
+            running_status = executor.get_running_status()
+
             # check status
-            if NodeRunningStatus.is_finished(running_node_dict['node_running_status']):
-                node = Node.from_dict(running_node_dict)
-                self.update_node(node)
-                self.monitoring_node_ids.remove(node._id)
+            if NodeRunningStatus.is_finished(running_status.node_running_status):
+                self.update_node(executor.node)
+                finished_node_ids.add(executor.node._id)
+        self.monitoring_executors = [ex for ex in self.monitoring_executors if ex.node._id not in finished_node_ids]    # type: ignore
 
         if NodeRunningStatus.is_failed(self._node_running_status):
             logging.info("Job in DAG failed, pop_jobs will return []")
@@ -141,7 +146,7 @@ class DAG(plynx.base.executor.BaseExecutor):
 
             if DAG._cacheable(node):
                 try:
-                    cache = node_cache_manager.get(node)
+                    cache = node_cache_manager().get(node)
                     if cache:
                         node.node_running_status = NodeRunningStatus.RESTORED
                         node.outputs = cache.outputs
@@ -170,7 +175,7 @@ class DAG(plynx.base.executor.BaseExecutor):
         if node.node_running_status == NodeRunningStatus.SUCCESS \
                 and dest_node.node_running_status != node.node_running_status \
                 and DAG._cacheable(node):
-            node_cache_manager.post(node, self.node._id)
+            node_cache_manager().post(node, self.node._id)
 
         if dest_node.node_running_status == node.node_running_status:
             return
@@ -252,9 +257,11 @@ class DAG(plynx.base.executor.BaseExecutor):
         if NodeRunningStatus.is_finished(node.node_running_status):     # NodeRunningStatus.SPECIAL
             return
         node.author = self.node.author                                  # Change it to the author that runs it
-        node.save(collection=Collections.RUNS)
 
-        self.monitoring_node_ids.append(node._id)
+        executor = plynx.utils.executor.materialize_executor(node)
+        executor.launch()
+
+        self.monitoring_executors.append(executor)
 
     def run(self, preview: bool = False) -> str:
         assert self.node, "Attribute `node` is unassigned"
@@ -291,8 +298,8 @@ class DAG(plynx.base.executor.BaseExecutor):
         The reason can be the fact it was working too long or parent exectuter canceled it.
         """
         self._node_running_status = NodeRunningStatus.CANCELED
-        for node_id in list(self.monitoring_node_ids):
-            run_cancellation_manager.cancel_run(node_id)
+        for executor in self.monitoring_executors:
+            executor.kill()
 
     def validate(self) -> Optional[ValidationError]:
         assert self.node, "Attribute `node` is unassigned"

@@ -191,11 +191,6 @@ export const IAM_POLICIES = Object.freeze({
   IS_ADMIN: 'IS_ADMIN',
 });
 
-export const OPERATION_VIEW_SETTING = Object.freeze({
-  KIND_AND_TITLE: 'KIND_AND_TITLE',
-  TITLE_AND_DESCRIPTION: 'TITLE_AND_DESCRIPTION',
-});
-
 export const USER_POST_ACTION = Object.freeze({
   CREATE: 'CREATE',
   MODIFY: 'MODIFY',

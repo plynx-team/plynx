@@ -1,7 +1,6 @@
 """Main PLynx worker service and utils"""
 
 import logging
-import os
 import socket
 import sys
 import threading
@@ -116,8 +115,7 @@ class Worker:
         try:
             try:
                 status = NodeRunningStatus.FAILED
-                executor.workdir = os.path.join('/tmp', str(uuid.uuid1()))
-                executor.init_workdir()
+                executor.init_executor()
                 with TickThread(executor):
                     status = executor.run()
             except Exception:   # pylint: disable=broad-except
@@ -131,7 +129,7 @@ class Worker:
                     logging.critical(traceback.format_exc())
                     raise
             finally:
-                executor.clean_up()
+                executor.clean_up_executor()
 
             logging.info(f"Node {executor.node._id} `{executor.node.title}` finished with status `{status}`")
             executor.node.node_running_status = status

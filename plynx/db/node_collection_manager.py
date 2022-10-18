@@ -160,6 +160,8 @@ class NodeCollectionManager:
             assert len(target_props) == 1, "Only node_status can be assigned"
             assert target_props[0] == 'node_status', "Only node_status can be assigned"
             for sub_node_dict in sub_nodes_dicts:
+                if sub_node_dict.get(reference_node_id, "unknown") is None:
+                    continue
                 if sub_node_dict.get(reference_node_id, "unknown") not in function_location_to_updated_node_dict:
                     logging.warning(f"`{sub_node_dict.get(reference_node_id, 'unknown')}` is not found in the list of operation locations")
                     continue

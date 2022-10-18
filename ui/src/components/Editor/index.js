@@ -24,7 +24,7 @@ import RunList from '../NodeList/runList';
 import DeprecateDialog from '../Dialogs/DeprecateDialog';
 import TextViewDialog from '../Dialogs/TextViewDialog';
 import { PluginsProvider } from '../../contexts';
-import { makeControlPanel, makeControlToggles, makeControlButton, makeControlSeparator } from '../Common/controlButton';
+import { makeControlPanel, makeControlCheckbox, makeControlToggles, makeControlButton, makeControlSeparator } from '../Common/controlButton';
 import { addStyleToTourSteps } from '../../utils';
 import "./style.css";
 
@@ -74,6 +74,9 @@ export default class Editor extends Component {
     }
 
     this.tour_steps = [];
+    this.schedule = null;
+    this.syncInterval = null;
+    this.last_run_is_in_finished_status = false;
     console.log(global.appVersion);
   }
 
@@ -182,6 +185,30 @@ export default class Editor extends Component {
         setTimeout(() => this.handleTour(), 1000);
         cookie.remove('showTour', { path: '/' });
       }
+
+      if (!self.node.auto_sync || self.state.collection !== COLLECTIONS.TEMPLATES) {
+        self.graphComponent.ref.current.clearCacheNodes();
+      }
+    };
+
+    const syncNode = (response) => {
+      const node = response.data.node;
+
+      self.node.latest_run_id = node.latest_run_id;
+      self.last_run_is_in_finished_status = response.data.last_run_is_in_finished_status;
+
+      let sub_nodes = null;
+      for (let i = 0; i < node.parameters.length; ++i) {
+        if (node.parameters[i].name === '_nodes') {
+          sub_nodes = node.parameters[i].value.value;
+          break;
+        }
+      }
+      if (sub_nodes === null) {
+        return;
+      }
+
+      this.graphComponent.ref.current.syncNodes(sub_nodes);
     };
 
     const handleError = (error) => {
@@ -228,18 +255,40 @@ export default class Editor extends Component {
     self.setState({
       loading: false,
     });
+
+    self.syncInterval = setInterval(() => {
+      if (self.state.collection !== COLLECTIONS.TEMPLATES) {
+        return;
+      }
+      if (!self.state.node || !self.state.node.auto_sync) {
+        return;
+      }
+      if (self.last_run_is_in_finished_status === true) {
+        return;
+      }
+
+      console.log("Run sync");
+
+      PLynxApi.endpoints[self.props.collection].getOne({ id: self.node._id})
+        .then(syncNode)
+        .catch(handleError);
+    }, 1000);
   }
 
   componentWillUnmount() {
     if (this.timeout) {
       clearTimeout(this.timeout);
     }
+
+    if (this.syncInterval) {
+      clearInterval(this.syncInterval);
+    }
   }
 
   checkNodeStatus() {
     const self = this;
     const node_id = self.node._id;
-    PLynxApi.endpoints[self.props.collection].getOne({ id: node_id})
+    PLynxApi.endpoints[self.props.collection].getOne({id: node_id})
     .then((response) => {
       self.updateNode(response.data.node, false);
 
@@ -268,13 +317,13 @@ export default class Editor extends Component {
     }
   }
 
-  postNode({node, reloadOption, action, retryOnAuth = true} = {}) {
+  postNode({node, reloadOption, action, retryOnAuth = true, silent = false} = {}) {
     /* action might be in {'save', 'validate', 'approve', 'deprecate'}*/
     const self = this;
-    self.setState({loading: true});
-
-    console.log(action, node);
-
+    if (!silent) {
+      self.setState({loading: true});
+      console.log(action, node);
+    }
 
     PLynxApi.endpoints[self.props.collection]
     .create({
@@ -283,7 +332,6 @@ export default class Editor extends Component {
     })
     .then((response) => {
       const data = response.data;
-      console.log(data);
       self.setState({loading: false});
       if (data.status === RESPONCE_STATUS.SUCCESS) {
         if (reloadOption === RELOAD_OPTIONS.RELOAD) {
@@ -296,7 +344,9 @@ export default class Editor extends Component {
         }
 
         if (action === ACTION.SAVE) {
-          self.showAlert("Saved", 'success');
+          if (!silent) {
+            self.showAlert("Saved", 'success');
+          }
         } else if (action === ACTION.VALIDATE) {
           self.showAlert("Valid", 'success');
         } else if (action === ACTION.PREVIEW_CMD) {
@@ -320,7 +370,11 @@ export default class Editor extends Component {
           });
         } else if (action === ACTION.CREATE_RUN) {
           self.showAlert("Created new run with id: " + response.data.run_id, 'success');
-          window.open(`/${COLLECTIONS.RUNS}/${response.data.run_id}`, '_blank');
+          if (this.state.node.auto_sync) {
+            self.last_run_is_in_finished_status = false;
+          } else {
+            window.open(`/${COLLECTIONS.RUNS}/${response.data.run_id}`, '_blank');
+          }
         }
       } else if (data.status === RESPONCE_STATUS.VALIDATION_FAILED) {
         console.warn(data.message);
@@ -402,8 +456,39 @@ export default class Editor extends Component {
     });
   }
 
+  scheduleUpdate(delay) {
+    if (this.schedule) {
+      return;
+    }
+    this.schedule = setTimeout(this.runScheduledUpdate, delay, this);
+  }
+
+  disableScheduledUpdate() {
+    this.schedule = null;
+  }
+
+  runScheduledUpdate(self) {
+    self.disableScheduledUpdate();
+    self.postNode({
+      node: self.node,
+      action: ACTION.SAVE,
+      reloadOption: RELOAD_OPTIONS.NONE,
+      silent: true,
+    });
+  }
+
   handleNodeChange(node) {
+    const shouldSave = this.node.auto_sync || node.auto_sync;
+
+    if (this.state.collection !== COLLECTIONS.TEMPLATES) {
+      return;
+    }
     this.node = node;
+    this.last_run_is_in_finished_status = false;
+
+    if (shouldSave) {
+      this.scheduleUpdate(100);
+    }
   }
 
   handleSave() {
@@ -435,7 +520,7 @@ export default class Editor extends Component {
     this.postNode({
       node: this.node,
       action: ACTION.CREATE_RUN,
-      reloadOption: RELOAD_OPTIONS.NEW_TAB,
+      reloadOption: RELOAD_OPTIONS.NEW_TAB, // TODO: not used?
     });
   }
 
@@ -485,6 +570,21 @@ export default class Editor extends Component {
       action: ACTION.CLONE,
       reloadOption: RELOAD_OPTIONS.OPEN_NEW_LINK,
     });
+  }
+
+  handleChangeNodeParameter(parameterName, event) {
+    const target = event.target;
+    const value = target.type === 'checkbox' ? target.checked : target.value;
+
+    this.node[parameterName] = value;
+    this.updateNode(this.node, false);
+
+    if (parameterName === "auto_sync") {
+      if (value === false) {
+        this.graphComponent.ref.current.clearCacheNodes();
+      }
+      this.handleSave();
+    }
   }
 
   handleDeprecateClick() {
@@ -633,7 +733,24 @@ export default class Editor extends Component {
           enabled: this.state.activeStatus,
           func: () => this.handleCancel(),
         },
+      }, {
+        render: makeControlCheckbox,
+        props: {
+          text: 'Sync',
+          enabled: this.state.editable && this.state.collection === COLLECTIONS.TEMPLATES,
+          checked: this.state.node && this.state.node.auto_sync,
+          func: (event) => this.handleChangeNodeParameter("auto_sync", event),
+        },
+      }, {
+        render: makeControlCheckbox,
+        props: {
+          text: 'Auto run',
+          enabled: this.state.editable && this.state.collection === COLLECTIONS.TEMPLATES,
+          checked: this.state.node && this.state.node.auto_run,
+          func: (event) => this.handleChangeNodeParameter("auto_run", event),
+        },
       },
+
 
       {
         render: makeControlSeparator,

@@ -4,8 +4,7 @@ import BlockInputList from './BlockInputList';
 import BlockOuputList from './BlockOutputList';
 import ParameterList from './ParameterList';
 import {PluginsConsumer} from '../../../../contexts';
-import cookie from 'react-cookies';
-import { NODE_STATUS, NODE_RUNNING_STATUS, OPERATION_VIEW_SETTING } from '../../../../constants';
+import { NODE_STATUS, NODE_RUNNING_STATUS } from '../../../../constants';
 
 import Icon from '../../../Common/Icon';
 
@@ -16,6 +15,10 @@ class Block extends React.Component {
   static propTypes = {
     node: PropTypes.shape({
       _id: PropTypes.string.isRequired,
+      _cached_node: PropTypes.shape({
+        node_running_status: PropTypes.oneOf(Object.values(NODE_RUNNING_STATUS)).isRequired,
+        outputs: PropTypes.array.isRequired,
+      }),
       title: PropTypes.string.isRequired,
       description: PropTypes.string.isRequired,
       kind: PropTypes.string.isRequired,
@@ -46,13 +49,6 @@ class Block extends React.Component {
 
   constructor(props) {
     super(props);
-
-    const settings = cookie.load('settings');
-    if (settings) {
-      this.kindAndTitle = settings.node_view_mode === OPERATION_VIEW_SETTING.KIND_AND_TITLE;
-    } else {
-      console.error('Could not find settings');
-    }
 
     this.state = {
       selected: props.selected,
@@ -108,10 +104,16 @@ class Block extends React.Component {
   }
 
   render() {
+    let node_running_status;
+    if (this.props.node._cached_node) {
+      node_running_status = this.props.node._cached_node.node_running_status.toLowerCase();
+    } else {
+      node_running_status = this.props.node.node_running_status.toLowerCase();
+    }
     const blockClass = [
       'node',
       this.state.selected ? 'selected' : '',
-      `running-status-${this.props.node.node_running_status.toLowerCase()}`,
+      `running-status-${node_running_status}`,
       `status-${this.props.node.node_status.toLowerCase()}`,
         (this.state.highlight ? 'error-highlight' : ''),
         (this.state.readonly ? 'readonly' : 'editable'),
@@ -140,7 +142,7 @@ class Block extends React.Component {
                         className="operation-icon"
                       />
                       <div className="operation-title-text">
-                        {this.kindAndTitle ? plugins_dict.executors_info[this.props.node.kind].title : this.props.node.title}
+                        {plugins_dict.executors_info[this.props.node.kind].title}
                       </div>
                   </span>
                   {
@@ -167,7 +169,7 @@ class Block extends React.Component {
                   }
                 </header>
                 <div className="node-title">
-                    {(this.kindAndTitle ? this.props.node.title : this.props.node.description) || "*"}
+                    {this.props.node.title || "*"}
                 </div>
                 <div className="node-content" onClick={(e) => {
                   this.handleClick(e);

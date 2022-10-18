@@ -3,7 +3,7 @@ The class defines `DBObject`. This is an abstraction of all of the objects in da
 """
 import datetime
 import inspect
-from typing import Any, Dict, Optional, Type, TypeVar
+from typing import Any, Dict, Optional, Type, TypeVar, no_type_check
 
 import typing_inspect
 
@@ -20,6 +20,7 @@ def register_class(target_class):
     _registry[target_class.__name__] = target_class
 
 
+@no_type_check
 def get_class(name: str) -> DBObjectType:
     """Get DB Object inherited class object by its name from the registry"""
     return _registry[name]
@@ -41,22 +42,8 @@ class _DBObject:
     # Name of the collection in the database
     DB_COLLECTION = ''
 
-    def __post_init__(self):
-        for (name, field_type) in self.__annotations__.items():     # pylint: disable=no-member
-            value = self.__dict__[name]
-            if typing_inspect.is_optional_type(field_type) and value is not None:
-                # Process case of Optional[Cls]
-                types = typing_inspect.get_args(field_type)
-                assert len(types) == 2, "Must be exactly two classes: [CustomClass, None]"
-                type_cls = types[0]
-                setattr(self, name, type_cls(getattr(self, name)))
-            if inspect.isclass(field_type):
-                # Process external type, such as ObjectId
-                # dataclass_json should handle the rest dataclasses and primitive types
-                setattr(self, name, field_type(getattr(self, name)))
-
     @classmethod
-    def load(cls, _id: ObjectId, collection: str = None) -> "_DBObject":
+    def load(cls: Type[DBObjectType], _id: ObjectId, collection: str = None) -> DBObjectType:
         """Load object from db.
 
         Args:
@@ -93,7 +80,7 @@ class _DBObject:
 
         return True
 
-    def copy(self) -> "_DBObject":
+    def copy(self: DBObjectType) -> DBObjectType:
         """Make a copy
 
         Return:
@@ -105,7 +92,7 @@ class _DBObject:
     def from_dict(cls: Type[DBObjectType], dict_obj: Dict[str, Any]) -> DBObjectType:
         """Create a class based on dict_obj"""
 
-    def to_dict(self: DBObjectType) -> Dict[str, Any]:     # pylint: disable=no-self-use
+    def to_dict(self: DBObjectType) -> Dict[str, Any]:
         """Create serialized object"""
         return {}
 
@@ -134,3 +121,17 @@ class DBObject(_DBObject, metaclass=Meta):
     Args:
         obj_dict    (dict, None):   Representation of the object. If None, an object with default fields will be created.
     """
+
+    def __post_init__(self):
+        for (name, field_type) in self.__annotations__.items():     # pylint: disable=no-member
+            value = self.__dict__[name]
+            if typing_inspect.is_optional_type(field_type) and value is not None:
+                # Process case of Optional[Cls]
+                types = typing_inspect.get_args(field_type)
+                assert len(types) == 2, "Must be exactly two classes: [CustomClass, None]"
+                type_cls = types[0]
+                setattr(self, name, type_cls(getattr(self, name)))
+            if inspect.isclass(field_type) and not isinstance(value, _DBObject):
+                # Process external type, such as ObjectId
+                # dataclass_json should handle the rest dataclasses and primitive types
+                setattr(self, name, field_type(getattr(self, name)))

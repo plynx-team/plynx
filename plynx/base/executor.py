@@ -1,24 +1,28 @@
 """Templates for PLynx Executors and utils."""
-
-import os
-import shutil
-from abc import abstractmethod
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Union
 
 from plynx.constants import NodeStatus, SpecialNodeId, ValidationCode, ValidationTargetType
 from plynx.db.node import Node, NodeRunningStatus, Parameter, ParameterListOfNodes, ParameterTypes
 from plynx.db.validation_error import ValidationError
 
-TMP_DIR = '/tmp/plx'
+
+@dataclass
+class RunningStatus:
+    """Async job running status"""
+    node_running_status: str
 
 
-class BaseExecutor:
+class BaseExecutor(ABC):
     """Base Executor class"""
     IS_GRAPH: bool = False
 
     def __init__(self, node: Node = None):
         self.node = node
-        self.workdir = TMP_DIR
+
+    def _update_node(self, node):
+        self.node = node
 
     @abstractmethod
     def run(self, preview: bool = False) -> str:
@@ -34,13 +38,33 @@ class BaseExecutor:
         """
 
     @abstractmethod
+    def launch(self) -> RunningStatus:
+        """Launch the Node on the backend.
+
+        The difference between `launch()` and `run()` is that:
+        - `run()` assumes synchronous execution.
+        - `launch()` does not necessary have this assumtion. Use `get_node_running_status` to get the status of the execution.
+
+        Returns:
+            RunningStatus
+        """
+        raise NotImplementedError()
+
+    def get_running_status(self) -> RunningStatus:
+        """Returns the status of the execution.
+
+        Async executions should sync with the remote and return the result immediately.
+        """
+        assert self.node, "Node must be difened by this stage"
+        return RunningStatus(self.node.node_running_status)
+
+    @abstractmethod
     def kill(self):
         """Force to kill the process.
 
         The reason can be the fact it was working too long or parent executor canceled it.
         """
 
-    # pylint: disable=no-self-use
     def is_updated(self) -> bool:
         """Function that is regularly called by a Worker.
 
@@ -90,15 +114,11 @@ class BaseExecutor:
             node.arrange_auto_layout()
         return node
 
-    def init_workdir(self):
-        """Make tmp dir if it does not exist"""
-        if not os.path.exists(self.workdir):
-            os.makedirs(self.workdir)
+    def init_executor(self):
+        """Initialize environment for the executor"""
 
-    def clean_up(self):
-        """Remove tmp dir"""
-        if os.path.exists(self.workdir):
-            shutil.rmtree(self.workdir, ignore_errors=True)
+    def clean_up_executor(self):
+        """Clean up the environment created by executor"""
 
     def validate(self) -> Union[ValidationError, None]:
         """Validate Node.
@@ -118,17 +138,15 @@ class BaseExecutor:
                     validation_code=ValidationCode.MISSING_PARAMETER
                 ))
 
-        # Meaning the node is in the graph. Otherwise souldn't be in validation step
-        if self.node.node_status != NodeStatus.CREATED:
-            for input in self.node.inputs:  # pylint: disable=redefined-builtin
-                min_count = input.min_count if input.is_array else 1
-                if len(input.input_references) < min_count:
-                    violations.append(
-                        ValidationError(
-                            target=ValidationTargetType.INPUT,
-                            object_id=input.name,
-                            validation_code=ValidationCode.MISSING_INPUT
-                        ))
+        for input in self.node.inputs:  # pylint: disable=redefined-builtin
+            min_count = input.min_count if input.is_array else 1
+            if len(input.input_references) < min_count:
+                violations.append(
+                    ValidationError(
+                        target=ValidationTargetType.INPUT,
+                        object_id=input.name,
+                        validation_code=ValidationCode.MISSING_INPUT
+                    ))
 
             if self.node.node_status == NodeStatus.MANDATORY_DEPRECATED:
                 violations.append(

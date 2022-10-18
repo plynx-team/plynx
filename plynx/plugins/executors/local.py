@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Union
 import jinja2
 from past.builtins import basestring
 
-import plynx.base.executor
+import plynx.plugins.executors.bases
 import plynx.utils.plugin_manager
 from plynx.constants import NodeResources, NodeRunningStatus, ParameterTypes
 from plynx.db.node import Node, Output, Parameter, ParameterCode
@@ -90,7 +90,7 @@ class _ResourceMerger:
         return self._dict
 
 
-class BaseBash(plynx.base.executor.BaseExecutor):
+class BaseBash(plynx.plugins.executors.bases.PLynxAsyncExecutorWithDirectory):
     """Base Executor that will use unix bash as a backend."""
     # pylint: disable=too-many-instance-attributes
 
@@ -353,7 +353,7 @@ class BaseBash(plynx.base.executor.BaseExecutor):
 class BashJinja2(BaseBash):
     """Local executor that uses jinja2 template to format a bash script."""
     HELP_TEMPLATE = """# Use templates: {}
-# For example `{{{{ '{{{{' }}}} param['_timeout'] {{{{ '}}}}' }}}}` or `{{{{ '{{{{' }}}} input['abc'] {{{{ '}}}}' }}}}`
+# For example `{{{{ '{{{{' }}}} params['_timeout'] {{{{ '}}}}' }}}}` or `{{{{ '{{{{' }}}} inputs['abc'] {{{{ '}}}}' }}}}`
 
 """
 
@@ -468,7 +468,7 @@ class PythonNode(BaseBash):
         return node
 
 
-class File(plynx.base.executor.BaseExecutor):
+class File(plynx.plugins.executors.bases.PLynxAsyncExecutor):
     """Dummy executor that represents STATIC Operations."""
 
     def run(self, preview: bool = False):

@@ -89,7 +89,6 @@ graph.approve().wait()
                 mode: 'python',
                 value: code,
               },
-              handleChange: null,
               readOnly: true,
               height: '550px',
             })}

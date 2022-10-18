@@ -67,6 +67,13 @@ function intToRGB(i) {
   return "00000".substring(0, 6 - c.length) + c;
 }
 
+function getBlockRunningStatus(block) {
+  if (block._cached_node) {
+    return block._cached_node.node_running_status;
+  }
+  return block.node_running_status ? block.node_running_status : "static";
+}
+
 class ReactBlockGraph extends React.Component {
   static propTypes = {
     data: PropTypes.object.isRequired,
@@ -144,6 +151,9 @@ class ReactBlockGraph extends React.Component {
     if (this.preventDrawingBox) {
       return;
     }
+    if (e.button === 2) {
+      return;
+    }
     const {svgComponent: {refs: {svg}}} = this.refs;
 
     // Get svg element position to substract offset top and left
@@ -209,6 +219,7 @@ class ReactBlockGraph extends React.Component {
       this.props.onBlockStartMove(nid, pos);
     }
     this.initialPos = pos;
+    this.moveChangedPosition = false;
     if (this.selectedNIDs.indexOf(nid) < 0) {
       this.moveOnlyCurrentBlock = true;
     } else {
@@ -226,7 +237,9 @@ class ReactBlockGraph extends React.Component {
           x: d.nodes[ii].x,
           y: d.nodes[ii].y,
         };
-        this.props.onBlockMove(d.nodes[ii]._id, blockPos);
+        if (this.moveChangedPosition) {
+          this.props.onBlockMove(d.nodes[ii]._id, blockPos);
+        }
       }
     }
   }
@@ -237,6 +250,10 @@ class ReactBlockGraph extends React.Component {
     // For some reason, we need to treat dragged object differently from selected
     d.nodes[index].x = pos.x;
     d.nodes[index].y = pos.y;
+
+    if (pos.x - this.initialPos.x !== 0 || pos.y - this.initialPos.y !== 0) {
+      this.moveChangedPosition = true;
+    }
 
     if (!this.moveOnlyCurrentBlock) {
       const dx = pos.x - this.initialPos.x;
@@ -286,11 +303,6 @@ class ReactBlockGraph extends React.Component {
   }
 
   handleOutputClick(nid, outputIndex, displayRaw) {
-    const nodes = this.state.data.nodes;
-    const block = this.getBlockbyId(nodes, nid);
-    if (block.node_running_status !== NODE_RUNNING_STATUS.STATIC && this.state.editable) {
-      return;
-    }
     this.props.onOutputClick(nid, outputIndex, displayRaw);
   }
 
@@ -475,7 +487,7 @@ class ReactBlockGraph extends React.Component {
                       key={graphId +
                         block._id +
                         (selectedBlock ? '1' : '0') +
-                        (block.node_running_status ? block.node_running_status : "static") +
+                        getBlockRunningStatus(block) +
                         block.highlight +
                         block._ts +
                         (block.cache_url ? 'c' : 'r') +
