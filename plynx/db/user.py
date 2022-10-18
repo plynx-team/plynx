@@ -67,7 +67,7 @@ class User(DBObject):
         """Get all the users"""
         return getattr(get_db_connector(), User.DB_COLLECTION).find({})
 
-    def generate_token(self, token_type: str, expiration: int = 10) -> str:
+    def generate_token(self, token_type: str, expiration: int = 600) -> str:
         """Generate a token.
 
         Args:
