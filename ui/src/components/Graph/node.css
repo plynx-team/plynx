@@ -91,7 +91,6 @@
   color: red;
 }
 
-
 .node-title {
   color: #ccc;
   white-space: nowrap;
@@ -237,11 +236,14 @@
   margin-bottom: 10px;
 }
 
+.input-item.required-and-empty {
+    background-color: rgba(255, 32, 0, 0.2);
+}
+
 .nodeOutputList li {
   cursor: pointer;
   color: #337ab7;
   height: 20px !important;
-  border-bottom: 1px solid rgba(128, 128, 128, 0.2);
 }
 
 .nodeOutputList li div {
@@ -303,8 +305,7 @@
 
 
 .editable .nodeOutputList li div {
-  border-top-right-radius: 5px;
-  border-bottom-right-radius: 5px;
+
 }
 
 .editable .nodeOutputList li div:hover {
@@ -333,7 +334,6 @@
 
 .nodeInputList li {
   height: 20px !important;
-  border-bottom: 1px solid rgba(128, 128, 128, 0.2);
 }
 
 .nodeInputList li div {
@@ -351,8 +351,7 @@
 }
 
 .editable .nodeInputList li div {
-  border-top-left-radius: 5px;
-  border-bottom-left-radius: 5px;
+
 }
 
 .editable .nodeInputList li div:hover {
