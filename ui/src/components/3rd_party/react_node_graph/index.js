@@ -21,7 +21,6 @@ const BORDERS_HEIGHT = 2;
 const ITEM_HEIGHT = 20;
 const COMMON_HEIGHT = HEADER_HEIGHT + DESCRIPTION_HEIGHT + FOOTER_HEIGHT + BORDERS_HEIGHT;
 
-
 const getScrollOffset = () => {
   const el = document.getElementsByClassName('GraphRoot')[0];
   return {
@@ -77,11 +76,10 @@ function getBlockRunningStatus(block) {
 class ReactBlockGraph extends React.Component {
   static propTypes = {
     data: PropTypes.object.isRequired,
-    editable: PropTypes.bool.isRequired,
-    graphId: PropTypes.string.isRequired,
+    editable: PropTypes.bool,
     onAllBlocksDeselect: PropTypes.func.isRequired,
     onBlockMove: PropTypes.func.isRequired,
-    onBlockStartMove: PropTypes.func.isRequired,
+    onBlockStartMove: PropTypes.func,
     onBlocksSelect: PropTypes.func.isRequired,
     onCopyBlock: PropTypes.func.isRequired,
     onNewConnector: PropTypes.func.isRequired,
@@ -91,7 +89,8 @@ class ReactBlockGraph extends React.Component {
     onRemoveConnector: PropTypes.func.isRequired,
     onSavePressed: PropTypes.func.isRequired,
     onSpecialParameterClick: PropTypes.func.isRequired,
-  }
+    connectDropTarget: PropTypes.func.isRequired,
+  };
 
   constructor(props) {
     super(props);
@@ -104,19 +103,12 @@ class ReactBlockGraph extends React.Component {
       dragging: false,
       editable: this.props.editable,
       selectedNIDs: this.selectedNIDs,
-      graphId: this.props.graphId,
     };
 
     this.onMouseMove = this.onMouseMove.bind(this);
     this.onMouseUp = this.onMouseUp.bind(this);
     this.commandPressed = false;
     this.recalcSize();
-  }
-
-  static propTypes = {
-    connectDropTarget: PropTypes.func.isRequired,
-    isOver: PropTypes.bool.isRequired,
-    canDrop: PropTypes.bool.isRequired,
   }
 
   componentDidMount() {
@@ -366,7 +358,6 @@ class ReactBlockGraph extends React.Component {
       this.selectedNIDs = nids;
     }
 
-
     this.setState({
       selectedNIDs: this.selectedNIDs
     });
@@ -405,7 +396,7 @@ class ReactBlockGraph extends React.Component {
   render() {
     const nodes = this.state.data.nodes;
     const connectors = this.state.data.connections;
-    const { mousePos, dragging, selectedNIDs, graphId, selectedConnector } = this.state;
+    const { mousePos, dragging, selectedNIDs, selectedConnector } = this.state;
     const { connectDropTarget } = this.props;
 
     let i = 0;
@@ -484,8 +475,7 @@ class ReactBlockGraph extends React.Component {
                       index={i++}
                       node={block}
                       highlight={block.highlight || false}
-                      key={graphId +
-                        block._id +
+                      key={block._id +
                         (selectedBlock ? '1' : '0') +
                         getBlockRunningStatus(block) +
                         block.highlight +

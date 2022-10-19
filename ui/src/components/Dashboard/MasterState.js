@@ -1,3 +1,4 @@
+/* eslint max-classes-per-file: 0 */
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { PLynxApi } from '../../API';
@@ -16,7 +17,7 @@ class ListItem extends Component {
       kinds: PropTypes.array.isRequired,
       update_date: PropTypes.string.isRequired,
     }).isRequired,
-  }
+  };
 
   render() {
     const isBusy = this.props.item.runs.length > 0;

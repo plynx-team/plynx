@@ -35,6 +35,11 @@ const RenderIcon = ({ family, name, ...props }) => {
   throw new Error("Unknown icon family " + family);
 };
 
+RenderIcon.propTypes = {
+  family: PropTypes.string.isRequired,
+  name: PropTypes.string.isRequired,
+};
+
 export default function icon(props) {
   const {type_descriptor} = props;
   const icon_descriptor = type_descriptor.icon.split('.');

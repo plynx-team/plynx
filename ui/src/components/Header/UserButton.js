@@ -6,7 +6,6 @@ import { User } from 'react-feather';
 
 import './style.css';
 
-
 export default class UserButton extends Component {
   constructor(props) {
     super(props);

@@ -1,13 +1,12 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-
 export default class BlockInputListItem extends React.Component {
   static propTypes = {
     index: PropTypes.number.isRequired,
     item: PropTypes.string.isRequired,
     onMouseUp: PropTypes.func.isRequired,
-  }
+  };
 
   onMouseUp(e) {
     e.stopPropagation();

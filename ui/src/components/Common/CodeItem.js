@@ -31,7 +31,7 @@ export default class EnumItem extends Component {
       value: PropTypes.string.isRequired,
     }).isRequired,
     onChange: PropTypes.func.isRequired,
-  }
+  };
 
   constructor(props) {
     super(props);

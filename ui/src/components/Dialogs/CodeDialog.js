@@ -28,7 +28,7 @@ export default class CodeDialog extends Component {
     }).isRequired,
     onClose: PropTypes.func.isRequired,
     onParameterChanged: PropTypes.func,
-  }
+  };
 
   constructor(props) {
     super(props);

@@ -1,6 +1,5 @@
 import { ObjectID } from 'bson';
 
-
 export const PARAMETER_TYPES = [
   {
     type: 'str', // same as in parameter_types.py

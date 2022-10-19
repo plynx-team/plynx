@@ -16,7 +16,6 @@ import OperationList from './components/NodeList/operationList';
 import WorkflowList from './components/NodeList/workflowList';
 import RunList from './components/NodeList/runList';
 
-
 import './App.css';
 
 class App extends Component {

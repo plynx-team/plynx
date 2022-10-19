@@ -14,6 +14,11 @@ Please join the discussions in the [Discord](https://discord.gg/ZC3wY2J).
 - [(Release 1.9.x) New scalable execution model](https://github.com/plynx-team/plynx/projects/3)
 - [(Release 1.10.x) Create API Builder](https://github.com/plynx-team/plynx/projects/4)
 
+## [1.8.1] - 2022-10-19
+
+- Using single threaded python DAG by default.
+- UI bug fixes.
+
 ## [1.8.0] - 2022-10-17
 
 - Auto-sync and auto-run flags for interactive DAGs.

@@ -77,7 +77,6 @@ export default class NodeProperties extends Component {
         />
       );
 
-
     const statePropertiesItems = [
       makeKeyValueRow('Node Status', <i>{this.state.nodeStatus}</i>, 'node_status'),
       makeKeyValueRow('Created', <i>{utcTimeToLocal(this.props.created)}</i>, 'created'),

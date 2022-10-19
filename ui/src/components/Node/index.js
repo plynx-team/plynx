@@ -57,7 +57,7 @@ export default class Node extends Component {
     escPressed: () => {
       this.closeAllDialogs();
     },
-  }
+  };
 
   sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));

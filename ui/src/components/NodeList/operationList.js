@@ -5,7 +5,6 @@ import { makeControlSeparator } from '../Common/controlButton';
 import { COLLECTIONS, VIRTUAL_COLLECTIONS } from '../../constants';
 import { renderNodeItem, NODE_ITEM_HEADER } from './common';
 
-
 const renderItem = renderNodeItem(COLLECTIONS.TEMPLATES, 'node_status');
 
 export default class OperationListPage extends Component {

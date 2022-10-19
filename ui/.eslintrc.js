@@ -1,6 +1,6 @@
 module.exports = {
   'extends': 'airbnb-base',
-  'parser': 'babel-eslint',
+  'parser': '@babel/eslint-parser',
   'plugins': [
     'react',
   ],
@@ -10,6 +10,7 @@ module.exports = {
     'ecmaFeatures': {
       'jsx': true,
     },
+    "requireConfigFile": false,
   },
   'env': {
     'es6': true,
@@ -28,6 +29,7 @@ module.exports = {
             // eslint-disable-next-line no-process-env
             'modules': ['node_modules', process.env.NODE_MODULES_PATH],
             'extensions': ['.js', '.jsx', '.ts', '.tsx'],
+            'fullySpecified': false
           },
         },
       },
@@ -211,6 +213,7 @@ module.exports = {
     'no-plusplus': 0,
     'no-process-env': 0,
     'no-process-exit': 2,
+    'no-promise-executor-return': 0,
     'no-proto': 2,
     'no-prototype-builtins': 0,
     'no-redeclare': 2,

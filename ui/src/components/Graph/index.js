@@ -1,7 +1,6 @@
 /* eslint max-lines: 0 */
 /* eslint complexity: 0 */
 
-
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import ReactNodeGraph from '../3rd_party/react_node_graph';
@@ -96,7 +95,7 @@ class Graph extends Component {
     node: PropTypes.object.isRequired,
     editable: PropTypes.bool.isRequired,
     selectedNode: PropTypes.string,
-  }
+  };
 
   constructor(props) {
     super(props);
@@ -749,7 +748,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
     escPressed: () => {
       this.closeAllDialogs();
     },
-  }
+  };
 
   handleDrop(blockObjArg, replaceOriginalNode) {
     const blockObj = JSON.parse(JSON.stringify(blockObjArg)); // copy
@@ -969,6 +968,5 @@ ENDPOINT = '` + API_ENDPOINT + `'
     );
   }
 }
-
 
 export default withDragDropContext(Graph);

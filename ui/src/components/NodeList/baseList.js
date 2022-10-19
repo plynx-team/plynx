@@ -14,7 +14,6 @@ import PropTypes from 'prop-types';
 import './list.css';
 import '../controls.css';
 
-
 export default class ListPage extends Component {
   static propTypes = {
     children: PropTypes.oneOfType([
@@ -30,8 +29,7 @@ export default class ListPage extends Component {
     header: PropTypes.array.isRequired,
     renderItem: PropTypes.func.isRequired,
     onUploadDialog: PropTypes.func,
-  }
-
+  };
 
   constructor(props) {
     super(props);

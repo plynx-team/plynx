@@ -2,7 +2,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-
 export default class TrashIcon extends React.Component {
   static propTypes = {
     position: PropTypes.shape({
@@ -11,7 +10,7 @@ export default class TrashIcon extends React.Component {
     }).isRequired,
     color: PropTypes.string.isRequired,
     onClick: PropTypes.func.isRequired,
-  }
+  };
 
   handleClick(e) {
     if (this.props.onClick) {

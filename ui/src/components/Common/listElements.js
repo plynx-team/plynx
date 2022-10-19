@@ -12,7 +12,6 @@ export function listTextElement(className, text, key) {
   );
 }
 
-
 export function renderStatus(status) {
   return <div className={`status-badge ${status}`}>
       {status}

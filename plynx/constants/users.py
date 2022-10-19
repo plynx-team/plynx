@@ -31,3 +31,9 @@ class RegisterUserExceptionCode:
     EMAIL_ALREADY_EXISTS: str = 'EMAIL_ALREADY_EXISTS'
     INVALID_EMAIL: str = 'INVALID_EMAIL'
     INVALID_LENGTH_OF_USERNAME: str = 'INVALID_LENGTH_OF_USERNAME'
+
+
+class TokenType:
+    """Auth token type"""
+    ACCESS_TOKEN = "access"
+    REFRESH_TOKEN = "refresh"

@@ -4,7 +4,6 @@ import onClickOutside from 'react-onclickoutside';
 
 import TrashIcon from './TrashIcon';
 
-
 class Spline extends React.Component {
   static propTypes = {
     color: PropTypes.string.isRequired,
@@ -26,7 +25,7 @@ class Spline extends React.Component {
     onRemove: PropTypes.func,
     onSelected: PropTypes.func,
     readonly: PropTypes.bool.isRequired,
-  }
+  };
 
   constructor(props) {
     super(props);
@@ -117,7 +116,6 @@ class Spline extends React.Component {
                     />
                 : null }
                 </g>
-
 
     );
   }
