@@ -76,11 +76,10 @@ function getBlockRunningStatus(block) {
 class ReactBlockGraph extends React.Component {
   static propTypes = {
     data: PropTypes.object.isRequired,
-    editable: PropTypes.bool.isRequired,
-    graphId: PropTypes.string.isRequired,
+    editable: PropTypes.bool,
     onAllBlocksDeselect: PropTypes.func.isRequired,
     onBlockMove: PropTypes.func.isRequired,
-    onBlockStartMove: PropTypes.func.isRequired,
+    onBlockStartMove: PropTypes.func,
     onBlocksSelect: PropTypes.func.isRequired,
     onCopyBlock: PropTypes.func.isRequired,
     onNewConnector: PropTypes.func.isRequired,
@@ -104,7 +103,6 @@ class ReactBlockGraph extends React.Component {
       dragging: false,
       editable: this.props.editable,
       selectedNIDs: this.selectedNIDs,
-      graphId: this.props.graphId,
     };
 
     this.onMouseMove = this.onMouseMove.bind(this);
@@ -398,7 +396,7 @@ class ReactBlockGraph extends React.Component {
   render() {
     const nodes = this.state.data.nodes;
     const connectors = this.state.data.connections;
-    const { mousePos, dragging, selectedNIDs, graphId, selectedConnector } = this.state;
+    const { mousePos, dragging, selectedNIDs, selectedConnector } = this.state;
     const { connectDropTarget } = this.props;
 
     let i = 0;
@@ -477,8 +475,7 @@ class ReactBlockGraph extends React.Component {
                       index={i++}
                       node={block}
                       highlight={block.highlight || false}
-                      key={graphId +
-                        block._id +
+                      key={block._id +
                         (selectedBlock ? '1' : '0') +
                         getBlockRunningStatus(block) +
                         block.highlight +
