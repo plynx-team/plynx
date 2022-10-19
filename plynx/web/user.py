@@ -50,11 +50,11 @@ def post_demo_user():
         except bson.objectid.InvalidId as e:
             logger.error(f"node_id `{DemoUserManager.demo_config.template_id}` is invalid")
             logger.error(e)
-            return make_fail_response('Failed to create a demo node')
+            return make_fail_response('Failed to create a demo node.')
         try:
             user_id = user._id
             node = template_collection_manager.get_db_node(node_id, user_id)
-            node = get_class(node['_type'])(node).clone(NodeClonePolicy.NODE_TO_NODE)
+            node = get_class(node['_type']).from_dict(node).clone(NodeClonePolicy.NODE_TO_NODE)
             node.author = user_id
             node.save()
             template_id = node._id
