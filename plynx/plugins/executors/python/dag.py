@@ -38,11 +38,12 @@ def worker_main(job_run_queue: queue.Queue, job_complete_queue: queue.Queue):
         else:
             node.node_running_status = NodeRunningStatus.SUCCESS
         job_complete_queue.put(node)
+        logging.info(f"worker_main: added node {node.title} on the job_complete_queue queue")
 
     logging.info("Deleted pool worker")
 
 
-class DAG(plynx.plugins.executors.dag.DAG):
+class DAGParallel(plynx.plugins.executors.dag.DAG):
     """ Python DAG scheduler.
 
     Args:
@@ -73,7 +74,9 @@ class DAG(plynx.plugins.executors.dag.DAG):
         while not self.job_complete_queue.empty():
             try:
                 node = self.job_complete_queue.get_nowait()
+                logging.info(f"pop_jobs: run update {node.title}: start")
                 self.update_node(node)
+                logging.info(f"pop_jobs: run update {node.title}: finish")
                 num_completed_jobs += 1
             except queue.Empty:
                 logging.warning("Queue is empty")
@@ -129,3 +132,80 @@ class DAG(plynx.plugins.executors.dag.DAG):
         """Return True or False depending on the running status of the DAG."""
         # TODO wait for the canceled nodes to complete
         return self._node_running_status in {NodeRunningStatus.SUCCESS, NodeRunningStatus.FAILED, NodeRunningStatus.CANCELED}
+
+
+class DAG(plynx.plugins.executors.dag.DAG):
+    """Base Executor class"""
+    IS_GRAPH: bool = True
+
+    def __init__(self, node: Node):
+        super().__init__(node)
+        self.job_run_queue: queue.Queue = queue.Queue()
+        self.job_complete_queue: queue.Queue = queue.Queue()
+        self.worker_pool = None
+
+    def kill(self):
+        """Force to kill the process.
+
+        The reason can be the fact it was working too long or parent exectuter canceled it.
+        """
+        logging.info("Received kill request")
+        self._node_running_status = NodeRunningStatus.CANCELED
+        self.job_complete_queue.put(NodeRunningStatus.CANCELED)
+
+    def init_executor(self):
+        """Initialize environment for the executor"""
+        pool_size = 1
+        self.worker_pool = multiprocessing.pool.ThreadPool(
+            pool_size, worker_main, (
+                self.job_run_queue,
+                self.job_complete_queue,
+            )
+        )
+
+    def clean_up_executor(self):
+        """Clean up the environment created by executor"""
+        if self.worker_pool:
+            self.worker_pool.terminate()
+        self.worker_pool = None
+
+    def _apply_inputs(self, node):
+        for node_input in node.inputs:
+            for input_reference in node_input.input_references:
+                node_input.values.extend(
+                    self.node_id_to_node[to_object_id(input_reference.node_id)].get_output_by_name(
+                        input_reference.output_id
+                    ).values
+                )
+
+    def run(self, preview: bool = False) -> str:
+        """Main execution function.
+        """
+        assert self.node, "Attribute `node` is unassigned"
+        if preview:
+            raise Exception("`preview` is not supported for the DAG")
+
+        for sub_node in self.node.traverse_in_order():
+            if NodeRunningStatus.is_finished(sub_node.node_running_status):
+                continue
+            self._apply_inputs(sub_node)
+            sub_node.node_running_status = NodeRunningStatus.RUNNING
+            self.node.save(collection=Collections.RUNS, force=True)
+
+            # Run
+            self.job_run_queue.put(sub_node.copy())
+            new_node = self.job_complete_queue.get()
+
+            # In case something else is on the queue (i.e. canceled)
+            if isinstance(new_node, Node):
+                self.update_node(new_node)
+
+            if NodeRunningStatus.is_finished(self._node_running_status):
+                prev_status = self._node_running_status
+                self._node_running_status = prev_status
+                break
+            self.node.save(collection=Collections.RUNS, force=True)
+
+        if self._node_running_status == NodeRunningStatus.FAILED_WAITING:
+            self._node_running_status = NodeRunningStatus.FAILED
+        return self._node_running_status
