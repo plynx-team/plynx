@@ -1,6 +1,6 @@
 """Templates for PLynx Resources and utils."""
 from collections import namedtuple
-from typing import Dict
+from typing import Any, Dict, Optional
 
 from plynx.constants import NodeResources
 
@@ -18,6 +18,7 @@ def _force_decode(byte_array):
 class BaseResource:
     """Base Resource class"""
     DISPLAY_RAW: bool = False
+    DISPLAY_THUMBNAIL: bool = False
 
     def __init__(self):
         pass
@@ -47,3 +48,8 @@ class BaseResource:
         # TODO escape html code for security reasons
         data = _force_decode(preview_object.fp.read())
         return f"<pre>{data}</pre>"
+
+    @classmethod
+    def thumbnail(cls, output: Any) -> Optional[str]:   # pylint: disable=unused-argument
+        """Thumbnail preview Resource"""
+        return None

@@ -120,7 +120,7 @@ class BaseExecutor(ABC):
     def clean_up_executor(self):
         """Clean up the environment created by executor"""
 
-    def validate(self) -> Union[ValidationError, None]:
+    def validate(self, ignore_inputs: bool = True) -> Union[ValidationError, None]:
         """Validate Node.
 
         Return:
@@ -138,23 +138,25 @@ class BaseExecutor(ABC):
                     validation_code=ValidationCode.MISSING_PARAMETER
                 ))
 
-        for input in self.node.inputs:  # pylint: disable=redefined-builtin
-            min_count = input.min_count if input.is_array else 1
-            if len(input.input_references) < min_count:
-                violations.append(
-                    ValidationError(
-                        target=ValidationTargetType.INPUT,
-                        object_id=input.name,
-                        validation_code=ValidationCode.MISSING_INPUT
-                    ))
+        # Meaning the node is in the graph. Otherwise souldn't be in validation step
+        if not ignore_inputs:
+            for input in self.node.inputs:  # pylint: disable=redefined-builtin
+                min_count = input.min_count if input.is_array else 1
+                if len(input.input_references) < min_count:
+                    violations.append(
+                        ValidationError(
+                            target=ValidationTargetType.INPUT,
+                            object_id=input.name,
+                            validation_code=ValidationCode.MISSING_INPUT
+                        ))
 
-            if self.node.node_status == NodeStatus.MANDATORY_DEPRECATED:
-                violations.append(
-                    ValidationError(
-                        target=ValidationTargetType.NODE,
-                        object_id=str(self.node._id),
-                        validation_code=ValidationCode.DEPRECATED_NODE
-                    ))
+        if self.node.node_status == NodeStatus.MANDATORY_DEPRECATED:
+            violations.append(
+                ValidationError(
+                    target=ValidationTargetType.NODE,
+                    object_id=str(self.node._id),
+                    validation_code=ValidationCode.DEPRECATED_NODE
+                ))
 
         if len(violations) == 0:
             return None

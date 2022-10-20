@@ -4,7 +4,7 @@ import json
 import os
 import stat
 import zipfile
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from plynx.base import resource
 from plynx.constants import NodeResources
@@ -34,10 +34,17 @@ class PDF(resource.BaseResource):
 
 class Image(resource.BaseResource):
     """Image file"""
+    DISPLAY_THUMBNAIL: bool = True
+
     @classmethod
     def preview(cls, preview_object: resource.PreviewObject) -> str:
         """Generate preview html body"""
         src_url = f"{WEB_CONFIG.endpoint}/resource/{preview_object.resource_id}"
+        return f'<img src="{src_url}" width="100%" alt="preview" />'
+
+    @classmethod
+    def thumbnail(cls, output: Any) -> Optional[str]:
+        src_url = f"{WEB_CONFIG.endpoint}/resource/{output.values[0]}"
         return f'<img src="{src_url}" width="100%" alt="preview" />'
 
 

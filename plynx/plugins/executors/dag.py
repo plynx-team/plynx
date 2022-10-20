@@ -301,7 +301,7 @@ class DAG(plynx.plugins.executors.bases.PLynxAsyncExecutor):
         for executor in self.monitoring_executors:
             executor.kill()
 
-    def validate(self) -> Optional[ValidationError]:
+    def validate(self, ignore_inputs: bool = True) -> Optional[ValidationError]:
         assert self.node, "Attribute `node` is unassigned"
         validation_error = super().validate()
         if validation_error:
@@ -319,7 +319,7 @@ class DAG(plynx.plugins.executors.bases.PLynxAsyncExecutor):
                 ))
 
         for node in sub_nodes:
-            node_violation = plynx.utils.executor.materialize_executor(node.to_dict()).validate()
+            node_violation = plynx.utils.executor.materialize_executor(node.to_dict()).validate(ignore_inputs=False)
             if node_violation:
                 violations.append(node_violation)
 

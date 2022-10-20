@@ -14,6 +14,7 @@ import plynx.utils.plugin_manager
 from plynx.constants import Collections, IAMPolicies, NodeClonePolicy, NodePostAction, NodePostStatus, NodeRunningStatus, NodeStatus, NodeVirtualCollection
 from plynx.db.node import Node
 from plynx.utils.common import to_object_id
+from plynx.utils.thumbnails import apply_thumbnails
 from plynx.web.common import app, handle_errors, logger, make_fail_response, make_permission_denied, make_success_response, requires_auth
 
 PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'hub', 'node_kinds', 'search', 'user_id'}
@@ -115,34 +116,35 @@ def get_nodes(collection: str, node_link: Optional[str] = None):
         node_dict = node_collection_managers[collection].get_db_node(node_id, user_id)
         if not node_dict:
             return make_fail_response(f"Node `{node_link}` was not found"), 404
+        node = Node.from_dict(node_dict)
 
-        is_owner = node_dict['author'] == user_id
-        kind = node_dict['kind']
-        if kind in workflow_manager.kind_to_workflow_dict and not can_view_workflows:
+        is_owner = node.author == user_id
+        if node.kind in workflow_manager.kind_to_workflow_dict and not can_view_workflows:
             return make_permission_denied()
-        if kind in operation_manager.kind_to_operation_dict and not can_view_operations:
+        if node.kind in operation_manager.kind_to_operation_dict and not can_view_operations:
             return make_permission_denied()
-        if kind in workflow_manager.kind_to_workflow_dict and not can_view_others_workflows and not is_owner:
+        if node.kind in workflow_manager.kind_to_workflow_dict and not can_view_others_workflows and not is_owner:
             return make_permission_denied()
-        if kind in operation_manager.kind_to_operation_dict and not can_view_others_operations and not is_owner:
+        if node.kind in operation_manager.kind_to_operation_dict and not can_view_others_operations and not is_owner:
             return make_permission_denied()
 
-        latest_run_id = node_dict.get("latest_run_id", None)
+        latest_run_id = node.latest_run_id
         last_run_is_in_finished_status = None
         if collection == Collections.TEMPLATES and latest_run_id:
             node_in_run_dict = node_collection_managers[Collections.RUNS].get_db_node(latest_run_id, user_id)
 
             if node_in_run_dict:
-                node = Node.from_dict(node_dict)
                 node_in_run = Node.from_dict(node_in_run_dict)
                 node.augment_node_with_cache(node_in_run)
-                node_dict = node.to_dict()
+
                 last_run_is_in_finished_status = NodeRunningStatus.is_finished(node_in_run.node_running_status)
             else:
                 logger.warning(f"Failed to load a run with id `{latest_run_id}`")
 
+        apply_thumbnails(node)
+
         return make_success_response({
-            "node": node_dict,
+            "node": node.to_dict(),
             "plugins_dict": PLUGINS_DICT,
             "last_run_is_in_finished_status": last_run_is_in_finished_status,
             })
