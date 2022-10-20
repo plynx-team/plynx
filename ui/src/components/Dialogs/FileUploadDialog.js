@@ -65,7 +65,7 @@ export default class FileUploadDialog extends Component {
     console.log(self.props.uploadOperation.kind);
 
     const config = {
-      headers: { 'content-type': 'multipart/form-data' },
+      headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress(progressEvent) {
         const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
         self.setState({
