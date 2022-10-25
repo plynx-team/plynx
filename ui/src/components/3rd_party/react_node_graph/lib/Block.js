@@ -204,7 +204,7 @@ class Block extends React.Component {
                     onClick={(index) => this.onSpecialParameterClick(index)}
                 />
                 <ThumbnailList
-                    items={outputs.filter(output => output.thumbnail !== null)}
+                    items={outputs.filter(output => output.thumbnail != null)}
                     onClick={(output_name, display_raw) => this.onThumbnailClick(output_name, display_raw)}
                     resources_dict={plugins_dict.resources_dict}
                 />

@@ -24,19 +24,12 @@
   box-shadow: 0 0 8px 3px #99F;
 }
 
-.node-seperator {
-  color: black;
-  border-color: black;
-}
-
 .node-content {
   padding: 0px 0px 10px 0px;
 }
 
 .node-header {
   cursor: all-scroll;
-
-  background: #000;
 
   border-top-left-radius: 4px;
   border-top-right-radius: 4px;
@@ -52,10 +45,6 @@
 
   display: grid;
   grid-template-columns: 1fr 13px;
-}
-
-.node.selected .node-header {
-  background: #335;
 }
 
 .node-header-title {
@@ -103,41 +92,41 @@
   text-decoration: line-through;
 }
 
-.node.status-mandatory_deprecated > .node-header, .node.status-mandatory_deprecated > .node-title {
+.status-mandatory_deprecated > .node-header, .node.status-mandatory_deprecated > .node-title {
   text-decoration: line-through;
 }
 
-.node.running-status-in_queue {
+.running-status-in_queue > .node-header {
   background-color: rgba(70, 70, 70, 0.7);
 }
 
-.node.running-status-running {
+.running-status-running > .node-header {
   background-color: rgba(0, 70, 70, 0.7);
 }
 
-.node.running-status-failed {
+.running-status-failed > .node-header {
   background-color: rgba(80, 0, 0, 0.7);
 }
 
-.node.running-status-success {
+.running-status-success > .node-header {
   background-color: rgba(0, 70, 0, 0.7);
 }
 
-.node.running-status-static {
+.running-status-static > .node-header {
   background-color: rgba(128, 96, 44, 0.6);
 }
 
-.node.running-status-restored {
+.running-status-restored > .node-header {
   background: repeating-linear-gradient(
       -45deg, rgba(0, 100, 0, 0.7), rgba(0, 100, 0, 0.7) 20px, rgba(128, 96, 44, 0.6) 20px, rgba(128, 96, 44, 0.6) 25px
       );
 }
 
-.node.running-status-canceled {
+.running-status-canceled > .node-header {
   background-color: rgba(145, 80, 80, 0.6);
 }
 
-.node.running-status-special {
+.running-status-special > .node-header {
   background-color: rgba(145, 80, 145, 0.6);
 }
 
@@ -303,9 +292,15 @@
   background-color: #62a6f3;
 }
 
+.node-separator {
+  background: #333;
+  height: 1px;
+  display: flex;
+  width: 100%;
+}
 
 .node-thumbnail-wrapper {
- margin: 3px;
+  margin: 3px;
 }
 
 .node-thumbnail-wrapper > .parameterItem {

@@ -22,23 +22,25 @@ export default class ThumbnailListItem extends React.Component {
     const name = this.props.item.name;
 
     return (
-      <div className="parameterItem">
-        <div
-          className="button"
-          onClick={
-            (e) => {
-                this.noop(e);
-                const type_descriptor = this.props.resources_dict[this.props.item.file_type];
-                this.props.onClick(this.props.item.name, type_descriptor.display_raw)
-            }
+      <div
+        className="parameterItem"
+        onClick={
+          (e) => {
+              this.noop(e);
+              const type_descriptor = this.props.resources_dict[this.props.item.file_type];
+              this.props.onClick(this.props.item.name, type_descriptor.display_raw)
           }
-          >
-          {name}
+        }
+        >
+          <div
+            className="item-title"
+            >
+            {name}
+          </div>
           <div
             dangerouslySetInnerHTML={{ __html: this.props.item.thumbnail }}           // eslint-disable-line react/no-danger
           />
         </div>
-      </div>
     );
   }
 }

@@ -15,6 +15,7 @@ export default class ThumbnailList extends React.Component {
     // TODO broken: this.props.items is null
     return (
       <div className="node-thumbnail-wrapper">
+        <div className="node-separator"></div>
           {this.props.items && this.props.items.map((item) => {
             return (
               <ThumbnailListItem

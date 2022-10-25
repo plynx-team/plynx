@@ -44,6 +44,8 @@ class Image(resource.BaseResource):
 
     @classmethod
     def thumbnail(cls, output: Any) -> Optional[str]:
+        if len(output.values) != 1:
+            return None
         src_url = f"{WEB_CONFIG.endpoint}/resource/{output.values[0]}"
         return f'<img src="{src_url}" width="100%" alt="preview" />'
 
