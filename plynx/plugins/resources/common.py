@@ -130,11 +130,11 @@ class Directory(resource.BaseResource):
         return {NodeResources.OUTPUT: filename}
 
     @staticmethod
-    def postprocess_output(filename: str) -> str:
+    def postprocess_output(value: str) -> str:
         """Compress folder to a zip file"""
-        zip_filename = f"{filename}.zip"
+        zip_filename = f"{value}.zip"
         with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zf:
-            zipdir(filename, zf)
+            zipdir(value, zf)
         return zip_filename
 
     @classmethod

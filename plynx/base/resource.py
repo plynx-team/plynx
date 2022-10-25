@@ -38,9 +38,14 @@ class BaseResource:
         return {NodeResources.OUTPUT: filename}
 
     @staticmethod
-    def postprocess_output(filename: str) -> str:
+    def preprocess_input(value: Any) -> Any:
+        """Resource preprocessor"""
+        return value
+
+    @staticmethod
+    def postprocess_output(value: Any) -> Any:
         """Resource postprocessor"""
-        return filename
+        return value
 
     @classmethod
     def preview(cls, preview_object: PreviewObject) -> str:
