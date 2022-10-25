@@ -88,8 +88,8 @@ class Block extends React.Component {
 
   onThumbnailClick(output_name, display_raw) {
     const outputs = this.props.node.outputs;
-    for (var ii = 0; ii < outputs.length; ++ii) {
-      if (output_name == outputs[ii].name) {
+    for (let ii = 0; ii < outputs.length; ++ii) {
+      if (output_name === outputs[ii].name) {
         this.props.onOutputClick(this.props.node._id, ii, display_raw);
       }
     }
@@ -114,7 +114,7 @@ class Block extends React.Component {
 
   render() {
     let node_running_status;
-    var outputs;
+    let outputs;
     if (this.props.node._cached_node) {
       node_running_status = this.props.node._cached_node.node_running_status.toLowerCase();
       outputs = this.props.node._cached_node.outputs;
@@ -204,7 +204,7 @@ class Block extends React.Component {
                     onClick={(index) => this.onSpecialParameterClick(index)}
                 />
                 <ThumbnailList
-                    items={outputs.filter(output => output.thumbnail != null)}
+                    items={outputs.filter(output => output.thumbnail)}
                     onClick={(output_name, display_raw) => this.onThumbnailClick(output_name, display_raw)}
                     resources_dict={plugins_dict.resources_dict}
                 />

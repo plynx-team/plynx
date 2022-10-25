@@ -52,8 +52,7 @@ export default class OperationListPage extends Component {
                 >
                 {this.state.uploadOperation &&
                     <PluginsConsumer>
-                    { plugins_info =>
-                          <FileUploadDialog
+                    { plugins_info => <FileUploadDialog
                             onClose={() => this.handleCloseDialog()}
                             uploadOperation={this.state.uploadOperation}
                             plugins_info={plugins_info}

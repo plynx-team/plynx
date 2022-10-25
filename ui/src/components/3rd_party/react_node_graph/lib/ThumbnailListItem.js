@@ -8,8 +8,9 @@ export default class ThumbnailListItem extends React.Component {
       name: PropTypes.string.isRequired,
       file_type: PropTypes.string.isRequired,
       is_array: PropTypes.bool.isRequired,
-      thumbnail:  PropTypes.string.isRequired,
+      thumbnail: PropTypes.string.isRequired,
     }).isRequired,
+    onClick: PropTypes.func.isRequired,
     resources_dict: PropTypes.object.isRequired,
   };
 
@@ -26,9 +27,9 @@ export default class ThumbnailListItem extends React.Component {
         className="parameterItem"
         onClick={
           (e) => {
-              this.noop(e);
-              const type_descriptor = this.props.resources_dict[this.props.item.file_type];
-              this.props.onClick(this.props.item.name, type_descriptor.display_raw)
+            this.noop(e);
+            const type_descriptor = this.props.resources_dict[this.props.item.file_type];
+            this.props.onClick(this.props.item.name, type_descriptor.display_raw);
           }
         }
         >

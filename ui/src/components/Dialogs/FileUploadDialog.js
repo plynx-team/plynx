@@ -14,7 +14,12 @@ export default class FileUploadDialog extends Component {
     onClose: PropTypes.func.isRequired,
     uploadOperation: PropTypes.shape({
       resources: PropTypes.array.isRequired,
+      kind: PropTypes.string.isRequired,
     }),
+    plugins_info: PropTypes.shape({
+      operations_dict: PropTypes.object.isRequired,
+      resources_dict: PropTypes.object.isRequired,
+    }).isRequired,
   };
 
   constructor(props) {
