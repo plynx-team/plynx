@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import BlockInputList from './BlockInputList';
 import BlockOuputList from './BlockOutputList';
 import ParameterList from './ParameterList';
+import ThumbnailList from './ThumbnailList';
 import {PluginsConsumer} from '../../../../contexts';
 import { NODE_STATUS, NODE_RUNNING_STATUS } from '../../../../constants';
 
@@ -85,6 +86,15 @@ class Block extends React.Component {
     this.props.onSpecialParameterClick(this.props.node._id, index);
   }
 
+  onThumbnailClick(output_name, display_raw) {
+    const outputs = this.props.node.outputs;
+    for (let ii = 0; ii < outputs.length; ++ii) {
+      if (output_name === outputs[ii].name) {
+        this.props.onOutputClick(this.props.node._id, ii, display_raw);
+      }
+    }
+  }
+
   onCompleteConnector(index) {
     this.props.onCompleteConnector(this.props.node._id, index);
   }
@@ -104,10 +114,13 @@ class Block extends React.Component {
 
   render() {
     let node_running_status;
+    let outputs;
     if (this.props.node._cached_node) {
       node_running_status = this.props.node._cached_node.node_running_status.toLowerCase();
+      outputs = this.props.node._cached_node.outputs;
     } else {
       node_running_status = this.props.node.node_running_status.toLowerCase();
+      outputs = this.props.node.outputs;
     }
     const blockClass = [
       'node',
@@ -179,7 +192,7 @@ class Block extends React.Component {
                                   resources_dict={plugins_dict.resources_dict}
                                   />
                     <BlockOuputList
-                                  items={this.props.node.outputs}
+                                  items={outputs}
                                   onStartConnector={(index) => this.onStartConnector(index)}
                                   onClick={(index, displayRaw) => this.onOutputClick(index, displayRaw)}
                                   resources_dict={plugins_dict.resources_dict}
@@ -189,6 +202,11 @@ class Block extends React.Component {
                 <ParameterList
                     items={[]}
                     onClick={(index) => this.onSpecialParameterClick(index)}
+                />
+                <ThumbnailList
+                    items={outputs.filter(output => output.thumbnail)}
+                    onClick={(output_name, display_raw) => this.onThumbnailClick(output_name, display_raw)}
+                    resources_dict={plugins_dict.resources_dict}
                 />
             </section>
           </Draggable>

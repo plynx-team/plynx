@@ -16,7 +16,7 @@ def print_any(value):
 @plynx.node.output(name='float', var_type=float)
 @plynx.node.output(name='bool', var_type=bool)
 @plynx.node.operation(
-    title="Produce Values",
+    title="All types",
     description="Echo all types",
 )
 def all_types():
@@ -75,6 +75,30 @@ def print_bool(value):
     print_any(value)
 
 
+@plynx.node.input(name='value', var_type="py-json-file")
+@plynx.node.output(name='value', var_type=dict)
+@plynx.node.operation(
+    title="File to Dict",
+)
+def file_to_dict(value):
+    """Transform file object to dict"""
+    return {
+        "value": value,
+    }
+
+
+@plynx.node.input(name='value', var_type=dict)
+@plynx.node.output(name='value', var_type="py-json-file")
+@plynx.node.operation(
+    title="Dict to File",
+)
+def dict_to_file(value):
+    """transform dict to file object"""
+    return {
+        "value": value,
+    }
+
+
 GROUP = plynx.node.utils.Group(
     title="Test Python built-in types",
     items=[
@@ -84,5 +108,7 @@ GROUP = plynx.node.utils.Group(
         print_dict,
         print_float,
         print_bool,
+        file_to_dict,
+        dict_to_file,
     ]
 )

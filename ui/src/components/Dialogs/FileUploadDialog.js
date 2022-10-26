@@ -3,7 +3,6 @@ import PropTypes from 'prop-types';
 import Dialog from './Dialog';
 import { PLynxApi } from '../../API';
 import LoadingScreen from '../LoadingScreen';
-import {PluginsConsumer} from '../../contexts';
 import Icon from '../Common/Icon';
 import { RESPONCE_STATUS } from '../../constants';
 import './FileUploadDialog.css';
@@ -15,7 +14,12 @@ export default class FileUploadDialog extends Component {
     onClose: PropTypes.func.isRequired,
     uploadOperation: PropTypes.shape({
       resources: PropTypes.array.isRequired,
+      kind: PropTypes.string.isRequired,
     }),
+    plugins_info: PropTypes.shape({
+      operations_dict: PropTypes.object.isRequired,
+      resources_dict: PropTypes.object.isRequired,
+    }).isRequired,
   };
 
   constructor(props) {
@@ -23,7 +27,7 @@ export default class FileUploadDialog extends Component {
     this.state = {
       title: DEFAULT_TITLE,
       description: 'Uploaded custom file',
-      file_type: 'file',
+      file_type: this.props.plugins_info.operations_dict[props.uploadOperation.kind].resources[0].kind,
       file_path: null,
       file_name: null,
       uploadProgress: 10,
@@ -61,11 +65,11 @@ export default class FileUploadDialog extends Component {
     formData.append('title', self.state.title);
     formData.append('description', self.state.description);
     formData.append('file_type', self.state.file_type);
-    formData.append('node_type', self.props.uploadOperation.kind);
+    formData.append('node_kind', self.props.uploadOperation.kind);
     console.log(self.props.uploadOperation.kind);
 
     const config = {
-      headers: { 'content-type': 'multipart/form-data' },
+      headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress(progressEvent) {
         const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
         self.setState({
@@ -120,8 +124,7 @@ export default class FileUploadDialog extends Component {
           <LoadingScreen />
         </div>
       }
-      <PluginsConsumer>
-      { plugins_info => <div className='FileUploadDialogBody selectable'>
+      <div className='FileUploadDialogBody selectable'>
           <div className='MainBlock'>
 
             <div className='TitleDescription'>
@@ -136,11 +139,11 @@ export default class FileUploadDialog extends Component {
             <div className={'Type'}>
               <div className='Widget'>
                 <Icon
-                  type_descriptor={plugins_info.resources_dict[this.state.file_type]}
+                  type_descriptor={this.props.plugins_info.resources_dict[this.state.file_type]}
                   width={"20"}
                   height={"20"}
                 />
-                {plugins_info.resources_dict[this.state.file_type].title}
+                {this.props.plugins_info.resources_dict[this.state.file_type].title}
               </div>
             </div>
           </div>
@@ -219,8 +222,6 @@ export default class FileUploadDialog extends Component {
             </div>
           </div>
         </div>
-        }
-        </PluginsConsumer>
       </Dialog>
     );
   }

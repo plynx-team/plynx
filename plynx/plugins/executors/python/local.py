@@ -11,6 +11,7 @@ import cloudpickle
 
 import plynx.plugins.executors.bases
 import plynx.plugins.executors.local
+import plynx.utils.plugin_manager
 from plynx.constants import NodeRunningStatus, ParameterTypes
 from plynx.db.node import Input, Node, Output, Parameter, ParameterCode
 
@@ -26,6 +27,8 @@ def operation(int_a, int_b):
 
 stateful_init_mutex = threading.Lock()
 stateful_class_registry = {}
+
+_resource_manager = plynx.utils.plugin_manager.get_resource_manager()
 
 
 def materialize_fn_or_cls(node: Node) -> Callable:
@@ -54,7 +57,11 @@ def assign_outputs(node: Node, output_dict: Dict[str, Any]):
         return
     for key, value in output_dict.items():
         node_output = node.get_output_by_name(key)
-        node_output.values = value if node_output.is_array else [value]
+        func = _resource_manager.kind_to_resource_class[node_output.file_type].postprocess_output
+        if node_output.is_array:
+            node_output.values = list(map(func, value))
+        else:
+            node_output.values = [func(value)]
 
 
 class redirect_to_plynx_logs:   # pylint: disable=invalid-name
@@ -112,7 +119,11 @@ def prep_args(node: Node) -> Dict[str, Any]:
     """Pythonize inputs and parameters"""
     args = {}
     for input in node.inputs:   # pylint: disable=redefined-builtin
-        args[input.name] = input.values if input.is_array else input.values[0]
+        func = _resource_manager.kind_to_resource_class[input.file_type].preprocess_input
+        if input.is_array:
+            args[input.name] = list(map(func, input.values))
+        else:
+            args[input.name] = func(input.values[0])
 
     # TODO smater way to determine what parameters to pass
     visible_parameters = list(filter(lambda param: param.widget is not None, node.parameters))

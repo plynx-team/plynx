@@ -23,6 +23,7 @@ def worker_main(job_run_queue: queue.Queue, job_complete_queue: queue.Queue):
         executor = plynx.utils.executor.materialize_executor(node)
 
         try:
+            # TODO support async executors
             executor.launch()
         except Exception:   # pylint: disable=broad-except
             error_str = traceback.format_exc()

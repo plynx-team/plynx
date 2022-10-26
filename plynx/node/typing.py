@@ -18,6 +18,8 @@ CLASS_TO_STR: Dict[Union[Type, Callable], str] = {
 }
 
 
-def type_to_str(type_cls: Union[Type, Callable]) -> str:
+def type_to_str(type_cls: Union[str, Type, Callable]) -> str:
     """Standard type to PLynx type"""
+    if isinstance(type_cls, str):
+        return type_cls
     return CLASS_TO_STR[type_cls]

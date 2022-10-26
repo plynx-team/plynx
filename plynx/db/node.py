@@ -95,6 +95,8 @@ class _BaseResource(DBObject):
 class Output(_BaseResource):
     """Basic Output structure."""
 
+    thumbnail: Optional[str] = None
+
 
 @dataclass_json
 @dataclass
@@ -473,8 +475,7 @@ class Node(DBObject):
         """
         sub_nodes_parameter = self.get_parameter_by_name('_nodes', throw=False)
         if not sub_nodes_parameter:
-            # TODO check if cacheable
-            raise NotImplementedError("Subnodes not found. Do we want to be here?")
+            return
 
         sub_nodes = sub_nodes_parameter.value.value
         for sub_node in sub_nodes:
@@ -509,7 +510,7 @@ class Node(DBObject):
         sub_nodes_parameter = self.get_parameter_by_name('_nodes', throw=False)
         if not sub_nodes_parameter:
             # TODO check if cacheable
-            raise NotImplementedError("Subnodes not found. Do we want to be here?")
+            return True
 
         sub_nodes = sub_nodes_parameter.value.value
 
