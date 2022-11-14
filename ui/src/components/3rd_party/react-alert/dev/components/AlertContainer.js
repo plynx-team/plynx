@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import EventEmitter from 'events';
-import CSSTransitionGroup from 'react-transition-group/CSSTransitionGroup';
+// import CSSTransitionGroup from 'react-transition-group/CSSTransitionGroup';
 import AlertMessage from './AlertMessage';
 
 class AlertContainer extends React.Component {
@@ -202,6 +202,11 @@ class AlertContainer extends React.Component {
   }
 
   render() {
+      return (
+        <div style={this.style} className="react-alerts">
+        </div>
+      );
+    /*
     return (
       <div style={this.style} className="react-alerts">
         <CSSTransitionGroup
@@ -214,6 +219,7 @@ class AlertContainer extends React.Component {
         </CSSTransitionGroup>
       </div>
     );
+    */
   }
 }
 
