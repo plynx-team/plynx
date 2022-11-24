@@ -7,6 +7,8 @@
   font-weight: 400;
   height: 100%;
   display: flex;
+  flex-direction: row;
+  grid-template-columns: 280px 1fr 300px;
   text-rendering:optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-font-smoothing: antialiased;
@@ -21,11 +23,11 @@
 }
 
 .BackgroundLabels.readonly {
-  left: 30px;
+  left: 80px;
 }
 
 .BackgroundLabels.editable {
-  left: 300px;
+  left: 350px;
 }
 
 .BackgroundLabels > .Title {
@@ -46,7 +48,7 @@
 
 .PropertiesBar {
   background-color: #2b2b2b;
-  width: 300px;
+  --width: 300px;
   padding: 5px;
   overflow: auto;
 }

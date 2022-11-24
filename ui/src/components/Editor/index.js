@@ -26,6 +26,7 @@ import TextViewDialog from '../Dialogs/TextViewDialog';
 import { PluginsProvider } from '../../contexts';
 import { makeControlPanel, makeControlCheckbox, makeControlToggles, makeControlButton, makeControlSeparator } from '../Common/controlButton';
 import { addStyleToTourSteps } from '../../utils';
+import { ReactFlowProvider } from 'reactflow';
 import "./style.css";
 
 export const VIEW_MODE = Object.freeze({
@@ -93,9 +94,9 @@ export default class Editor extends Component {
     });
     if (this.graphComponent) {
       if (force) {
-        this.graphComponent.ref.current.loadGraphFromJson(this.node);
+        this.graphComponent.loadGraphFromJson(this.node);
       } else {
-        this.graphComponent.ref.current.updateGraphFromJson(this.node);
+        this.graphComponent.updateGraphFromJson(this.node);
       }
     }
   }
@@ -184,7 +185,7 @@ export default class Editor extends Component {
       }
 
       if (!self.node.auto_sync || self.state.collection !== COLLECTIONS.TEMPLATES) {
-        self.graphComponent.ref.current.clearCacheNodes();
+        self.graphComponent.clearCacheNodes();
       }
     };
 
@@ -205,7 +206,7 @@ export default class Editor extends Component {
         return;
       }
 
-      this.graphComponent.ref.current.syncNodes(sub_nodes);
+      this.graphComponent.syncNodes(sub_nodes);
     };
 
     const handleError = (error) => {
@@ -413,7 +414,7 @@ export default class Editor extends Component {
   showValidationError(validationError) {
     if (validationError.target === VALIDATION_TARGET_TYPE.GRAPH) {
       if (this.graphComponent) {
-        this.graphComponent.ref.current.showValidationError(validationError);
+        this.graphComponent.showValidationError(validationError);
       } else {
         this.showAlert('Errors in the graph structure', 'failed');
       }
@@ -578,7 +579,7 @@ export default class Editor extends Component {
 
     if (parameterName === "auto_sync") {
       if (value === false) {
-        this.graphComponent.ref.current.clearCacheNodes();
+        this.graphComponent.clearCacheNodes();
       }
       this.handleSave();
     }
@@ -616,7 +617,7 @@ export default class Editor extends Component {
   handleTour() {
     let tourSteps;
     if (this.graphComponent) {
-      tourSteps = this.graphComponent.ref.current.tourSteps;
+      tourSteps = this.graphComponent.tourSteps;
 
       // TODO tour nodeComponent as well
       if (this.tour_steps.length > 0) {
@@ -859,6 +860,7 @@ export default class Editor extends Component {
               <div className="editor-content">
                   {
                       this.state.view_mode === VIEW_MODE.GRAPH &&
+                      <ReactFlowProvider>
                       <Graph
                         ref={a => this.graphComponent = a}
                         node={this.state.node}
@@ -869,6 +871,7 @@ export default class Editor extends Component {
                         onSave={() => this.handleSave()}
                         selectedNode={this.state.selectedNode}
                       />
+                      </ReactFlowProvider>
                   }
                   {
                       this.state.view_mode === VIEW_MODE.NODE &&

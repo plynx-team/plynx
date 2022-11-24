@@ -465,8 +465,6 @@ class Node(DBObject):
                 logs=other_subnode.logs,
             )
 
-            sub_node.node_running_status = NodeRunningStatus.READY
-
     def reset_failed_nodes(self):
         """
         Reset the statuses of the failed subnodes.

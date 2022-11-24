@@ -1,7 +1,7 @@
 /* eslint max-lines: 0 */
 /* eslint complexity: 0 */
 
-import React, { Component } from 'react';
+import React, { Component, useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import ReactNodeGraph from '../3rd_party/react_node_graph';
 import { typesValid } from '../../graphValidation';
@@ -9,7 +9,7 @@ import cookie from 'react-cookies';
 import HubPanel from './HubPanel';
 import PreviewDialog from '../Dialogs/PreviewDialog';
 import PropertiesBar from './PropertiesBar';
-import withDragDropContext from './withDragDropContext';
+//import withDragDropContext from './withDragDropContext';
 import FileDialog from '../Dialogs/FileDialog';
 import CodeDialog from '../Dialogs/CodeDialog';
 import ParameterSelectionDialog from '../Dialogs/ParameterSelectionDialog';
@@ -24,6 +24,11 @@ import {
 } from '../../constants';
 import { API_ENDPOINT } from '../../configConsts';
 import { storeToClipboard, loadFromClipboard, addStyleToTourSteps } from '../../utils';
+
+import ReactFlow, { Controls, Background, MiniMap, ReactFlowProvider, fitView, useNodesState, useEdgesState, useReactFlow, applyNodeChanges } from 'reactflow';
+import styled, { ThemeProvider } from 'styled-components';
+import OperationNode from './nodes/OperationNode';
+import 'reactflow/dist/style.css';
 
 import "./gridtile.png";
 import "./node.css";
@@ -88,6 +93,41 @@ const TOUR_STEPS = [
   },
 ];
 
+const nodeTypes = {
+  operation: OperationNode,
+};
+
+const minimapStyle = {
+  height: 120,
+  backgroundColor: "black",
+};
+
+const ControlsStyled = styled(Controls)`
+  button {
+    background-color: #2b2b2b;
+    color: #eee;
+    border-bottom: 1px solid #444;
+
+    &:hover {
+      background-color: #444;
+    }
+
+    path {
+      fill: currentColor;
+    }
+  }
+`;
+
+const ChangeType = {
+  DELETE_EDGE: "DELETE_EDGE",
+  CREATE_EDGE: "CREATE_EDGE",
+  MOVE_NODE: "MOVE_NODE",
+  DELETE_NODE: "DELETE_NODE",
+  DROP_NODE: "DROP_NODE",
+  SELECT_NODE: "SELECT_NODE",
+  DESELECT_NODE: "DESELECT_NODE",
+};
+
 class Graph extends Component {
   static propTypes = {
     showAlert: PropTypes.func.isRequired,
@@ -117,6 +157,8 @@ class Graph extends Component {
       previewData: null,
       generatedCode: "",
       linkParameters: null,
+      flowNodes: [],
+      flowEdges: [],
     };
 
     let token = cookie.load('refresh_token');
@@ -131,6 +173,10 @@ from plynx.api import Operation, File, Graph, Client
 TOKEN = '` + token + `'
 ENDPOINT = '` + API_ENDPOINT + `'
 `;
+
+    this.reactFlowInstance = React.createRef();
+    this.reactFlowWrapper = React.createRef();
+    this.selectedNodeIds = new Set();
   }
 
   sleep(ms) {
@@ -139,8 +185,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
 
   async componentDidMount() {
     // Loading
-
-    this.loadGraphFromJson(this.props.node);
   }
 
   loadGraphFromJson(data) {
@@ -263,11 +307,52 @@ ENDPOINT = '` + API_ENDPOINT + `'
       }
     }
 
+    //---------------------- down
+    var flowNodes = [];
+    var flowEdges = [];
+    for (var ii = 0; this.nodes && ii < this.nodes.length; ++ii) {
+      const node = this.nodes[ii];
+      flowNodes.push(this.nodeToFlowNode(node));
+
+      for (var jj = 0; jj < node.inputs.length; ++jj) {
+        const input = node.inputs[jj];
+        console.log(input);
+        for (var kk = 0; kk < input.input_references.length; ++kk) {
+            const input_reference = input.input_references[kk];
+            flowEdges.push({
+                id: `${input_reference.node_id}-${node._id}-${input.name}-${input_reference.output_id}`,
+                source: input_reference.node_id,
+                target: node._id,
+                sourceHandle: input_reference.output_id,
+                targetHandle: input.name,
+                // style: {
+                //     strokeWidth: 4,
+                //     stroke: `#${intToRGB(hashCode(input_reference.node_id + input_reference.name))}`,
+                // },
+                interactionWidth: 6,
+            });
+            console.log(input_reference, input_reference.name);
+        }
+
+      }
+    }
+    if (this.reactFlowInstance) {
+      this.reactFlowInstance.setNodes(flowNodes);
+      this.reactFlowInstance.setEdges(flowEdges);
+      console.log(this.reactFlowInstance.getNodes());
+    }
+
+    //---------------------- up
+
+    console.log("$$$", this.reactFlowInstance);
+
     this.setState({
       nodes: this.nodes,
       connections: this.connections,
       graph: this.graph_node,
       editable: this.props.editable,
+      flowNodes: flowNodes,
+      flowEdges: flowEdges,
 
     }, () => {
       if (this.selectedNode) {
@@ -288,6 +373,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
     }
 
     this.graph_node = newGraph;
+    this.reactFlowInstance.setNodes(newNodes.map(node => this.nodeToFlowNode(node)));
 
     this.setState({
       nodes: newNodes,
@@ -311,12 +397,17 @@ ENDPOINT = '` + API_ENDPOINT + `'
       this.nodes[i]._cached_node = newNodesLookup[this.nodes[i]._id]._cached_node;
     }
 
+    this.reactFlowInstance.setNodes(this.nodes.map(node => this.nodeToFlowNode(node)));
+
     this.setState({
       nodes: this.nodes,
     });
   }
 
   clearCacheNodes() {
+    if (!this.nodes) {
+       return;
+    }
     let i;
     for (i = 0; i < this.nodes.length; ++i) {
       this.nodes[i]._cached_node = null;
@@ -565,7 +656,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   onBlockMove(nid, pos) {
-    console.log('end move : ' + nid, pos);
     if (!this.node_lookup.hasOwnProperty(nid)) {
       console.error("Cannot find node with id " + nid);
       return;
@@ -860,11 +950,252 @@ ENDPOINT = '` + API_ENDPOINT + `'
     }
   }
 
+  nodeToFlowNode(node) {
+      return {
+        id: node._id,
+        type: "operation",
+        position: {x: node.x, y: node.y},
+        data: {
+            node: node
+        },
+        selected: this.selectedNodeIds.has(node._id),
+      };
+  }
+
+  onNodesChange(nodeChanges) {
+      var eventsToPass = [];
+      for (var ii = 0; ii < nodeChanges.length; ++ii) {
+          const nodeChange = nodeChanges[ii];
+
+          switch (nodeChange.type) {
+              case "remove":
+                  eventsToPass.push({changeType: ChangeType.DELETE_NODE, id: nodeChange.id});
+                  break;
+              case "select":
+                  if (nodeChange.selected) {
+                      eventsToPass.push({changeType: ChangeType.SELECT_NODE, id: nodeChange.id})
+                  } else {
+                      eventsToPass.push({changeType: ChangeType.DESELECT_NODE, id: nodeChange.id});
+                  }
+                  break;
+          }
+      }
+      this.applyChanges(eventsToPass);
+  }
+
+  onDragOver(event) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+  }
+
+  onDrop(event) {
+    event.preventDefault();
+    const obj = event.dataTransfer.getData('application/reactflow')
+    //addNodes
+
+    const reactFlowBounds = this.reactFlowWrapper.current.getBoundingClientRect();
+    const node = JSON.parse(obj);
+
+    const position = this.reactFlowInstance.project({
+      x: event.clientX - reactFlowBounds.left,
+      y: event.clientY - reactFlowBounds.top,
+    });
+    this.applyChanges([{
+        changeType: ChangeType.DROP_NODE,
+        node: node,
+        replaceOriginalNode: true,
+        position: position,
+    }]);
+  }
+
+  onEdgesDelete(edges) {
+    this.applyChanges(
+        edges.map(edge => ({changeType: ChangeType.DELETE_EDGE, edge: edge}))
+    );
+  }
+
+  onConnect(connection) {
+    this.applyChanges([{changeType: ChangeType.CREATE_EDGE, connection: connection}]);
+  }
+
+  onNodeDrag(event, node, nodes) {
+      nodes.map(n => {this.node_lookup[n.id].x = n.position.x; this.node_lookup[n.id].y = n.position.y; });
+  }
+
+  onNodeDragStop(event, node, nodes) {
+      this.applyChanges(
+          nodes.map(node => ({changeType: ChangeType.MOVE_NODE, node: node}))
+      );
+  }
+
+  applyChanges(changes) {
+      for (var ii = 0; ii < changes.length; ++ii) {
+        const change = changes[ii];
+        switch (change.changeType) {
+          case ChangeType.DELETE_EDGE:
+            this.applyDeleteEdge(change.edge);
+            break;
+          case ChangeType.CREATE_EDGE:
+            this.applyCreateEdge(change.connection);
+            break;
+          case ChangeType.MOVE_NODE:
+            this.applyMoveNode(change.node);
+            break;
+          case ChangeType.DELETE_NODE:
+            this.applyDeleteNode(change.id);
+            break
+          case ChangeType.DROP_NODE:
+            this.applyDropNode(change.node, change.replaceOriginalNode, change.position);
+            break
+          case ChangeType.SELECT_NODE:
+            this.applyNodeSelect(change.id);
+            break;
+          case ChangeType.DESELECT_NODE:
+            this.applyNodeDeselect(change.id);
+            break;
+          default:
+            console.error(`Unknown ChangeType: ${change.changeType}`);
+        }
+      }
+      if (changes.length > 0) {
+          this.props.onNodeChange(this.graph_node);
+          console.log("this.graph_node", this.graph_node);
+      }
+  }
+
+  applyDeleteEdge(edge) {
+      const to_node = this.node_lookup[edge.target];
+      const input = to_node.inputs.find((input_) => {
+        return input_.name === edge.targetHandle;
+      });
+      input.input_references = input.input_references.filter((value) => {
+        return !(value.output_id === edge.sourceHandle && value.node_id === edge.source);
+      });
+
+      // this.updateFlowInstanceNode(to_node);
+  }
+
+  applyCreateEdge(connection) {
+      const from_node = this.node_lookup[connection.source];
+      const node_output = from_node.outputs.find(
+        (node_output_) => {
+          return node_output_.name === connection.sourceHandle;
+        }
+      );
+
+      const to_node = this.node_lookup[connection.target];
+      const node_input = to_node.inputs.find(
+        (node_input_) => {
+          return node_input_.name === connection.targetHandle;
+        }
+      );
+
+      if (!node_input) {
+        throw new Error("Node input with name '" + to_pin + "' not found");
+      }
+      if (!node_output) {
+        throw new Error("Node input with name '" + from_pin + "' not found");
+      }
+
+      node_input.input_references.push({
+        "node_id": connection.source,
+        "output_id": connection.sourceHandle,
+      });
+  }
+
+  applyMoveNode(node) {
+      const node_to_apply = this.node_lookup[node.id];
+      node_to_apply.x = node.position.x;
+      node_to_apply.y = node.position.y;
+  }
+
+  applyDeleteNode(node_id) {
+      if (this.node_lookup[node_id].node_running_status === NODE_RUNNING_STATUS.SPECIAL) {
+        console.error('Cannot remove special node');
+        return;
+      }
+
+      this.nodes.splice(
+          this.nodes.map(node => node._id === node_id).indexOf(true),     // simply indexOf does not work!
+          1
+      );
+
+      this.applyNodeDeselect(node_id);
+      delete this.node_lookup[node_id];
+  }
+
+  applyDropNode(node, replaceOriginalNode, position) {
+      if (replaceOriginalNode) {
+        node.original_node_id = node._id;
+      }
+      node.parent_node_id = null;
+      node.successor_node_id = null;
+      node._id = new ObjectID().toString();
+      node.x = position.x;
+      node.y = position.y;
+
+      const flowNode = this.nodeToFlowNode(node);
+
+      this.nodes.push(node)
+      this.node_lookup[node._id] = node;
+      this.reactFlowInstance.setNodes((nds) => nds.concat(flowNode));
+  }
+
+  applyNodeSelect(node_id) {
+      const prevSize = this.selectedNodeIds.size;
+      this.selectedNodeIds.add(node_id);
+      const newSize = this.selectedNodeIds.size;
+      if (prevSize === newSize) {
+          return
+      }
+      this.applySelection();
+  }
+
+  applyNodeDeselect(node_id) {
+      const prevSize = this.selectedNodeIds.size;
+      this.selectedNodeIds.delete(node_id);
+      const newSize = this.selectedNodeIds.size;
+      if (prevSize === newSize) {
+          return
+      }
+      this.applySelection();
+  }
+
+  applySelection() {
+      if (this.selectedNodeIds.size === 1) {
+        const [nid] = this.selectedNodeIds;
+        const node = this.node_lookup[nid];
+        if (node) {
+          this.propertiesBar.setNodeData(node);
+        }
+      } else if (this.selectedNodeIds.size > 1) {
+        this.propertiesBar.setNodeDataArr([...this.selectedNodeIds].map((nid) => this.node_lookup[nid]));
+      } else {
+        this.propertiesBar.setNodeData(this.graph_node);
+      }
+  }
+
+  // TODO remove?
+  updateFlowInstanceNode(node) {
+    this.reactFlowInstance.setNodes(
+        (nds) => {
+            for (var ii = 0; ii < nds.length; ++ii) {
+                if (nds[ii].id === node._id) {
+                    nds[ii].data = node;
+                    break;
+                }
+            }
+            return nds;
+        }
+    );
+  }
+
   render() {
     return (
     <HotKeys className="GraphNode"
              handlers={this.keyHandlers} keyMap={KEY_MAP}
     >
+      <ReactFlowProvider>
         <div className={'BackgroundLabels ' + (this.state.editable ? 'editable' : 'readonly')}>
           <div className="Title">{this.state.graph.title}</div>
           <div className="Description">&ldquo;{this.state.graph.description}&rdquo;</div>
@@ -926,6 +1257,45 @@ ENDPOINT = '` + API_ENDPOINT + `'
         {/* Visible and flex layout blocks */}
         {this.state.editable && <HubPanel kind={this.state.graph.kind} />}
 
+        {/*this.Flow()*/}
+        {/*<Flow nodes={this.state.nodes}/>*/}
+        <div
+            style={{ height: '100%' }}
+            className="graph-flow"
+            ref={this.reactFlowWrapper}
+            //{...register("reactFlowWrapper")}
+            >
+          <ReactFlow
+            defaultNodes={this.state.flowNodes}
+            nodeTypes={nodeTypes}
+            defaultEdges={this.state.flowEdges}
+            ref={this.reactFlowInstance}
+            onNodesChange={nodeChanges => this.onNodesChange(nodeChanges)}
+            onEdgesDelete={edges => this.onEdgesDelete(edges)}
+            onEdgeUpdateEnd={(event, edge, handleType) => console.log("onEdgeUpdateEnd", event, edge, handleType)}
+            onConnect={connection => this.onConnect(connection)}
+            onNodeDrag={(event, node, nodes) => this.onNodeDrag(event, node, nodes)}
+            onNodeDragStop={(event, node, nodes) => this.onNodeDragStop(event, node, nodes)}
+            // onInit={onInit}
+            onInit={reactFlowInstance => {this.reactFlowInstance = reactFlowInstance; this.loadGraphFromJson(this.props.node);}}
+            defaultEdgeOptions={{
+                style:{strokeWidth: "5px"},
+            }}
+            onDrop={event => this.onDrop(event)}
+            onDragOver={event => this.onDragOver(event)}
+            fitView
+            >
+            <Background />
+            <ControlsStyled
+            />
+            <MiniMap
+                style={minimapStyle}
+                zoomable pannable
+                 />
+          </ReactFlow>
+        </div>
+
+        {/*
         <ReactNodeGraph className="MainGraph"
           ref={(child) => {
             this.mainGraph = child;
@@ -949,6 +1319,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
           onSavePressed={() => this.handleSave()}
           key={'graph' + this.state.editable}
         />
+        */}
 
         { this.state.editable !== null &&
         <PropertiesBar className="PropertiesBar"
@@ -964,9 +1335,10 @@ ENDPOINT = '` + API_ENDPOINT + `'
                       onLinkClick={(node_ids, name) => this.handleLinkClick(node_ids, name)}
         />
         }
+      </ReactFlowProvider>
     </HotKeys>
     );
   }
 }
 
-export default withDragDropContext(Graph);
+export default Graph;

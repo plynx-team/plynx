@@ -130,7 +130,8 @@ class DBObject(_DBObject, metaclass=Meta):
                 types = typing_inspect.get_args(field_type)
                 assert len(types) == 2, "Must be exactly two classes: [CustomClass, None]"
                 type_cls = types[0]
-                setattr(self, name, type_cls(getattr(self, name)))
+                if not isinstance(value, type_cls):
+                    setattr(self, name, type_cls(getattr(self, name)))
             if inspect.isclass(field_type) and not isinstance(value, _DBObject):
                 # Process external type, such as ObjectId
                 # dataclass_json should handle the rest dataclasses and primitive types

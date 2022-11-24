@@ -208,7 +208,6 @@ class AlertContainer extends React.Component {
     return (
       <div style={this.style} className="react-alerts">
         <CSSTransition
-          transitionName={this.props.transition}
           timeout={250}
         >
           <div>

@@ -52,6 +52,7 @@
     "react-router-dom": "^5.3.4",
     "react-scripts": "^5.0.1",
     "react-side-effect": "^2.1.2",
+    "reactflow": "^11.2.0",
     "reactour": "^1.18.7",
     "sshpk": "^1.17.0",
     "styled-components": "^5.3.6",

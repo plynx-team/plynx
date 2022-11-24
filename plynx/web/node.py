@@ -136,7 +136,6 @@ def get_nodes(collection: str, node_link: Optional[str] = None):
             if node_in_run_dict:
                 node_in_run = Node.from_dict(node_in_run_dict)
                 node.augment_node_with_cache(node_in_run)
-
                 last_run_is_in_finished_status = NodeRunningStatus.is_finished(node_in_run.node_running_status)
             else:
                 logger.warning(f"Failed to load a run with id `{latest_run_id}`")
@@ -266,8 +265,10 @@ def post_node(collection: str):
 
         node_in_run = node.clone(NodeClonePolicy.NODE_TO_RUN)
         node_in_run.author = g.user._id
-        node.latest_run_id = node_in_run._id
-        node.save(force=True)
+
+        db_node_obj = Node.from_dict(db_node)
+        db_node_obj.latest_run_id = node_in_run._id
+        db_node_obj.save(force=True)
 
         if is_admin or can_run_workflows:
             executor._update_node(node_in_run)
