@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Union
 from past.builtins import basestring
 from pymongo import ReturnDocument
 
-from plynx.constants import Collections, NodeRunningStatus, NodeStatus
+from plynx.constants import Collections, HubSearchParams, NodeRunningStatus, NodeStatus
 from plynx.db.node import Node
 from plynx.utils.common import ObjectId, parse_search_string, to_object_id
 from plynx.utils.db_connector import get_db_connector
@@ -45,6 +45,7 @@ class NodeCollectionManager:
         Return:
             (list of dict)  List of Nodes in dict format
         """
+        # pylint: disable=too-many-branches
         if status and isinstance(status, basestring):
             status = [status]
         if node_kinds and isinstance(node_kinds, basestring):
@@ -54,7 +55,7 @@ class NodeCollectionManager:
         search_parameters, search_string = parse_search_string(search)
 
         # Match
-        and_query: Dict[str, Union[ObjectId, Dict[str, Union[str, List[str]]]]] = {}
+        and_query: Dict[str, Union[ObjectId, Dict[str, Union[str, List[str], Dict]]]] = {}
         if node_kinds:
             and_query['kind'] = {'$in': node_kinds}
         if status:
@@ -63,6 +64,10 @@ class NodeCollectionManager:
             and_query['$text'] = {'$search': search_string}
         if 'original_node_id' in search_parameters:
             and_query['original_node_id'] = to_object_id(search_parameters['original_node_id'])
+        if HubSearchParams.INPUT_FILE_TYPE in search_parameters:
+            and_query['inputs'] = {"$elemMatch": {"file_type": search_parameters[HubSearchParams.INPUT_FILE_TYPE]}}
+        if HubSearchParams.OUTPUT_FILE_TYPE in search_parameters:
+            and_query['outputs'] = {"$elemMatch": {"file_type": search_parameters[HubSearchParams.OUTPUT_FILE_TYPE]}}
         if len(and_query) > 0:
             aggregate_list.append({"$match": and_query})
 

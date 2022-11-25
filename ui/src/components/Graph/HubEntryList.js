@@ -1,7 +1,6 @@
 /* eslint max-classes-per-file: 0 */
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import HubEntryListNode from './HubEntryListNode';
 import Icon from '../Common/Icon';
 import './style.css';
 
@@ -9,6 +8,7 @@ import './style.css';
 export default class HubEntryList extends Component {
   static propTypes = {
     items: PropTypes.array.isRequired,
+    hubEntryItem: PropTypes.func.isRequired,
     extraClassName: PropTypes.string,
     level: PropTypes.number.isRequired,
   };
@@ -24,11 +24,12 @@ export default class HubEntryList extends Component {
         if (entry._type === 'Group') {
           return <HubEntryListGroup
                 key={entry._id}
+                hubEntryItem={this.props.hubEntryItem}
                 group={entry}
                 level={this.props.level}
             />;
         } else {
-          return <HubEntryListNode
+          return <this.props.hubEntryItem
               key={entry._id}
               nodeContent={entry}
               />;
@@ -46,6 +47,7 @@ export default class HubEntryList extends Component {
 
 class HubEntryListGroup extends Component {
   static propTypes = {
+    hubEntryItem: PropTypes.func.isRequired,
     group: PropTypes.object.isRequired,
     level: PropTypes.number.isRequired,
   };
@@ -73,6 +75,7 @@ class HubEntryListGroup extends Component {
         </div>
         <HubEntryList
             key={this.props.group._id}
+            hubEntryItem={this.props.hubEntryItem}
             items={this.props.group.items}
             extraClassName={this.state.open ? "open" : "closed"}
             level={this.props.level + 1}

@@ -6,9 +6,10 @@ import PropTypes from 'prop-types';
 import { typesValid } from '../../graphValidation';
 import cookie from 'react-cookies';
 import HubPanel from './HubPanel';
+import {HubDraggableEntry, HubResourceTypeBasedEntry, TmpHubEntry} from './HubEntryListNode';
+import HubLookupDialog from './HubLookupDialog';
 import PreviewDialog from '../Dialogs/PreviewDialog';
 import PropertiesBar from './PropertiesBar';
-//import withDragDropContext from './withDragDropContext';
 import FileDialog from '../Dialogs/FileDialog';
 import CodeDialog from '../Dialogs/CodeDialog';
 import ParameterSelectionDialog from '../Dialogs/ParameterSelectionDialog';
@@ -148,6 +149,7 @@ class Graph extends Component {
       linkParameters: null,
       flowNodes: [],
       flowEdges: [],
+      lookupResourceKind: undefined,
     };
 
     this.reactFlowInstance = null;
@@ -364,12 +366,10 @@ class Graph extends Component {
     });
   }
 
-  handleCloseCodeDialog() {
-    this.setState({
-      nodeId: undefined,
-      parameterName: undefined,
-      parameterValue: undefined,
-    });
+  handleCloseHubLookupDialog() {
+      this.setState({
+          nodeLookupSearch: undefined
+      });
   }
 
   handleShowFile(nid) {
@@ -446,7 +446,7 @@ class Graph extends Component {
 
   closeAllDialogs() {
     this.handleClosePreview();
-    this.handleCloseCodeDialog();
+    this.handleCloseHubLookupDialog();
     this.handleCloseFileDialog();
     this.handleCloseParameterLinkDialog();
   }
@@ -669,6 +669,78 @@ class Graph extends Component {
       );
   }
 
+  onConnectStart(event, params) {
+      console.log("onConnectStart", params);
+      this.connectionStartParams = params;
+  }
+
+  onConnectEnd(event) {
+      const targetIsPane = event.target.classList.contains('react-flow__pane');
+      console.log("onConnectEnd", targetIsPane);
+      if (!targetIsPane) {
+          return;
+      }
+
+      const { top, left } = this.reactFlowWrapper.current.getBoundingClientRect();
+      this.positionToInsert = this.reactFlowInstance.project({ x: event.clientX - left, y: event.clientY - top });
+
+      const node = this.node_lookup[this.connectionStartParams.nodeId];
+      const resources = this.connectionStartParams.handleType === "source" ? node.outputs : node.inputs;
+      const nodeLookupSearchInputsOrOutputs = this.connectionStartParams.handleType === "source" ? "outputs" : "inputs";
+      const inputOrOutput = resources.filter(obj => obj.name === this.connectionStartParams.handleId)[0];
+      const kind = inputOrOutput.file_type;
+      const nodeLookupSearch = `${this.connectionStartParams.handleType === "source" ? "input_file_type" : "output_file_type"}:${kind}`;
+
+      if (this.connectionStartParams.handleType === "target") {
+          if (inputOrOutput.input_references.length > 0 && !inputOrOutput.is_array) {
+              this.props.showAlert("Cannot add more inputs", 'warning');
+              return;
+          }
+      }
+
+      this.setState({
+          nodeLookupSearch: nodeLookupSearch,
+          nodeLookupSearchInputsOrOutputs: nodeLookupSearchInputsOrOutputs,
+      })
+  }
+
+  onInsertLookup(nodeBody, inputOrOutput) {
+      this.handleCloseHubLookupDialog();
+
+      nodeBody._id = new ObjectID().toString()
+
+      const changesToApply = [];
+      changesToApply.push({
+          changeType: ChangeType.DROP_NODE,
+          node: nodeBody,
+          replaceNodeId: false,
+          replaceOriginalNode: true,
+          position: this.positionToInsert,
+      });
+      var source;
+      var sourceHandle;
+      var target;
+      var targetHandle;
+      if (this.connectionStartParams.handleType === "source") {
+          source = this.connectionStartParams.nodeId;
+          sourceHandle = this.connectionStartParams.handleId;
+          target = nodeBody._id;
+          targetHandle = inputOrOutput;
+      } else {
+          target = this.connectionStartParams.nodeId;
+          targetHandle = this.connectionStartParams.handleId;
+          source = nodeBody._id;
+          sourceHandle = inputOrOutput;
+      }
+      changesToApply.push({
+          changeType: ChangeType.CREATE_EDGE,
+          connection: {source: source, sourceHandle: sourceHandle, target: target, targetHandle: targetHandle},
+          pushToReactflow: true,
+      });
+
+      this.applyChanges(changesToApply);
+  }
+
   applyChanges(changes) {
       for (var ii = 0; ii < changes.length; ++ii) {
         const change = changes[ii];
@@ -869,16 +941,6 @@ class Graph extends Component {
           />
         }
         {
-          (this.state.nodeId && this.state.parameterName) &&
-          <CodeDialog
-            title={this.state.parameterName}
-            value={this.state.parameterValue}
-            onClose={() => this.handleCloseCodeDialog()}
-            readOnly={!this.state.editable}
-            onParameterChanged={(value) => this.handleParameterChanged(this.state.nodeId, this.state.parameterName, value)}
-          />
-        }
-        {
             this.state.linkParameters &&
             <ParameterSelectionDialog
               title={"Link Graph parameter"}
@@ -889,9 +951,19 @@ class Graph extends Component {
               readOnly={!this.state.editable}
             />
         }
+        {
+            this.state.nodeLookupSearch && this.state.nodeLookupSearchInputsOrOutputs &&
+            <HubLookupDialog
+                kind={this.state.graph.kind}
+                a_hubEntryItem={HubResourceTypeBasedEntry}
+                hubEntryItem={TmpHubEntry(this.state.nodeLookupSearch, (nodeBody, inputOrOutput) => this.onInsertLookup(nodeBody, inputOrOutput))}
+                hiddenSearch={this.state.nodeLookupSearch}
+                onClose={() => this.handleCloseHubLookupDialog()}
+            />
+        }
 
         {/* Visible and flex layout blocks */}
-        {this.state.editable && <HubPanel kind={this.state.graph.kind} />}
+        {this.state.editable && <HubPanel kind={this.state.graph.kind} hubEntryItem={HubDraggableEntry} />}
 
         <div
             style={{ height: '100%' }}
@@ -906,6 +978,8 @@ class Graph extends Component {
             onEdgesDelete={edges => this.onEdgesDelete(edges)}
             onEdgeUpdateEnd={(event, edge, handleType) => console.log("onEdgeUpdateEnd", event, edge, handleType)}
             onConnect={connection => this.onConnect(connection)}
+            onConnectStart={(event, params) => this.onConnectStart(event, params)}
+            onConnectEnd={event => this.onConnectEnd(event)}
             onNodeDrag={(event, node, nodes) => this.onNodeDrag(event, node, nodes)}
             onNodeDragStop={(event, node, nodes) => this.onNodeDragStop(event, node, nodes)}
             onInit={reactFlowInstance => {this.reactFlowInstance = reactFlowInstance; this.loadGraphFromJson(this.props.node);}}

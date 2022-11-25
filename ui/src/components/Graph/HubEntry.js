@@ -46,6 +46,8 @@ class HubEntryHeader extends Component {
 export default class HubEntry extends Component {
   static propTypes = {
     hub: PropTypes.string.isRequired,
+    hubEntryItem: PropTypes.func.isRequired,
+    hiddenSearch: PropTypes.string,
   };
 
   constructor(props) {
@@ -55,7 +57,7 @@ export default class HubEntry extends Component {
       loading: true,
       pageCount: 0,
       offset: 0,
-      search: "sort:starred ",
+      search: "",
     };
     this.perPage = 30;
 
@@ -119,7 +121,7 @@ export default class HubEntry extends Component {
         per_page: self.perPage,
         status: "READY",
         hub: this.props.hub,
-        search: this.state.search,
+        search: `${this.props.hiddenSearch ? this.props.hiddenSearch + " ": ""}${this.state.search}`,
       })
       .then(handleResponse)
       .catch(handleError);
@@ -172,6 +174,7 @@ export default class HubEntry extends Component {
             onUpdateFilter={(search) => this.handleUpdateFilter(search)}
             />
           <HubEntryList items={this.state.items}
+                        hubEntryItem={this.props.hubEntryItem}
                         ref={(child) => {
                           this.nodeList = child;
                         }}/>

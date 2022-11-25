@@ -11,7 +11,7 @@ const onDragStart = (event, nodeType) => {
     event.dataTransfer.effectAllowed = 'move';
   };
 
-class HubEntryListNode extends Component {
+export class HubDraggableEntry extends Component {
   static propTypes = {
     nodeContent: PropTypes.object.isRequired,
   };
@@ -43,8 +43,58 @@ class HubEntryListNode extends Component {
   }
 }
 
-// export default DragSource(ItemTypes.NODE_ITEM, nodeSource, (connect, monitor) => ({
-//   connectDragSource: connect.dragSource(),
-//   isDragging: monitor.isDragging(),
-// }))(HubEntryListNode);
-export default HubEntryListNode;
+export class HubResourceTypeBasedEntry extends Component {
+  static propTypes = {
+    nodeContent: PropTypes.object.isRequired,
+    nodeLookupSearch: PropTypes.string.isRequired,
+    onClick: PropTypes.func.isRequired
+  };
+
+  render() {
+    const { nodeContent, nodeLookupSearch, onClick } = this.props;
+    const splittedArr = nodeLookupSearch.split(":");
+    const inOrOut = splittedArr[0];
+
+    return (
+      <div
+          className="hub-resource-type-based"
+        >
+        <PluginsConsumer>
+        {
+            plugins_dict => <div className="hub-item">
+              <div className="hub-item-node">
+                  <Icon
+                    type_descriptor={plugins_dict.executors_info[nodeContent.kind]}
+                    className="hub-item-icon"
+                  />
+                  <div className="hub-item-node-text">
+                    {nodeContent.title}
+                  </div>
+              </div>
+              {
+                  inOrOut === "input_file_type" &&
+                  nodeContent.inputs.filter(
+                      input => input.file_type === splittedArr[1]
+                  ).map(
+                      input => <div className="hub-item-in-or-out" key={input.name} onClick={() => onClick(nodeContent, input.name)}>&#8627; {input.name}</div>
+                  )
+              }
+              {
+                  inOrOut === "output_file_type" &&
+                  nodeContent.outputs.filter(
+                      output => output.file_type === splittedArr[1]
+                  ).map(
+                      output => <div className="hub-item-in-or-out" key={output.name} onClick={() => onClick(nodeContent, output.name)}>&#8627; {output.name}</div>
+                  )
+              }
+            </div>
+        }
+        </PluginsConsumer>
+      </div>
+    );
+  }
+}
+
+export function TmpHubEntry(nodeLookupSearch, onClick) {
+    return (props) => <HubResourceTypeBasedEntry nodeLookupSearch={nodeLookupSearch} onClick={onClick} {...props}/>;
+}
