@@ -29,8 +29,6 @@ import styled, { ThemeProvider } from 'styled-components';
 import OperationNode from './nodes/OperationNode';
 import 'reactflow/dist/style.css';
 
-import "./gridtile.png";
-import "./node.css";
 import "./style.css";
 
 function parameterIsSpecial(parameter) {
@@ -146,8 +144,6 @@ class Graph extends Component {
     document.title = "Graph";
 
     this.state = {
-      nodes: [],
-      connections: [],
       graph: {},
       graphId: null,
       editable: null,
@@ -193,7 +189,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
     document.title = this.graph_node.title + " - Graph - PLynx";
     console.log(this.graph_node);
     this.node_lookup = {};
-    this.connections = [];
     const parameterNameToGraphParameter = {};
     const ts = new ObjectID().toString();
 
@@ -275,12 +270,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
               continue;
             }
           }
-          this.connections.push({
-            "from_block": from_block,
-            "from": from,
-            "to_block": node._id,
-            "to": node.inputs[j].name}
-              );
         }
         for (let v = inputValueIndexToRemove.length - 1; v >= 0; --v) {
           node.inputs[j].input_references.splice(inputValueIndexToRemove[v], 1);
@@ -348,8 +337,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
     console.log("$$$", this.reactFlowInstance);
 
     this.setState({
-      nodes: this.nodes,
-      connections: this.connections,
       graph: this.graph_node,
       editable: this.props.editable,
       flowNodes: flowNodes,
@@ -374,10 +361,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
 
     this.graph_node = newGraph;
     this.reactFlowInstance.setNodes(newNodes.map(node => this.nodeToFlowNode(node)));
-
-    this.setState({
-      nodes: newNodes,
-    });
   }
 
   syncNodes(newNodes) {
@@ -398,10 +381,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
     }
 
     this.reactFlowInstance.setNodes(this.nodes.map(node => this.nodeToFlowNode(node)));
-
-    this.setState({
-      nodes: this.nodes,
-    });
   }
 
   clearCacheNodes() {
@@ -412,9 +391,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
     for (i = 0; i < this.nodes.length; ++i) {
       this.nodes[i]._cached_node = null;
     }
-    this.setState({
-      nodes: this.nodes,
-    });
   }
 
   onOutputClick(nid, outputName, displayRaw) {
@@ -696,9 +672,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
           node = this.node_lookup[nodeId];
 
           this.node_lookup[nodeId]._highlight = true;
-          this.setState({
-            nodes: this.nodes,
-          });
 
           this.props.showAlert("Deprecated Node found: `" + node.title + "`", 'warning');
           break;
@@ -707,9 +680,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
           node = this.node_lookup[nodeId];
 
           this.node_lookup[nodeId]._highlight = true;
-          this.setState({
-            nodes: this.nodes,
-          });
 
           this.props.showAlert("Missing input `" + child.object_id + "` in node `" + node.title + "`", 'warning');
           break;

@@ -121,6 +121,14 @@
   background-color: rgba(128, 96, 44, 0.6);
 }
 
+.node-status-deprecated > .flow-node-header {
+  text-decoration: line-through;
+}
+
+.node-status-mandatory_deprecated > .flow-node-header {
+  text-decoration: line-through;
+}
+
 .flow-node-icon {
   width: 16px;
   height: 16px;

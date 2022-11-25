@@ -115,7 +115,7 @@ function CustomNode({ id, data }) {
       <PluginsConsumer>
       {
         plugins_dict =>
-          <div className={`flow-node node-running-status-${node_running_status}`}>
+          <div className={`flow-node node-running-status-${node_running_status} node-status-${node.node_status.toLowerCase()} `}>
               <div className="flow-node-header">
                   <Icon
                       type_descriptor={plugins_dict.executors_info[node.kind]}
