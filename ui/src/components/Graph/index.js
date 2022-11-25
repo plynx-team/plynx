@@ -45,23 +45,23 @@ const TOUR_STEPS = [
     content: 'This toolbar contains all the Operations you need to build your workflow. All you need to do is to drag and drop Operations to the editor.',
   },
   {
-    selector: '.NodeItem',
+    selector: '.flow-node',
     content: 'Plynx is an open modular platform. Each Operaion represents an executable code or function, business logic, transformation, etc. ' +
         'They can be defined eigher by users, admins, or imported from public library.',
   },
   {
-    selector: '.GraphRoot',
+    selector: '.graph-flow',
     content: 'Workflow Editor has a central place in Plynx. ' +
         'It allows you to easily build new pipelines, improve existing ones or create new experiments with the workflow.',
   },
   {
-    selector: '.GraphRoot .node',
+    selector: '.flow-node',
     content: 'Plynx is domain and framework agnostic platform. ' +
         'Operation can be a python script, API call, model inference function, interaction with other services, etc. ' +
         'The complexity under the hood does not matter.  What matters is what role it plays in your workflow.',
   },
   {
-    selector: '.GraphRoot .connector',
+    selector: '.graph-flow .react-flow__edge',
     content: 'The relations between Operations are defined by the edges. ' +
         'Depending on the use case, the entire Workflow will be exectuded in multiple independent containers, ' +
         'compiled to a single executable file for higher performance or converted into Spark or AWS Step Functions workflow.',
@@ -133,45 +133,24 @@ class Graph extends Component {
     onNodeChange: PropTypes.func.isRequired,
     node: PropTypes.object.isRequired,
     editable: PropTypes.bool.isRequired,
-    selectedNode: PropTypes.string,
   };
 
   constructor(props) {
     super(props);
     this.graph_node = {};
     this.tourSteps = addStyleToTourSteps(TOUR_STEPS);
-    this.selectedNode = this.props.selectedNode;
-    document.title = "Graph";
+    document.title = "Workflow";
 
     this.state = {
       graph: {},
-      graphId: null,
       editable: null,
-      loading: true,
-      title: "",
-      description: "",
-      graphRunningStatus: null,
       previewData: null,
-      generatedCode: "",
       linkParameters: null,
       flowNodes: [],
       flowEdges: [],
     };
 
-    let token = cookie.load('refresh_token');
-    // TODO remove after demo
-    if (token === 'Not assigned') {
-      token = cookie.load('access_token');
-    }
-
-    this.generatedCodeHeader =
-`#!/usr/bin/env python
-from plynx.api import Operation, File, Graph, Client
-TOKEN = '` + token + `'
-ENDPOINT = '` + API_ENDPOINT + `'
-`;
-
-    this.reactFlowInstance = React.createRef();
+    this.reactFlowInstance = null;
     this.reactFlowWrapper = React.createRef();
     this.selectedNodeIds = new Set();
   }
@@ -180,17 +159,12 @@ ENDPOINT = '` + API_ENDPOINT + `'
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  async componentDidMount() {
-    // Loading
-  }
-
   loadGraphFromJson(data) {
     this.graph_node = data;
     document.title = this.graph_node.title + " - Graph - PLynx";
     console.log(this.graph_node);
     this.node_lookup = {};
     const parameterNameToGraphParameter = {};
-    const ts = new ObjectID().toString();
 
     this.nodes = this.graph_node.parameters.find(p => p.name === '_nodes').value.value;
 
@@ -202,7 +176,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
     let inputNode = null;
     for (let i = 0; i < this.nodes.length; ++i) {
       const node = this.nodes[i];
-      node._ts = ts;
 
       // Remove broken references
       for (parameter of node.parameters) {
@@ -244,60 +217,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
       this.node_lookup[node._id] = node;
     }
 
-    let i = 0;
-    for (i = 0; i < this.nodes.length; ++i) {
-      const node = this.nodes[i];
-      const blockInputs = [];
-      const blockOutputs = [];
-      const specialParameterNames = [];
-      let j = 0;
-
-      for (j = 0; j < node.inputs.length; ++j) {
-        blockInputs.push({
-          name: node.inputs[j].name,
-          file_type: node.inputs[j].file_type,
-          is_array: node.inputs[j].is_array,
-        });
-        const inputValueIndexToRemove = [];
-        for (let k = 0; k < node.inputs[j].input_references.length; ++k) {
-          const from_block = node.inputs[j].input_references[k].node_id;
-          const from = node.inputs[j].input_references[k].output_id;
-
-          if (from_block === SPECIAL_NODE_IDS.INPUT && inputNode) {
-            const output = inputNode.outputs.filter((out) => out.name === from);
-            if (output.length === 0 || !typesValid(output[0], node.inputs[j])) {
-              inputValueIndexToRemove.push(k);
-              continue;
-            }
-          }
-        }
-        for (let v = inputValueIndexToRemove.length - 1; v >= 0; --v) {
-          node.inputs[j].input_references.splice(inputValueIndexToRemove[v], 1);
-        }
-      }
-      for (j = 0; j < node.outputs.length; ++j) {
-        blockOutputs.push({
-          name: node.outputs[j].name,
-          file_type: node.outputs[j].file_type,
-          is_array: node.outputs[j].is_array,
-        });
-      }
-
-      for (j = 0; j < node.parameters.length; ++j) {
-        if (parameterIsSpecial(node.parameters[j])) {
-          specialParameterNames.push(node.parameters[j].name);
-        }
-      }
-
-      if (!node.hasOwnProperty("x")) {
-        node.x = Math.floor(Math.random() * 800) + 1;
-      }
-      if (!node.hasOwnProperty("y")) {
-        node.y = Math.floor(Math.random() * 400) + 1;
-      }
-    }
-
-    //---------------------- down
     var flowNodes = [];
     var flowEdges = [];
     for (var ii = 0; this.nodes && ii < this.nodes.length; ++ii) {
@@ -306,7 +225,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
 
       for (var jj = 0; jj < node.inputs.length; ++jj) {
         const input = node.inputs[jj];
-        console.log(input);
         for (var kk = 0; kk < input.input_references.length; ++kk) {
             const input_reference = input.input_references[kk];
             flowEdges.push({
@@ -315,37 +233,23 @@ ENDPOINT = '` + API_ENDPOINT + `'
                 target: node._id,
                 sourceHandle: input_reference.output_id,
                 targetHandle: input.name,
-                // style: {
-                //     strokeWidth: 4,
-                //     stroke: `#${intToRGB(hashCode(input_reference.node_id + input_reference.name))}`,
-                // },
                 interactionWidth: 6,
             });
-            console.log(input_reference, input_reference.name);
         }
 
       }
     }
+
     if (this.reactFlowInstance) {
       this.reactFlowInstance.setNodes(flowNodes);
       this.reactFlowInstance.setEdges(flowEdges);
-      //this.reactFlowInstance.fitView();
     }
-
-    //---------------------- up
-
-    console.log("$$$", this.reactFlowInstance);
 
     this.setState({
       graph: this.graph_node,
       editable: this.props.editable,
       flowNodes: flowNodes,
       flowEdges: flowEdges,
-
-    }, () => {
-      if (this.selectedNode) {
-        this.selectedNode = null;
-      }
     });
   }
 
@@ -387,8 +291,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
     if (!this.nodes) {
        return;
     }
-    let i;
-    for (i = 0; i < this.nodes.length; ++i) {
+    for (let i = 0; i < this.nodes.length; ++i) {
       this.nodes[i]._cached_node = null;
     }
   }
@@ -469,12 +372,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
     });
   }
 
-  handleCloseGeneratedCodeDialog() {
-    this.setState({
-      generatedCode: undefined,
-    });
-  }
-
   handleShowFile(nid) {
     this.setState({
       fileObj: this.node_lookup[nid]
@@ -550,7 +447,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
   closeAllDialogs() {
     this.handleClosePreview();
     this.handleCloseCodeDialog();
-    this.handleCloseGeneratedCodeDialog();
     this.handleCloseFileDialog();
     this.handleCloseParameterLinkDialog();
   }
@@ -736,7 +632,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
   onDrop(event) {
     event.preventDefault();
     const obj = event.dataTransfer.getData('application/reactflow')
-    //addNodes
 
     const reactFlowBounds = this.reactFlowWrapper.current.getBoundingClientRect();
     const node = JSON.parse(obj);
@@ -805,7 +700,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
       }
       if (changes.length > 0) {
           this.props.onNodeChange(this.graph_node);
-          console.log("this.graph_node", this.graph_node);
       }
   }
 
@@ -985,18 +879,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
           />
         }
         {
-          this.state.generatedCode &&
-          <CodeDialog
-            title={"API Code"}
-            value={{
-              mode: "python",
-              value: this.generatedCodeHeader + this.state.generatedCode,
-            }}
-            onClose={() => this.handleCloseGeneratedCodeDialog()}
-            readOnly
-          />
-        }
-        {
             this.state.linkParameters &&
             <ParameterSelectionDialog
               title={"Link Graph parameter"}
@@ -1015,13 +897,11 @@ ENDPOINT = '` + API_ENDPOINT + `'
             style={{ height: '100%' }}
             className="graph-flow"
             ref={this.reactFlowWrapper}
-            //{...register("reactFlowWrapper")}
             >
           <ReactFlow
             defaultNodes={this.state.flowNodes}
             nodeTypes={nodeTypes}
             defaultEdges={this.state.flowEdges}
-            ref={this.reactFlowInstance}
             onNodesChange={nodeChanges => this.onNodesChange(nodeChanges)}
             onEdgesDelete={edges => this.onEdgesDelete(edges)}
             onEdgeUpdateEnd={(event, edge, handleType) => console.log("onEdgeUpdateEnd", event, edge, handleType)}

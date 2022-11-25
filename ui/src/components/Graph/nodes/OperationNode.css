@@ -79,8 +79,8 @@
 .flow-node-header {
   cursor: all-scroll;
 
-  border-top-left-radius: 6px;
-  border-top-right-radius: 6px;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
   border-bottom: 1px solid #353535;
 
   height: 23px;
