@@ -339,7 +339,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
     if (this.reactFlowInstance) {
       this.reactFlowInstance.setNodes(flowNodes);
       this.reactFlowInstance.setEdges(flowEdges);
-      console.log(this.reactFlowInstance.getNodes());
+      //this.reactFlowInstance.fitView();
     }
 
     //---------------------- up
@@ -1286,8 +1286,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
             fitView
             >
             <Background />
-            <ControlsStyled
-            />
+            <ControlsStyled/>
             <MiniMap
                 style={minimapStyle}
                 zoomable pannable

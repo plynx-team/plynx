@@ -3,10 +3,6 @@
   height: 100%;
 }
 
-.graph-flow {
-  width: 100%;
-}
-
 .svg-graph {
   background: url('gridtile.png');
   display: inline;
