@@ -266,7 +266,9 @@ class Node(DBObject):
         TITLE_HEIGHT = 20
         FOOTER_HEIGHT = 10
         BORDERS_HEIGHT = 2
-        ITEM_HEIGHT = 20
+        # ITEM_HEIGHT = 20
+        ITEM_HEIGHT = 30
+        OUTPUT_ITEM_HEIGHT = 100
         SPACE_HEIGHT = 50
         LEFT_PADDING = 30
         TOP_PADDING = 80
@@ -371,7 +373,7 @@ class Node(DBObject):
                 )
                 node_height = sum([
                     min_node_height,
-                    ITEM_HEIGHT * max(len(node.inputs), len(node.outputs)),
+                    ITEM_HEIGHT * len(node.inputs) + OUTPUT_ITEM_HEIGHT * len(node.outputs),
                     special_parameters_count * SPECIAL_PARAMETER_HEIGHT
                 ])
                 row_heights[index] = max(row_heights[index], node_height)

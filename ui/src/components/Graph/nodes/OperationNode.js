@@ -72,13 +72,19 @@ function InputItem({input, plugins_dict}) {
     );
 }
 
-function OutputItem({output, plugins_dict}) {
+function OutputItem({output, plugins_dict, onOutputClick}) {
     const type_descriptor = plugins_dict.resources_dict[output.file_type];
+    //console.log("_cached_node", output.thumbnail);
     return (
         <div className="flow-node-item flow-node-item-output" key={output.name}>
             {output.name}
             <Icon
               type_descriptor={type_descriptor}
+            />
+            <a
+              className="flow-node-item-thumbnail"
+              dangerouslySetInnerHTML={{ __html: output.thumbnail ? output.thumbnail : "preview" }}           // eslint-disable-line react/no-danger
+              onClick={() => {onOutputClick(output.name, type_descriptor.display_raw)}}
             />
             <Handle
                 type="source"
@@ -135,6 +141,7 @@ function CustomNode({ id, data }) {
                             key={output.name}
                             plugins_dict={plugins_dict}
                             output={output}
+                            onOutputClick={data.onOutputClick}
                           />
                       )
                   }

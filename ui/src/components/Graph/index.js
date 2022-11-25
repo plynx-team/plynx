@@ -102,6 +102,8 @@ const minimapStyle = {
   backgroundColor: "black",
 };
 
+const proOptions = { hideAttribution: true };
+
 const ControlsStyled = styled(Controls)`
   button {
     background-color: #2b2b2b;
@@ -521,106 +523,14 @@ ENDPOINT = '` + API_ENDPOINT + `'
     this.props.onNodeChange(this.graph_node);
   }
 
-  onCopyBlock(copyList, offset) {
-    const nodes = copyList.nids.map(nid => this.node_lookup[nid]).filter((node) => node && node.node_running_status !== NODE_RUNNING_STATUS.SPECIAL);
-    const copyObject = {
-      nodes: nodes,
-      connectors: copyList.connectors,
-      offset: offset,
-    };
-    console.log(copyList.nids, copyObject);
-
-    storeToClipboard(copyObject);
-  }
-
-  onPasteBlock(offset) {
-    const copyBody = loadFromClipboard();
-    const nidOldToNew = {};
-    if (!copyBody) {
-      return;
-    }
-    let ii;
-    const pastedBlockIds = [];
-    this.mainGraph.getDecoratedComponentInstance().deselectAll(false);
-    for (ii = 0; ii < copyBody.nodes.length; ++ii) {
-      const blockJson = copyBody.nodes[ii];
-      const block_id = this.handleDrop(
-        {
-          nodeContent: blockJson,
-          mousePos: {
-            x: blockJson.x + 380 + offset.x - copyBody.offset.x,
-            y: blockJson.y + 120 + offset.y - copyBody.offset.y,
-          },
-        },
-        false);
-      nidOldToNew[blockJson._id] = block_id;
-      pastedBlockIds.push(block_id);
-    }
-    for (ii = 0; ii < copyBody.connectors.length; ++ii) {
-      const connector = copyBody.connectors[ii];
-      let { to_block, from_block } = connector;
-      if (nidOldToNew.hasOwnProperty(to_block)) {
-        to_block = nidOldToNew[to_block];
-      }
-      if (nidOldToNew.hasOwnProperty(from_block)) {
-        from_block = nidOldToNew[from_block];
-      }
-      const from_node = this.node_lookup[from_block];
-      const to_node = this.node_lookup[to_block];
-      if (from_node && to_node) {
-        let from_index = -1;
-        let to_index = -1;
-        let jj;
-        for (jj = 0; jj < from_node.outputs.length; ++jj) {
-          if (from_node.outputs[jj].name === connector.from) {
-            from_index = jj;
-            break;
-          }
-        }
-        for (jj = 0; jj < to_node.inputs.length; ++jj) {
-          if (to_node.inputs[jj].name === connector.to) {
-            to_index = jj;
-            break;
-          }
-        }
-
-        if (to_index < 0 || from_index < 0) {
-          console.log(`Index not found for connector ${connector}`);
-          continue;
-        }
-        if (!to_node.inputs[to_index].is_array && to_node.inputs[to_index].input_references.length > 0) {
-          continue;
-        }
-
-        to_node.inputs[to_index].input_references.push({
-          "node_id": from_node._id,
-          "output_id": connector.from,
-        });
-
-        this.connections.push({
-          "from_block": from_node._id,
-          "from": connector.from,
-          "to_block": to_node._id,
-          "to": connector.to,
-        });
-      }
-    }
-    this.mainGraph.getDecoratedComponentInstance().selectBlocks(pastedBlockIds);
-    this.setState({
-      nodes: this.nodes,
-      connections: this.connections,
-    });
-
-    this.props.onNodeChange(this.graph_node);
-  }
-
-  onOutputClick(nid, outputIndex, displayRaw) {
+  onOutputClick(nid, outputName, displayRaw) {
     if (!this.node_lookup.hasOwnProperty(nid)) {
       console.error("Cannot find node with id " + nid);
       return;
     }
     const node = this.node_lookup[nid];
-    const output = node._cached_node ? node._cached_node.outputs[outputIndex] : node.outputs[outputIndex];
+    const outputs = node._cached_node ? node._cached_node.outputs : node.outputs;
+    const output = outputs.filter(item => item.name === outputName)[0];
     if (output.values.length > 0) {
       this.handlePreview({
         title: output.name,
@@ -838,7 +748,185 @@ ENDPOINT = '` + API_ENDPOINT + `'
     escPressed: () => {
       this.closeAllDialogs();
     },
+
+    copyPressed: () => {
+      const nodesToCopy = [...this.selectedNodeIds].map(
+          nid => JSON.parse(JSON.stringify(this.node_lookup[nid]))
+      ).filter((node) => node && node.node_running_status !== NODE_RUNNING_STATUS.SPECIAL);
+      const edgesToCopy = [];
+
+      for (const edge of this.reactFlowInstance.getEdges()) {
+          if (this.selectedNodeIds.has(edge.source) || this.selectedNodeIds.has(edge.target)) {
+              edgesToCopy.push(edge);
+          }
+      }
+
+      for (var node of nodesToCopy) {
+          for (var input of node.inputs) {
+              input.input_references = [];
+          }
+
+          if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
+              for (var output of node.outputs) {
+                  output.values = []; // clear outputs
+              }
+          }
+
+          if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
+            node.node_running_status = NODE_RUNNING_STATUS.CREATED;
+          }
+          node._cached_node = null;
+      }
+
+      const copyObject = {
+        nodes: nodesToCopy,
+        edges: edgesToCopy,
+      };
+      console.log("Copy", copyObject);
+
+      storeToClipboard(copyObject);
+    },
+    pastePressed: () => {
+      console.log("PASTE");
+      if (!this.state.editable) {
+          console.log("Could not paste into read only graph");
+          return;
+      }
+
+      const copyBody = loadFromClipboard();
+      console.log(copyBody);
+      if (!copyBody) {
+        return;
+      }
+
+      const changesToApply = [];
+      const oldNodeIdToNewId = {}
+      this.selectedNodeIds.clear();
+
+      for (const node of copyBody.nodes) {
+          const newNodeId = new ObjectID().toString();
+          oldNodeIdToNewId[node._id] = newNodeId;
+          node._id = newNodeId;
+          this.selectedNodeIds.add(node._id);
+
+          const position = {
+              x: node.x + 20,
+              y: node.y + 20,
+          };
+
+          changesToApply.push({
+              changeType: ChangeType.DROP_NODE,
+              node: node,
+              replaceNodeId: false,
+              replaceOriginalNode: false,
+              position: position,
+          });
+      }
+
+      for (const edge of copyBody.edges) {
+          var source = oldNodeIdToNewId.hasOwnProperty(edge.source) ? oldNodeIdToNewId[edge.source] : edge.source;
+          var target = oldNodeIdToNewId.hasOwnProperty(edge.target) ? oldNodeIdToNewId[edge.target] : edge.target;
+
+          changesToApply.push({
+              changeType: ChangeType.CREATE_EDGE,
+              connection: {source: source, sourceHandle: edge.sourceHandle, target: target, targetHandle: edge.targetHandle},
+              pushToReactflow: true,
+          });
+      }
+
+      this.applyChanges(changesToApply);
+
+      this.reactFlowInstance.setNodes(
+          (nds) => {
+              for (var ii = 0; ii < nds.length; ++ii) {
+                  nds[ii].selected = this.selectedNodeIds.has(nds[ii].id)
+              }
+              return nds;
+          }
+      )
+    },
   };
+
+  onPasteBlock(offset) {
+    const copyBody = loadFromClipboard();
+    const nidOldToNew = {};
+    if (!copyBody) {
+      return;
+    }
+    let ii;
+    const pastedBlockIds = [];
+    this.mainGraph.getDecoratedComponentInstance().deselectAll(false);
+    for (ii = 0; ii < copyBody.nodes.length; ++ii) {
+      const blockJson = copyBody.nodes[ii];
+      const block_id = this.handleDrop(
+        {
+          nodeContent: blockJson,
+          mousePos: {
+            x: blockJson.x + 380 + offset.x - copyBody.offset.x,
+            y: blockJson.y + 120 + offset.y - copyBody.offset.y,
+          },
+        },
+        false);
+      nidOldToNew[blockJson._id] = block_id;
+      pastedBlockIds.push(block_id);
+    }
+    for (ii = 0; ii < copyBody.connectors.length; ++ii) {
+      const connector = copyBody.connectors[ii];
+      let { to_block, from_block } = connector;
+      if (nidOldToNew.hasOwnProperty(to_block)) {
+        to_block = nidOldToNew[to_block];
+      }
+      if (nidOldToNew.hasOwnProperty(from_block)) {
+        from_block = nidOldToNew[from_block];
+      }
+      const from_node = this.node_lookup[from_block];
+      const to_node = this.node_lookup[to_block];
+      if (from_node && to_node) {
+        let from_index = -1;
+        let to_index = -1;
+        let jj;
+        for (jj = 0; jj < from_node.outputs.length; ++jj) {
+          if (from_node.outputs[jj].name === connector.from) {
+            from_index = jj;
+            break;
+          }
+        }
+        for (jj = 0; jj < to_node.inputs.length; ++jj) {
+          if (to_node.inputs[jj].name === connector.to) {
+            to_index = jj;
+            break;
+          }
+        }
+
+        if (to_index < 0 || from_index < 0) {
+          console.log(`Index not found for connector ${connector}`);
+          continue;
+        }
+        if (!to_node.inputs[to_index].is_array && to_node.inputs[to_index].input_references.length > 0) {
+          continue;
+        }
+
+        to_node.inputs[to_index].input_references.push({
+          "node_id": from_node._id,
+          "output_id": connector.from,
+        });
+
+        this.connections.push({
+          "from_block": from_node._id,
+          "from": connector.from,
+          "to_block": to_node._id,
+          "to": connector.to,
+        });
+      }
+    }
+    this.mainGraph.getDecoratedComponentInstance().selectBlocks(pastedBlockIds);
+    this.setState({
+      nodes: this.nodes,
+      connections: this.connections,
+    });
+
+    this.props.onNodeChange(this.graph_node);
+  }
 
   handleDrop(blockObjArg, replaceOriginalNode) {
     const blockObj = JSON.parse(JSON.stringify(blockObjArg)); // copy
@@ -956,7 +1044,8 @@ ENDPOINT = '` + API_ENDPOINT + `'
         type: "operation",
         position: {x: node.x, y: node.y},
         data: {
-            node: node
+            node: node,
+            onOutputClick: (outputName, displayRaw) => this.onOutputClick(node._id, outputName, displayRaw),
         },
         selected: this.selectedNodeIds.has(node._id),
       };
@@ -1003,6 +1092,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
     this.applyChanges([{
         changeType: ChangeType.DROP_NODE,
         node: node,
+        replaceNodeId: true,
         replaceOriginalNode: true,
         position: position,
     }]);
@@ -1015,7 +1105,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
   }
 
   onConnect(connection) {
-    this.applyChanges([{changeType: ChangeType.CREATE_EDGE, connection: connection}]);
+    this.applyChanges([{changeType: ChangeType.CREATE_EDGE, connection: connection, pushToReactflow: false}]);
   }
 
   onNodeDrag(event, node, nodes) {
@@ -1036,7 +1126,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
             this.applyDeleteEdge(change.edge);
             break;
           case ChangeType.CREATE_EDGE:
-            this.applyCreateEdge(change.connection);
+            this.applyCreateEdge(change.connection, change.pushToReactflow);
             break;
           case ChangeType.MOVE_NODE:
             this.applyMoveNode(change.node);
@@ -1045,7 +1135,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
             this.applyDeleteNode(change.id);
             break
           case ChangeType.DROP_NODE:
-            this.applyDropNode(change.node, change.replaceOriginalNode, change.position);
+            this.applyDropNode(change.node, change.replaceNodeId, change.replaceOriginalNode, change.position);
             break
           case ChangeType.SELECT_NODE:
             this.applyNodeSelect(change.id);
@@ -1075,8 +1165,12 @@ ENDPOINT = '` + API_ENDPOINT + `'
       // this.updateFlowInstanceNode(to_node);
   }
 
-  applyCreateEdge(connection) {
+  applyCreateEdge(connection, pushToReactflow) {
       const from_node = this.node_lookup[connection.source];
+      if (!from_node) {
+          console.log(`Source node ${connection.source} not found` );
+          return;
+      }
       const node_output = from_node.outputs.find(
         (node_output_) => {
           return node_output_.name === connection.sourceHandle;
@@ -1084,6 +1178,10 @@ ENDPOINT = '` + API_ENDPOINT + `'
       );
 
       const to_node = this.node_lookup[connection.target];
+      if (!to_node) {
+          console.log(`Target node ${connection.target} not found` );
+          return;
+      }
       const node_input = to_node.inputs.find(
         (node_input_) => {
           return node_input_.name === connection.targetHandle;
@@ -1097,10 +1195,25 @@ ENDPOINT = '` + API_ENDPOINT + `'
         throw new Error("Node input with name '" + from_pin + "' not found");
       }
 
-      node_input.input_references.push({
-        "node_id": connection.source,
-        "output_id": connection.sourceHandle,
-      });
+      // check if we could add the edge
+      if (node_input.is_array || node_input.input_references.length == 0) {
+          node_input.input_references.push({
+            "node_id": connection.source,
+            "output_id": connection.sourceHandle,
+          });
+
+          if (pushToReactflow) {
+              // TODO check if needed to insert the edge
+              this.reactFlowInstance.addEdges({
+                  id: `${connection.source}-${connection.sourceHandle}-${connection.target}-${connection.targetHandle}`,
+                  source: connection.source,
+                  target: connection.target,
+                  sourceHandle: connection.sourceHandle,
+                  targetHandle: connection.targetHandle,
+                  interactionWidth: 6,
+              });
+          }
+      }
   }
 
   applyMoveNode(node) {
@@ -1124,13 +1237,15 @@ ENDPOINT = '` + API_ENDPOINT + `'
       delete this.node_lookup[node_id];
   }
 
-  applyDropNode(node, replaceOriginalNode, position) {
+  applyDropNode(node, replaceNodeId, replaceOriginalNode, position) {
       if (replaceOriginalNode) {
         node.original_node_id = node._id;
       }
+      if (replaceNodeId) {
+          node._id = new ObjectID().toString();
+      }
       node.parent_node_id = null;
       node.successor_node_id = null;
-      node._id = new ObjectID().toString();
       node.x = position.x;
       node.y = position.y;
 
@@ -1283,6 +1398,7 @@ ENDPOINT = '` + API_ENDPOINT + `'
             }}
             onDrop={event => this.onDrop(event)}
             onDragOver={event => this.onDragOver(event)}
+            proOptions={proOptions}
             fitView
             >
             <Background />

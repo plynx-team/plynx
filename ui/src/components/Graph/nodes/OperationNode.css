@@ -153,6 +153,32 @@
     margin-right: 8px;
 }
 
+.flow-node-item-output > .flow-node-item-thumbnail {
+    cursor: pointer;
+    width: calc(100% - 10px - 2);
+    font-size:12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-decoration: none;
+    display: block;
+    text-align: center;
+    color: #eee;
+
+    border: 1px solid #444;
+    border-radius: 6px;
+    margin: 5px;
+
+    transition: all .1s ease-in;
+}
+
+.flow-node-item-thumbnail:hover {
+    border-color: #3f6da0;
+    background-color: #444;
+}
+
+.flow-node-item-thumbnail:active {
+    border-color: #00BFFF;
+}
 
 .react-flow__minimap-mask {
   fill: rgba(128, 128, 128, 0.5);
