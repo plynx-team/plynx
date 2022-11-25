@@ -3,7 +3,6 @@
 
 import React, { Component, useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
-import ReactNodeGraph from '../3rd_party/react_node_graph';
 import { typesValid } from '../../graphValidation';
 import cookie from 'react-cookies';
 import HubPanel from './HubPanel';
@@ -358,7 +357,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
 
     }, () => {
       if (this.selectedNode) {
-        this.mainGraph.getDecoratedComponentInstance().selectBlocks([this.selectedNode]);
         this.selectedNode = null;
       }
     });
@@ -419,110 +417,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
     });
   }
 
-  onNewConnector(from_nid, from_pin, to_nid, to_pin) {
-    const from_node = this.node_lookup[from_nid];
-    const node_output = from_node.outputs.find(
-      (node_output_) => {
-        return node_output_.name === from_pin;
-      }
-    );
-
-    const to_node = this.node_lookup[to_nid];
-    const node_input = to_node.inputs.find(
-      (node_input_) => {
-        return node_input_.name === to_pin;
-      }
-    );
-
-    if (!node_input) {
-      throw new Error("Node input with name '" + to_pin + "' not found");
-    }
-    if (!node_output) {
-      throw new Error("Node input with name '" + from_pin + "' not found");
-    }
-
-    if (!node_input.is_array && node_input.input_references.length > 0) {
-      this.props.showAlert("No more slots for new connections left", 'warning');
-      return;
-    }
-
-    if (!typesValid(node_output, node_input)) {
-      this.props.showAlert("Incompatible types", 'warning');
-      return;
-    }
-
-    if (node_input.input_references.filter(
-        (a) => a.node_id === from_nid && a.output_id === from_pin).length > 0) {
-      this.props.showAlert("Connection already exists", 'warning');
-      return;
-    }
-
-    this.connections.push({
-      from_block: from_nid,
-      from: from_pin,
-      to_block: to_nid,
-      to: to_pin
-    });
-
-    node_input.input_references.push({
-      "node_id": from_nid,
-      "output_id": from_pin
-    });
-
-    if (this.node_lookup[to_nid]._highlight) {
-      this.node_lookup[to_nid]._highlight = false;
-      this.setState({
-        nodes: this.nodes,
-      });
-    }
-
-    this.setState({connections: this.connections});
-
-    this.props.onNodeChange(this.graph_node);
-  }
-
-  onRemoveConnector(connector) {
-    console.log('Remove connector', connector);
-    let connections = this.connections;
-    connections = connections.filter((connection) => {
-      return connection !== connector;
-    });
-
-    const to_node = this.node_lookup[connector.to_block];
-    const input = to_node.inputs.find((input_) => {
-      return input_.name === connector.to;
-    });
-    input.input_references = input.input_references.filter((value) => {
-      return !(value.output_id === connector.from && value.node_id === connector.from_block);
-    });
-
-    this.connections = connections;
-    this.setState({connections: connections});
-
-    this.props.onNodeChange(this.graph_node);
-  }
-
-  onRemoveBlock(nid) {
-    console.log('Remove block', nid);
-    if (this.node_lookup[nid].node_running_status === NODE_RUNNING_STATUS.SPECIAL) {
-      console.log('Cannot remove special node');
-      return;
-    }
-
-    this.nodes.splice(
-        this.nodes.map(node => node._id === nid).indexOf(true),     // simply indexOf does not work!
-        1
-    );
-
-    delete this.node_lookup[nid];
-
-    this.setState({
-      nodes: this.nodes,
-    });
-
-    this.props.onNodeChange(this.graph_node);
-  }
-
   onOutputClick(nid, outputName, displayRaw) {
     if (!this.node_lookup.hasOwnProperty(nid)) {
       console.error("Cannot find node with id " + nid);
@@ -541,64 +435,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
       });
     } else {
       console.log("Resource is not ready yet");
-    }
-  }
-
-  onSpecialParameterClick(nid, specialParameterIndex) {
-    if (!this.node_lookup.hasOwnProperty(nid)) {
-      console.error("Cannot find node with id " + nid);
-      return;
-    }
-    const node = this.node_lookup[nid];
-    let idx = 0;
-    for (let i = 0; i < node.parameters.length; ++i) {
-      if (parameterIsSpecial(node.parameters[i])) {
-        if (idx === specialParameterIndex) {
-          this.setState({
-            nodeId: nid,
-            parameterName: node.parameters[i].name,
-            parameterValue: node.parameters[i].value,
-          });
-        }
-        ++idx;
-      }
-    }
-  }
-
-  onBlockMove(nid, pos) {
-    if (!this.node_lookup.hasOwnProperty(nid)) {
-      console.error("Cannot find node with id " + nid);
-      return;
-    }
-    const node = this.node_lookup[nid];
-    node.x = pos.x;
-    node.y = pos.y;
-
-    this.props.onNodeChange(this.graph_node);
-  }
-
-  handleBlocksSelect(nids) {
-    console.log('blocks selected : ' + nids);
-
-    this.selectedNodeIds = nids;
-
-    if (nids.length === 1) {
-      const nid = nids[0];
-      const node = this.node_lookup[nid];
-      if (node) {
-        this.propertiesBar.setNodeData(node);
-
-        if (this.node_lookup[nid]._highlight) {
-          this.node_lookup[nid]._highlight = false;
-          this.setState({
-            nodes: this.nodes,
-          });
-        }
-      }
-    } else if (nids.length > 1) {
-      this.propertiesBar.setNodeDataArr(nids.map((nid) => this.node_lookup[nid]));
-    } else {
-      this.propertiesBar.setNodeData(this.graph_node);
     }
   }
 
@@ -726,7 +562,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
     for (node_parameter of this.link_node_parameters) {
       node_parameter.reference = this.link_graph_parameters[index].name;
     }
-    this.handleBlocksSelect(this.selectedNodeIds);
     this.props.onNodeChange(this.graph_node);
   }
 
@@ -846,155 +681,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
       )
     },
   };
-
-  onPasteBlock(offset) {
-    const copyBody = loadFromClipboard();
-    const nidOldToNew = {};
-    if (!copyBody) {
-      return;
-    }
-    let ii;
-    const pastedBlockIds = [];
-    this.mainGraph.getDecoratedComponentInstance().deselectAll(false);
-    for (ii = 0; ii < copyBody.nodes.length; ++ii) {
-      const blockJson = copyBody.nodes[ii];
-      const block_id = this.handleDrop(
-        {
-          nodeContent: blockJson,
-          mousePos: {
-            x: blockJson.x + 380 + offset.x - copyBody.offset.x,
-            y: blockJson.y + 120 + offset.y - copyBody.offset.y,
-          },
-        },
-        false);
-      nidOldToNew[blockJson._id] = block_id;
-      pastedBlockIds.push(block_id);
-    }
-    for (ii = 0; ii < copyBody.connectors.length; ++ii) {
-      const connector = copyBody.connectors[ii];
-      let { to_block, from_block } = connector;
-      if (nidOldToNew.hasOwnProperty(to_block)) {
-        to_block = nidOldToNew[to_block];
-      }
-      if (nidOldToNew.hasOwnProperty(from_block)) {
-        from_block = nidOldToNew[from_block];
-      }
-      const from_node = this.node_lookup[from_block];
-      const to_node = this.node_lookup[to_block];
-      if (from_node && to_node) {
-        let from_index = -1;
-        let to_index = -1;
-        let jj;
-        for (jj = 0; jj < from_node.outputs.length; ++jj) {
-          if (from_node.outputs[jj].name === connector.from) {
-            from_index = jj;
-            break;
-          }
-        }
-        for (jj = 0; jj < to_node.inputs.length; ++jj) {
-          if (to_node.inputs[jj].name === connector.to) {
-            to_index = jj;
-            break;
-          }
-        }
-
-        if (to_index < 0 || from_index < 0) {
-          console.log(`Index not found for connector ${connector}`);
-          continue;
-        }
-        if (!to_node.inputs[to_index].is_array && to_node.inputs[to_index].input_references.length > 0) {
-          continue;
-        }
-
-        to_node.inputs[to_index].input_references.push({
-          "node_id": from_node._id,
-          "output_id": connector.from,
-        });
-
-        this.connections.push({
-          "from_block": from_node._id,
-          "from": connector.from,
-          "to_block": to_node._id,
-          "to": connector.to,
-        });
-      }
-    }
-    this.mainGraph.getDecoratedComponentInstance().selectBlocks(pastedBlockIds);
-    this.setState({
-      nodes: this.nodes,
-      connections: this.connections,
-    });
-
-    this.props.onNodeChange(this.graph_node);
-  }
-
-  handleDrop(blockObjArg, replaceOriginalNode) {
-    const blockObj = JSON.parse(JSON.stringify(blockObjArg)); // copy
-    const node = blockObj.nodeContent;
-    const inputs = [];
-    const outputs = [];
-    const specialParameterNames = [];
-
-    let i = 0;
-
-    if (replaceOriginalNode) {
-      node.original_node_id = node._id;
-    }
-    node.parent_node_id = null;
-    node.successor_node_id = null;
-    node._id = new ObjectID().toString();
-
-    if (node.inputs) {
-      for (i = 0; i < node.inputs.length; ++i) {
-        inputs.push({
-          name: node.inputs[i].name,
-          file_type: node.inputs[i].file_type,
-          is_array: node.inputs[i].is_array,
-        });
-        node.inputs[i].values = []; // clear inputs on paste
-        node.inputs[i].input_references = [];
-      }
-    }
-    for (i = 0; i < node.outputs.length; ++i) {
-      outputs.push({
-        name: node.outputs[i].name,
-        file_type: node.outputs[i].file_type,
-        is_array: node.outputs[i].is_array,
-      });
-      if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
-        node.outputs[i].values = []; // clear outputs
-      }
-    }
-    for (i = 0; i < node.logs.length; ++i) {
-      node.logs[i].values = []; // clear outputs
-    }
-    for (i = 0; i < node.parameters.length; ++i) {
-      if (parameterIsSpecial(node.parameters[i])) {
-        specialParameterNames.push(node.parameters[i].name);
-      }
-    }
-    node.x = Math.max(blockObj.mousePos.x - 340, 0);
-    node.y = Math.max(blockObj.mousePos.y - 80, 0);
-
-    if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
-      node.node_running_status = NODE_RUNNING_STATUS.CREATED;
-    }
-    node.cache_url = null;
-
-    this.node_lookup[node._id] = node;
-
-    this.nodes.push(node);
-    console.log("node", node);
-
-    this.setState({
-      nodes: this.nodes,
-      connections: this.connections,
-    });
-
-    this.props.onNodeChange(this.graph_node);
-
-    return node._id;
-  }
 
   showValidationError(validationError) {
     for (let ii = 0; ii < validationError.children.length; ++ii) {
@@ -1161,8 +847,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
       input.input_references = input.input_references.filter((value) => {
         return !(value.output_id === edge.sourceHandle && value.node_id === edge.source);
       });
-
-      // this.updateFlowInstanceNode(to_node);
   }
 
   applyCreateEdge(connection, pushToReactflow) {
@@ -1290,21 +974,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
       }
   }
 
-  // TODO remove?
-  updateFlowInstanceNode(node) {
-    this.reactFlowInstance.setNodes(
-        (nds) => {
-            for (var ii = 0; ii < nds.length; ++ii) {
-                if (nds[ii].id === node._id) {
-                    nds[ii].data = node;
-                    break;
-                }
-            }
-            return nds;
-        }
-    );
-  }
-
   render() {
     return (
     <HotKeys className="GraphNode"
@@ -1372,8 +1041,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
         {/* Visible and flex layout blocks */}
         {this.state.editable && <HubPanel kind={this.state.graph.kind} />}
 
-        {/*this.Flow()*/}
-        {/*<Flow nodes={this.state.nodes}/>*/}
         <div
             style={{ height: '100%' }}
             className="graph-flow"
@@ -1391,7 +1058,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
             onConnect={connection => this.onConnect(connection)}
             onNodeDrag={(event, node, nodes) => this.onNodeDrag(event, node, nodes)}
             onNodeDragStop={(event, node, nodes) => this.onNodeDragStop(event, node, nodes)}
-            // onInit={onInit}
             onInit={reactFlowInstance => {this.reactFlowInstance = reactFlowInstance; this.loadGraphFromJson(this.props.node);}}
             defaultEdgeOptions={{
                 style:{strokeWidth: "5px"},
@@ -1409,32 +1075,6 @@ ENDPOINT = '` + API_ENDPOINT + `'
                  />
           </ReactFlow>
         </div>
-
-        {/*
-        <ReactNodeGraph className="MainGraph"
-          ref={(child) => {
-            this.mainGraph = child;
-          }}
-          data={this.state}
-          graphId={this.state.graphId}
-          editable={this.state.editable}
-          onBlockMove={(nid, pos) => this.onBlockMove(nid, pos)}
-          onNewConnector={(n1, o, n2, i) => this.onNewConnector(n1, o, n2, i)}
-          onRemoveConnector={(connector) => this.onRemoveConnector(connector)}
-          onOutputClick={(nid, outputIndex, displayRaw) => this.onOutputClick(nid, outputIndex, displayRaw)}
-          onSpecialParameterClick={(nid, specialParameterIndex) => this.onSpecialParameterClick(nid, specialParameterIndex)}
-          onRemoveBlock={(nid) => this.onRemoveBlock(nid)}
-          onCopyBlock={(copyList, offset) => this.onCopyBlock(copyList, offset)}
-          onPasteBlock={(offset) => this.onPasteBlock(offset)}
-          onBlocksSelect={(nids) => {
-            this.handleBlocksSelect(nids);
-          }}
-          onDrop={(nodeObj) => this.handleDrop(nodeObj, true)}
-          onAllBlocksDeselect={() => this.handleBlocksSelect([])}
-          onSavePressed={() => this.handleSave()}
-          key={'graph' + this.state.editable}
-        />
-        */}
 
         { this.state.editable !== null &&
         <PropertiesBar className="PropertiesBar"
