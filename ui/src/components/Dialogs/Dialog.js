@@ -63,10 +63,10 @@ export default class Dialog extends Component {
           default={{
             x: (window.innerWidth - this.props.width) / 2,
             y: (window.innerHeight - this.props.height) / 2,
-            width: this.props.width,
-            height: this.props.height,
+            width: this.props.width + 2,
+            height: this.props.height + 2,
           }}
-          minWidth={400}
+          minWidth={200}
           minHeight={100}
           onResize={(e, direction, ref, delta, position) => {
             this.setState({

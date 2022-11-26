@@ -6,7 +6,7 @@ import LogIn from './components/LogIn';
 import LogInRedirect from './components/LogInRedirect';
 import Dashboard from './components/Dashboard';
 import ErrorPage from './components/ErrorPage';
-import CacheBuster from './CacheBuster';
+import CacheBuster from 'react-cache-buster';
 import { UserMenuContextProvider } from './contexts';
 import { COLLECTIONS, VIRTUAL_COLLECTIONS, SPECIAL_USERS } from './constants';
 
@@ -15,6 +15,8 @@ import UserView from './components/UserView';
 import OperationList from './components/NodeList/operationList';
 import WorkflowList from './components/NodeList/workflowList';
 import RunList from './components/NodeList/runList';
+import LoadingScreen from './components/LoadingScreen';
+import packageInfo from '../package.json';
 
 import './App.css';
 
@@ -56,16 +58,17 @@ class App extends Component {
   }
 
   render() {
-    return (
-      <CacheBuster>
-        {({ loading, isLatestVersion, refreshCacheAndReload }) => {
-          if (loading) return null;
-          if (!loading && !isLatestVersion) {
-            // You can decide how and when you want to force reload
-            refreshCacheAndReload();
-          }
+    const isProduction = process.env.NODE_ENV === 'production';
 
-          return (
+    console.log("VERSION", packageInfo.version);
+    return (
+        <CacheBuster
+            currentVersion={packageInfo.version}
+            isEnabled={isProduction} // If false, the library is disabled.
+            isVerboseMode={false} // If true, the library writes verbose logs to console.
+            loadingComponent={<LoadingScreen />} // If not pass, nothing appears at the time of new version check.
+            metaFileDirectory={'.'} // If public assets are hosted somewhere other than root on your server.
+          >
             <div className="App">
               <UserMenuContextProvider>
                 <Header />
@@ -91,8 +94,6 @@ class App extends Component {
                 </div>
               </UserMenuContextProvider>
             </div>
-          );
-        }}
       </CacheBuster>
     );
   }

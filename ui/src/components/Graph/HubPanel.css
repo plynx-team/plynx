@@ -5,7 +5,6 @@
   background-color: #2b2b2b;
   color: #fff;
   vertical-align: middle;
-
 }
 
 .hub-box {
@@ -136,21 +135,42 @@
 }
 
 .hub-item {
-  padding: 5px;
-  display: flex;
   font-weight: 600;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
   align-items: center;
+  margin: 3px 0 3px 0;
+}
+
+.dndnode > .hub-item {
+    cursor: grab;
 }
 
 .hub-item-node {
+  padding: 5px;
   background-color: #333;
+  display: flex;
 }
 
-.hub-item-node:hover {
+.dndnode > .hub-item-node:hover {
   background-color: #458;
+}
+
+.hub-item-in-or-out {
+    background-color: #333;
+    padding: 4px;
+    padding-left: 17px;
+    font-style: italic;
+}
+
+.hub-item-in-or-out:hover {
+    background-color: #458;
+    cursor: pointer;
+}
+
+.hub-item-in-or-out:active {
+    background-color: #62a6f3;
 }
 
 .hub-item-icon {

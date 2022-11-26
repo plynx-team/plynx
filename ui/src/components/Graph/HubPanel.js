@@ -15,6 +15,8 @@ export default class HubPanel extends Component {
 
   static propTypes = {
     kind: PropTypes.string.isRequired,
+    hubEntryItem: PropTypes.func.isRequired,
+    hiddenSearch: PropTypes.string,
   };
 
   render() {
@@ -49,6 +51,8 @@ export default class HubPanel extends Component {
                 <HubEntry
                     hub={{...plugins_dict.workflows_dict, ...plugins_dict.operations_dict}[this.props.kind].hubs[this.state.index]}
                     key={this.state.index}
+                    hubEntryItem={this.props.hubEntryItem}
+                    hiddenSearch={this.props.hiddenSearch}
                 />
             </div>
 

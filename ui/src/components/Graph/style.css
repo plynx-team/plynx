@@ -1,3 +1,6 @@
+.graph-flow {
+  width: calc(100% - 280px - 310px);    /* TODO use dynamic values*/
+}
 
 .GraphNode {
   font-family: 'Source Sans Pro', sans-serif;
@@ -6,8 +9,19 @@
   font-size: 14px;
   font-weight: 400;
   height: 100%;
+  min-height: 0;
+
+  overflow: auto;
+
+  /* display: flex;
+  flex-direction: row; */
+
+  /* display: grid;
+  grid-template-columns: 280px 1fr 300px; */
+
   display: flex;
-  text-rendering:optimizeLegibility;
+  flex-direction: row;
+
   -webkit-font-smoothing: antialiased;
   -moz-font-smoothing: antialiased;
 }
@@ -21,11 +35,11 @@
 }
 
 .BackgroundLabels.readonly {
-  left: 30px;
+  left: 80px;
 }
 
 .BackgroundLabels.editable {
-  left: 300px;
+  left: 350px;
 }
 
 .BackgroundLabels > .Title {
@@ -47,6 +61,7 @@
 .PropertiesBar {
   background-color: #2b2b2b;
   width: 300px;
+  min-width: 300px;
   padding: 5px;
   overflow: auto;
 }

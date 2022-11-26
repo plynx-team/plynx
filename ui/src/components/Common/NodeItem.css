@@ -30,3 +30,12 @@
 .NodeItem .star-visible {
   display: block;
 }
+
+.operation-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.operation-title-text {
+  margin-left: 5px;
+}

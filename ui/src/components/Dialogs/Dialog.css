@@ -10,13 +10,15 @@
 
 .dialog .dialog-rnd {
   border: 1px solid #444;
-  border-radius: 5px;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
   box-shadow: 0 0 20px rgba(0, 0, 0, 1);
 }
 
 .dialog .dialog-window {
   background-color: #000;
-  border-radius: 4px;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
   display: grid;
   grid-template-rows: 30px 1fr;
   height: 100%;
@@ -32,6 +34,8 @@
   font-family: 'Source Sans Pro', sans-serif;
   color: white;
   padding: 4px;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
 }
 
 .dialog .dialog-window .header .close-button {

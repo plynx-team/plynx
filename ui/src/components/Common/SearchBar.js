@@ -72,6 +72,7 @@ export default class SearchBar extends Component {
           onChange={(e) => this.handleInputChange(e)}
           onKeyPress={(e) => this.handleKeyPress(e)}
           type="search"
+          autoFocus
         />
 
       </div>
