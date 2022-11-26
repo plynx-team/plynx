@@ -29,6 +29,7 @@
     "react-alert-es6": "^1.0.0",
     "react-alert-template-basic": "^1.0.2",
     "react-beautiful-dnd": "^13.1.1",
+    "react-cache-buster": "^0.1.7",
     "react-cookie": "^4.1.1",
     "react-cookies": "^0.1.1",
     "react-dev-utils": "^12.0.1",
@@ -61,7 +62,8 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "generate-meta-tag": "node ./node_modules/react-cache-buster/dist/generate-meta-tag.js",
+    "build": "npm run generate-meta-tag && react-scripts build",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject",
     "generate-build-version": "node generate-build-version",
