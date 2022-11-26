@@ -14,6 +14,12 @@ Please join the discussions in the [Discord](https://discord.gg/ZC3wY2J).
 - [(Release 1.9.x) New scalable execution model](https://github.com/plynx-team/plynx/projects/3)
 - [(Release 1.10.x) Create API Builder](https://github.com/plynx-team/plynx/projects/4)
 
+## [1.9.0] - 2022-11-25
+
+- Updated react version to 17.
+- Using reactFlow as the workflow engine.
+- Added interactive Operation lookup.
+
 ## [1.8.1] - 2022-10-19
 
 - Using single threaded python DAG by default.
