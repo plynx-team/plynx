@@ -4,7 +4,6 @@ import PropTypes from 'prop-types';
 import Icon from '../Common/Icon';
 import './style.css';
 
-
 export default class HubEntryList extends Component {
   static propTypes = {
     items: PropTypes.array.isRequired,

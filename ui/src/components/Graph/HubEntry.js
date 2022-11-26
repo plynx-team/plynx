@@ -121,7 +121,7 @@ export default class HubEntry extends Component {
         per_page: self.perPage,
         status: "READY",
         hub: this.props.hub,
-        search: `${this.props.hiddenSearch ? this.props.hiddenSearch + " ": ""}${this.state.search}`,
+        search: `${this.props.hiddenSearch ? this.props.hiddenSearch + " " : ""}${this.state.search}`,
       })
       .then(handleResponse)
       .catch(handleError);

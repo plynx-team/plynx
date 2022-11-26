@@ -1,40 +1,32 @@
 /* eslint max-lines: 0 */
 /* eslint complexity: 0 */
 
-import React, { Component, useState, useCallback } from 'react';
+import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { typesValid } from '../../graphValidation';
-import cookie from 'react-cookies';
 import HubPanel from './HubPanel';
 import {HubDraggableEntry, HubResourceTypeBasedEntry, TmpHubEntry} from './HubEntryListNode';
 import HubLookupDialog from './HubLookupDialog';
 import PreviewDialog from '../Dialogs/PreviewDialog';
 import PropertiesBar from './PropertiesBar';
 import FileDialog from '../Dialogs/FileDialog';
-import CodeDialog from '../Dialogs/CodeDialog';
 import ParameterSelectionDialog from '../Dialogs/ParameterSelectionDialog';
 import {ObjectID} from 'bson';
 import {HotKeys} from 'react-hotkeys';
 import {
   VALIDATION_CODES,
   NODE_RUNNING_STATUS,
-  SPECIAL_TYPE_NAMES,
   KEY_MAP,
   SPECIAL_NODE_IDS,
 } from '../../constants';
-import { API_ENDPOINT } from '../../configConsts';
 import { storeToClipboard, loadFromClipboard, addStyleToTourSteps } from '../../utils';
 
-import ReactFlow, { Controls, Background, MiniMap, ReactFlowProvider, fitView, useNodesState, useEdgesState, useReactFlow, applyNodeChanges } from 'reactflow';
-import styled, { ThemeProvider } from 'styled-components';
+// eslint-disable-next-line no-unused-vars
+import ReactFlow, { Controls, Background, MiniMap, ReactFlowProvider, fitView } from 'reactflow';
+import styled from 'styled-components';
 import OperationNode from './nodes/OperationNode';
 import 'reactflow/dist/style.css';
 
 import "./style.css";
-
-function parameterIsSpecial(parameter) {
-  return SPECIAL_TYPE_NAMES.indexOf(parameter.parameter_type) > -1 && parameter.widget !== null;
-}
 
 const TOUR_STEPS = [
   {
@@ -175,7 +167,6 @@ class Graph extends Component {
       parameterNameToGraphParameter[parameter.name] = parameter;
     }
 
-    let inputNode = null;
     for (let i = 0; i < this.nodes.length; ++i) {
       const node = this.nodes[i];
 
@@ -192,7 +183,6 @@ class Graph extends Component {
 
       // work with input and output
       if (node._id === SPECIAL_NODE_IDS.INPUT) {
-        inputNode = node;
         node.outputs = this.graph_node.inputs;
       } else if (node._id === SPECIAL_NODE_IDS.OUTPUT) {
         const prevInputToInputReferences = {};
@@ -219,26 +209,25 @@ class Graph extends Component {
       this.node_lookup[node._id] = node;
     }
 
-    var flowNodes = [];
-    var flowEdges = [];
-    for (var ii = 0; this.nodes && ii < this.nodes.length; ++ii) {
+    const flowNodes = [];
+    const flowEdges = [];
+    for (let ii = 0; this.nodes && ii < this.nodes.length; ++ii) {
       const node = this.nodes[ii];
       flowNodes.push(this.nodeToFlowNode(node));
 
-      for (var jj = 0; jj < node.inputs.length; ++jj) {
+      for (let jj = 0; jj < node.inputs.length; ++jj) {
         const input = node.inputs[jj];
-        for (var kk = 0; kk < input.input_references.length; ++kk) {
-            const input_reference = input.input_references[kk];
-            flowEdges.push({
-                id: `${input_reference.node_id}-${node._id}-${input.name}-${input_reference.output_id}`,
-                source: input_reference.node_id,
-                target: node._id,
-                sourceHandle: input_reference.output_id,
-                targetHandle: input.name,
-                interactionWidth: 6,
-            });
+        for (let kk = 0; kk < input.input_references.length; ++kk) {
+          const input_reference = input.input_references[kk];
+          flowEdges.push({
+            id: `${input_reference.node_id}-${node._id}-${input.name}-${input_reference.output_id}`,
+            source: input_reference.node_id,
+            target: node._id,
+            sourceHandle: input_reference.output_id,
+            targetHandle: input.name,
+            interactionWidth: 6,
+          });
         }
-
       }
     }
 
@@ -291,7 +280,7 @@ class Graph extends Component {
 
   clearCacheNodes() {
     if (!this.nodes) {
-       return;
+      return;
     }
     for (let i = 0; i < this.nodes.length; ++i) {
       this.nodes[i]._cached_node = null;
@@ -367,9 +356,9 @@ class Graph extends Component {
   }
 
   handleCloseHubLookupDialog() {
-      this.setState({
-          nodeLookupSearch: undefined
-      });
+    this.setState({
+      nodeLookupSearch: undefined
+    });
   }
 
   handleShowFile(nid) {
@@ -463,26 +452,26 @@ class Graph extends Component {
       const edgesToCopy = [];
 
       for (const edge of this.reactFlowInstance.getEdges()) {
-          if (this.selectedNodeIds.has(edge.source) || this.selectedNodeIds.has(edge.target)) {
-              edgesToCopy.push(edge);
-          }
+        if (this.selectedNodeIds.has(edge.source) || this.selectedNodeIds.has(edge.target)) {
+          edgesToCopy.push(edge);
+        }
       }
 
-      for (var node of nodesToCopy) {
-          for (var input of node.inputs) {
-              input.input_references = [];
-          }
+      for (const node of nodesToCopy) {
+        for (const input of node.inputs) {
+          input.input_references = [];
+        }
 
-          if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
-              for (var output of node.outputs) {
-                  output.values = []; // clear outputs
-              }
+        if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
+          for (const output of node.outputs) {
+            output.values = []; // clear outputs
           }
+        }
 
-          if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
-            node.node_running_status = NODE_RUNNING_STATUS.CREATED;
-          }
-          node._cached_node = null;
+        if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
+          node.node_running_status = NODE_RUNNING_STATUS.CREATED;
+        }
+        node._cached_node = null;
       }
 
       const copyObject = {
@@ -496,8 +485,8 @@ class Graph extends Component {
     pastePressed: () => {
       console.log("PASTE");
       if (!this.state.editable) {
-          console.log("Could not paste into read only graph");
-          return;
+        console.log("Could not paste into read only graph");
+        return;
       }
 
       const copyBody = loadFromClipboard();
@@ -507,50 +496,50 @@ class Graph extends Component {
       }
 
       const changesToApply = [];
-      const oldNodeIdToNewId = {}
+      const oldNodeIdToNewId = {};
       this.selectedNodeIds.clear();
 
       for (const node of copyBody.nodes) {
-          const newNodeId = new ObjectID().toString();
-          oldNodeIdToNewId[node._id] = newNodeId;
-          node._id = newNodeId;
-          this.selectedNodeIds.add(node._id);
+        const newNodeId = new ObjectID().toString();
+        oldNodeIdToNewId[node._id] = newNodeId;
+        node._id = newNodeId;
+        this.selectedNodeIds.add(node._id);
 
-          const position = {
-              x: node.x + 20,
-              y: node.y + 20,
-          };
+        const position = {
+          x: node.x + 20,
+          y: node.y + 20,
+        };
 
-          changesToApply.push({
-              changeType: ChangeType.DROP_NODE,
-              node: node,
-              replaceNodeId: false,
-              replaceOriginalNode: false,
-              position: position,
-          });
+        changesToApply.push({
+          changeType: ChangeType.DROP_NODE,
+          node: node,
+          replaceNodeId: false,
+          replaceOriginalNode: false,
+          position: position,
+        });
       }
 
       for (const edge of copyBody.edges) {
-          var source = oldNodeIdToNewId.hasOwnProperty(edge.source) ? oldNodeIdToNewId[edge.source] : edge.source;
-          var target = oldNodeIdToNewId.hasOwnProperty(edge.target) ? oldNodeIdToNewId[edge.target] : edge.target;
+        const source = oldNodeIdToNewId.hasOwnProperty(edge.source) ? oldNodeIdToNewId[edge.source] : edge.source;
+        const target = oldNodeIdToNewId.hasOwnProperty(edge.target) ? oldNodeIdToNewId[edge.target] : edge.target;
 
-          changesToApply.push({
-              changeType: ChangeType.CREATE_EDGE,
-              connection: {source: source, sourceHandle: edge.sourceHandle, target: target, targetHandle: edge.targetHandle},
-              pushToReactflow: true,
-          });
+        changesToApply.push({
+          changeType: ChangeType.CREATE_EDGE,
+          connection: {source: source, sourceHandle: edge.sourceHandle, target: target, targetHandle: edge.targetHandle},
+          pushToReactflow: true,
+        });
       }
 
       this.applyChanges(changesToApply);
 
       this.reactFlowInstance.setNodes(
           (nds) => {
-              for (var ii = 0; ii < nds.length; ++ii) {
-                  nds[ii].selected = this.selectedNodeIds.has(nds[ii].id)
-              }
-              return nds;
+            for (let ii = 0; ii < nds.length; ++ii) {
+              nds[ii].selected = this.selectedNodeIds.has(nds[ii].id);  // eslint-disable-line no-param-reassign
+            }
+            return nds;
           }
-      )
+      );
     },
   };
 
@@ -591,47 +580,49 @@ class Graph extends Component {
   }
 
   nodeToFlowNode(node) {
-      return {
-        id: node._id,
-        type: "operation",
-        position: {x: node.x, y: node.y},
-        data: {
-            node: node,
-            onOutputClick: (outputName, displayRaw) => this.onOutputClick(node._id, outputName, displayRaw),
-        },
-        selected: this.selectedNodeIds.has(node._id),
-      };
+    return {
+      id: node._id,
+      type: "operation",
+      position: {x: node.x, y: node.y},
+      data: {
+        node: node,
+        onOutputClick: (outputName, displayRaw) => this.onOutputClick(node._id, outputName, displayRaw),
+      },
+      selected: this.selectedNodeIds.has(node._id),
+    };
   }
 
   onNodesChange(nodeChanges) {
-      var eventsToPass = [];
-      for (var ii = 0; ii < nodeChanges.length; ++ii) {
-          const nodeChange = nodeChanges[ii];
+    const eventsToPass = [];
+    for (let ii = 0; ii < nodeChanges.length; ++ii) {
+      const nodeChange = nodeChanges[ii];
 
-          switch (nodeChange.type) {
-              case "remove":
-                  eventsToPass.push({changeType: ChangeType.DELETE_NODE, id: nodeChange.id});
-                  break;
-              case "select":
-                  if (nodeChange.selected) {
-                      eventsToPass.push({changeType: ChangeType.SELECT_NODE, id: nodeChange.id})
-                  } else {
-                      eventsToPass.push({changeType: ChangeType.DESELECT_NODE, id: nodeChange.id});
-                  }
-                  break;
+      switch (nodeChange.type) {
+        case "remove":
+          eventsToPass.push({changeType: ChangeType.DELETE_NODE, id: nodeChange.id});
+          break;
+        case "select":
+          if (nodeChange.selected) {
+            eventsToPass.push({changeType: ChangeType.SELECT_NODE, id: nodeChange.id});
+          } else {
+            eventsToPass.push({changeType: ChangeType.DESELECT_NODE, id: nodeChange.id});
           }
+          break;
+        default:
+          continue;
       }
-      this.applyChanges(eventsToPass);
+    }
+    this.applyChanges(eventsToPass);
   }
 
   onDragOver(event) {
-      event.preventDefault();
-      event.dataTransfer.dropEffect = 'move';
+    event.preventDefault();     // eslint-disable-line no-param-reassign
+    event.dataTransfer.dropEffect = 'move';     // eslint-disable-line no-param-reassign
   }
 
   onDrop(event) {
     event.preventDefault();
-    const obj = event.dataTransfer.getData('application/reactflow')
+    const obj = event.dataTransfer.getData('application/reactflow');
 
     const reactFlowBounds = this.reactFlowWrapper.current.getBoundingClientRect();
     const node = JSON.parse(obj);
@@ -641,11 +632,11 @@ class Graph extends Component {
       y: event.clientY - reactFlowBounds.top,
     });
     this.applyChanges([{
-        changeType: ChangeType.DROP_NODE,
-        node: node,
-        replaceNodeId: true,
-        replaceOriginalNode: true,
-        position: position,
+      changeType: ChangeType.DROP_NODE,
+      node: node,
+      replaceNodeId: true,
+      replaceOriginalNode: true,
+      position: position,
     }]);
   }
 
@@ -660,254 +651,247 @@ class Graph extends Component {
   }
 
   onNodeDrag(event, node, nodes) {
-      nodes.map(n => {this.node_lookup[n.id].x = n.position.x; this.node_lookup[n.id].y = n.position.y; });
+    for (const n of nodes) {
+      this.node_lookup[n.id].x = n.position.x;
+      this.node_lookup[n.id].y = n.position.y;
+    }
   }
 
   onNodeDragStop(event, node, nodes) {
-      this.applyChanges(
-          nodes.map(node => ({changeType: ChangeType.MOVE_NODE, node: node}))
+    this.applyChanges(
+          nodes.map(n => ({changeType: ChangeType.MOVE_NODE, node: n}))
       );
   }
 
   onConnectStart(event, params) {
-      console.log("onConnectStart", params);
-      this.connectionStartParams = params;
+    console.log("onConnectStart", params);
+    this.connectionStartParams = params;
   }
 
   onConnectEnd(event) {
-      const targetIsPane = event.target.classList.contains('react-flow__pane');
-      console.log("onConnectEnd", targetIsPane);
-      if (!targetIsPane) {
-          return;
+    const targetIsPane = event.target.classList.contains('react-flow__pane');
+    console.log("onConnectEnd", targetIsPane);
+    if (!targetIsPane) {
+      return;
+    }
+
+    const { top, left } = this.reactFlowWrapper.current.getBoundingClientRect();
+    this.positionToInsert = this.reactFlowInstance.project({ x: event.clientX - left, y: event.clientY - top });
+
+    const node = this.node_lookup[this.connectionStartParams.nodeId];
+    const resources = this.connectionStartParams.handleType === "source" ? node.outputs : node.inputs;
+    const nodeLookupSearchInputsOrOutputs = this.connectionStartParams.handleType === "source" ? "outputs" : "inputs";
+    const inputOrOutput = resources.filter(obj => obj.name === this.connectionStartParams.handleId)[0];
+    const kind = inputOrOutput.file_type;
+    const nodeLookupSearch = `${this.connectionStartParams.handleType === "source" ? "input_file_type" : "output_file_type"}:${kind}`;
+
+    if (this.connectionStartParams.handleType === "target") {
+      if (inputOrOutput.input_references.length > 0 && !inputOrOutput.is_array) {
+        this.props.showAlert("Cannot add more inputs", 'warning');
+        return;
       }
+    }
 
-      const { top, left } = this.reactFlowWrapper.current.getBoundingClientRect();
-      this.positionToInsert = this.reactFlowInstance.project({ x: event.clientX - left, y: event.clientY - top });
-
-      const node = this.node_lookup[this.connectionStartParams.nodeId];
-      const resources = this.connectionStartParams.handleType === "source" ? node.outputs : node.inputs;
-      const nodeLookupSearchInputsOrOutputs = this.connectionStartParams.handleType === "source" ? "outputs" : "inputs";
-      const inputOrOutput = resources.filter(obj => obj.name === this.connectionStartParams.handleId)[0];
-      const kind = inputOrOutput.file_type;
-      const nodeLookupSearch = `${this.connectionStartParams.handleType === "source" ? "input_file_type" : "output_file_type"}:${kind}`;
-
-      if (this.connectionStartParams.handleType === "target") {
-          if (inputOrOutput.input_references.length > 0 && !inputOrOutput.is_array) {
-              this.props.showAlert("Cannot add more inputs", 'warning');
-              return;
-          }
-      }
-
-      this.setState({
-          nodeLookupSearch: nodeLookupSearch,
-          nodeLookupSearchInputsOrOutputs: nodeLookupSearchInputsOrOutputs,
-      })
+    this.setState({
+      nodeLookupSearch: nodeLookupSearch,
+      nodeLookupSearchInputsOrOutputs: nodeLookupSearchInputsOrOutputs,
+    });
   }
 
   onInsertLookup(nodeBody, inputOrOutput) {
-      this.handleCloseHubLookupDialog();
+    const node = JSON.parse(JSON.stringify(nodeBody));
+    this.handleCloseHubLookupDialog();
 
-      nodeBody._id = new ObjectID().toString()
+    node._id = new ObjectID().toString();
 
-      const changesToApply = [];
-      changesToApply.push({
-          changeType: ChangeType.DROP_NODE,
-          node: nodeBody,
-          replaceNodeId: false,
-          replaceOriginalNode: true,
-          position: this.positionToInsert,
-      });
-      var source;
-      var sourceHandle;
-      var target;
-      var targetHandle;
-      if (this.connectionStartParams.handleType === "source") {
-          source = this.connectionStartParams.nodeId;
-          sourceHandle = this.connectionStartParams.handleId;
-          target = nodeBody._id;
-          targetHandle = inputOrOutput;
-      } else {
-          target = this.connectionStartParams.nodeId;
-          targetHandle = this.connectionStartParams.handleId;
-          source = nodeBody._id;
-          sourceHandle = inputOrOutput;
-      }
-      changesToApply.push({
-          changeType: ChangeType.CREATE_EDGE,
-          connection: {source: source, sourceHandle: sourceHandle, target: target, targetHandle: targetHandle},
-          pushToReactflow: true,
-      });
+    const changesToApply = [];
+    changesToApply.push({
+      changeType: ChangeType.DROP_NODE,
+      node: node,
+      replaceNodeId: false,
+      replaceOriginalNode: true,
+      position: this.positionToInsert,
+    });
+    let source;
+    let sourceHandle;
+    let target;
+    let targetHandle;
+    if (this.connectionStartParams.handleType === "source") {
+      source = this.connectionStartParams.nodeId;
+      sourceHandle = this.connectionStartParams.handleId;
+      target = node._id;
+      targetHandle = inputOrOutput;
+    } else {
+      target = this.connectionStartParams.nodeId;
+      targetHandle = this.connectionStartParams.handleId;
+      source = node._id;
+      sourceHandle = inputOrOutput;
+    }
+    changesToApply.push({
+      changeType: ChangeType.CREATE_EDGE,
+      connection: {source: source, sourceHandle: sourceHandle, target: target, targetHandle: targetHandle},
+      pushToReactflow: true,
+    });
 
-      this.applyChanges(changesToApply);
+    this.applyChanges(changesToApply);
   }
 
   applyChanges(changes) {
-      for (var ii = 0; ii < changes.length; ++ii) {
-        const change = changes[ii];
-        switch (change.changeType) {
-          case ChangeType.DELETE_EDGE:
-            this.applyDeleteEdge(change.edge);
-            break;
-          case ChangeType.CREATE_EDGE:
-            this.applyCreateEdge(change.connection, change.pushToReactflow);
-            break;
-          case ChangeType.MOVE_NODE:
-            this.applyMoveNode(change.node);
-            break;
-          case ChangeType.DELETE_NODE:
-            this.applyDeleteNode(change.id);
-            break
-          case ChangeType.DROP_NODE:
-            this.applyDropNode(change.node, change.replaceNodeId, change.replaceOriginalNode, change.position);
-            break
-          case ChangeType.SELECT_NODE:
-            this.applyNodeSelect(change.id);
-            break;
-          case ChangeType.DESELECT_NODE:
-            this.applyNodeDeselect(change.id);
-            break;
-          default:
-            console.error(`Unknown ChangeType: ${change.changeType}`);
-        }
+    for (let ii = 0; ii < changes.length; ++ii) {
+      const change = changes[ii];
+      switch (change.changeType) {
+        case ChangeType.DELETE_EDGE:
+          this.applyDeleteEdge(change.edge);
+          break;
+        case ChangeType.CREATE_EDGE:
+          this.applyCreateEdge(change.connection, change.pushToReactflow);
+          break;
+        case ChangeType.MOVE_NODE:
+          this.applyMoveNode(change.node);
+          break;
+        case ChangeType.DELETE_NODE:
+          this.applyDeleteNode(change.id);
+          break;
+        case ChangeType.DROP_NODE:
+          this.applyDropNode(change.node, change.replaceNodeId, change.replaceOriginalNode, change.position);
+          break;
+        case ChangeType.SELECT_NODE:
+          this.applyNodeSelect(change.id);
+          break;
+        case ChangeType.DESELECT_NODE:
+          this.applyNodeDeselect(change.id);
+          break;
+        default:
+          console.error(`Unknown ChangeType: ${change.changeType}`);
       }
-      if (changes.length > 0) {
-          this.props.onNodeChange(this.graph_node);
-      }
+    }
+    if (changes.length > 0) {
+      this.props.onNodeChange(this.graph_node);
+    }
   }
 
   applyDeleteEdge(edge) {
-      const to_node = this.node_lookup[edge.target];
-      const input = to_node.inputs.find((input_) => {
-        return input_.name === edge.targetHandle;
-      });
-      input.input_references = input.input_references.filter((value) => {
-        return !(value.output_id === edge.sourceHandle && value.node_id === edge.source);
-      });
+    const to_node = this.node_lookup[edge.target];
+    const input = to_node.inputs.find((input_) => {
+      return input_.name === edge.targetHandle;
+    });
+    input.input_references = input.input_references.filter((value) => {
+      return !(value.output_id === edge.sourceHandle && value.node_id === edge.source);
+    });
   }
 
   applyCreateEdge(connection, pushToReactflow) {
-      const from_node = this.node_lookup[connection.source];
-      if (!from_node) {
-          console.log(`Source node ${connection.source} not found` );
-          return;
-      }
-      const node_output = from_node.outputs.find(
-        (node_output_) => {
-          return node_output_.name === connection.sourceHandle;
-        }
-      );
+    const from_node = this.node_lookup[connection.source];
+    if (!from_node) {
+      console.log(`Source node ${connection.source} not found`);
+      return;
+    }
 
-      const to_node = this.node_lookup[connection.target];
-      if (!to_node) {
-          console.log(`Target node ${connection.target} not found` );
-          return;
-      }
-      const node_input = to_node.inputs.find(
+    const to_node = this.node_lookup[connection.target];
+    if (!to_node) {
+      console.log(`Target node ${connection.target} not found`);
+      return;
+    }
+    const node_input = to_node.inputs.find(
         (node_input_) => {
           return node_input_.name === connection.targetHandle;
         }
       );
 
-      if (!node_input) {
-        throw new Error("Node input with name '" + to_pin + "' not found");
-      }
-      if (!node_output) {
-        throw new Error("Node input with name '" + from_pin + "' not found");
-      }
+    // check if we could add the edge
+    if (node_input.is_array || node_input.input_references.length === 0) {
+      node_input.input_references.push({
+        "node_id": connection.source,
+        "output_id": connection.sourceHandle,
+      });
 
-      // check if we could add the edge
-      if (node_input.is_array || node_input.input_references.length == 0) {
-          node_input.input_references.push({
-            "node_id": connection.source,
-            "output_id": connection.sourceHandle,
-          });
-
-          if (pushToReactflow) {
+      if (pushToReactflow) {
               // TODO check if needed to insert the edge
-              this.reactFlowInstance.addEdges({
-                  id: `${connection.source}-${connection.sourceHandle}-${connection.target}-${connection.targetHandle}`,
-                  source: connection.source,
-                  target: connection.target,
-                  sourceHandle: connection.sourceHandle,
-                  targetHandle: connection.targetHandle,
-                  interactionWidth: 6,
-              });
-          }
+        this.reactFlowInstance.addEdges({
+          id: `${connection.source}-${connection.sourceHandle}-${connection.target}-${connection.targetHandle}`,
+          source: connection.source,
+          target: connection.target,
+          sourceHandle: connection.sourceHandle,
+          targetHandle: connection.targetHandle,
+          interactionWidth: 6,
+        });
       }
+    }
   }
 
   applyMoveNode(node) {
-      const node_to_apply = this.node_lookup[node.id];
-      node_to_apply.x = node.position.x;
-      node_to_apply.y = node.position.y;
+    const node_to_apply = this.node_lookup[node.id];
+    node_to_apply.x = node.position.x;
+    node_to_apply.y = node.position.y;
   }
 
   applyDeleteNode(node_id) {
-      if (this.node_lookup[node_id].node_running_status === NODE_RUNNING_STATUS.SPECIAL) {
-        console.error('Cannot remove special node');
-        return;
-      }
+    if (this.node_lookup[node_id].node_running_status === NODE_RUNNING_STATUS.SPECIAL) {
+      console.error('Cannot remove special node');
+      return;
+    }
 
-      this.nodes.splice(
+    this.nodes.splice(
           this.nodes.map(node => node._id === node_id).indexOf(true),     // simply indexOf does not work!
           1
       );
 
-      this.applyNodeDeselect(node_id);
-      delete this.node_lookup[node_id];
+    this.applyNodeDeselect(node_id);
+    delete this.node_lookup[node_id];
   }
 
-  applyDropNode(node, replaceNodeId, replaceOriginalNode, position) {
-      if (replaceOriginalNode) {
-        node.original_node_id = node._id;
-      }
-      if (replaceNodeId) {
-          node._id = new ObjectID().toString();
-      }
-      node.parent_node_id = null;
-      node.successor_node_id = null;
-      node.x = position.x;
-      node.y = position.y;
+  applyDropNode(nodeBody, replaceNodeId, replaceOriginalNode, position) {
+    const node = JSON.parse(JSON.stringify(nodeBody));
+    if (replaceOriginalNode) {
+      node.original_node_id = node._id;
+    }
+    if (replaceNodeId) {
+      node._id = new ObjectID().toString();
+    }
+    node.parent_node_id = null;
+    node.successor_node_id = null;
+    node.x = position.x;
+    node.y = position.y;
 
-      const flowNode = this.nodeToFlowNode(node);
+    const flowNode = this.nodeToFlowNode(node);
 
-      this.nodes.push(node)
-      this.node_lookup[node._id] = node;
-      this.reactFlowInstance.setNodes((nds) => nds.concat(flowNode));
+    this.nodes.push(node);
+    this.node_lookup[node._id] = node;
+    this.reactFlowInstance.setNodes((nds) => nds.concat(flowNode));
   }
 
   applyNodeSelect(node_id) {
-      const prevSize = this.selectedNodeIds.size;
-      this.selectedNodeIds.add(node_id);
-      const newSize = this.selectedNodeIds.size;
-      if (prevSize === newSize) {
-          return
-      }
-      this.applySelection();
+    const prevSize = this.selectedNodeIds.size;
+    this.selectedNodeIds.add(node_id);
+    const newSize = this.selectedNodeIds.size;
+    if (prevSize === newSize) {
+      return;
+    }
+    this.applySelection();
   }
 
   applyNodeDeselect(node_id) {
-      const prevSize = this.selectedNodeIds.size;
-      this.selectedNodeIds.delete(node_id);
-      const newSize = this.selectedNodeIds.size;
-      if (prevSize === newSize) {
-          return
-      }
-      this.applySelection();
+    const prevSize = this.selectedNodeIds.size;
+    this.selectedNodeIds.delete(node_id);
+    const newSize = this.selectedNodeIds.size;
+    if (prevSize === newSize) {
+      return;
+    }
+    this.applySelection();
   }
 
   applySelection() {
-      if (this.selectedNodeIds.size === 1) {
-        const [nid] = this.selectedNodeIds;
-        const node = this.node_lookup[nid];
-        if (node) {
-          this.propertiesBar.setNodeData(node);
-        }
-      } else if (this.selectedNodeIds.size > 1) {
-        this.propertiesBar.setNodeDataArr([...this.selectedNodeIds].map((nid) => this.node_lookup[nid]));
-      } else {
-        this.propertiesBar.setNodeData(this.graph_node);
+    if (this.selectedNodeIds.size === 1) {
+      const [nid] = this.selectedNodeIds;
+      const node = this.node_lookup[nid];
+      if (node) {
+        this.propertiesBar.setNodeData(node);
       }
+    } else if (this.selectedNodeIds.size > 1) {
+      this.propertiesBar.setNodeDataArr([...this.selectedNodeIds].map((nid) => this.node_lookup[nid]));
+    } else {
+      this.propertiesBar.setNodeData(this.graph_node);
+    }
   }
 
   render() {
@@ -982,9 +966,12 @@ class Graph extends Component {
             onConnectEnd={event => this.onConnectEnd(event)}
             onNodeDrag={(event, node, nodes) => this.onNodeDrag(event, node, nodes)}
             onNodeDragStop={(event, node, nodes) => this.onNodeDragStop(event, node, nodes)}
-            onInit={reactFlowInstance => {this.reactFlowInstance = reactFlowInstance; this.loadGraphFromJson(this.props.node);}}
+            onInit={reactFlowInstance => {
+              this.reactFlowInstance = reactFlowInstance;
+              this.loadGraphFromJson(this.props.node);
+            }}
             defaultEdgeOptions={{
-                style:{strokeWidth: "5px"},
+              style: {strokeWidth: "5px"},
             }}
             onDrop={event => this.onDrop(event)}
             onDragOver={event => this.onDragOver(event)}

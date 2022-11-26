@@ -1,15 +1,13 @@
+/* eslint max-classes-per-file: 0 */
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { DragSource } from 'react-dnd';
-import ItemTypes from '../../DragAndDropsItemTypes';
 import Icon from '../Common/Icon';
 import {PluginsConsumer} from '../../contexts';
 
-
 const onDragStart = (event, nodeType) => {
-    event.dataTransfer.setData('application/reactflow', nodeType);
-    event.dataTransfer.effectAllowed = 'move';
-  };
+  event.dataTransfer.setData('application/reactflow', nodeType);    // eslint-disable-line no-param-reassign
+  event.dataTransfer.effectAllowed = 'move';    // eslint-disable-line no-param-reassign
+};
 
 export class HubDraggableEntry extends Component {
   static propTypes = {
@@ -76,7 +74,9 @@ export class HubResourceTypeBasedEntry extends Component {
                   nodeContent.inputs.filter(
                       input => input.file_type === splittedArr[1]
                   ).map(
-                      input => <div className="hub-item-in-or-out" key={input.name} onClick={() => onClick(nodeContent, input.name)}>&#8627; {input.name}</div>
+                      input => <div className="hub-item-in-or-out" key={input.name} onClick={() => onClick(nodeContent, input.name)}>
+                        &#8627; {input.name}
+                        </div>
                   )
               }
               {
@@ -84,7 +84,9 @@ export class HubResourceTypeBasedEntry extends Component {
                   nodeContent.outputs.filter(
                       output => output.file_type === splittedArr[1]
                   ).map(
-                      output => <div className="hub-item-in-or-out" key={output.name} onClick={() => onClick(nodeContent, output.name)}>&#8627; {output.name}</div>
+                      output => <div className="hub-item-in-or-out" key={output.name} onClick={() => onClick(nodeContent, output.name)}>
+                        &#8627; {output.name}
+                      </div>
                   )
               }
             </div>
@@ -96,5 +98,5 @@ export class HubResourceTypeBasedEntry extends Component {
 }
 
 export function TmpHubEntry(nodeLookupSearch, onClick) {
-    return (props) => <HubResourceTypeBasedEntry nodeLookupSearch={nodeLookupSearch} onClick={onClick} {...props}/>;
+  return (props) => <HubResourceTypeBasedEntry nodeLookupSearch={nodeLookupSearch} onClick={onClick} {...props}/>;
 }
