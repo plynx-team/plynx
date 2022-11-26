@@ -60,7 +60,7 @@ class App extends Component {
   render() {
     const isProduction = process.env.NODE_ENV === 'production';
 
-    console.log("VERSION", packageInfo.version);
+    console.log(`VERSION ${packageInfo.version}:${process.env.NODE_ENV}`);
     return (
         <CacheBuster
             currentVersion={packageInfo.version}

@@ -2,6 +2,10 @@
   width: calc(100% - 280px - 310px);    /* TODO use dynamic values*/
 }
 
+.graph-flow.read-only {
+  width: calc(100% - 310px);    /* TODO use dynamic values*/
+}
+
 .GraphNode {
   font-family: 'Source Sans Pro', sans-serif;
   color: #323232;

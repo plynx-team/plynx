@@ -120,7 +120,8 @@ class NodeCollectionManager:
             }
         })
 
-        return next(get_db_connector()[self.collection].aggregate(aggregate_list), None)
+        # TODO: remove `allowDiskUse=True` and update indexes instead
+        return next(get_db_connector()[self.collection].aggregate(aggregate_list, allowDiskUse=True), None)
 
     def get_db_objects_by_ids(self, ids: Union[List[ObjectId], List[str]], collection: Optional[str] = None) -> List[dict]:
         """Find all the Objects with a given IDs.

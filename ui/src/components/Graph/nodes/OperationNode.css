@@ -168,7 +168,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     text-decoration: none;
-    display: block;
+    display: flex;
     text-align: center;
     color: #eee;
 
@@ -177,6 +177,10 @@
     margin: 5px;
 
     transition: all .1s ease-in;
+}
+
+.flow-node-item-output > .flow-node-item-thumbnail > .preview-button {
+    width: 100%;
 }
 
 .flow-node-item-thumbnail:hover {

@@ -8,6 +8,8 @@ import './OperationNode.css';
 // TODO: remove the hack with the registry and use built in methods
 const nodesRegistry = {};
 
+const PREVIEW_BUTTON = "<div class=preview-button>preview</div>";
+
 const isValidConnection = (connection) => {
   let input;
   let output;
@@ -74,7 +76,7 @@ function OutputItem({output, plugins_dict, onOutputClick}) {
             {output.values.length > 0 &&
                 <a
                   className="flow-node-item-thumbnail"
-                  dangerouslySetInnerHTML={{ __html: output.thumbnail ? output.thumbnail : "preview" }}           // eslint-disable-line react/no-danger
+                  dangerouslySetInnerHTML={{ __html: output.thumbnail ? output.thumbnail : PREVIEW_BUTTON }}           // eslint-disable-line react/no-danger
                   onClick={() => {
                     onOutputClick(output.name, type_descriptor.display_raw);
                   }}
