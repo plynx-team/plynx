@@ -1,7 +1,7 @@
 """Templates for PLynx Executors and utils."""
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Union
+from typing import Optional, Union
 
 from plynx.constants import NodeStatus, SpecialNodeId, ValidationCode, ValidationTargetType
 from plynx.db.node import Node, NodeRunningStatus, Parameter, ParameterListOfNodes, ParameterTypes
@@ -18,7 +18,7 @@ class BaseExecutor(ABC):
     """Base Executor class"""
     IS_GRAPH: bool = False
 
-    def __init__(self, node: Node = None):
+    def __init__(self, node: Optional[Node] = None):
         self.node = node
 
     def _update_node(self, node):

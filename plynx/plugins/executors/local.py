@@ -94,7 +94,7 @@ class BaseBash(plynx.plugins.executors.bases.PLynxAsyncExecutorWithDirectory):
     """Base Executor that will use unix bash as a backend."""
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, node: Node = None):
+    def __init__(self, node: Optional[Node] = None):
         super().__init__(node)
         self.sp: Optional[Popen] = None
         self.logs_sizes: Dict[str, int] = {}
@@ -400,7 +400,7 @@ class BashJinja2(BaseBash):
 
 class PythonNode(BaseBash):
     """Local executor that uses python template to format a bash script."""
-    def __init__(self, node: Node = None):
+    def __init__(self, node: Optional[Node] = None):
         super().__init__(node)
         self._command = 'python'
 

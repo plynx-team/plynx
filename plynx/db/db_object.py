@@ -43,7 +43,7 @@ class _DBObject:
     DB_COLLECTION = ''
 
     @classmethod
-    def load(cls: Type[DBObjectType], _id: ObjectId, collection: str = None) -> DBObjectType:
+    def load(cls: Type[DBObjectType], _id: ObjectId, collection: Optional[str] = None) -> DBObjectType:
         """Load object from db.
 
         Args:
@@ -89,7 +89,7 @@ class _DBObject:
         return self.__class__.from_dict(self.to_dict())
 
     @classmethod
-    def from_dict(cls: Type[DBObjectType], dict_obj: Dict[str, Any]) -> DBObjectType:
+    def from_dict(cls: Type[DBObjectType], dict_obj: Dict[str, Any]) -> DBObjectType:   # type: ignore
         """Create a class based on dict_obj"""
 
     def to_dict(self: DBObjectType) -> Dict[str, Any]:
