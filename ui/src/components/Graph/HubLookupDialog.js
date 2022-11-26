@@ -10,6 +10,8 @@ export default class HubLookupDialog extends Component {
     hubEntryItem: PropTypes.func.isRequired,
     onClose: PropTypes.func.isRequired,
     hiddenSearch: PropTypes.string,
+    defaultX: PropTypes.number,
+    defaultY: PropTypes.number,
   };
 
   constructor(props) {
@@ -24,7 +26,9 @@ export default class HubLookupDialog extends Component {
                 this.props.onClose();
               }}
               width={280}
-              height={400}
+              height={500}
+              defaultX={this.props.defaultX}
+              defaultY={this.props.defaultY}
               title="Look up"
               enableResizing
       >

@@ -677,6 +677,10 @@ class Graph extends Component {
 
     const { top, left } = this.reactFlowWrapper.current.getBoundingClientRect();
     this.positionToInsert = this.reactFlowInstance.project({ x: event.clientX - left, y: event.clientY - top });
+    this.positionToShowDialog = {
+        x: event.clientX,
+        y: event.clientY,
+    }
 
     const node = this.node_lookup[this.connectionStartParams.nodeId];
     const resources = this.connectionStartParams.handleType === "source" ? node.outputs : node.inputs;
@@ -943,6 +947,8 @@ class Graph extends Component {
                 hubEntryItem={TmpHubEntry(this.state.nodeLookupSearch, (nodeBody, inputOrOutput) => this.onInsertLookup(nodeBody, inputOrOutput))}
                 hiddenSearch={this.state.nodeLookupSearch}
                 onClose={() => this.handleCloseHubLookupDialog()}
+                defaultX={this.positionToShowDialog.x - 140}
+                defaultY={this.positionToShowDialog.y - 50}
             />
         }
 
@@ -951,7 +957,7 @@ class Graph extends Component {
 
         <div
             style={{ height: '100%' }}
-            className="graph-flow"
+            className={`graph-flow ${this.state.editable ? "editable": "read-only"}`}
             ref={this.reactFlowWrapper}
             >
           <ReactFlow

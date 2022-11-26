@@ -16,6 +16,8 @@ export default class Dialog extends Component {
     title: PropTypes.string.isRequired,
     width: PropTypes.number.isRequired,
     className: PropTypes.string.isRequired,
+    defaultX: PropTypes.number,
+    defaultY: PropTypes.number,
   };
 
   constructor(props) {
@@ -53,6 +55,14 @@ export default class Dialog extends Component {
   }
 
   render() {
+    var x = (window.innerWidth - this.props.width) / 2;
+    var y = (window.innerHeight - this.props.height) / 2;
+    if (this.props.defaultX) {
+        x = Math.min(this.props.defaultX, window.innerWidth - this.props.width);
+    }
+    if (this.props.defaultY) {
+        y = Math.min(this.props.defaultY, window.innerHeight - this.props.height);
+    }
     return (
       <div className='dialog noselect'
            onMouseDown={(e) => this.handleBackgroundMouseDown(e)}
@@ -61,8 +71,8 @@ export default class Dialog extends Component {
         <Rnd
           className='dialog-rnd'
           default={{
-            x: (window.innerWidth - this.props.width) / 2,
-            y: (window.innerHeight - this.props.height) / 2,
+            x: x,
+            y: y,
             width: this.props.width + 2,
             height: this.props.height + 2,
           }}
