@@ -16,6 +16,7 @@ ADD ./LICENSE /app
 
 # Build
 ENV NODE_OPTIONS "--max-old-space-size=8192"
+ENV NODE_ENV production
 RUN npm install
 RUN npm run build
 
@@ -27,5 +28,6 @@ COPY --from=0 /app/build /var/www
 ADD ./ui/nginx.conf /etc/nginx/nginx.conf
 ADD ./LICENSE /app
 EXPOSE 80
+ENV NODE_ENV production
 
 ENTRYPOINT ["nginx","-g","daemon off;"]

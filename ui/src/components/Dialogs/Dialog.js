@@ -55,13 +55,13 @@ export default class Dialog extends Component {
   }
 
   render() {
-    var x = (window.innerWidth - this.props.width) / 2;
-    var y = (window.innerHeight - this.props.height) / 2;
+    let x = (window.innerWidth - this.props.width) / 2;
+    let y = (window.innerHeight - this.props.height) / 2;
     if (this.props.defaultX) {
-        x = Math.min(this.props.defaultX, window.innerWidth - this.props.width);
+      x = Math.min(this.props.defaultX, window.innerWidth - this.props.width);
     }
     if (this.props.defaultY) {
-        y = Math.min(this.props.defaultY, window.innerHeight - this.props.height);
+      y = Math.min(this.props.defaultY, window.innerHeight - this.props.height);
     }
     return (
       <div className='dialog noselect'

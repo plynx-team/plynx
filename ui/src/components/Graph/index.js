@@ -678,9 +678,9 @@ class Graph extends Component {
     const { top, left } = this.reactFlowWrapper.current.getBoundingClientRect();
     this.positionToInsert = this.reactFlowInstance.project({ x: event.clientX - left, y: event.clientY - top });
     this.positionToShowDialog = {
-        x: event.clientX,
-        y: event.clientY,
-    }
+      x: event.clientX,
+      y: event.clientY,
+    };
 
     const node = this.node_lookup[this.connectionStartParams.nodeId];
     const resources = this.connectionStartParams.handleType === "source" ? node.outputs : node.inputs;
@@ -957,7 +957,7 @@ class Graph extends Component {
 
         <div
             style={{ height: '100%' }}
-            className={`graph-flow ${this.state.editable ? "editable": "read-only"}`}
+            className={`graph-flow ${this.state.editable ? "editable" : "read-only"}`}
             ref={this.reactFlowWrapper}
             >
           <ReactFlow
