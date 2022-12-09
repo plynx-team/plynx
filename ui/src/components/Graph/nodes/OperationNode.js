@@ -1,9 +1,11 @@
 import React, { memo } from 'react';
-import PropTypes from 'prop-types';
+import PropTypes, { node } from 'prop-types';
 import { Handle } from 'reactflow';
 import {PluginsConsumer} from '../../../contexts';
+import Tooltip from '../../Common/Tooltip.js';
 import Icon from '../../Common/Icon';
 import './OperationNode.css';
+import { makeControlCheckbox } from '../../Common/controlButton';
 
 // TODO: remove the hack with the registry and use built in methods
 const nodesRegistry = {};
@@ -132,6 +134,14 @@ function CustomNode({ id, data }) {
                   <div className="flow-title-text">
                     {node.title}
                   </div>
+                  <Tooltip title={node.description} arrow>
+                    <div>
+                      <Icon
+                          type_descriptor={{icon: 'feathericons.help-circle', color: "#aaa"}}
+                          className={`flow-title-help ${node.description ? "visible": "hidden"}`}
+                      />
+                    </div>
+                  </Tooltip>
               </div>
               <div className="flow-node-body">
                   {
@@ -151,6 +161,27 @@ function CustomNode({ id, data }) {
                           />
                       )
                   }
+              </div>
+              <div className="flow-node-footer">
+                {makeControlCheckbox({
+                    text: 'Auto run',
+                    enabled: true,
+                    checked: node.auto_run,
+                    func: (event) => {
+                      event.preventDefault();
+                      const target = event.target;
+                      const value = target.type === 'checkbox' ? target.checked : target.value;
+                      node.auto_run = value;
+                    },
+                })}
+                <Tooltip title="Restart the operation" arrow>
+                    <a className="flow-button">
+                      <Icon
+                          type_descriptor={{icon: 'feathericons.refresh-ccw', color: "#aaa"}}
+                          className={`flow-button-icon`}
+                      />
+                    </a>
+                  </Tooltip>
               </div>
           </div>
       }

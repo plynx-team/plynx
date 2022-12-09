@@ -1,6 +1,7 @@
 /* eslint max-classes-per-file: 0 */
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import Tooltip from '../Common/Tooltip.js';
 import Icon from '../Common/Icon';
 import {PluginsConsumer} from '../../contexts';
 
@@ -33,6 +34,14 @@ export class HubDraggableEntry extends Component {
               <div className="hub-item-node-text">
                 {nodeContent.title}
               </div>
+              <Tooltip title={nodeContent.description} arrow>
+                <div className="hub-item-help-wrapper">
+                  <Icon
+                      type_descriptor={{icon: 'feathericons.help-circle', color: "#aaa"}}
+                      className={`hub-item-help ${nodeContent.description ? "visible": "hidden"}`}
+                  />
+                </div>
+              </Tooltip>
             </div>
         }
         </PluginsConsumer>
@@ -68,6 +77,14 @@ export class HubResourceTypeBasedEntry extends Component {
                   <div className="hub-item-node-text">
                     {nodeContent.title}
                   </div>
+                  <Tooltip title={nodeContent.description} arrow style={{ zIndex: '30000' }}>
+                    <div>
+                      <Icon
+                          type_descriptor={{icon: 'feathericons.help-circle', color: "#aaa"}}
+                          className={`hub-item-help hidden`}
+                      />
+                    </div>
+                  </Tooltip>
               </div>
               {
                   inOrOut === "input_file_type" &&

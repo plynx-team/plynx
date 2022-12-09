@@ -147,7 +147,7 @@ class Node(DBObject):
     _type: str = "Node"
     _cached_node: Optional[CachedNode] = None
     title: str = "Title"
-    description: str = "Description"
+    description: str = ""
     kind: str = "dummy"
     # ID of previous version of the node, always refer to `nodes` collection.
     parent_node_id: Optional[ObjectId] = None

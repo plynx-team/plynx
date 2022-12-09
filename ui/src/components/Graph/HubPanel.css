@@ -119,6 +119,8 @@
 
 .hub-entry-group-title {
   cursor: pointer;
+  display: flex;
+  padding-left: 6px;
 }
 
 .hub-entry-group-title:hover {
@@ -150,7 +152,29 @@
 .hub-item-node {
   padding: 5px;
   background-color: #333;
-  display: flex;
+
+  display: grid;
+  grid-template-columns: 27px 1fr 16px;
+}
+
+.hub-item-node-text {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.hub-item-help {
+  display: block;
+}
+
+.hub-item-help {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.hub-item-help.hidden {
+  display: none;
 }
 
 .dndnode > .hub-item-node:hover {

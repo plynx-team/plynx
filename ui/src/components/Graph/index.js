@@ -324,7 +324,7 @@ class Graph extends Component {
         );
       if (node_parameter) {
         node_parameter.value = value;
-      } else if (name === '_DESCRIPTION' || name === '_TITLE') {
+      } else if (name === '_TITLE') {
         const inName = name.substring(1, name.length).toLowerCase();
         const block = this.node_lookup[node_id];
         node[inName] = value;
@@ -906,7 +906,6 @@ class Graph extends Component {
       <ReactFlowProvider>
         <div className={'BackgroundLabels ' + (this.state.editable ? 'editable' : 'readonly')}>
           <div className="Title">{this.state.graph.title}</div>
-          <div className="Description">&ldquo;{this.state.graph.description}&rdquo;</div>
         </div>
         {this.state.fileObj &&
           <FileDialog

@@ -26,13 +26,30 @@
   font-weight: 600;
   text-transform: uppercase;
 
-  display: flex;
+  display: grid;
+  grid-template-columns: 33px 1fr 27px;
 
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
 
   padding: 8px 0px 3px 0px;
+}
+
+.flow-title-text {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.flow-title-help {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.flow-title-help.hidden {
+  display: none;
 }
 
 .react-flow__node.annotation {
@@ -172,4 +189,62 @@
 
 .flow-node-item .react-flow__handle-valid {
   background: #0c0;
+}
+
+.flow-node-footer {
+  display: grid;
+  grid-template-columns: 1fr 30px;
+}
+
+.flow-node-footer .control-checkbox {
+  padding: 0 0 0 5px;
+}
+
+.flow-node-footer .control-checkbox .switch {
+  position: relative;
+  display: inline-block;
+  width: 30px;
+  height: 19px;
+  top: 3px;
+}
+
+.flow-node-footer .control-checkbox .slider:before {
+  position: absolute;
+  content: "";
+  height: 12px;
+  width: 12px;
+  left: 4px;
+  top: 3px;
+  background-color: #ccc;
+  -webkit-transition: .2s;
+  transition: .2s;
+}
+
+.flow-node-footer .control-checkbox input:checked + .slider:before {
+  -webkit-transform: translateX(10px);
+  -ms-transform: translateX(10px);
+  transform: translateX(10px);
+}
+
+.flow-node-footer .control-checkbox-text {
+  font-size: 10px;
+}
+
+.flow-button-icon {
+  padding: 4px;
+  border-radius: 2px;
+}
+
+.flow-button:hover .flow-button-icon {
+  cursor: pointer;
+  background-color: #444;
+}
+
+.flow-button:active .flow-button-icon {
+  background-color: #62a6f3;
+}
+
+.flow-button-icon {
+  width: 16px;
+  height: 16px;
 }
