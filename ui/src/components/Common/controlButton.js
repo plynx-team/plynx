@@ -1,6 +1,8 @@
 import React from 'react';
 import SearchBar from './SearchBar';
 import PropTypes from 'prop-types';
+import Switch from '@mui/material/Switch';
+
 
 export function makeControlButton(props) {
   return (
@@ -130,6 +132,9 @@ makeControlSearchBar.propTypes = {
   search: PropTypes.string.isRequired,
 };
 
+const tmpLabel = { inputProps: { 'aria-label': 'Switch demo' } };
+
+
 export function makeControlCheckbox(props) {
   return (
     <div
@@ -141,14 +146,7 @@ export function makeControlCheckbox(props) {
        ].join(" ")}
     >
         <div className='control-checkbox-text'>{props.text}:</div>
-        <label className="switch">
-            <input
-                type="checkbox"
-                checked={props.checked}
-                onChange={props.func}
-                />
-            <span className="slider round"></span>
-        </label>
+        <Switch {...tmpLabel} checked={props.checked} onChange={props.func} size="small"/>
     </div>
   );
 }

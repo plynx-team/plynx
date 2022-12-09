@@ -196,40 +196,6 @@
   grid-template-columns: 1fr 30px;
 }
 
-.flow-node-footer .control-checkbox {
-  padding: 0 0 0 5px;
-}
-
-.flow-node-footer .control-checkbox .switch {
-  position: relative;
-  display: inline-block;
-  width: 30px;
-  height: 19px;
-  top: 3px;
-}
-
-.flow-node-footer .control-checkbox .slider:before {
-  position: absolute;
-  content: "";
-  height: 12px;
-  width: 12px;
-  left: 4px;
-  top: 3px;
-  background-color: #ccc;
-  -webkit-transition: .2s;
-  transition: .2s;
-}
-
-.flow-node-footer .control-checkbox input:checked + .slider:before {
-  -webkit-transform: translateX(10px);
-  -ms-transform: translateX(10px);
-  transform: translateX(10px);
-}
-
-.flow-node-footer .control-checkbox-text {
-  font-size: 10px;
-}
-
 .flow-button-icon {
   padding: 4px;
   border-radius: 2px;
