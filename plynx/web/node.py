@@ -13,6 +13,7 @@ import plynx.db.run_cancellation_manager
 import plynx.utils.plugin_manager
 from plynx.constants import Collections, IAMPolicies, NodeClonePolicy, NodePostAction, NodePostStatus, NodeRunningStatus, NodeStatus, NodeVirtualCollection
 from plynx.db.node import Node
+from plynx.utils import node_utils
 from plynx.utils.common import to_object_id
 from plynx.utils.thumbnails import apply_thumbnails
 from plynx.web.common import app, handle_errors, logger, make_fail_response, make_permission_denied, make_success_response, requires_auth
@@ -135,7 +136,7 @@ def get_nodes(collection: str, node_link: Optional[str] = None):
 
             if node_in_run_dict:
                 node_in_run = Node.from_dict(node_in_run_dict)
-                node.augment_node_with_cache(node_in_run)
+                node_utils.augment_node_with_cache(node, node_in_run)
                 last_run_is_in_finished_status = NodeRunningStatus.is_finished(node_in_run.node_running_status)
             else:
                 logger.warning(f"Failed to load a run with id `{latest_run_id}`")
@@ -206,7 +207,7 @@ def post_node(collection: str):
                     node_in_run = Node.from_dict(
                         node_in_run_dict
                     )
-                    node_clone.augment_node_with_cache(node_in_run)
+                    node_utils.augment_node_with_cache(node_clone, node_in_run)
                     node_clone.apply_cache()
                 else:
                     logger.warning(f"Failed to load a run with id `{node.latest_run_id}`")

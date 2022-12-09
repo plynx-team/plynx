@@ -10,6 +10,7 @@ import plynx.plugins.executors.dag
 import plynx.utils.executor
 from plynx.constants import Collections, NodeRunningStatus
 from plynx.db.node import Node
+from plynx.utils import node_utils
 from plynx.utils.common import to_object_id
 
 POOL_SIZE = 3
@@ -186,7 +187,7 @@ class DAG(plynx.plugins.executors.dag.DAG):
         if preview:
             raise Exception("`preview` is not supported for the DAG")
 
-        for sub_node in self.node.traverse_in_order():
+        for sub_node in node_utils.traverse_in_order(self.node):
             if NodeRunningStatus.is_finished(sub_node.node_running_status):
                 continue
             self._apply_inputs(sub_node)
