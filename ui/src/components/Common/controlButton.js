@@ -1,6 +1,7 @@
 import React from 'react';
 import SearchBar from './SearchBar';
 import PropTypes from 'prop-types';
+import { alpha, styled } from '@mui/material/styles';
 import Switch from '@mui/material/Switch';
 
 
@@ -135,6 +136,12 @@ makeControlSearchBar.propTypes = {
 const tmpLabel = { inputProps: { 'aria-label': 'Switch demo' } };
 
 
+const StyledSwitch = styled(Switch)(({ theme }) => ({
+  '&  .MuiSwitch-track': {
+    backgroundColor: "#eee",
+  },
+}));
+
 export function makeControlCheckbox(props) {
   return (
     <div
@@ -146,7 +153,7 @@ export function makeControlCheckbox(props) {
        ].join(" ")}
     >
         <div className='control-checkbox-text'>{props.text}:</div>
-        <Switch {...tmpLabel} checked={props.checked} onChange={props.func} size="small"/>
+        <StyledSwitch {...tmpLabel} checked={props.checked} onChange={props.func} size="small"/>
     </div>
   );
 }

@@ -27,6 +27,7 @@ import OperationNode from './nodes/OperationNode';
 import 'reactflow/dist/style.css';
 
 import "./style.css";
+import { ThemeCssVarOverrides } from '@mui/material';
 
 const TOUR_STEPS = [
   {
@@ -446,38 +447,7 @@ class Graph extends Component {
     },
 
     copyPressed: () => {
-      const nodesToCopy = [...this.selectedNodeIds].map(
-          nid => JSON.parse(JSON.stringify(this.node_lookup[nid]))
-      ).filter((node) => node && node.node_running_status !== NODE_RUNNING_STATUS.SPECIAL);
-      const edgesToCopy = [];
-
-      for (const edge of this.reactFlowInstance.getEdges()) {
-        if (this.selectedNodeIds.has(edge.source) || this.selectedNodeIds.has(edge.target)) {
-          edgesToCopy.push(edge);
-        }
-      }
-
-      for (const node of nodesToCopy) {
-        for (const input of node.inputs) {
-          input.input_references = [];
-        }
-
-        if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
-          for (const output of node.outputs) {
-            output.values = []; // clear outputs
-          }
-        }
-
-        if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
-          node.node_running_status = NODE_RUNNING_STATUS.CREATED;
-        }
-        node._cached_node = null;
-      }
-
-      const copyObject = {
-        nodes: nodesToCopy,
-        edges: edgesToCopy,
-      };
+      const copyObject = this.makeCopyObject();
       console.log("Copy", copyObject);
 
       storeToClipboard(copyObject);
@@ -490,7 +460,47 @@ class Graph extends Component {
       }
 
       const copyBody = loadFromClipboard();
-      console.log(copyBody);
+      this.pasteCopyObject(copyBody);
+    },
+  };
+
+  makeCopyObject() {
+    const nodesToCopy = [...this.selectedNodeIds].map(
+        nid => JSON.parse(JSON.stringify(this.node_lookup[nid]))
+    ).filter((node) => node && node.node_running_status !== NODE_RUNNING_STATUS.SPECIAL);
+    const edgesToCopy = [];
+
+    for (const edge of this.reactFlowInstance.getEdges()) {
+      if (this.selectedNodeIds.has(edge.source) || this.selectedNodeIds.has(edge.target)) {
+        edgesToCopy.push(edge);
+      }
+    }
+
+    for (const node of nodesToCopy) {
+      for (const input of node.inputs) {
+        input.input_references = [];
+      }
+
+      if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
+        for (const output of node.outputs) {
+          output.values = []; // clear outputs
+        }
+      }
+
+      if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
+        node.node_running_status = NODE_RUNNING_STATUS.CREATED;
+      }
+      node._cached_node = null;
+    }
+
+    return {
+      nodes: nodesToCopy,
+      edges: edgesToCopy,
+    };
+  }
+
+  pasteCopyObject(copyBody, translatePosition=true) {
+    console.log(copyBody);
       if (!copyBody) {
         return;
       }
@@ -506,8 +516,8 @@ class Graph extends Component {
         this.selectedNodeIds.add(node._id);
 
         const position = {
-          x: node.x + 20,
-          y: node.y + 20,
+          x: node.x + 20 * (translatePosition ? 1 : 0),
+          y: node.y + 20 * (translatePosition ? 1 : 0),
         };
 
         changesToApply.push({
@@ -540,8 +550,7 @@ class Graph extends Component {
             return nds;
           }
       );
-    },
-  };
+  }
 
   showValidationError(validationError) {
     for (let ii = 0; ii < validationError.children.length; ++ii) {
@@ -579,6 +588,20 @@ class Graph extends Component {
     }
   }
 
+  onRestartClick(node) {
+    console.log("restart", node._id)
+
+    const copyObject = this.makeCopyObject();
+
+    this.reactFlowInstance.deleteElements({
+      nodes: this.reactFlowInstance.getNodes().filter(n => n.id === node._id),
+    });
+    
+    this.pasteCopyObject(copyObject, false);
+
+    this.props.onNodeChange(this.graph_node);
+  }
+
   nodeToFlowNode(node) {
     return {
       id: node._id,
@@ -587,6 +610,7 @@ class Graph extends Component {
       data: {
         node: node,
         onOutputClick: (outputName, displayRaw) => this.onOutputClick(node._id, outputName, displayRaw),
+        onRestartClick: () => this.onRestartClick(node),
       },
       selected: this.selectedNodeIds.has(node._id),
     };

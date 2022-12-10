@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 
 import json
-from typing import Optional
+from typing import Optional, Set
 
 import bson.objectid
 from flask import g, request
@@ -14,7 +14,7 @@ import plynx.utils.plugin_manager
 from plynx.constants import Collections, IAMPolicies, NodeClonePolicy, NodePostAction, NodePostStatus, NodeRunningStatus, NodeStatus, NodeVirtualCollection
 from plynx.db.node import Node
 from plynx.utils import node_utils
-from plynx.utils.common import to_object_id
+from plynx.utils.common import ObjectId, to_object_id
 from plynx.utils.thumbnails import apply_thumbnails
 from plynx.web.common import app, handle_errors, logger, make_fail_response, make_permission_denied, make_success_response, requires_auth
 
@@ -199,23 +199,19 @@ def post_node(collection: str):
             return make_permission_denied('Only the owners or users with CAN_MODIFY_OTHERS_WORKFLOWS role can save it')
 
         if node.auto_run:
-            node_clone = Node.from_dict(node.to_dict())
-            if node.latest_run_id:
-                node_in_run_dict = node_collection_managers[Collections.RUNS].get_db_node(node.latest_run_id, user_id)
+            node_in_run, new_node_in_run = node_utils.construct_new_run(node, user_id)
+            node_utils.remove_auto_run_disabled(new_node_in_run)
 
-                if node_in_run_dict:
-                    node_in_run = Node.from_dict(
-                        node_in_run_dict
-                    )
-                    node_utils.augment_node_with_cache(node_clone, node_in_run)
-                    node_clone.apply_cache()
-                else:
-                    logger.warning(f"Failed to load a run with id `{node.latest_run_id}`")
+            old_run_stats = node_utils.calc_status_to_node_ids(node_in_run)
+            new_run_stats = node_utils.calc_status_to_node_ids(new_node_in_run)
 
-            new_node_in_run = node_clone.clone(NodeClonePolicy.NODE_TO_RUN, override_finished_state=False)
-            new_node_in_run.reset_failed_nodes()
+            awaiting_nodes: Set[ObjectId] = set()
+            for status in NodeRunningStatus._AWAITING_STATUSES | NodeRunningStatus._SUCCEEDED_STATUSES:
+                awaiting_nodes = awaiting_nodes | old_run_stats[status]
+            no_need_to_run = node_in_run and node_in_run.node_running_status == NodeRunningStatus.RUNNING and \
+                len(new_run_stats[NodeRunningStatus.READY] - awaiting_nodes) == 0
 
-            if not new_node_in_run.is_all_cached_and_successful():
+            if not no_need_to_run:
                 # TODO check permissions
                 executor._update_node(new_node_in_run)
                 validation_error = executor.validate()
@@ -343,7 +339,7 @@ def post_node(collection: str):
             })
 
     elif action == NodePostAction.REARRANGE_NODES:
-        node.arrange_auto_layout()
+        node_utils.arrange_auto_layout(node)
         return make_success_response({
                 'message': 'Successfully created preview',
                 'node': node.to_dict(),

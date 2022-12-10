@@ -31,6 +31,12 @@ class NodeRunningStatus:
         SPECIAL,
     }
 
+    _AWAITING_STATUSES: Set[str] = {
+        READY,
+        IN_QUEUE,
+        RUNNING,
+    }
+
     _FINISHED_STATUSES: Set[str] = _FAILED_STATUSES | _SUCCEEDED_STATUSES
 
     @staticmethod

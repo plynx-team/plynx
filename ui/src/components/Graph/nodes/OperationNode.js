@@ -175,7 +175,7 @@ function CustomNode({ id, data }) {
                     },
                 })}
                 <Tooltip title="Restart the operation" arrow>
-                    <a className="flow-button">
+                    <a className="flow-button" onClick={data.onRestartClick}>
                       <Icon
                           type_descriptor={{icon: 'feathericons.refresh-ccw', color: "#aaa"}}
                           className={`flow-button-icon`}
@@ -205,6 +205,7 @@ CustomNode.propTypes = {
       outputs: PropTypes.array.isRequired,
     }).isRequired,
     onOutputClick: PropTypes.func.isRequired,
+    onRestartClick: PropTypes.func.isRequired,
   }).isRequired,
 };
 
