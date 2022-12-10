@@ -10,9 +10,14 @@ The roadmap will be posted here [Project](https://github.com/plynx-team/plynx/pr
 
 Please join the discussions in the [Discord](https://discord.gg/ZC3wY2J).
 
-### Added
-- [(Release 1.9.x) New scalable execution model](https://github.com/plynx-team/plynx/projects/3)
-- [(Release 1.10.x) Create API Builder](https://github.com/plynx-team/plynx/projects/4)
+### Recent releases
+
+
+## [1.9.2] - 2022-12-10
+
+- Some of the Operations have auto-run disabled.
+- Auto-run can be specified on Operations level.
+- Improved sync with a running job: it is not restarted with minor changes.
 
 ## [1.9.1] - 2022-11-26
 
