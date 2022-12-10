@@ -349,8 +349,6 @@ export default class Editor extends Component {
           self.showAlert("Valid", 'success');
         } else if (action === ACTION.PREVIEW_CMD) {
           self.setState({preview_text: data.preview_text});
-        } else if (action === ACTION.REARRANGE_NODES) {
-          self.updateNode(data.node, true);
         } else if (action === ACTION.UPGRADE_NODES) {
           self.updateNode(data.node, true);
           console.log('new', data.node);
@@ -527,14 +525,6 @@ export default class Editor extends Component {
       node: this.node,
       action: ACTION.APPROVE,
       reloadOption: RELOAD_OPTIONS.RELOAD,
-    });
-  }
-
-  handleRearrange() {
-    this.postNode({
-      node: this.node,
-      action: ACTION.REARRANGE_NODES,
-      reloadOption: RELOAD_OPTIONS.NONE,
     });
   }
 
@@ -737,6 +727,7 @@ export default class Editor extends Component {
           text: 'Sync',
           enabled: this.state.editable && this.state.collection === COLLECTIONS.TEMPLATES,
           checked: this.state.node && this.state.node.auto_sync,
+          visible: this.state.editable && this.state.collection === COLLECTIONS.TEMPLATES,
           func: (event) => this.handleChangeNodeParameter("auto_sync", event),
         },
       }, {
@@ -745,6 +736,7 @@ export default class Editor extends Component {
           text: 'Auto run',
           enabled: this.state.editable && this.state.collection === COLLECTIONS.TEMPLATES,
           checked: this.state.node && this.state.node.auto_run,
+          visible: this.state.editable && this.state.collection === COLLECTIONS.TEMPLATES,
           func: (event) => this.handleChangeNodeParameter("auto_run", event),
         },
       },
@@ -761,14 +753,6 @@ export default class Editor extends Component {
           text: 'Upgrade Nodes',
           enabled: this.state.is_graph && this.state.editable,
           func: () => this.handleUpgradeNodes(),
-        },
-      }, {
-        render: makeControlButton,
-        props: {
-          img: 'rearrange.svg',
-          text: 'Rearrange nodes',
-          enabled: this.state.is_graph,
-          func: () => this.handleRearrange(),
         },
       }, {
         render: makeControlButton,

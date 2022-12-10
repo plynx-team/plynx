@@ -324,7 +324,7 @@ class Graph extends Component {
         );
       if (node_parameter) {
         node_parameter.value = value;
-      } else if (name === '_DESCRIPTION' || name === '_TITLE') {
+      } else if (name === '_TITLE') {
         const inName = name.substring(1, name.length).toLowerCase();
         const block = this.node_lookup[node_id];
         node[inName] = value;
@@ -446,38 +446,7 @@ class Graph extends Component {
     },
 
     copyPressed: () => {
-      const nodesToCopy = [...this.selectedNodeIds].map(
-          nid => JSON.parse(JSON.stringify(this.node_lookup[nid]))
-      ).filter((node) => node && node.node_running_status !== NODE_RUNNING_STATUS.SPECIAL);
-      const edgesToCopy = [];
-
-      for (const edge of this.reactFlowInstance.getEdges()) {
-        if (this.selectedNodeIds.has(edge.source) || this.selectedNodeIds.has(edge.target)) {
-          edgesToCopy.push(edge);
-        }
-      }
-
-      for (const node of nodesToCopy) {
-        for (const input of node.inputs) {
-          input.input_references = [];
-        }
-
-        if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
-          for (const output of node.outputs) {
-            output.values = []; // clear outputs
-          }
-        }
-
-        if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
-          node.node_running_status = NODE_RUNNING_STATUS.CREATED;
-        }
-        node._cached_node = null;
-      }
-
-      const copyObject = {
-        nodes: nodesToCopy,
-        edges: edgesToCopy,
-      };
+      const copyObject = this.makeCopyObject();
       console.log("Copy", copyObject);
 
       storeToClipboard(copyObject);
@@ -490,49 +459,89 @@ class Graph extends Component {
       }
 
       const copyBody = loadFromClipboard();
-      console.log(copyBody);
-      if (!copyBody) {
-        return;
+      this.pasteCopyObject(copyBody);
+    },
+  };
+
+  makeCopyObject() {
+    const nodesToCopy = [...this.selectedNodeIds].map(
+        nid => JSON.parse(JSON.stringify(this.node_lookup[nid]))
+    ).filter((node) => node && node.node_running_status !== NODE_RUNNING_STATUS.SPECIAL);
+    const edgesToCopy = [];
+
+    for (const edge of this.reactFlowInstance.getEdges()) {
+      if (this.selectedNodeIds.has(edge.source) || this.selectedNodeIds.has(edge.target)) {
+        edgesToCopy.push(edge);
+      }
+    }
+
+    for (const node of nodesToCopy) {
+      for (const input of node.inputs) {
+        input.input_references = [];
       }
 
-      const changesToApply = [];
-      const oldNodeIdToNewId = {};
-      this.selectedNodeIds.clear();
-
-      for (const node of copyBody.nodes) {
-        const newNodeId = new ObjectID().toString();
-        oldNodeIdToNewId[node._id] = newNodeId;
-        node._id = newNodeId;
-        this.selectedNodeIds.add(node._id);
-
-        const position = {
-          x: node.x + 20,
-          y: node.y + 20,
-        };
-
-        changesToApply.push({
-          changeType: ChangeType.DROP_NODE,
-          node: node,
-          replaceNodeId: false,
-          replaceOriginalNode: false,
-          position: position,
-        });
+      if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
+        for (const output of node.outputs) {
+          output.values = []; // clear outputs
+        }
       }
 
-      for (const edge of copyBody.edges) {
-        const source = oldNodeIdToNewId.hasOwnProperty(edge.source) ? oldNodeIdToNewId[edge.source] : edge.source;
-        const target = oldNodeIdToNewId.hasOwnProperty(edge.target) ? oldNodeIdToNewId[edge.target] : edge.target;
-
-        changesToApply.push({
-          changeType: ChangeType.CREATE_EDGE,
-          connection: {source: source, sourceHandle: edge.sourceHandle, target: target, targetHandle: edge.targetHandle},
-          pushToReactflow: true,
-        });
+      if (node.node_running_status !== NODE_RUNNING_STATUS.STATIC) {
+        node.node_running_status = NODE_RUNNING_STATUS.CREATED;
       }
+      node._cached_node = null;
+    }
 
-      this.applyChanges(changesToApply);
+    return {
+      nodes: nodesToCopy,
+      edges: edgesToCopy,
+    };
+  }
 
-      this.reactFlowInstance.setNodes(
+  pasteCopyObject(copyBody, translatePosition = true) {
+    console.log(copyBody);
+    if (!copyBody) {
+      return;
+    }
+
+    const changesToApply = [];
+    const oldNodeIdToNewId = {};
+    this.selectedNodeIds.clear();
+
+    for (const node of copyBody.nodes) {
+      const newNodeId = new ObjectID().toString();
+      oldNodeIdToNewId[node._id] = newNodeId;
+      node._id = newNodeId;
+      this.selectedNodeIds.add(node._id);
+
+      const position = {
+        x: node.x + (20 * (translatePosition ? 1 : 0)),
+        y: node.y + (20 * (translatePosition ? 1 : 0)),
+      };
+
+      changesToApply.push({
+        changeType: ChangeType.DROP_NODE,
+        node: node,
+        replaceNodeId: false,
+        replaceOriginalNode: false,
+        position: position,
+      });
+    }
+
+    for (const edge of copyBody.edges) {
+      const source = oldNodeIdToNewId.hasOwnProperty(edge.source) ? oldNodeIdToNewId[edge.source] : edge.source;
+      const target = oldNodeIdToNewId.hasOwnProperty(edge.target) ? oldNodeIdToNewId[edge.target] : edge.target;
+
+      changesToApply.push({
+        changeType: ChangeType.CREATE_EDGE,
+        connection: {source: source, sourceHandle: edge.sourceHandle, target: target, targetHandle: edge.targetHandle},
+        pushToReactflow: true,
+      });
+    }
+
+    this.applyChanges(changesToApply);
+
+    this.reactFlowInstance.setNodes(
           (nds) => {
             for (let ii = 0; ii < nds.length; ++ii) {
               nds[ii].selected = this.selectedNodeIds.has(nds[ii].id);  // eslint-disable-line no-param-reassign
@@ -540,8 +549,7 @@ class Graph extends Component {
             return nds;
           }
       );
-    },
-  };
+  }
 
   showValidationError(validationError) {
     for (let ii = 0; ii < validationError.children.length; ++ii) {
@@ -579,6 +587,20 @@ class Graph extends Component {
     }
   }
 
+  onRestartClick(node) {
+    console.log("restart", node._id);
+
+    const copyObject = this.makeCopyObject();
+
+    this.reactFlowInstance.deleteElements({
+      nodes: this.reactFlowInstance.getNodes().filter(n => n.id === node._id),
+    });
+
+    this.pasteCopyObject(copyObject, false);
+
+    this.props.onNodeChange(this.graph_node);
+  }
+
   nodeToFlowNode(node) {
     return {
       id: node._id,
@@ -587,6 +609,7 @@ class Graph extends Component {
       data: {
         node: node,
         onOutputClick: (outputName, displayRaw) => this.onOutputClick(node._id, outputName, displayRaw),
+        onRestartClick: () => this.onRestartClick(node),
       },
       selected: this.selectedNodeIds.has(node._id),
     };
@@ -906,7 +929,6 @@ class Graph extends Component {
       <ReactFlowProvider>
         <div className={'BackgroundLabels ' + (this.state.editable ? 'editable' : 'readonly')}>
           <div className="Title">{this.state.graph.title}</div>
-          <div className="Description">&ldquo;{this.state.graph.description}&rdquo;</div>
         </div>
         {this.state.fileObj &&
           <FileDialog
