@@ -111,7 +111,6 @@ class BaseExecutor(ABC):
             node.parameters.extend([
                 nodes_parameter,
             ])
-            node.arrange_auto_layout()
         return node
 
     def init_executor(self):

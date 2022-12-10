@@ -26,7 +26,7 @@ export default class FileUploadDialog extends Component {
     super(props);
     this.state = {
       title: DEFAULT_TITLE,
-      description: 'Uploaded custom file',
+      description: '',
       file_type: this.props.plugins_info.operations_dict[props.uploadOperation.kind].resources[0].kind,
       file_path: null,
       file_name: null,

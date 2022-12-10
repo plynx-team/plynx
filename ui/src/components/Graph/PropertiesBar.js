@@ -59,15 +59,6 @@ export default class PropertiesBar extends Component {
         commonParameters.splice(indexesToRemove.pop(), 1);
       }
     }
-    if (allEqual(nodes.map(node => node.description))) {
-      commonParameters.unshift({
-        name: '_DESCRIPTION',
-        widget: 'Description',
-        value: nodes[0].description,
-        parameter_type: 'str',
-        _link_visibility: false,
-      });
-    }
     if (allEqual(nodes.map(node => node.title))) {
       commonParameters.unshift({
         name: '_TITLE',

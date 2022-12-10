@@ -87,6 +87,18 @@ class Statefull:
         }
 
 
+@plynx.node.input(name='x', var_type=int, is_array=True, min_count=0)
+@plynx.node.output(name='x', var_type=int)
+@plynx.node.operation(
+    title="Wait manual run",
+    auto_run_enabled=False
+)
+def auto_run_disabled(x):
+    "Auto run disabled for this node."
+    print(f"Run on depand. Input: {x}")
+    return {"x": x}
+
+
 GROUP = plynx.node.utils.Group(
     title="Test basics",
     items=[
@@ -95,5 +107,6 @@ GROUP = plynx.node.utils.Group(
         sleep,
         error,
         Statefull,
+        auto_run_disabled,
     ]
 )

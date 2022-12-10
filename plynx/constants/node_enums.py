@@ -31,6 +31,12 @@ class NodeRunningStatus:
         SPECIAL,
     }
 
+    _AWAITING_STATUSES: Set[str] = {
+        READY,
+        IN_QUEUE,
+        RUNNING,
+    }
+
     _FINISHED_STATUSES: Set[str] = _FAILED_STATUSES | _SUCCEEDED_STATUSES
 
     @staticmethod
@@ -62,6 +68,7 @@ class NodePostAction:
     SAVE: str = 'SAVE'
     APPROVE: str = 'APPROVE'
     CREATE_RUN: str = 'CREATE_RUN'
+    CREATE_RUN_FROM_SCRATCH: str = 'CREATE_RUN_FROM_SCRATCH'
     CLONE: str = 'CLONE'
     VALIDATE: str = 'VALIDATE'
     DEPRECATE: str = 'DEPRECATE'
