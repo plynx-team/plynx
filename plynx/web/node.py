@@ -260,6 +260,38 @@ def post_node(collection: str):
                 'validation_error': validation_error.to_dict()
             })
 
+        _, new_node_in_run = node_utils.construct_new_run(node, user_id)
+        new_node_in_run.author = g.user._id
+
+        if is_admin or can_run_workflows:
+            executor._update_node(new_node_in_run)
+            executor.launch()
+        else:
+            return make_permission_denied('You do not have CAN_RUN_WORKFLOWS role')
+
+        node.latest_run_id = new_node_in_run._id
+        node.save(force=True)
+
+        return make_success_response({
+                'status': NodePostStatus.SUCCESS,
+                'message': f"Run(_id=`{new_node_in_run._id}`) successfully created",
+                'run_id': str(new_node_in_run._id),
+                'url': f"/{Collections.RUNS}/{new_node_in_run._id}",
+            })
+
+    elif action == NodePostAction.CREATE_RUN_FROM_SCRATCH:
+        if not is_workflow:
+            return make_fail_response('Invalid action for an operation'), 400
+        if node.node_status != NodeStatus.CREATED:
+            return make_fail_response(f"Node status `{NodeStatus.CREATED}` expected. Found `{node.node_status}`")
+        validation_error = executor.validate()
+        if validation_error:
+            return make_success_response({
+                'status': NodePostStatus.VALIDATION_FAILED,
+                'message': 'Node validation failed',
+                'validation_error': validation_error.to_dict()
+            })
+
         node_in_run = node.clone(NodeClonePolicy.NODE_TO_RUN)
         node_in_run.author = g.user._id
 
