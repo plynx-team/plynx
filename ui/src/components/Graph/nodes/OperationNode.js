@@ -165,8 +165,8 @@ function CustomNode({ id, data }) {
               <div className="flow-node-footer">
                 {makeControlCheckbox({
                     text: 'Auto run',
-                    enabled: true,
-                    checked: node.auto_run,
+                    enabled: node.auto_run_enabled,
+                    checked: node.auto_run && node.auto_run_enabled,
                     func: (event) => {
                       event.preventDefault();
                       const target = event.target;

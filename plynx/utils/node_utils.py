@@ -405,7 +405,7 @@ def remove_auto_run_disabled(node: Node):
     """
     node_ids_to_remove = set()
     for sub_node in traverse_in_order(node):
-        if not sub_node.auto_run and not NodeRunningStatus.is_succeeded(sub_node.node_running_status):
+        if (not sub_node.auto_run or not sub_node.auto_run_enabled) and not NodeRunningStatus.is_succeeded(sub_node.node_running_status):
             node_ids_to_remove.add(sub_node._id)
         for input in sub_node.inputs:   # pylint: disable=redefined-builtin
             for input_reference in input.input_references:

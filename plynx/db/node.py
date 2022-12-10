@@ -158,6 +158,7 @@ class Node(DBObject):
     starred: bool = False
     auto_sync: bool = True
     auto_run: bool = True
+    auto_run_enabled: bool = True
     # latest_run_id would be used in Templates to refer to the current run
     latest_run_id: Optional[ObjectId] = None
 

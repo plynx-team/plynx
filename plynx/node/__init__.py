@@ -68,10 +68,12 @@ class ParamItem:
 @dataclass
 class PlynxParams:
     """Internal PLynx Node params"""
+    # pylint: disable=too-many-instance-attributes
     title: str
     description: str
     kind: str
     node_type: str
+    auto_run_enabled: bool = True
     inputs: List[InputItem] = field(default_factory=list)
     params: List[ParamItem] = field(default_factory=list)
     outputs: List[OutputItem] = field(default_factory=list)
@@ -132,7 +134,7 @@ def param(
     return decorator
 
 
-def operation(node_type=None, title=None, description="", kind=None):
+def operation(node_type=None, title=None, description="", kind=None, auto_run_enabled: bool = True):
     """PLynx user-defined Operation"""
     def decorator(func_or_class):
         func_or_class.plynx_params = PlynxParams(
@@ -140,6 +142,7 @@ def operation(node_type=None, title=None, description="", kind=None):
             description=description,
             kind=kind or "python-code-operation",
             node_type=node_type or "python-code-operation",
+            auto_run_enabled=auto_run_enabled,
             inputs=[],
             params=[],
             outputs=[],

@@ -149,11 +149,12 @@ export function makeControlCheckbox(props) {
        className={[
          "control-checkbox",
            (props.className || ''),
-           (props.enabled !== false ? 'enabled' : 'disabled')
+           (props.enabled !== false ? 'enabled' : 'disabled'),
+           (props.visible !== false ? 'visible' : 'hidden')
        ].join(" ")}
     >
         <div className='control-checkbox-text'>{props.text}:</div>
-        <StyledSwitch {...tmpLabel} checked={props.checked} onChange={props.func} size="small"/>
+        <StyledSwitch {...tmpLabel} checked={props.checked} disabled={!props.enabled} onChange={props.func} size="small"/>
     </div>
   );
 }
@@ -164,6 +165,7 @@ makeControlCheckbox.propTypes = {
   text: PropTypes.string.isRequired,
   checked: PropTypes.bool,
   enabled: PropTypes.bool.isRequired,
+  visible: PropTypes.bool,
 };
 
 export function makeControlPanel({props, children_func} = {}) {

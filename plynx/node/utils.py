@@ -61,6 +61,7 @@ def func_or_group_to_dict(func_or_group: Union[Callable, Group]):
         "node_running_status": NodeRunningStatus.CREATED,
         "node_status": NodeStatus.READY,
         "author": None,
+        "auto_run_enabled": plynx_params.auto_run_enabled,
         "kind": plynx_params.kind,
         "origin": NodeOrigin.BUILT_IN_HUBS,
         "code_hash": version_data.hash_value,

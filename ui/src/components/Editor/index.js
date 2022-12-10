@@ -727,6 +727,7 @@ export default class Editor extends Component {
           text: 'Sync',
           enabled: this.state.editable && this.state.collection === COLLECTIONS.TEMPLATES,
           checked: this.state.node && this.state.node.auto_sync,
+          visible: this.state.editable && this.state.collection === COLLECTIONS.TEMPLATES,
           func: (event) => this.handleChangeNodeParameter("auto_sync", event),
         },
       }, {
@@ -735,6 +736,7 @@ export default class Editor extends Component {
           text: 'Auto run',
           enabled: this.state.editable && this.state.collection === COLLECTIONS.TEMPLATES,
           checked: this.state.node && this.state.node.auto_run,
+          visible: this.state.editable && this.state.collection === COLLECTIONS.TEMPLATES,
           func: (event) => this.handleChangeNodeParameter("auto_run", event),
         },
       },

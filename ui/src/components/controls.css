@@ -181,8 +181,12 @@
   transition: all .1s ease-in;
 }
 
-.control-checkbox.disabled {
+.control-checkbox.hidden {
   display: none;
+}
+
+.disabled .control-checkbox-text {
+  color: #333;
 }
 
 /* mobile */
