@@ -1,9 +1,8 @@
 import React from 'react';
 import SearchBar from './SearchBar';
 import PropTypes from 'prop-types';
-import { alpha, styled } from '@mui/material/styles';
+import { styled } from '@mui/material/styles';
 import Switch from '@mui/material/Switch';
-
 
 export function makeControlButton(props) {
   return (
@@ -135,8 +134,7 @@ makeControlSearchBar.propTypes = {
 
 const tmpLabel = { inputProps: { 'aria-label': 'Switch demo' } };
 
-
-const StyledSwitch = styled(Switch)(({ theme }) => ({
+const StyledSwitch = styled(Switch)(() => ({
   '&  .MuiSwitch-track': {
     backgroundColor: "#eee",
   },

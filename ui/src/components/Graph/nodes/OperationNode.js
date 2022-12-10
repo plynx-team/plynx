@@ -1,11 +1,14 @@
 import React, { memo } from 'react';
-import PropTypes, { node } from 'prop-types';
+import PropTypes from 'prop-types';
 import { Handle } from 'reactflow';
 import {PluginsConsumer} from '../../../contexts';
-import Tooltip from '../../Common/Tooltip.js';
+import Tooltip from '../../Common/Tooltip';
 import Icon from '../../Common/Icon';
 import './OperationNode.css';
 import { makeControlCheckbox } from '../../Common/controlButton';
+import {
+  NODE_RUNNING_STATUS,
+} from '../../../constants';
 
 // TODO: remove the hack with the registry and use built in methods
 const nodesRegistry = {};
@@ -138,7 +141,7 @@ function CustomNode({ id, data }) {
                     <div>
                       <Icon
                           type_descriptor={{icon: 'feathericons.help-circle', color: "#aaa"}}
-                          className={`flow-title-help ${node.description ? "visible": "hidden"}`}
+                          className={`flow-title-help ${node.description ? "visible" : "hidden"}`}
                       />
                     </div>
                   </Tooltip>
@@ -162,17 +165,17 @@ function CustomNode({ id, data }) {
                       )
                   }
               </div>
-              <div className="flow-node-footer">
+              <div className={`flow-node-footer ${node.node_running_status === NODE_RUNNING_STATUS.STATIC ? "hidden" : "visible"}`}>
                 {makeControlCheckbox({
-                    text: 'Auto run',
-                    enabled: node.auto_run_enabled,
-                    checked: node.auto_run && node.auto_run_enabled,
-                    func: (event) => {
-                      event.preventDefault();
-                      const target = event.target;
-                      const value = target.type === 'checkbox' ? target.checked : target.value;
-                      node.auto_run = value;
-                    },
+                  text: 'Auto run',
+                  enabled: node.auto_run_enabled,
+                  checked: node.auto_run && node.auto_run_enabled,
+                  func: (event) => {
+                    event.preventDefault();
+                    const target = event.target;
+                    const value = target.type === 'checkbox' ? target.checked : target.value;
+                    node.auto_run = value;
+                  },
                 })}
                 <Tooltip title="Restart the operation" arrow>
                     <a className="flow-button" onClick={data.onRestartClick}>
@@ -201,6 +204,9 @@ CustomNode.propTypes = {
       node_status: PropTypes.string.isRequired,
       kind: PropTypes.string.isRequired,
       title: PropTypes.string.isRequired,
+      description: PropTypes.string.isRequired,
+      auto_run: PropTypes.bool,
+      auto_run_enabled: PropTypes.bool,
       inputs: PropTypes.array.isRequired,
       outputs: PropTypes.array.isRequired,
     }).isRequired,

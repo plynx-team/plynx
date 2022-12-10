@@ -27,7 +27,6 @@ import OperationNode from './nodes/OperationNode';
 import 'reactflow/dist/style.css';
 
 import "./style.css";
-import { ThemeCssVarOverrides } from '@mui/material';
 
 const TOUR_STEPS = [
   {
@@ -499,50 +498,50 @@ class Graph extends Component {
     };
   }
 
-  pasteCopyObject(copyBody, translatePosition=true) {
+  pasteCopyObject(copyBody, translatePosition = true) {
     console.log(copyBody);
-      if (!copyBody) {
-        return;
-      }
+    if (!copyBody) {
+      return;
+    }
 
-      const changesToApply = [];
-      const oldNodeIdToNewId = {};
-      this.selectedNodeIds.clear();
+    const changesToApply = [];
+    const oldNodeIdToNewId = {};
+    this.selectedNodeIds.clear();
 
-      for (const node of copyBody.nodes) {
-        const newNodeId = new ObjectID().toString();
-        oldNodeIdToNewId[node._id] = newNodeId;
-        node._id = newNodeId;
-        this.selectedNodeIds.add(node._id);
+    for (const node of copyBody.nodes) {
+      const newNodeId = new ObjectID().toString();
+      oldNodeIdToNewId[node._id] = newNodeId;
+      node._id = newNodeId;
+      this.selectedNodeIds.add(node._id);
 
-        const position = {
-          x: node.x + 20 * (translatePosition ? 1 : 0),
-          y: node.y + 20 * (translatePosition ? 1 : 0),
-        };
+      const position = {
+        x: node.x + (20 * (translatePosition ? 1 : 0)),
+        y: node.y + (20 * (translatePosition ? 1 : 0)),
+      };
 
-        changesToApply.push({
-          changeType: ChangeType.DROP_NODE,
-          node: node,
-          replaceNodeId: false,
-          replaceOriginalNode: false,
-          position: position,
-        });
-      }
+      changesToApply.push({
+        changeType: ChangeType.DROP_NODE,
+        node: node,
+        replaceNodeId: false,
+        replaceOriginalNode: false,
+        position: position,
+      });
+    }
 
-      for (const edge of copyBody.edges) {
-        const source = oldNodeIdToNewId.hasOwnProperty(edge.source) ? oldNodeIdToNewId[edge.source] : edge.source;
-        const target = oldNodeIdToNewId.hasOwnProperty(edge.target) ? oldNodeIdToNewId[edge.target] : edge.target;
+    for (const edge of copyBody.edges) {
+      const source = oldNodeIdToNewId.hasOwnProperty(edge.source) ? oldNodeIdToNewId[edge.source] : edge.source;
+      const target = oldNodeIdToNewId.hasOwnProperty(edge.target) ? oldNodeIdToNewId[edge.target] : edge.target;
 
-        changesToApply.push({
-          changeType: ChangeType.CREATE_EDGE,
-          connection: {source: source, sourceHandle: edge.sourceHandle, target: target, targetHandle: edge.targetHandle},
-          pushToReactflow: true,
-        });
-      }
+      changesToApply.push({
+        changeType: ChangeType.CREATE_EDGE,
+        connection: {source: source, sourceHandle: edge.sourceHandle, target: target, targetHandle: edge.targetHandle},
+        pushToReactflow: true,
+      });
+    }
 
-      this.applyChanges(changesToApply);
+    this.applyChanges(changesToApply);
 
-      this.reactFlowInstance.setNodes(
+    this.reactFlowInstance.setNodes(
           (nds) => {
             for (let ii = 0; ii < nds.length; ++ii) {
               nds[ii].selected = this.selectedNodeIds.has(nds[ii].id);  // eslint-disable-line no-param-reassign
@@ -589,14 +588,14 @@ class Graph extends Component {
   }
 
   onRestartClick(node) {
-    console.log("restart", node._id)
+    console.log("restart", node._id);
 
     const copyObject = this.makeCopyObject();
 
     this.reactFlowInstance.deleteElements({
       nodes: this.reactFlowInstance.getNodes().filter(n => n.id === node._id),
     });
-    
+
     this.pasteCopyObject(copyObject, false);
 
     this.props.onNodeChange(this.graph_node);

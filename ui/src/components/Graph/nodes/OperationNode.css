@@ -196,6 +196,10 @@
   grid-template-columns: 1fr 30px;
 }
 
+.flow-node-footer.hidden {
+  display: none;
+}
+
 .flow-button-icon {
   padding: 4px;
   border-radius: 2px;

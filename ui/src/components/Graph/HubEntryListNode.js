@@ -1,7 +1,7 @@
 /* eslint max-classes-per-file: 0 */
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import Tooltip from '../Common/Tooltip.js';
+import Tooltip from '../Common/Tooltip';
 import Icon from '../Common/Icon';
 import {PluginsConsumer} from '../../contexts';
 
@@ -38,7 +38,7 @@ export class HubDraggableEntry extends Component {
                 <div className="hub-item-help-wrapper">
                   <Icon
                       type_descriptor={{icon: 'feathericons.help-circle', color: "#aaa"}}
-                      className={`hub-item-help ${nodeContent.description ? "visible": "hidden"}`}
+                      className={`hub-item-help ${nodeContent.description ? "visible" : "hidden"}`}
                   />
                 </div>
               </Tooltip>
