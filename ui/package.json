@@ -1,7 +1,7 @@
 {
   "name": "plynx-web",
   "homepage": ".",
-  "version": "1.9.2",
+  "version": "1.9.3",
   "private": true,
   "dependencies": {
     "@babel/runtime": "^7.19.4",
