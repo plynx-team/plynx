@@ -2,7 +2,7 @@
     width: 210px;
     border: 2px solid #333;
     border-radius: 10px;
-    background-color: rgba(0,0,0,.7);
+    background-color: #050505;
     user-select: none;
 }
 
@@ -217,4 +217,43 @@
 .flow-button-icon {
   width: 16px;
   height: 16px;
+}
+
+@property --a{
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 90deg;
+}
+
+.flow-node.node-running-status-running::before,
+.flow-node.node-running-status-running::after {
+  --a:20deg;
+  content: '';
+  z-index: -1;
+  position: absolute;
+  width: calc(100%);
+  height: calc(100%);
+  top: 0px;
+  left: 0px;
+  border-radius: 10px;
+  background: conic-gradient(from var(--a), rgba(0, 0, 0, 0), #00BFFF, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0), rgba(0, 0, 0, 0), rgba(0, 0, 0, 0), rgba(0, 0, 0, 0));
+  animation: border 2s linear infinite;
+}
+
+.flow-node.node-running-status-running::after {
+  filter: blur(10px);
+}
+
+@keyframes border {
+  0%, 100% {
+      --a: 0deg;
+  }
+
+  50% {
+      --a: 180deg;
+  }
+
+  100% {
+    --a: 360deg;
+  }
 }
