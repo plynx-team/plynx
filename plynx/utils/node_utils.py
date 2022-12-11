@@ -318,25 +318,6 @@ def arrange_auto_layout(node: Node, readonly: bool = False):
             node.y = TOP_PADDING + level_padding + cum_heights[index]
 
 
-def reset_failed_nodes(node: Node):
-    """
-    Reset the statuses of the failed subnodes.
-
-    Resetting means node_running_status as well as the outputs and the logs.
-    """
-    sub_nodes_parameter = node.get_parameter_by_name('_nodes', throw=False)
-    if not sub_nodes_parameter:
-        return
-
-    sub_nodes = sub_nodes_parameter.value.value
-    for sub_node in sub_nodes:
-        if not NodeRunningStatus.is_failed(sub_node.node_running_status):
-            continue
-        sub_node.node_running_status = NodeRunningStatus.READY
-        for resource in sub_node.outputs + sub_node.logs:
-            resource.values = []
-
-
 def apply_cache(node: Node):
     """Apply cache values to outputs and logs"""
     sub_nodes_parameter = node.get_parameter_by_name('_nodes', throw=False)
@@ -394,7 +375,6 @@ def construct_new_run(node: Node, user_id) -> Tuple[Optional[Node], Node]:
             logger.warning(f"Failed to load a run with id `{node.latest_run_id}`")
 
     new_node_in_run = node.clone(NodeClonePolicy.NODE_TO_RUN, override_finished_state=False)
-    reset_failed_nodes(new_node_in_run)
 
     return node_in_run, new_node_in_run
 
