@@ -12,6 +12,10 @@ Please join the discussions in the [Discord](https://discord.gg/ZC3wY2J).
 
 ### Recent releases
 
+## [1.9.3] - 2022-12-11
+
+- Fix a bug: do not restart a failed Operation without explicit action.
+- Indicate running Operations using styles.
 
 ## [1.9.2] - 2022-12-10
 

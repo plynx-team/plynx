@@ -206,9 +206,9 @@ def post_node(collection: str):
             new_run_stats = node_utils.calc_status_to_node_ids(new_node_in_run)
 
             awaiting_nodes: Set[ObjectId] = set()
-            for status in NodeRunningStatus._AWAITING_STATUSES | NodeRunningStatus._SUCCEEDED_STATUSES:
+            for status in NodeRunningStatus._AWAITING_STATUSES | NodeRunningStatus._FINISHED_STATUSES:
                 awaiting_nodes = awaiting_nodes | old_run_stats[status]
-            no_need_to_run = node_in_run and node_in_run.node_running_status == NodeRunningStatus.RUNNING and \
+            no_need_to_run = node_in_run and \
                 len(new_run_stats[NodeRunningStatus.READY] - awaiting_nodes) == 0
 
             if not no_need_to_run:
