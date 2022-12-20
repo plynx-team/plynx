@@ -28,6 +28,61 @@ DEFAULT_PASSWORD = ''
 _CONFIG = None
 
 
+# pylint: disable=too-many-arguments
+def register_user(username: str, password: str, email: str, picture: str = "", is_oauth: bool = False, display_name: Optional[str] = None) -> User:
+    """
+    Register a new user.
+    """
+    if not username:
+        raise RegisterUserException(
+            'Missing username',
+            error_code=RegisterUserExceptionCode.EMPTY_USERNAME
+        )
+    if username != DEFAULT_USERNAME and not is_oauth and not password:
+        raise RegisterUserException(
+            'Missing password',
+            error_code=RegisterUserExceptionCode.EMPTY_PASSWORD
+        )
+    if UserCollectionManager.find_user_by_name(username):
+        raise RegisterUserException(
+            'Username is taken',
+            error_code=RegisterUserExceptionCode.USERNAME_ALREADY_EXISTS
+        )
+    if username != DEFAULT_USERNAME and not re.match(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", email):
+        raise RegisterUserException(
+            f"Invalid email: `{email}`",
+            error_code=RegisterUserExceptionCode.INVALID_EMAIL
+        )
+    if username != DEFAULT_USERNAME and UserCollectionManager.find_user_by_email(email):
+        raise RegisterUserException(
+            'Email already exists',
+            error_code=RegisterUserExceptionCode.EMAIL_ALREADY_EXISTS
+        )
+    if len(username) < 6 or len(username) > 22:
+        raise RegisterUserException(
+            'Lenght of the username must be between 6 and 22',
+            error_code=RegisterUserExceptionCode.INVALID_LENGTH_OF_USERNAME
+        )
+
+    user = User()
+    user.username = username
+    user.email = email
+    user.hash_password(password)
+    user.settings.picture = picture
+    user.settings.display_name = display_name or username
+    user.save()
+    return user
+
+
+def _init_default_user():
+    if UserCollectionManager.find_user_by_name(DEFAULT_USERNAME) is None:
+        user = register_user(DEFAULT_USERNAME, DEFAULT_PASSWORD, DEFAULT_EMAIL)
+        logging.info(f"Created default user `{DEFAULT_USERNAME}`")
+        create_default_templates(user)
+    else:
+        logging.info(f"Default user `{DEFAULT_USERNAME}` already exists")
+
+
 def verify_password(username_or_token: str, password: str):
     """Veryfy password based on user"""
     if _CONFIG and _CONFIG.auth.secret_key and username_or_token == DEFAULT_USERNAME:
@@ -64,65 +119,6 @@ def requires_auth(f):
             return authenticate()
         return f(*args, **kwargs)
     return decorated
-
-
-def register_user(username: str, password: str, email: str):
-    """Register a new user.
-
-    Args:
-        username    (str):  Username
-        password    (str):  Pasword
-        email       (str):  Email
-
-    Return:
-        (User):     New user DB Object
-    """
-    if not username:
-        raise RegisterUserException(
-            'Missing username',
-            error_code=RegisterUserExceptionCode.EMPTY_USERNAME
-        )
-    if username != DEFAULT_USERNAME and not password:
-        raise RegisterUserException(
-            'Missing password',
-            error_code=RegisterUserExceptionCode.EMPTY_PASSWORD
-        )
-    if UserCollectionManager.find_user_by_name(username):
-        raise RegisterUserException(
-            'Username is taken',
-            error_code=RegisterUserExceptionCode.USERNAME_ALREADY_EXISTS
-        )
-    if username != DEFAULT_USERNAME and not re.match(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", email):
-        raise RegisterUserException(
-            f"Invalid email: `{email}`",
-            error_code=RegisterUserExceptionCode.INVALID_EMAIL
-        )
-    if username != DEFAULT_USERNAME and UserCollectionManager.find_user_by_email(email):
-        raise RegisterUserException(
-            'Email already exists',
-            error_code=RegisterUserExceptionCode.EMAIL_ALREADY_EXISTS
-        )
-    if len(username) < 6 or len(username) > 22:
-        raise RegisterUserException(
-            'Lenght of the username must be between 6 and 22',
-            error_code=RegisterUserExceptionCode.INVALID_LENGTH_OF_USERNAME
-        )
-
-    user = User()
-    user.username = username
-    user.email = email
-    user.hash_password(password)
-    user.save()
-    return user
-
-
-def _init_default_user():
-    if UserCollectionManager.find_user_by_name(DEFAULT_USERNAME) is None:
-        user = register_user(DEFAULT_USERNAME, DEFAULT_PASSWORD, DEFAULT_EMAIL)
-        logging.info(f"Created default user `{DEFAULT_USERNAME}`")
-        create_default_templates(user)
-    else:
-        logging.info(f"Default user `{DEFAULT_USERNAME}` already exists")
 
 
 def make_fail_response(message, **kwargs):

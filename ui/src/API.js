@@ -80,7 +80,7 @@ plynxApi.createEntity({ name: COLLECTIONS.USERS });
 plynxApi.createEntity({ name: 'resource' });
 plynxApi.createEntity({ name: 'token' });
 plynxApi.createEntity({ name: 'register' });
-plynxApi.createEntity({ name: 'demo' });
+plynxApi.createEntity({ name: 'register_with_oauth2' });
 plynxApi.createEntity({ name: 'user_settings' });
 plynxApi.createEntity({ name: 'pull_settings' });
 plynxApi.createEntity({ name: 'worker_states' });

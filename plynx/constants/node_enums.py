@@ -37,6 +37,11 @@ class NodeRunningStatus:
         RUNNING,
     }
 
+    _NON_CHANGEABLE_STATUSES: Set[str] = {
+        STATIC,
+        SPECIAL,
+    }
+
     _FINISHED_STATUSES: Set[str] = _FAILED_STATUSES | _SUCCEEDED_STATUSES
 
     @staticmethod
@@ -53,6 +58,11 @@ class NodeRunningStatus:
     def is_failed(node_running_status: str) -> bool:
         """Check if the status is final and failed"""
         return node_running_status in NodeRunningStatus._FAILED_STATUSES
+
+    @staticmethod
+    def is_non_changeable(node_running_status: str) -> bool:
+        """Check if the status is in static or special"""
+        return node_running_status in NodeRunningStatus._NON_CHANGEABLE_STATUSES
 
 
 class NodeStatus:

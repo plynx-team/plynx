@@ -19,7 +19,7 @@
 .user-menu-grid .menu-item {
   padding: 10px;
   display: block;
-  color: #ffffff;
+  color: #eee;
   text-decoration: none;
   -moz-transition: all .1s ease-in;
   -o-transition: all .1s ease-in;
@@ -27,12 +27,18 @@
   transition: all .1s ease-in;
 }
 
-.user-menu-grid .menu-item:hover {
+.user-menu-grid .menu-item-name {
+  border-bottom: 1px solid #555;
+  color: #bbb;
+}
+
+
+.user-menu-grid .menu-item-clickable:hover {
     background-color: #2b2b2b;
     text-decoration: none;
     cursor: pointer;
 }
 
-.user-menu-grid .menu-item:active {
+.user-menu-grid .menu-item-clickable:active {
     background-color: #62a6f3;
 }

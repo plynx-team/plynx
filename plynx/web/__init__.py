@@ -9,4 +9,4 @@ import plynx.web.node
 import plynx.web.resource
 import plynx.web.state
 import plynx.web.user
-from plynx.web.common import app, authenticate, make_fail_response, register_user, requires_auth, run_api, verify_password
+from plynx.web.common import DEFAULT_EMAIL, DEFAULT_PASSWORD, DEFAULT_USERNAME, app, authenticate, make_fail_response, requires_auth, run_api, verify_password

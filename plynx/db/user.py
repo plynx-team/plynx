@@ -23,6 +23,7 @@ JWT_ENCODE_ALGORITHM = "HS256"
 class UserSettings(DBObject):
     """User Settings structure."""
     display_name: str = ""
+    picture: str = ""
 
 
 @dataclass_json
@@ -45,7 +46,7 @@ class User(DBObject):
         Args:
             password    (str)   Real password string
         """
-        self.password_hash = pwd_context.encrypt(password)  # pylint: disable=attribute-defined-outside-init
+        self.password_hash = pwd_context.encrypt(password) if password else ""  # pylint: disable=attribute-defined-outside-init
 
     def verify_password(self, password: str) -> bool:
         """Verify password.
