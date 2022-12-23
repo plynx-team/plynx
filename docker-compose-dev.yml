@@ -58,6 +58,7 @@ services:
         environment:
             - PLYNX_MODE=api
             - PLYNX_CONFIG=/app/config.yaml
+            - GOOGLE_CLIENT_ID=231909420850-nj0e0lm27itj46lg5obn78mukuvou6hb.apps.googleusercontent.com
         command: sh /app/watch.sh
 
     test:
@@ -73,16 +74,16 @@ services:
             - ./config.yaml:/app/config.yaml
         command: /app/tests/run_tests.sh
 
-    frontend:
-        image: plynxteam/ui_dev:latest
-        container_name: "frontend"
-        ports:
-            - "3001:3000"
-        depends_on:
-            - api
-        links:
-            - api
-        volumes:
-            - ./ui:/app
-        tty: true
-        command: sh -c "npm install && npm start"
+    # frontend:
+    #     image: plynxteam/ui_dev:latest
+    #     container_name: "frontend"
+    #     ports:
+    #         - "3001:3000"
+    #     depends_on:
+    #         - api
+    #     links:
+    #         - api
+    #     volumes:
+    #         - ./ui:/app
+    #     tty: true
+    #     command: sh -c "npm install && npm start"
