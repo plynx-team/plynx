@@ -116,7 +116,7 @@ class Worker:
         self.node_collection_manager = plynx.db.node_collection_manager.NodeCollectionManager(collection=Collections.RUNS)
         self.run_cancellation_manager = plynx.db.run_cancellation_manager.RunCancellationManager()
         self.kinds = worker_config.kinds
-        set_global_api_url(worker_config.api_url)
+        set_global_api_url(worker_config.api)
         self.host = socket.gethostname()
         self._stop_event = threading.Event()
 

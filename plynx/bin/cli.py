@@ -88,12 +88,12 @@ class CLIFactory:
             action='append',
             levels=['worker', 'kinds'],
             ),
-        'api_url': Arg(
-            ("--api-url", ),
+        'api': Arg(
+            ("--api", ),
             help="Base API URL",
-            default=_config.worker.api_url,
+            default=_config.worker.api,
             type=str,
-            levels=['worker', 'api-url'],
+            levels=['worker', 'api'],
             ),
 
         # MongoConfig
@@ -209,7 +209,7 @@ class CLIFactory:
         {
             'func': worker,
             'help': 'Run Worker',
-            'args': ('verbose', 'db_host', 'db_port', 'db_user', 'db_password', 'kinds', 'api_url',
+            'args': ('verbose', 'db_host', 'db_port', 'db_user', 'db_password', 'kinds', 'api',
                      'storage_scheme', 'storage_prefix', 'credential_path'),
         }, {
             'func': api,
