@@ -12,6 +12,11 @@ Please join the discussions in the [Discord](https://discord.gg/ZC3wY2J).
 
 ### Recent releases
 
+## [1.9.4] - 2022-12-22
+
+- Using Oauth2 to sign-up / log-in.
+- Isolate workers from using database directly.
+
 ## [1.9.3] - 2022-12-11
 
 - Fix a bug: do not restart a failed Operation without explicit action.
