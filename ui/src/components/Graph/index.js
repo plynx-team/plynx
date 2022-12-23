@@ -921,6 +921,22 @@ class Graph extends Component {
     }
   }
 
+  insertNode(node) {
+    const reactFlowBounds = this.reactFlowWrapper.current.getBoundingClientRect();
+
+    const position = this.reactFlowInstance.project({
+      x: (reactFlowBounds.right - reactFlowBounds.left) / 2,
+      y: (reactFlowBounds.bottom - reactFlowBounds.top) / 2,
+    });
+    this.applyChanges([{
+      changeType: ChangeType.DROP_NODE,
+      node: node,
+      replaceNodeId: true,
+      replaceOriginalNode: true,
+      position: position,
+    }]);
+  }
+
   render() {
     return (
     <HotKeys className="GraphNode"

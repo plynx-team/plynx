@@ -74,7 +74,7 @@ export default class Dialog extends Component {
             x: x,
             y: y,
             width: this.props.width + 2,
-            height: this.props.height + 2,
+            height: this.props.height ? this.props.height + 2 : "auto",
           }}
           minWidth={200}
           minHeight={100}

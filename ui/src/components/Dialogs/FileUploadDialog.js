@@ -20,6 +20,8 @@ export default class FileUploadDialog extends Component {
       operations_dict: PropTypes.object.isRequired,
       resources_dict: PropTypes.object.isRequired,
     }).isRequired,
+    onUpload: PropTypes.func,
+    doNotSave: PropTypes.bool,
   };
 
   constructor(props) {
@@ -33,6 +35,7 @@ export default class FileUploadDialog extends Component {
       uploadProgress: 10,
       loading: false
     };
+
   }
 
   handleChange(event) {
@@ -66,6 +69,7 @@ export default class FileUploadDialog extends Component {
     formData.append('description', self.state.description);
     formData.append('file_type', self.state.file_type);
     formData.append('node_kind', self.props.uploadOperation.kind);
+    formData.append('do_not_save', !!self.props.doNotSave);
     console.log(self.props.uploadOperation.kind);
 
     const config = {
@@ -87,6 +91,9 @@ export default class FileUploadDialog extends Component {
       if (data.status === RESPONCE_STATUS.SUCCESS) {
         self.props.onClose();
         self.setState({loading: false});
+      }
+      if (this.props.onUpload) {
+        this.props.onUpload(data.node)
       }
     }).catch((error) => {
       console.error('error', error);
@@ -114,8 +121,8 @@ export default class FileUploadDialog extends Component {
               onClose={() => {
                 this.props.onClose();
               }}
-              width={600}
-              height={240}
+              width={400}
+              height={null}
               title={'Upload file'}
               enableResizing={false}
       >
@@ -127,13 +134,8 @@ export default class FileUploadDialog extends Component {
       <div className='FileUploadDialogBody selectable'>
           <div className='MainBlock'>
 
-            <div className='TitleDescription'>
-              <div className='Title'>
-                {this.state.title || 'No title'}
-              </div>
-              <div className='Description'>
-                &ldquo;{this.state.description}&rdquo;
-              </div>
+            <div className='Title'>
+              {this.state.title || 'No title'}
             </div>
 
             <div className={'Type'}>
@@ -194,10 +196,15 @@ export default class FileUploadDialog extends Component {
                    e.preventDefault();
                    this.handleChooseFile();
                  }}
-                 className={"control-button" + (this.state.file_name ? ' selected' : '')}>
-                 <img src="/icons/file-plus.svg" alt="new file"/> {this.state.file_name || 'Choose file'}
-                 <div className='progress-bar'>
-                 </div>
+                 className={"control-button file-dialog-upload-button " + (this.state.file_name ? ' selected' : '')}>
+                  <Icon
+                    type_descriptor={{icon: 'feathericons.plus-square', color: "#eee"}}
+                    className={`file-dialog-upload-button-icon`}
+                    width={20}
+                    height={20}
+                  />
+                  <div className="file-dialog-upload-button-text">{this.state.file_name || 'Choose file'}</div>
+                  <div className='progress-bar'></div>
               </div>
             </div>
           </div>
