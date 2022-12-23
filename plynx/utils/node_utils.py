@@ -414,3 +414,16 @@ def calc_status_to_node_ids(node: Optional[Node]) -> Dict[str, Set[ObjectId]]:
     for sub_node in node.get_sub_nodes():
         res[sub_node.node_running_status].add(sub_node._id)
     return res
+
+
+def reset_nodes(node: Node):
+    """
+    Reset statuses of the sub-nodes as well as logs and outputs
+    """
+    for sub_node in node.get_sub_nodes():
+        if NodeRunningStatus.is_non_changeable(sub_node.node_running_status):
+            continue
+        sub_node.node_running_status = NodeRunningStatus.READY
+        for resource in sub_node.outputs + sub_node.logs:
+            resource.values = []
+        sub_node._cached_node = None

@@ -38,10 +38,13 @@ export class Settings extends Component {
                 <div className='user-menu-wrapper'>
                     {context.showModal &&
                         <div className='user-menu-grid'>
-                            <a className='menu-item' href={`/users/${this.state.user.username}`}>
+                            <div className="menu-item menu-item-name">
+                              @{this.state.user.settings.display_name || this.state.user.username}
+                            </div>
+                            <a className='menu-item menu-item-clickable' href={`/users/${this.state.user.username}`}>
                               Settings
                             </a>
-                            <div className='menu-item' onClick={() => this.handleSignOut()}>
+                            <div className='menu-item menu-item-clickable' onClick={() => this.handleSignOut()}>
                               Sign Out
                             </div>
                         </div>

@@ -47,20 +47,7 @@ export default class LogInRedirect extends Component {
     let handleResponse = null;
     let promise = null;
 
-    if (specialUser === SPECIAL_USERS.DEMO) {
-      promise = PLynxApi.endpoints.demo.getCustom({
-        method: 'post'
-      });
-      handleResponse = response => {
-        cookie.save('access_token', response.data.access_token, { path: '/' });
-        cookie.save('refresh_token', response.data.refresh_token, { path: '/' });
-        cookie.save('user', response.data.user, { path: '/' });
-        cookie.save('settings', response.data.settings, { path: '/' });
-        cookie.save('showTour', true, { path: '/' });
-        window.location = response.data.url;
-        loading = false;
-      };
-    } else if (specialUser === SPECIAL_USERS.DEFAULT) {
+    if (specialUser === SPECIAL_USERS.DEFAULT) {
       promise = PLynxApi.endpoints.token.getCustom({
         method: 'get',
         auth:

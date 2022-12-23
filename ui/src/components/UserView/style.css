@@ -22,8 +22,15 @@
   padding: 30px 0px 30px 0px;
 }
 
-.user-icon {
+.user-view-block .user-icon {
     height: 64px;
     width: 64px;
-    padding: 0px 10px 0px 10px;
+    padding: 0px;
+    border-radius: 50%;
+    border: 2px solid #505050;
+    margin-left: 15px;
+}
+
+.user-display-name {
+  padding-left: 15px;
 }

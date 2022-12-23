@@ -24,6 +24,11 @@
     border-radius: 5px;
 }
 
+.login-hello-message {
+    text-align: center;
+    font-size: 15pt;
+}
+
 .Items .Item .buttons .Item>* {
     width: 100%;
 }

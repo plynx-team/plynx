@@ -1,21 +1,23 @@
 """All of the endpoints related to Users"""
 
 import json
+import os
 
-import bson.objectid
 from flask import g, request
+from google.auth.transport import requests as g_requests
+from google.oauth2 import id_token
 
 import plynx.db.node_collection_manager
-from plynx.constants import Collections, IAMPolicies, NodeClonePolicy, TokenType, UserPostAction
-from plynx.db.db_object import get_class
+from plynx.constants import Collections, IAMPolicies, TokenType, UserPostAction
 from plynx.db.demo_user_manager import DemoUserManager
 from plynx.db.user import User, UserCollectionManager
-from plynx.utils.common import JSONEncoder, to_object_id
 from plynx.utils.exceptions import RegisterUserException
 from plynx.web.common import app, handle_errors, logger, make_fail_response, make_success_response, register_user, requires_auth
 
 demo_user_manager = DemoUserManager()
 template_collection_manager = plynx.db.node_collection_manager.NodeCollectionManager(collection=Collections.TEMPLATES)
+
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", None)
 
 
 @app.route('/plynx/api/v0/token', strict_slashes=False)
@@ -32,46 +34,6 @@ def get_auth_token():
         'access_token': access_token,
         'refresh_token': refresh_token,
         'user': user_obj,
-    })
-
-
-@app.route('/plynx/api/v0/demo', methods=['POST'])
-@handle_errors
-def post_demo_user():
-    """Create a demo user"""
-    user: User = demo_user_manager.create_demo_user()
-    if not user:
-        return make_fail_response('Failed to create a demo user')
-
-    template_id = DemoUserManager.demo_config.kind
-    if DemoUserManager.demo_config.template_id:
-        try:
-            node_id = to_object_id(DemoUserManager.demo_config.template_id)
-        except bson.objectid.InvalidId as e:
-            logger.error(f"node_id `{DemoUserManager.demo_config.template_id}` is invalid")
-            logger.error(e)
-            return make_fail_response('Failed to create a demo node.')
-        try:
-            user_id = user._id
-            node = template_collection_manager.get_db_node(node_id, user_id)
-            node = get_class(node['_type']).from_dict(node).clone(NodeClonePolicy.NODE_TO_NODE)
-            node.author = user_id
-            node.save()
-            template_id = node._id
-        except Exception as e:  # pylint: disable=broad-except
-            logger.error('Failed to create a demo node')
-            logger.error(e)
-            return make_fail_response(str(e)), 500
-
-    access_token = user.generate_token(TokenType.ACCESS_TOKEN, expiration=1800)
-
-    user_obj = user.to_dict()
-    user_obj['hash_password'] = ''
-    return JSONEncoder().encode({
-        'access_token': access_token,
-        'refresh_token': 'Not assigned',
-        'user': user_obj,
-        'url': f'/{Collections.TEMPLATES}/{template_id}',
     })
 
 
@@ -165,6 +127,53 @@ def post_register():
             ex.message,
             error_code=ex.error_code,
         ), 400
+
+    g.user = user   # pylint: disable=assigning-non-slot
+    access_token = user.generate_token(TokenType.ACCESS_TOKEN)
+    refresh_token = user.generate_token(TokenType.REFRESH_TOKEN)
+
+    user_obj = user.to_dict()
+    user_obj['hash_password'] = ''
+    return make_success_response({
+        'access_token': access_token,
+        'refresh_token': refresh_token,
+        'user': user_obj,
+    })
+
+
+@app.route('/plynx/api/v0/register_with_oauth2', methods=['POST'])
+@handle_errors
+def post_register_with_oauth2():
+    """Register a new user"""
+    query = json.loads(request.data)
+    token = query["token"]
+
+    try:
+        idinfo = id_token.verify_oauth2_token(token, g_requests.Request(), GOOGLE_CLIENT_ID)
+    except ValueError:
+        # Invalid token
+        return make_fail_response("Invalid request"), 400
+
+    if not idinfo["email_verified"]:
+        return make_fail_response("Unable to verify the email"), 401
+
+    username = idinfo['sub']
+    user = UserCollectionManager.find_user_by_name(username)
+    if not user:
+        logger.info("The user does not exist. Creating a new one.")
+        user = register_user(
+            username=username,
+            password="",
+            email=idinfo["email"],
+            picture=idinfo["picture"],
+            is_oauth=True,
+            display_name=idinfo["name"],
+        )
+        demo_user_manager.create_demo_templates(user)
+
+    if user.settings.picture != idinfo["picture"]:
+        user.settings.picture = idinfo["picture"]
+        user.save()
 
     g.user = user   # pylint: disable=assigning-non-slot
     access_token = user.generate_token(TokenType.ACCESS_TOKEN)

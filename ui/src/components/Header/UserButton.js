@@ -18,20 +18,11 @@ export default class UserButton extends Component {
   }
 
   handleLogIn() {
-    console.log("Log in");
+    console.log("Sign Up / Log in");
     window.location = "/login";
   }
 
   render() {
-    let username = '';
-    if (this.state.user) {
-      if (this.state.user.settings && this.state.user.settings.display_name) {
-        username = this.state.user.settings.display_name;
-      } else {
-        username = this.state.user.username;
-      }
-    }
-
     return (
       <div className="UserButton">
         {this.state.refreshTokenExists &&
@@ -42,10 +33,8 @@ export default class UserButton extends Component {
                     context.toggleModal();
                     e.preventDefault();
                   }}>
-                    <User/>
-                    <div className="username">
-                      {username}
-                    </div>
+                    { this.state.user.settings.picture && <img src={this.state.user.settings.picture} className="user-icon" alt="Google profile pic" referrerPolicy="no-referrer"/>}
+                    { !this.state.user.settings.picture && <User className="user-icon"/> }
                   </a>
                 </div>
             );
@@ -54,7 +43,7 @@ export default class UserButton extends Component {
         {!this.state.refreshTokenExists &&
           <div className="inner-user-button">
             <div className="action" onClick={() => this.handleLogIn()}>
-              LogIn
+              Sign up / Log in
             </div>
           </div>
         }

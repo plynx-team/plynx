@@ -1,9 +1,12 @@
 import React, { Component } from 'react';
+import cookie from 'react-cookies';
+import { GoogleLogin } from 'react-google-login';
+import { gapi } from 'gapi-script';
+
 import AlertContainer from '../3rd_party/react-alert';
 import { PLynxApi } from '../../API';
 import { ALERT_OPTIONS, USER_POST_ACTION, REGISTER_USER_EXCEPTION_CODE } from '../../constants';
 import { validatePassword } from '../Common/passwordUtils';
-import cookie from 'react-cookies';
 
 import './style.css';
 
@@ -11,6 +14,9 @@ const MODES = {
   "LOGIN": 'LOGIN',
   'SIGNUP': 'SIGNUP',
 };
+
+const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+
 
 export default class LogIn extends Component {
   constructor(props) {
@@ -21,7 +27,7 @@ export default class LogIn extends Component {
       username: '',
       password: '',
       confpassword: '',
-      mode: MODES.LOGIN,
+      mode: MODES.SIGNUP,
       errors: {
         email: '',
         username: '',
@@ -37,6 +43,14 @@ export default class LogIn extends Component {
       cookie.remove('settings', { path: '/' });
       window.location.reload(false);
     }
+
+    const initClient = () => {
+        gapi.client.init({
+        clientId: clientId,
+        scope: "https://www.googleapis.com/auth/userinfo.email"
+      });
+    };
+    gapi.load('client:auth2', initClient);
   }
 
   toggleForms() {
@@ -45,42 +59,12 @@ export default class LogIn extends Component {
     });
   }
 
-  handleButton() {
-    if (this.state.mode === MODES.LOGIN) {
-      this.handleLogin();
-    } else if (this.state.mode === MODES.SIGNUP) {
-      this.handleSignup();
-    }
-  }
-
   handleLogin() {
     console.log("Login");
     this.loginUser({
       username: this.state.username,
       password: this.state.password
     });
-  }
-
-  handleSignup() {
-    if (this.state.password !== this.state.confpassword) {
-      this.setState({
-        errors: {
-          confpassword: "Password and confirmation must match"
-        }
-      });
-    } else if (!validatePassword(this.state.password)) {
-      this.setState({
-        errors: {
-          password: 'Password must have at least 8 characters, including an uppercase letter and a number'
-        }
-      });
-    } else {
-      this.signupUser({
-        email: this.state.email,
-        username: this.state.username,
-        password: this.state.password,
-      });
-    }
   }
 
   showAlert(message, type) {
@@ -105,6 +89,7 @@ export default class LogIn extends Component {
       cookie.save('refresh_token', response.data.refresh_token, { path: '/' });
       cookie.save('user', response.data.user, { path: '/' });
       cookie.save('settings', response.data.settings, { path: '/' });
+      cookie.save('showTour', true, { path: '/' });
       window.location = '/workflows';
     })
     .catch((error) => {
@@ -117,18 +102,42 @@ export default class LogIn extends Component {
     });
   }
 
-  signupUser({ email, username, password }) {
-    PLynxApi.endpoints.register.create({
-      action: USER_POST_ACTION.MODIFY,
-      user: this.user,
-      old_password: this.oldPassword,
-      new_password: this.newPassword,
+  handleChange(event) {
+    this.setState({[event.target.name]: event.target.value});
+  }
 
-      email: email,
-      username: username,
-      password: password,
+  handleKeyPressed(event) {
+    if (event.key === 'Enter') {
+      if (this.state.mode === MODES.LOGIN && event.target.name === 'password') {
+        this.handleLogin();
+      } else {
+        this.focusNext(event.target);
+      }
+    }
+  }
+
+  focusNext(activeInput) {
+    activeInput.blur();
+    const children = document.getElementsByClassName('Items')[0].children;
+    const activeinput = activeInput.parentNode.parentNode;
+    let next = false;
+    for (let i = 0; i < children.length; i++) {
+      if (next) {
+        children[i].children[1].children[0].focus();
+      } else if (children[i] === activeinput) {
+        next = true;
+      }
+    }
+  }
+
+  handleLoginCallback(response) {
+
+    PLynxApi.endpoints.register_with_oauth2.create({
+      token: response.tokenId,
     })
     .then(response => {
+      console.log(response);
+
       console.log('Registered');
       cookie.save('access_token', response.data.access_token, { path: '/' });
       cookie.save('refresh_token', response.data.refresh_token, { path: '/' });
@@ -152,85 +161,11 @@ export default class LogIn extends Component {
     });
   }
 
-  handleChange(event) {
-    this.setState({[event.target.name]: event.target.value});
-  }
-
-  handleKeyPressed(event) {
-    if (event.key === 'Enter') {
-      if (this.state.mode === MODES.LOGIN && event.target.name === 'password') {
-        this.handleLogin();
-      } else if (event.target.name === 'confpassword') {
-        this.handleSignup();
-      } else {
-        this.focusNext(event.target);
-      }
-    }
-  }
-
-  focusNext(activeInput) {
-    activeInput.blur();
-    const children = document.getElementsByClassName('Items')[0].children;
-    const activeinput = activeInput.parentNode.parentNode;
-    let next = false;
-    for (let i = 0; i < children.length; i++) {
-      if (next) {
-        children[i].children[1].children[0].focus();
-      } else if (children[i] === activeinput) {
-        next = true;
-      }
-    }
-  }
-
   render() {
+    const isLogIn = this.state.mode === MODES.LOGIN;
     let itemDescriptors = [];
     if (this.state.mode === MODES.SIGNUP) {
-      itemDescriptors = [
-        {
-          title: 'Email',
-          name: 'email',
-          element:
-                  <input name='email'
-                      value={this.state.email}
-                      autoComplete="on"
-                      type="email"
-                      onChange={(e) => this.handleChange(e)}
-                      onKeyPress={(e) => this.handleKeyPressed(e)}
-                      />,
-        }, {
-          title: 'Username',
-          name: 'username',
-          element:
-                  <input name='username'
-                       value={this.state.username}
-                       autoComplete="on"
-                       onChange={(e) => this.handleChange(e)}
-                       onKeyPress={(e) => this.handleKeyPressed(e)}
-                       />,
-        }, {
-          title: 'Password',
-          name: 'password',
-          element:
-                  <input name='password'
-                       value={this.state.password}
-                       autoComplete="on"
-                       type="password"
-                       onChange={(e) => this.handleChange(e)}
-                       onKeyPress={(e) => this.handleKeyPressed(e)}
-                       />
-        }, {
-          title: 'Confirm Password',
-          name: 'confpassword',
-          element:
-                  <input name='confpassword'
-                      value={this.state.confpassworf}
-                      autoComplete="on"
-                      type="password"
-                      onChange={(e) => this.handleChange(e)}
-                      onKeyPress={(e) => this.handleKeyPressed(e)}
-                      />,
-        },
-      ];
+      itemDescriptors = [];
     } else if (this.state.mode === MODES.LOGIN) {
       itemDescriptors = [
         {
@@ -262,6 +197,17 @@ export default class LogIn extends Component {
       <div className='Login'>
         <AlertContainer ref={a => this.msg = a} {...ALERT_OPTIONS} />
         <div className='LoginBlock'>
+          <div className="login-hello-message">
+            Hello! 👋 Please sign in to continue.
+          </div>
+          <GoogleLogin
+            clientId={clientId}
+            buttonText={isLogIn ? "Log in with Google" : "Sign up with Google"}
+            onSuccess={response => this.handleLoginCallback(response)}
+            onFailure={this.handleLoginCallback}
+            cookiePolicy={'single_host_origin'}
+            className="loginButton"
+          />
           <div className='Items'>
             {itemDescriptors.map(item => <div
                     className='Item'
@@ -281,14 +227,16 @@ export default class LogIn extends Component {
 
           </div>
 
-          <button className="loginButton" onClick={() => this.handleButton()} href="#">
-            {this.state.mode === MODES.LOGIN ? 'Login' : 'Sign Up'}
-          </button>
+          {isLogIn &&
+            <button className="loginButton" onClick={() => this.handleLogin()} href="#">
+              Login
+            </button>
+          }
 
           <div className="toggleState" onClick={() => this.toggleForms()}>
-            {this.state.mode === MODES.LOGIN ? 'Sign Up' : 'Login'}
+            {isLogIn ? 'Sign Up' : 'Login'}
           </div>
-          {this.state.mode === MODES.LOGIN &&
+          {isLogIn &&
             <div className="forgotPassword" onClick={() => this.showAlert("This part wasn't codded in yet...", "failed")}>
                 Forgot Password?
             </div>
