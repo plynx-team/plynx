@@ -141,7 +141,7 @@ def make_success_response(extra_response: Optional[Dict[str, Any]] = None):
         {
             'status': ResponseStatus.SUCCESS,
             'message': 'Success',
-            'settings': g.user.settings.to_dict(),
+            'settings': g.user.settings.to_dict() if hasattr(g, "user") else None,
         }, **(extra_response or {})))
 
 
@@ -177,4 +177,5 @@ def run_api():
         port=_CONFIG.web.port,
         debug=_CONFIG.web.debug,
         use_reloader=False,
+        threaded=True,
     )

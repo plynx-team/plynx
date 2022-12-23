@@ -13,7 +13,7 @@ DEFAULT_ICON: str = 'feathericons.x-square'
 DEFAULT_COLOR: str = '#ffffff'
 _CONFIG = None
 
-WorkerConfig = namedtuple('WorkerConfig', ['kinds'])
+WorkerConfig = namedtuple('WorkerConfig', ['kinds', 'api_url'])
 MongoConfig = namedtuple('MongoConfig', ['user', 'password', 'host', 'port'])
 StorageConfig = namedtuple('StorageConfig', ['scheme', 'prefix', 'credential_path'])
 AuthConfig = namedtuple('AuthConfig', ['secret_key'])
@@ -62,6 +62,7 @@ def get_worker_config() -> WorkerConfig:
     """Generate worker config"""
     return WorkerConfig(
         kinds=(_get_config().get('worker', {}).get('kinds', [])),
+        api_url=(_get_config().get('worker', {}).get('api_url', 'http://api:5005')),
     )
 
 
