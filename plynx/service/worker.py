@@ -27,7 +27,7 @@ from plynx.utils.file_handler import upload_file_stream
 
 CONNECT_POST_TIMEOUT = 1.0
 NUM_RETRIES = 3
-
+REQUESTS_TIMEOUT = 10
 API_URL = None
 
 
@@ -44,7 +44,7 @@ def post_request(uri, data, num_retries=NUM_RETRIES):
     for iter_num in range(num_retries):
         if iter_num != 0:
             time.sleep(CONNECT_POST_TIMEOUT)
-        response = requests.post(url=url, data=json_data)
+        response = requests.post(url=url, data=json_data, timeout=REQUESTS_TIMEOUT)
         if response.ok:
             return json.loads(response.text)
     return None
