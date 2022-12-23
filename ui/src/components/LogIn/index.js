@@ -15,7 +15,19 @@ const MODES = {
   'SIGNUP': 'SIGNUP',
 };
 
-const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+
+function getClientId() {
+  console.log(`Using ${process.env.NODE_ENV}`);
+  if (process.env.NODE_ENV === 'development') {
+    return "231909420850-nj0e0lm27itj46lg5obn78mukuvou6hb.apps.googleusercontent.com";
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    return "231909420850-dasbesud6enjf58kgkv38hk7spuieao5.apps.googleusercontent.com";
+  }
+
+  return null;
+}
 
 
 export default class LogIn extends Component {
@@ -46,7 +58,7 @@ export default class LogIn extends Component {
 
     const initClient = () => {
         gapi.client.init({
-        clientId: clientId,
+        clientId: getClientId(),
         scope: "https://www.googleapis.com/auth/userinfo.email"
       });
     };
@@ -201,7 +213,7 @@ export default class LogIn extends Component {
             Hello! 👋 Please sign in to continue.
           </div>
           <GoogleLogin
-            clientId={clientId}
+            clientId={getClientId()}
             buttonText={isLogIn ? "Log in with Google" : "Sign up with Google"}
             onSuccess={response => this.handleLoginCallback(response)}
             onFailure={this.handleLoginCallback}
