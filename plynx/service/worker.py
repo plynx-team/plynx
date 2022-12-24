@@ -9,7 +9,6 @@ import time
 import traceback
 import uuid
 from typing import Dict, Optional, Set
-from urllib.parse import urljoin
 
 import requests
 import six
@@ -21,25 +20,26 @@ from plynx.base.executor import BaseExecutor
 from plynx.constants import Collections, NodeRunningStatus
 from plynx.db.worker_state import WorkerState
 from plynx.utils.common import JSONEncoder, ObjectId
-from plynx.utils.config import WorkerConfig, get_worker_config
+from plynx.utils.config import WorkerConfig, get_web_config, get_worker_config
 from plynx.utils.db_connector import check_connection
 from plynx.utils.file_handler import upload_file_stream
 
 CONNECT_POST_TIMEOUT = 1.0
 NUM_RETRIES = 3
 REQUESTS_TIMEOUT = 10
-API_URL = None
 
 
-def set_global_api_url(new_api_url):
-    """Set api url"""
-    global API_URL  # pylint: disable=global-statement
-    API_URL = new_api_url
+def urljoin(base: str, postfix: str) -> str:
+    """Join urls in a reasonable way"""
+    if base[-1] == "/":
+        return f"{base}{postfix}"
+    return f"{base}/{postfix}"
 
 
 def post_request(uri, data, num_retries=NUM_RETRIES):
     """Make post request to the url"""
-    url = urljoin(API_URL, uri)
+    url = urljoin(get_web_config().endpoint, uri)
+    print(get_web_config().endpoint, url)
     json_data = JSONEncoder().encode(data)
     for iter_num in range(num_retries):
         if iter_num != 0:
@@ -82,7 +82,7 @@ class TickThread:
                 with self.executor._lock:
                     if NodeRunningStatus.is_finished(self.executor.node.node_running_status):
                         continue
-                    resp = post_request("plynx/api/v0/update_run", data={"node": self.executor.node.to_dict()})
+                    resp = post_request("update_run", data={"node": self.executor.node.to_dict()})
                     logging.info(f"Run update res: {resp}")
 
 
@@ -116,7 +116,6 @@ class Worker:
         self.node_collection_manager = plynx.db.node_collection_manager.NodeCollectionManager(collection=Collections.RUNS)
         self.run_cancellation_manager = plynx.db.run_cancellation_manager.RunCancellationManager()
         self.kinds = worker_config.kinds
-        set_global_api_url(worker_config.api)
         self.host = socket.gethostname()
         self._stop_event = threading.Event()
 
@@ -170,7 +169,7 @@ class Worker:
             executor.node.node_running_status = NodeRunningStatus.FAILED
         finally:
             with executor._lock:    # type: ignore
-                resp = post_request("plynx/api/v0/update_run", data={"node": executor.node.to_dict()})
+                resp = post_request("update_run", data={"node": executor.node.to_dict()})
                 logging.info(f"Run update res: {resp}")
             with self._run_id_to_executor_lock:
                 del self._run_id_to_executor[executor.node._id]
@@ -179,7 +178,7 @@ class Worker:
         """Syncing with the database."""
         try:
             while not self._stop_event.is_set():
-                response = post_request("plynx/api/v0/pick_run", data={"kinds": self.kinds})
+                response = post_request("pick_run", data={"kinds": self.kinds})
                 if response:
                     node = response["node"]
                 else:
@@ -225,7 +224,7 @@ class Worker:
                     runs=runs,
                     kinds=self.kinds,
                 )
-                post_request("plynx/api/v0/push_worker_state", data={"worker_state": worker_state.to_dict()}, num_retries=1)
+                post_request("push_worker_state", data={"worker_state": worker_state.to_dict()}, num_retries=1)
                 self._stop_event.wait(timeout=Worker.WORKER_STATE_UPDATE_TIMEOUT)
         except Exception:
             self.stop()
