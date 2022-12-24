@@ -12,6 +12,10 @@ Please join the discussions in the [Discord](https://discord.gg/ZC3wY2J).
 
 ### Recent releases
 
+## [1.9.7] - 2022-12-23
+
+- Add ability to upload a file in Workflow editor.
+
 ## [1.9.4] - 2022-12-22
 
 - Using Oauth2 to sign-up / log-in.
