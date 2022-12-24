@@ -20,7 +20,7 @@ AuthConfig = namedtuple('AuthConfig', ['secret_key'])
 WebConfig = namedtuple('WebConfig', ['host', 'port', 'endpoint', 'debug'])
 DemoConfig = namedtuple('DemoConfig', ['enabled', 'kind', 'template_ids'])
 CloudServiceConfig = namedtuple('CloudServiceConfig', ['prefix', 'url_prefix', 'url_postfix'])
-ResourceConfig = namedtuple('ResourceConfig', ['kind', 'title', 'cls', 'icon', 'color'])
+ResourceConfig = namedtuple('ResourceConfig', ['kind', 'title', 'cls', 'icon', 'color', 'extensions'])
 DummyOperationConfig = namedtuple('DummyOperationConfig', ['title', 'kind', 'executor', 'operations', 'icon', 'color'])
 OperationConfig = namedtuple('OperationConfig', ['kind', 'title', 'executor', 'hubs', 'resources', 'icon', 'color', 'is_static'])
 HubConfig = namedtuple('HubConfig', ['kind', 'title', 'icon', 'color', 'cls', 'args'])
@@ -145,6 +145,7 @@ def get_plugins() -> PluginsConfig:
             cls=raw_resource['cls'],
             icon=raw_resource.get('icon', DEFAULT_ICON),
             color=raw_resource.get('color', DEFAULT_COLOR),
+            extensions=raw_resource.get('extensions', []),
         )
         for raw_resource in _get_config().get('plugins')['resources']     # type: ignore
     }

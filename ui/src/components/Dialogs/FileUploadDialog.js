@@ -49,6 +49,17 @@ export default class FileUploadDialog extends Component {
     if (name === 'file-dialog') {
       console.log(event.target.files[0]);
       this.file = event.target.files[0];
+      if (this.file.name)
+      {
+        const extension = this.file.name.split('.').pop().toUpperCase();
+
+        for (const resource of this.props.uploadOperation.resources) {
+          if (resource.extensions.map(st => st.toUpperCase()).indexOf(extension) !== -1) {
+            this.setState({file_type: resource.kind});
+          }
+        }
+      }
+
       this.setState({
         file_path: this.file,
         file_name: this.file ? this.file.name : null,
@@ -109,7 +120,7 @@ export default class FileUploadDialog extends Component {
           }
         });
       } else {
-        self.showAlert('Failed to upload file', 'failed');
+        self.props.showAlert('Failed to upload file. Did you choose the right file type?', 'failed');
       }
       self.setState({loading: false});
     });

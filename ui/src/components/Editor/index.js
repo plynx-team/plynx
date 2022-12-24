@@ -939,6 +939,7 @@ export default class Editor extends Component {
                             plugins_info={plugins_info}
                             doNotSave
                             onUpload={node=>this.graphComponent.insertNode(node)}
+                            showAlert={(message, type) => this.showAlert(message, type)}
                           />
                      }
                      </PluginsConsumer>
