@@ -74,7 +74,8 @@ class App extends Component {
                 <Header />
                 <div className="Content">
                   <Switch>
-                    <Route exact path="/" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEFAULT} maxTry={6} />}/>
+                    <Route exact path="/" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.REDIRECT} maxTry={6} />}/>
+                    <Route exact path="/default" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEFAULT} maxTry={6} />}/>
                     <Route exact path="/demo" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEMO} maxTry={3} />}/>
                     <Route exact path="/dashboard" component={Dashboard} />
                     <Route exact path="/login" component={LogIn} />

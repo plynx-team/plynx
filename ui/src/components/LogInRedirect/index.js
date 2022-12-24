@@ -67,6 +67,9 @@ export default class LogInRedirect extends Component {
         cookie.save('user', response.data.user, { path: '/' });
         cookie.save('settings', response.data.settings, { path: '/' });
       };
+    } else if (specialUser === SPECIAL_USERS.REDIRECT) {
+      window.location = '/workflows/';
+      return
     }
 
     const errorHandler = (error) => {
