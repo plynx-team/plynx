@@ -37,6 +37,8 @@ export default class ListPage extends Component {
     let username = '';
     if (user) {
       username = user.username;
+    } else {
+      window.location = '/login';
     }
 
     let search = username ? 'author:' + username + ' ' : '';

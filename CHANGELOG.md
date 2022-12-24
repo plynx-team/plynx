@@ -12,6 +12,11 @@ Please join the discussions in the [Discord](https://discord.gg/ZC3wY2J).
 
 ### Recent releases
 
+## [1.9.8] - 2022-12-24
+
+- Parse file extensions in upload dialog to determine the right type.
+- Fix redirection logic.
+
 ## [1.9.7] - 2022-12-23
 
 - Add ability to upload a file in Workflow editor.

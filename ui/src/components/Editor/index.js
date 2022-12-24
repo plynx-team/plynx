@@ -778,9 +778,6 @@ export default class Editor extends Component {
     ];
 
     if (!!kind && plugins_info && plugins_info["workflows_dict"][kind]) {
-      let a = plugins_info["workflows_dict"][kind].static_operation_kinds
-      .map((op_kind) => plugins_info.operations_dict[op_kind]);
-
       try {
         items.push(
           ...plugins_info["workflows_dict"][kind].static_operation_kinds
@@ -801,8 +798,7 @@ export default class Editor extends Component {
                 }
             )
         );
-      }
-      catch(error) {
+      } catch (error) {
         console.log("Cought exception trying to render a button");
         console.log(error);
       }
@@ -882,10 +878,9 @@ export default class Editor extends Component {
                 />
               }
               <PluginsConsumer>
-                {plugins_info =>
-                  this.makeControls(
+                {plugins_info => this.makeControls(
                     plugins_info,
-                    this.state.node ? this.state.node.kind: null,
+                    this.state.node ? this.state.node.kind : null,
                     (operation_descriptor) => {
                       console.log(operation_descriptor);
                       this.setState({
@@ -938,7 +933,8 @@ export default class Editor extends Component {
                             uploadOperation={this.state.uploadOperation}
                             plugins_info={plugins_info}
                             doNotSave
-                            onUpload={node=>this.graphComponent.insertNode(node)}
+                            onUpload={node => this.graphComponent.insertNode(node)}
+                            showAlert={(message, type) => this.showAlert(message, type)}
                           />
                      }
                      </PluginsConsumer>

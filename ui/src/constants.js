@@ -147,6 +147,7 @@ export const KEY_MAP = {
 export const SPECIAL_USERS = Object.freeze({
   DEMO: 'demo',
   DEFAULT: 'default',
+  REDIRECT: 'redirect',
 });
 
 export const CODE_LANGUAGES = [

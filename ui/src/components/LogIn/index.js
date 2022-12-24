@@ -5,8 +5,7 @@ import { gapi } from 'gapi-script';
 
 import AlertContainer from '../3rd_party/react-alert';
 import { PLynxApi } from '../../API';
-import { ALERT_OPTIONS, USER_POST_ACTION, REGISTER_USER_EXCEPTION_CODE } from '../../constants';
-import { validatePassword } from '../Common/passwordUtils';
+import { ALERT_OPTIONS, REGISTER_USER_EXCEPTION_CODE } from '../../constants';
 
 import './style.css';
 
@@ -14,7 +13,6 @@ const MODES = {
   "LOGIN": 'LOGIN',
   'SIGNUP': 'SIGNUP',
 };
-
 
 function getClientId() {
   console.log(`Using ${process.env.NODE_ENV}`);
@@ -28,7 +26,6 @@ function getClientId() {
 
   return null;
 }
-
 
 export default class LogIn extends Component {
   constructor(props) {
@@ -57,7 +54,7 @@ export default class LogIn extends Component {
     }
 
     const initClient = () => {
-        gapi.client.init({
+      gapi.client.init({
         clientId: getClientId(),
         scope: "https://www.googleapis.com/auth/userinfo.email"
       });
@@ -143,18 +140,17 @@ export default class LogIn extends Component {
   }
 
   handleLoginCallback(response) {
-
     PLynxApi.endpoints.register_with_oauth2.create({
       token: response.tokenId,
     })
-    .then(response => {
+    .then(oauthResponse => {
       console.log(response);
 
       console.log('Registered');
-      cookie.save('access_token', response.data.access_token, { path: '/' });
-      cookie.save('refresh_token', response.data.refresh_token, { path: '/' });
-      cookie.save('user', response.data.user, { path: '/' });
-      cookie.save('settings', response.data.settings, { path: '/' });
+      cookie.save('access_token', oauthResponse.data.access_token, { path: '/' });
+      cookie.save('refresh_token', oauthResponse.data.refresh_token, { path: '/' });
+      cookie.save('user', oauthResponse.data.user, { path: '/' });
+      cookie.save('settings', oauthResponse.data.settings, { path: '/' });
       window.location = '/workflows';
     })
     .catch((error) => {
@@ -162,12 +158,11 @@ export default class LogIn extends Component {
         this.showAlert('Failed to register user', 'failed');
         console.error(error);
       } else {
-        const response = error.response;
-        const errorMessage = REGISTER_USER_EXCEPTION_CODE[response.data.error_code];
+        const errorMessage = REGISTER_USER_EXCEPTION_CODE[error.response.data.error_code];
         if (errorMessage) {
           this.setState({errors: errorMessage});
         } else {
-          this.showAlert(response.data.message, 'failed');
+          this.showAlert(error.response.data.message, 'failed');
         }
       }
     });

@@ -222,7 +222,8 @@ export default class LogIn extends Component {
         <div className='user-view-block'>
           <div className='user-preview'>
             {
-              this.state.user.settings.picture && <img src={this.state.user.settings.picture} className="user-icon" alt="Google profile pic" referrerPolicy="no-referrer"/>
+              this.state.user.settings.picture &&
+              <img src={this.state.user.settings.picture} className="user-icon" alt="Google profile pic" referrerPolicy="no-referrer"/>
             }
             {
               !this.state.user.settings.picture && <User className='user-icon' />
