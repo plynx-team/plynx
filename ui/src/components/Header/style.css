@@ -103,8 +103,8 @@
 
 .Header .logo {
   top: 8px;
-  left: 50%;
-  margin-left: -200px;
+  left: 0%;
+  margin-left: 80px;
   position: fixed;  /*fixing bug with disapearring header*/
   padding: 3px 15px 3px 15px;
 }
