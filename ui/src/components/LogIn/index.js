@@ -238,6 +238,9 @@ export default class LogIn extends Component {
             )}
 
           </div>
+          <div className="login-notes">
+            *If you have any troubles to sign in, please make sure 3rd party coockies are enabled for this website.
+          </div>
 
           {isLogIn &&
             <button className="loginButton" onClick={() => this.handleLogin()} href="#">

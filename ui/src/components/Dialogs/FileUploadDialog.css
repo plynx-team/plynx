@@ -19,8 +19,10 @@
 }
 
 .FileDialogBody .Title, .FileUploadDialogBody .Title{
-  font-weight: 700;
   font-size: 15pt;
+  text-overflow: ellipsis;
+  overflow:hidden;
+  white-space:nowrap;
 }
 
 .FileDialogBody .Type .Widget, .FileUploadDialogBody .Type .Widget {

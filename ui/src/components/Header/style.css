@@ -85,13 +85,7 @@
 }
 
 .UserButton .action {
-  display: inline-block;
-  cursor: pointer;
-  padding-left: 10px;
-  -moz-transition: all .1s ease-in;
-  -o-transition: all .1s ease-in;
-  -webkit-transition: all .1s ease-in;
-  transition: all .1s ease-in;
+  display: none;
 }
 
 .UserButton .action:hover {
@@ -103,8 +97,8 @@
 
 .Header .logo {
   top: 8px;
-  left: 50%;
-  margin-left: -200px;
+  left: 0%;
+  margin-left: 80px;
   position: fixed;  /*fixing bug with disapearring header*/
   padding: 3px 15px 3px 15px;
 }
@@ -272,6 +266,16 @@
   .UserButton .user-icon {
     height: 24px;
     width: 24px;
+  }
+
+  .UserButton .action {
+    display: inline-block;
+    cursor: pointer;
+    padding-left: 10px;
+    -moz-transition: all .1s ease-in;
+    -o-transition: all .1s ease-in;
+    -webkit-transition: all .1s ease-in;
+    transition: all .1s ease-in;
   }
 
 }

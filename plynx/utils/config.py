@@ -24,7 +24,7 @@ ResourceConfig = namedtuple('ResourceConfig', ['kind', 'title', 'cls', 'icon', '
 DummyOperationConfig = namedtuple('DummyOperationConfig', ['title', 'kind', 'executor', 'operations', 'icon', 'color'])
 OperationConfig = namedtuple('OperationConfig', ['kind', 'title', 'executor', 'hubs', 'resources', 'icon', 'color', 'is_static'])
 HubConfig = namedtuple('HubConfig', ['kind', 'title', 'icon', 'color', 'cls', 'args'])
-WorkflowConfig = namedtuple('WorkflowConfig', ['kind', 'title', 'executor', 'operations', 'hubs', 'icon', 'color'])
+WorkflowConfig = namedtuple('WorkflowConfig', ['kind', 'title', 'executor', 'operations', 'hubs', 'icon', 'color', 'static_operation_kinds'])
 PluginsConfig = namedtuple('PluginsConfig', ['resources', 'operations', 'hubs', 'workflows', 'dummy_operations'])
 IAMPoliciesConfig = namedtuple('IAMPoliciesConfig', ['default_policies'])
 
@@ -193,6 +193,7 @@ def get_plugins() -> PluginsConfig:
             operations=list(sub_operation_kinds),
             icon='feathericons.grid',
             color='#5ed1ff',
+            static_operation_kinds=raw_workflow.get("static_operation_kinds", []),
         ))
 
     return PluginsConfig(

@@ -23,7 +23,8 @@ import Node from '../Node';
 import RunList from '../NodeList/runList';
 import DeprecateDialog from '../Dialogs/DeprecateDialog';
 import TextViewDialog from '../Dialogs/TextViewDialog';
-import { PluginsProvider } from '../../contexts';
+import FileUploadDialog from '../Dialogs/FileUploadDialog';
+import { PluginsProvider, PluginsConsumer } from '../../contexts';
 import { makeControlPanel, makeControlCheckbox, makeControlToggles, makeControlButton, makeControlSeparator } from '../Common/controlButton';
 import { addStyleToTourSteps } from '../../utils';
 import { ReactFlowProvider } from 'reactflow';
@@ -63,6 +64,7 @@ export default class Editor extends Component {
       collection: null,
       tourSteps: [],
       activeStatus: false,
+      uploadOperation: null,
     };
 
     let token = cookie.load('refresh_token');
@@ -630,7 +632,7 @@ export default class Editor extends Component {
     });
   }
 
-  makeControls() {
+  makeControls(plugins_info, kind, onUploadDialog) {
     const items = [
       {
         render: makeControlToggles,
@@ -773,23 +775,58 @@ export default class Editor extends Component {
           func: () => this.handleShowNodeDialog(),
         },
       },
-
-      {
-        render: makeControlSeparator,
-        props: {key: 'separator_3'}
-      },
-
-      {
-        render: makeControlButton,
-        props: {
-          img: 'info.svg',
-          text: 'Show Tour',
-          enabled: true,
-          className: 'demo-button',
-          func: () => this.handleTour(),
-        },
-      },
     ];
+
+    if (!!kind && plugins_info && plugins_info["workflows_dict"][kind]) {
+      let a = plugins_info["workflows_dict"][kind].static_operation_kinds
+      .map((op_kind) => plugins_info.operations_dict[op_kind]);
+
+      try {
+        items.push(
+          ...plugins_info["workflows_dict"][kind].static_operation_kinds
+            .map((op_kind) => plugins_info.operations_dict[op_kind])
+              .map(
+                (operation) => {
+                  return {
+                    render: makeControlButton,
+                    props: {
+                      img: 'upload.svg',
+                      text: `Upload ${operation.title}`,
+                      func: () => {
+                        onUploadDialog(plugins_info.operations_dict[operation.kind]);
+                      },
+                      key: operation.kind
+                    },
+                  };
+                }
+            )
+        );
+      }
+      catch(error) {
+        console.log("Cought exception trying to render a button");
+        console.log(error);
+      }
+    }
+
+    items.push(
+      ...[
+        {
+          render: makeControlSeparator,
+          props: {key: 'separator_3'}
+        },
+
+        {
+          render: makeControlButton,
+          props: {
+            img: 'info.svg',
+            text: 'Show Tour',
+            enabled: true,
+            className: 'demo-button',
+            func: () => this.handleTour(),
+          },
+        },
+      ]
+    );
 
     return makeControlPanel(
       {
@@ -798,6 +835,10 @@ export default class Editor extends Component {
           key: this.state.view_mode + this.state.editable,
         },
       });
+  }
+
+  handleCloseUploadDialog() {
+    this.setState({uploadOperation: null});
   }
 
   render() {
@@ -840,7 +881,20 @@ export default class Editor extends Component {
                   onClose={() => this.setState({preview_text: null})}
                 />
               }
-              {this.makeControls()}
+              <PluginsConsumer>
+                {plugins_info =>
+                  this.makeControls(
+                    plugins_info,
+                    this.state.node ? this.state.node.kind: null,
+                    (operation_descriptor) => {
+                      console.log(operation_descriptor);
+                      this.setState({
+                        uploadOperation: operation_descriptor
+                      });
+                    }
+                  )
+                }
+              </PluginsConsumer>
               <div className="editor-content">
                   {
                       this.state.view_mode === VIEW_MODE.GRAPH &&
@@ -877,6 +931,18 @@ export default class Editor extends Component {
                         search={"original_node_id:" + (this.props.collection === COLLECTIONS.RUNS ? this.state.node.original_node_id : this.state.node._id)}
                       />
                   }
+                  {this.state.uploadOperation &&
+                    <PluginsConsumer>
+                    { plugins_info => <FileUploadDialog
+                            onClose={() => this.handleCloseUploadDialog()}
+                            uploadOperation={this.state.uploadOperation}
+                            plugins_info={plugins_info}
+                            doNotSave
+                            onUpload={node=>this.graphComponent.insertNode(node)}
+                          />
+                     }
+                     </PluginsConsumer>
+                }
               </div>
           </PluginsProvider>
           <Tour

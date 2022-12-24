@@ -29,6 +29,11 @@
     font-size: 15pt;
 }
 
+.login-notes {
+    margin: 0px 0 15px 0px;
+    font-size: 15px;
+}
+
 .Items .Item .buttons .Item>* {
     width: 100%;
 }

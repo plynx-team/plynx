@@ -57,6 +57,7 @@ def upload_file():
     description = request.form.get('description', '{description}')
     file_type = request.form.get('file_type', FILE_KIND)
     node_kind = request.form.get('node_kind', 'basic-file')
+    do_not_save = request.form.get('do_not_save', False)
     logger.debug(request)
     if file_type not in RESOURCE_TYPES:
         logger.debug(file_type)
@@ -81,7 +82,8 @@ def upload_file():
     file.outputs.append(output)
 
     file.author = g.user._id
-    file.save()
+    if not do_not_save:
+        file.save()
 
     return make_success_response({
         'resource_id': resource_id,
