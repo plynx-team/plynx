@@ -34,7 +34,7 @@ export default class LogInRedirect extends Component {
     // Loading
 
     const self = this;
-    let loading = true;
+    const loading = true;
     let sleepPeriod = 1000;
     const sleepMaxPeriod = 10000;
     const sleepStep = 1000;
@@ -69,7 +69,7 @@ export default class LogInRedirect extends Component {
       };
     } else if (specialUser === SPECIAL_USERS.REDIRECT) {
       window.location = '/workflows/';
-      return
+      return;
     }
 
     const errorHandler = (error) => {

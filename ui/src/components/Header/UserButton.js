@@ -33,7 +33,9 @@ export default class UserButton extends Component {
                     context.toggleModal();
                     e.preventDefault();
                   }}>
-                    { this.state.user.settings.picture && <img src={this.state.user.settings.picture} className="user-icon" alt="Google profile pic" referrerPolicy="no-referrer"/>}
+                    { this.state.user.settings.picture &&
+                      <img src={this.state.user.settings.picture} className="user-icon" alt="Google profile pic" referrerPolicy="no-referrer"/>
+                    }
                     { !this.state.user.settings.picture && <User className="user-icon"/> }
                   </a>
                 </div>

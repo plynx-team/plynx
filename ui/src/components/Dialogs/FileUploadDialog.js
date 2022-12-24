@@ -35,7 +35,6 @@ export default class FileUploadDialog extends Component {
       uploadProgress: 10,
       loading: false
     };
-
   }
 
   handleChange(event) {
@@ -49,8 +48,7 @@ export default class FileUploadDialog extends Component {
     if (name === 'file-dialog') {
       console.log(event.target.files[0]);
       this.file = event.target.files[0];
-      if (this.file.name)
-      {
+      if (this.file.name) {
         const extension = this.file.name.split('.').pop().toUpperCase();
 
         for (const resource of this.props.uploadOperation.resources) {
@@ -104,7 +102,7 @@ export default class FileUploadDialog extends Component {
         self.setState({loading: false});
       }
       if (this.props.onUpload) {
-        this.props.onUpload(data.node)
+        this.props.onUpload(data.node);
       }
     }).catch((error) => {
       console.error('error', error);
