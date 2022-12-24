@@ -85,13 +85,7 @@
 }
 
 .UserButton .action {
-  display: inline-block;
-  cursor: pointer;
-  padding-left: 10px;
-  -moz-transition: all .1s ease-in;
-  -o-transition: all .1s ease-in;
-  -webkit-transition: all .1s ease-in;
-  transition: all .1s ease-in;
+  display: none;
 }
 
 .UserButton .action:hover {
@@ -272,6 +266,16 @@
   .UserButton .user-icon {
     height: 24px;
     width: 24px;
+  }
+
+  .UserButton .action {
+    display: inline-block;
+    cursor: pointer;
+    padding-left: 10px;
+    -moz-transition: all .1s ease-in;
+    -o-transition: all .1s ease-in;
+    -webkit-transition: all .1s ease-in;
+    transition: all .1s ease-in;
   }
 
 }
