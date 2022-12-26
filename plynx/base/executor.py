@@ -73,7 +73,7 @@ class BaseExecutor(ABC):
         Returns:
             (bool):     True if worker needs to update DB else False
         """
-        return False
+        return True
 
     @classmethod
     def get_default_node(cls, is_workflow: bool) -> Node:

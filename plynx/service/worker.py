@@ -13,15 +13,12 @@ from typing import Dict, Optional, Set
 import requests
 import six
 
-import plynx.db.node_collection_manager
-import plynx.db.run_cancellation_manager
 import plynx.utils.executor
 from plynx.base.executor import BaseExecutor
-from plynx.constants import Collections, NodeRunningStatus
+from plynx.constants import NodeRunningStatus
 from plynx.db.worker_state import WorkerState
 from plynx.utils.common import JSONEncoder, ObjectId
 from plynx.utils.config import WorkerConfig, get_web_config, get_worker_config
-from plynx.utils.db_connector import check_connection
 from plynx.utils.file_handler import upload_file_stream
 
 CONNECT_POST_TIMEOUT = 1.0
@@ -60,8 +57,8 @@ class TickThread:
 
     def __init__(self, executor: BaseExecutor):
         self.executor = executor
-        self._tick_thread = threading.Thread(target=self.call_executor_tick, args=())
         self._stop_event = threading.Event()
+        self._tick_thread = threading.Thread(target=self.call_executor_tick, args=())
 
     def __enter__(self):
         """
@@ -82,6 +79,7 @@ class TickThread:
                 with self.executor._lock:
                     if NodeRunningStatus.is_finished(self.executor.node.node_running_status):
                         continue
+
                     resp = post_request("update_run", data={"node": self.executor.node.to_dict()})
                     logging.info(f"Run update res: {resp}")
 
@@ -113,8 +111,6 @@ class Worker:
 
     def __init__(self, worker_config: WorkerConfig, worker_id: Optional[str]):
         self.worker_id = worker_id if worker_id else str(uuid.uuid1())
-        self.node_collection_manager = plynx.db.node_collection_manager.NodeCollectionManager(collection=Collections.RUNS)
-        self.run_cancellation_manager = plynx.db.run_cancellation_manager.RunCancellationManager()
         self.kinds = worker_config.kinds
         self.host = socket.gethostname()
         self._stop_event = threading.Event()
@@ -169,7 +165,7 @@ class Worker:
             executor.node.node_running_status = NodeRunningStatus.FAILED
         finally:
             with executor._lock:    # type: ignore
-                resp = post_request("update_run", data={"node": executor.node.to_dict()})
+                resp = post_request("update_run", data={"node": executor.node.to_dict()}, num_retries=3)
                 logging.info(f"Run update res: {resp}")
             with self._run_id_to_executor_lock:
                 del self._run_id_to_executor[executor.node._id]
@@ -208,11 +204,13 @@ class Worker:
         try:
             while not self._stop_event.is_set():
                 # TODO move CANCEL to a separate thread
-                run_cancellations = list(self.run_cancellation_manager.get_run_cancellations())
-                run_cancellation_ids = set(map(lambda rc: rc.run_id, run_cancellations)) & set(self._run_id_to_executor.keys())
-                for run_id in run_cancellation_ids:
-                    self._killed_run_ids.add(run_id)
-                    self._run_id_to_executor[run_id].kill()
+                run_ids = list(self._run_id_to_executor.keys())
+                if run_ids:
+                    response = post_request("get_run_cancelations", data={"run_ids": run_ids}, num_retries=1)
+                    runs_to_kill = [] if not response else response["run_ids_to_cancel"]
+                    for run_id in runs_to_kill:
+                        self._killed_run_ids.add(run_id)
+                        self._run_id_to_executor[run_id].kill()
 
                 runs = []
                 with self._run_id_to_executor_lock:
@@ -239,9 +237,6 @@ class Worker:
 
 def run_worker(worker_id: Optional[str] = None):
     """Run worker daemon. It will run in the same thread."""
-    # Check connection to the db
-    check_connection()
-
     logging.info('Init Worker')
     worker_config = get_worker_config()
     logging.info(worker_config)
