@@ -8,7 +8,7 @@ from typing import List
 
 import plynx.plugins.executors.dag
 import plynx.utils.executor
-from plynx.constants import Collections, NodeRunningStatus
+from plynx.constants import NodeRunningStatus
 from plynx.db.node import Node
 from plynx.utils import node_utils
 from plynx.utils.common import to_object_id
@@ -104,9 +104,6 @@ class DAGParallel(plynx.plugins.executors.dag.DAG):
             res.append(node)
         del self.dependency_index_to_node_ids[0]
 
-        if num_completed_jobs > 0:
-            self.node.save(collection=Collections.RUNS, force=True)
-
         return res
 
     def _execute_node(self, node: Node):
@@ -116,7 +113,6 @@ class DAGParallel(plynx.plugins.executors.dag.DAG):
 
         logging.info(f'Execute {node} {node.title}')
         node.node_running_status = NodeRunningStatus.RUNNING
-        self.node.save(collection=Collections.RUNS)
         # TODO somehow optimize `update_node`?
         # If not copy but original sent, the dependencies list won't be updated
         self.job_run_queue.put(node.copy())
@@ -192,7 +188,6 @@ class DAG(plynx.plugins.executors.dag.DAG):
                 continue
             self._apply_inputs(sub_node)
             sub_node.node_running_status = NodeRunningStatus.RUNNING
-            self.node.save(collection=Collections.RUNS, force=True)
 
             # Run
             self.job_run_queue.put(sub_node.copy())
@@ -206,7 +201,6 @@ class DAG(plynx.plugins.executors.dag.DAG):
                 prev_status = self._node_running_status
                 self._node_running_status = prev_status
                 break
-            self.node.save(collection=Collections.RUNS, force=True)
 
         if self._node_running_status == NodeRunningStatus.FAILED_WAITING:
             self._node_running_status = NodeRunningStatus.FAILED

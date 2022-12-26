@@ -4,11 +4,13 @@ import json
 from flask import request
 
 import plynx.db.node_collection_manager
+import plynx.db.run_cancellation_manager
 from plynx.constants import Collections
 from plynx.db.node import Node
 from plynx.web.common import app, handle_errors, make_success_response
 
 node_collection_manager = plynx.db.node_collection_manager.NodeCollectionManager(collection=Collections.RUNS)
+run_cancellation_manager = plynx.db.run_cancellation_manager.RunCancellationManager()
 
 
 @app.route('/plynx/api/v0/pick_run', methods=['POST'])
@@ -33,3 +35,15 @@ def update_run():
 
     node.save(collection=Collections.RUNS)
     return make_success_response()
+
+
+@app.route('/plynx/api/v0/get_run_cancelations', methods=['POST'])
+def get_run_cancelations():
+    """Ask the server if there is a cancelation"""
+    data = json.loads(request.data)
+    run_ids = data["run_ids"]
+
+    run_cancellations = list(run_cancellation_manager.get_run_cancellations())
+    run_cancellation_ids = set(map(lambda rc: rc.run_id, run_cancellations)) & set(run_ids)
+
+    return make_success_response({"run_ids_to_cancel": list(run_cancellation_ids)})
