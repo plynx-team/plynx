@@ -19,6 +19,18 @@ def make_int(value):
     }
 
 
+@plynx.node.param(name='value', var_type="enum", default={"values": ["a", "b", "c"], "index": 0})
+@plynx.node.output(name='x', var_type=str)
+@plynx.node.operation(
+    title="Make Enum"
+)
+def make_enum(value):
+    """Pass Integer value as output."""
+    return {
+        "x": str(value),
+    }
+
+
 @plynx.node.input(name='x', var_type=int)
 @plynx.node.input(name='y', var_type=int)
 @plynx.node.output(name='res', var_type=str)
@@ -103,6 +115,7 @@ GROUP = plynx.node.utils.Group(
     title="Test basics",
     items=[
         make_int,
+        make_enum,
         example_func,
         sleep,
         error,
