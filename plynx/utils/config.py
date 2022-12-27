@@ -17,7 +17,7 @@ WorkerConfig = namedtuple('WorkerConfig', ['kinds', 'api'])
 MongoConfig = namedtuple('MongoConfig', ['user', 'password', 'host', 'port'])
 StorageConfig = namedtuple('StorageConfig', ['scheme', 'prefix', 'credential_path'])
 AuthConfig = namedtuple('AuthConfig', ['secret_key'])
-WebConfig = namedtuple('WebConfig', ['host', 'port', 'endpoint', 'debug'])
+WebConfig = namedtuple('WebConfig', ['host', 'port', 'endpoint', 'internal_endpoint', 'debug'])
 DemoConfig = namedtuple('DemoConfig', ['enabled', 'kind', 'template_ids'])
 CloudServiceConfig = namedtuple('CloudServiceConfig', ['prefix', 'url_prefix', 'url_postfix'])
 ResourceConfig = namedtuple('ResourceConfig', ['kind', 'title', 'cls', 'icon', 'color', 'extensions'])
@@ -101,6 +101,7 @@ def get_web_config() -> WebConfig:
         host=_get_config().get('web', {}).get('host', '0.0.0.0'),
         port=int(_get_config().get('web', {}).get('port', 5005)),
         endpoint=_get_config().get('web', {}).get('endpoint', '/').rstrip('/'),
+        internal_endpoint=_get_config().get('web', {}).get('internal_endpoint', '/').rstrip('/'),
         debug=bool(_get_config().get('web', {}).get('debug', False)),
     )
 
