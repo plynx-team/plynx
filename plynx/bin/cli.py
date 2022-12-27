@@ -160,6 +160,14 @@ class CLIFactory:
             levels=['web', 'endpoint'],
             ),
 
+        'internal_endpoint': Arg(
+            ('--internal-endpoint',),
+            help='Endpoint of api used by internal service',
+            default=_config.web.internal_endpoint,
+            type=str,
+            levels=['web', 'internal_endpoint'],
+            ),
+
         # Users
         'username': Arg(
             ('--username',),
@@ -202,7 +210,7 @@ class CLIFactory:
         {
             'func': worker,
             'help': 'Run Worker',
-            'args': ('verbose', 'db_host', 'db_port', 'db_user', 'db_password', 'kinds', 'endpoint',
+            'args': ('verbose', 'db_host', 'db_port', 'db_user', 'db_password', 'kinds', 'internal_endpoint',
                      'storage_scheme', 'storage_prefix', 'credential_path'),
         }, {
             'func': api,

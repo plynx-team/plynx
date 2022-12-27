@@ -35,8 +35,7 @@ def urljoin(base: str, postfix: str) -> str:
 
 def post_request(uri, data, num_retries=NUM_RETRIES):
     """Make post request to the url"""
-    url = urljoin(get_web_config().endpoint, uri)
-    print(get_web_config().endpoint, url)
+    url = urljoin(get_web_config().internal_endpoint, uri)
     json_data = JSONEncoder().encode(data)
     for iter_num in range(num_retries):
         if iter_num != 0:
