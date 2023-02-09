@@ -17,27 +17,33 @@ services:
         container_name: "master"
         depends_on:
             - mongodb
+            - api
         links:
             - mongodb
+            - api
         volumes:
             - ./data:/data
             - ./config.yaml:/app/config.yaml
         environment:
             - PLYNX_CONFIG=/app/config.yaml
-        command: plynx worker -vvv -e basic-dag-workflow
+        command: plynx worker -vvv -e basic-dag-workflow --internal-endpoint http://api:5005/plynx/api/v0
+        restart: always
 
     workers:
         image: plynxteam/backend:latest
         depends_on:
             - mongodb
+            - api
         links:
             - mongodb
+            - api
         volumes:
             - ./data:/data
             - ./config.yaml:/app/config.yaml
         environment:
             - PLYNX_CONFIG=/app/config.yaml
-        command: plynx worker -vvv -e basic-bash-jinja2-operation -e basic-python-node-operation -e basic-dag-operation -e python-workflow
+        command: plynx worker -vvv -e basic-bash-jinja2-operation -e basic-python-node-operation -e basic-dag-operation -e python-workflow --internal-endpoint http://api:5005/plynx/api/v0
+        restart: always
 
     api:
         image: plynxteam/backend:latest

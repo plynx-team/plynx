@@ -17,7 +17,7 @@ run_tests:
 up:
 	mkdir -p ./data/resources
 	python -m webbrowser "http://localhost:3001/"
-	docker-compose -f $(DOCKER_COMPOSE_FILE) up --scale workers=3
+	docker-compose -f $(DOCKER_COMPOSE_FILE) up --scale workers=1
 
 up_local_service:
 	python -m webbrowser "http://localhost:3001/"
@@ -30,7 +30,7 @@ dev:
 	mkdir -p ./data/resources
 	PLYNX_IMAGES="backend ui_dev" ./scripts/build_images.sh
 	python -m webbrowser "http://localhost:3001/"
-	docker-compose -f $(DOCKER_COMPOSE_DEV_FILE) up --abort-on-container-exit --scale api=1 --scale test=0
+	docker-compose -f $(DOCKER_COMPOSE_DEV_FILE) up --abort-on-container-exit --scale api=1 --scale test=0 --scale frontend=0
 
 build_package:
 	python setup.py sdist
