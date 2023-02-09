@@ -18,8 +18,10 @@ web:
   debug: true
 
 demo:
-  enabled: true
-  kind: basic-dag-workflow
+  enabled: false
+  template_ids:
+    - 639f4aa730bb7ecf8c4c97de
+    - 639f4ad130bb7ecf8c4c97e9
 
 plugins:
   resources:
@@ -89,6 +91,20 @@ plugins:
       title: bool
       cls: plynx.plugins.resources.common.Raw
       icon: plynx.python-bool
+    - kind: py-json-file
+      title: Python JSON file
+      cls: plynx.plugins.resources.python.common.Json
+      icon: feathericons.file-text
+      color: '#ff3333'
+      extensions:
+        - "json"
+    - kind: py-tmp-file
+      title: Python TMP txt file
+      cls: plynx.plugins.resources.python.common.Json
+      icon: feathericons.file-text
+      color: '#33ff33'
+      extensions:
+        - "txt"
 
   operations:
     - kind: basic-file
@@ -148,6 +164,8 @@ plugins:
         - dict
         - float
         - bool
+        - py-json-file
+        - py-tmp-file
     - kind: basic-dag-operation
       title: Composite Operation
       executor: plynx.plugins.executors.dag.DAG
@@ -155,6 +173,7 @@ plugins:
       color: '#5ed1ff'
       hubs:
         - db-hub
+        - static-hub
       resources:
         - file
         - pdf
@@ -165,6 +184,15 @@ plugins:
         - executable
         - directory
         - cloud-storage
+    - kind: python-basic-file
+      title: Python File
+      executor: plynx.plugins.executors.local.File
+      icon: feathericons.file
+      color: '#ff0'
+      is_static: true
+      resources:
+        - py-json-file
+        - py-tmp-file
   hubs:
     - kind: db-hub
       title: Database hub
@@ -177,6 +205,13 @@ plugins:
           - basic-python-node-operation
           - basic-dag-operation
         collection: templates
+    - kind: static-hub
+      title: Static hub
+      icon: feathericons.file
+      cls: plynx.plugins.hubs.static_list.StaticListHub
+      args:
+        list_module: plynx.demo.COLLECTION
+        #list_module: plynx_deploy.connections.COLLECTION
     - kind: python-db-hub
       title: Database hub
       icon: feathericons.database
@@ -184,20 +219,23 @@ plugins:
       args:
         operations:
           - python-code-operation
+          - python-basic-file
         collection: templates
-    - kind: static-hub
-      title: Static hub
-      icon: feathericons.file
-      cls: plynx.plugins.hubs.static_list.StaticListHub
-      args:
-        list_module: plynx.demo.COLLECTION
   workflows:
+    - kind: basic-dag-workflow
+      title: Basic DAG Workflow
+      executor: plynx.plugins.executors.dag.DAG
+      hubs:
+        - db-hub
+        - static-hub
     - kind: python-workflow
       title: Python Workflow
       executor: plynx.plugins.executors.python.dag.DAG
       hubs:
         - static-hub
         - python-db-hub
+      static_operation_kinds:
+        - python-basic-file
 
 default_policies:
   - CAN_VIEW_OTHERS_OPERATIONS

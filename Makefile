@@ -17,7 +17,7 @@ run_tests:
 up:
 	mkdir -p ./data/resources
 	python -m webbrowser "http://localhost:3001/"
-	docker-compose -f $(DOCKER_COMPOSE_FILE) up --scale workers=3
+	docker-compose -f $(DOCKER_COMPOSE_FILE) up --scale workers=1
 
 up_local_service:
 	python -m webbrowser "http://localhost:3001/"

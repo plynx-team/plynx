@@ -17,13 +17,15 @@ services:
         container_name: "master"
         depends_on:
             - mongodb
+            - api
         links:
             - mongodb
+            - api
         volumes:
             - ./plynx:/app/plynx
             - ./config.yaml:/app/config.yaml
         environment:
-            - PLYNX_MODE=worker -e basic-dag-workflow --api http://api:5005
+            - PLYNX_MODE=worker -e basic-dag-workflow --internal-endpoint http://api:5005/plynx/api/v0
             - PLYNX_CONFIG=/app/config.yaml
         command: sh /app/watch.sh
 
@@ -31,14 +33,16 @@ services:
         image: plynxteam/backend
         depends_on:
             - mongodb
+            - api
         links:
             - mongodb
+            - api
         volumes:
             - ./data:/data
             - ./plynx:/app/plynx
             - ./config.yaml:/app/config.yaml
         environment:
-            - PLYNX_MODE=worker -e basic-bash-jinja2-operation -e basic-python-node-operation -e basic-dag-operation -e python-workflow --api http://api:5005
+            - PLYNX_MODE=worker -e basic-bash-jinja2-operation -e basic-python-node-operation -e basic-dag-operation -e python-workflow --internal-endpoint http://api:5005/plynx/api/v0
             - PLYNX_CONFIG=/app/config.yaml
         command: sh /app/watch.sh
 
@@ -56,7 +60,7 @@ services:
             - ./plynx:/app/plynx
             - ./config.yaml:/app/config.yaml
         environment:
-            - PLYNX_MODE=api
+            - PLYNX_MODE=api --db-host mongodb
             - PLYNX_CONFIG=/app/config.yaml
             - GOOGLE_CLIENT_ID=231909420850-nj0e0lm27itj46lg5obn78mukuvou6hb.apps.googleusercontent.com
         command: sh /app/watch.sh
@@ -74,16 +78,16 @@ services:
             - ./config.yaml:/app/config.yaml
         command: /app/tests/run_tests.sh
 
-    frontend:
-        image: plynxteam/ui_dev:latest
-        container_name: "frontend"
-        ports:
-            - "3001:3000"
-        depends_on:
-            - api
-        links:
-            - api
-        volumes:
-            - ./ui:/app
-        tty: true
-        command: sh -c "npm install && npm start"
+    # frontend:
+    #     image: plynxteam/ui_dev:latest
+    #     container_name: "frontend"
+    #     ports:
+    #         - "3001:3000"
+    #     depends_on:
+    #         - api
+    #     links:
+    #         - api
+    #     volumes:
+    #         - ./ui:/app
+    #     tty: true
+    #     command: sh -c "npm install && npm start"
