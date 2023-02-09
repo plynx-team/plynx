@@ -1,7 +1,7 @@
-flake8>=4.0.1
-mypy>=0.960
-isort>=5.10.1
-pylint>=2.14.0
+flake8==4.0.1
+mypy==0.960
+isort==5.10.1
+pylint==2.14.0
 pre-commit>=2.19.0
 
 # mypy stubs:
