@@ -78,16 +78,16 @@ services:
             - ./config.yaml:/app/config.yaml
         command: /app/tests/run_tests.sh
 
-    # frontend:
-    #     image: plynxteam/ui_dev:latest
-    #     container_name: "frontend"
-    #     ports:
-    #         - "3001:3000"
-    #     depends_on:
-    #         - api
-    #     links:
-    #         - api
-    #     volumes:
-    #         - ./ui:/app
-    #     tty: true
-    #     command: sh -c "npm install && npm start"
+    frontend:
+        image: plynxteam/ui_dev:latest
+        container_name: "frontend"
+        ports:
+            - "3001:3000"
+        depends_on:
+            - api
+        links:
+            - api
+        volumes:
+            - ./ui:/app
+        tty: true
+        command: sh -c "npm install && npm start"
