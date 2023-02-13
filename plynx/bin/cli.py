@@ -32,7 +32,7 @@ def api(args):
     """Start web service."""
     # lazy load because web initializes too many variables
     from plynx.web.common import run_api  # noqa: E402  # pylint: disable=import-outside-toplevel
-    set_logging_level(args.pop('verbose'))
+    set_logging_level(args['verbose'])
     run_api(**args)
 
 
@@ -78,7 +78,8 @@ class CLIFactory:
         'mode': Arg(
             ('--mode',),
             help='Mode',
-            type=str),
+            type=str,
+            ),
 
         # Worker
         'kinds': Arg(
@@ -259,7 +260,7 @@ class CLIFactory:
         subparsers.required = True
 
         for sub in cls.SUBPARSERS:
-            sp = subparsers.add_parser(sub['func'].__name__, help=sub['help'])
+            sp = subparsers.add_parser(sub['func'].__name__.replace("_", "-"), help=sub['help'])
             for arg in sub['args']:
                 arg = cls.ARGS[arg]
                 kwargs = {
