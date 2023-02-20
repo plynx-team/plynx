@@ -13,6 +13,8 @@ from bson import ObjectId
 SearchParameter = collections.namedtuple('SearchParameter', ['key', 'value'])
 
 SEARCH_RGX = re.compile(r'[^\s]+:[^\s]+')
+TRUES = ["true", "t"]
+FALSES = ["false", "f"]
 
 
 def to_object_id(_id: Union[ObjectId, str, None]) -> ObjectId:
@@ -79,6 +81,17 @@ def query_yes_no(question: str, default: str = 'yes') -> bool:
         else:
             sys.stdout.write("Please respond with 'yes' or 'no' "
                              "(or 'y' or 'n').\n")
+
+
+def str_to_bool(val: Union[str, bool]) -> bool:
+    """Convert string value to boolean"""
+    if isinstance(val, bool):
+        return val
+    if val.lower() in TRUES:
+        return True
+    if val.lower() in FALSES:
+        return False
+    raise ValueError(f"Invalid value: `{val}`. Expected boolean or string-boolean i.e. `true`")
 
 
 def update_dict_recursively(dest: Dict[Any, Any], donor: Dict[Any, Any]) -> Dict[Any, Any]:

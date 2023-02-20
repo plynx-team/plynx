@@ -17,6 +17,7 @@ from plynx.utils.config import get_config
 from plynx.utils.content import create_default_templates
 from plynx.utils.db_connector import check_connection
 from plynx.utils.exceptions import RegisterUserException
+from plynx.utils.logs import set_logging_level
 
 app = Flask(__name__)
 logger = create_logger(app)
@@ -157,10 +158,14 @@ def handle_errors(f):
     return decorated
 
 
-def run_api():
+def run_api(verbose):
     """Run web service"""
     global _CONFIG  # pylint: disable=global-statement
     _CONFIG = get_config()
+
+    # set up logger level
+    set_logging_level(verbose, logger=logger)
+    set_logging_level(verbose, logger=logging.getLogger('werkzeug'))
 
     check_connection()
 

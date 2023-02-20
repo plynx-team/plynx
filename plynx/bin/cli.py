@@ -32,7 +32,7 @@ def api(args):
     """Start web service."""
     # lazy load because web initializes too many variables
     from plynx.web.common import run_api  # noqa: E402  # pylint: disable=import-outside-toplevel
-    set_logging_level(args.pop('verbose'))
+    set_logging_level(args['verbose'])
     run_api(**args)
 
 
@@ -78,7 +78,8 @@ class CLIFactory:
         'mode': Arg(
             ('--mode',),
             help='Mode',
-            type=str),
+            type=str,
+            ),
 
         # Worker
         'kinds': Arg(
@@ -159,6 +160,13 @@ class CLIFactory:
             type=str,
             levels=['web', 'endpoint'],
             ),
+        'port': Arg(
+            ('--port',),
+            help='Endpoint port',
+            default=_config.web.port,
+            type=int,
+            levels=['web', 'port'],
+            ),
 
         'internal_endpoint': Arg(
             ('--internal-endpoint',),
@@ -216,7 +224,7 @@ class CLIFactory:
             'func': api,
             'help': 'Run api server',
             'args': ('verbose', 'secret_key', 'endpoint',
-                     'db_host', 'db_port', 'db_user', 'db_password',
+                     'db_host', 'db_port', 'db_user', 'db_password', 'port',
                      'storage_scheme', 'storage_prefix', 'credential_path'),
         }, {
             'func': version,
@@ -259,7 +267,7 @@ class CLIFactory:
         subparsers.required = True
 
         for sub in cls.SUBPARSERS:
-            sp = subparsers.add_parser(sub['func'].__name__, help=sub['help'])
+            sp = subparsers.add_parser(sub['func'].__name__.replace("_", "-"), help=sub['help'])
             for arg in sub['args']:
                 arg = cls.ARGS[arg]
                 kwargs = {

@@ -8,6 +8,7 @@ import plynx.db.node
 import plynx.utils.plugin_manager
 from plynx.constants import NodeRunningStatus, NodeStatus
 from plynx.plugins.resources.common import FILE_KIND
+from plynx.utils.common import str_to_bool
 from plynx.utils.file_handler import get_file_stream, upload_file_stream
 from plynx.utils.thumbnails import get_thumbnail
 from plynx.web.common import app, handle_errors, logger, make_fail_response, make_success_response, requires_auth
@@ -57,11 +58,11 @@ def upload_file():
     description = request.form.get('description', '{description}')
     file_type = request.form.get('file_type', FILE_KIND)
     node_kind = request.form.get('node_kind', 'basic-file')
-    do_not_save = request.form.get('do_not_save', False)
-    logger.debug(request)
+    do_not_save = str_to_bool(request.form.get('do_not_save', "false"))
+    logger.info(request)
     if file_type not in RESOURCE_TYPES:
-        logger.debug(file_type)
-        logger.debug(RESOURCE_TYPES)
+        logger.info(file_type)
+        logger.info(RESOURCE_TYPES)
         return make_fail_response(f"Unknown file type `{file_type}`"), 400
 
     resource_id = upload_file_stream(request.files['data'])
@@ -82,6 +83,7 @@ def upload_file():
     file.outputs.append(output)
 
     file.author = g.user._id
+
     if not do_not_save:
         file.save()
 
