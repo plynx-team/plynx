@@ -160,6 +160,13 @@ class CLIFactory:
             type=str,
             levels=['web', 'endpoint'],
             ),
+        'port': Arg(
+            ('--port',),
+            help='Endpoint port',
+            default=_config.web.port,
+            type=int,
+            levels=['web', 'port'],
+            ),
 
         'internal_endpoint': Arg(
             ('--internal-endpoint',),
@@ -217,7 +224,7 @@ class CLIFactory:
             'func': api,
             'help': 'Run api server',
             'args': ('verbose', 'secret_key', 'endpoint',
-                     'db_host', 'db_port', 'db_user', 'db_password',
+                     'db_host', 'db_port', 'db_user', 'db_password', 'port',
                      'storage_scheme', 'storage_prefix', 'credential_path'),
         }, {
             'func': version,
