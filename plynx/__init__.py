@@ -4,4 +4,4 @@ PLynx
 Interactive, Scalable, Shareable and Reproducible Workflow Orchestration framework
 """
 
-__version__ = '1.9.12'
+__version__ = '1.9.13'
