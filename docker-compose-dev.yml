@@ -64,10 +64,12 @@ services:
             - ./plynx:/app/plynx
             - ./config.yaml:/app/config.yaml
         environment:
-            - PLYNX_MODE=api --db-host mongodb
             - PLYNX_CONFIG=/app/config.yaml
-            - GOOGLE_CLIENT_ID=231909420850-nj0e0lm27itj46lg5obn78mukuvou6hb.apps.googleusercontent.com
-        command: sh /app/watch.sh
+        command: |
+            watchmedo auto-restart --recursive --pattern="*.py" --directory="/app/plynx" -- bash -c " \
+                python -c 'import plynx.bin as bin; bin.main()' make-operations-meta --collection-module plynx.demo.COLLECTION -o /app/nodes.json && \
+                python -c 'import plynx.bin; plynx.bin.main()' api --db-host mongodb -vvv \
+            "
 
     internal-api:
         image: plynxteam/backend
@@ -81,7 +83,7 @@ services:
             - ./config.yaml:/app/config.yaml
         environment:
             - PLYNX_CONFIG=/app/config.yaml
-        command: plynx api -vv  # vv for WARNING
+        command: bash -c "echo '[]' > /app/nodes.json && plynx api -vv"  # vv for WARNING
 
     test:
         image: plynxteam/backend

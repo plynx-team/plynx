@@ -2,12 +2,11 @@
 import contextlib
 import inspect
 import os
+import pydoc
 import sys
 import threading
 import uuid
 from typing import Any, Callable, Dict
-
-import cloudpickle
 
 import plynx.plugins.executors.bases
 import plynx.plugins.executors.local
@@ -34,14 +33,12 @@ _resource_manager = plynx.utils.plugin_manager.get_resource_manager()
 def materialize_fn_or_cls(node: Node) -> Callable:
     """Unpickle the function"""
 
-    pickled_fn_parameter = node.get_parameter_by_name("_pickled_fn", throw=False)
+    code_function_location = node.code_function_location
     code_parameter = node.get_parameter_by_name("_cmd", throw=False)
-    assert not (pickled_fn_parameter and code_parameter), "`_pickled_fn` and `_cmd` cannot be both non-null"
-    if pickled_fn_parameter:
-        fn_str: str = pickled_fn_parameter.value
-
-        func_bytes = bytes.fromhex(fn_str)
-        func = cloudpickle.loads(func_bytes)
+    assert not (code_function_location and code_parameter), "`code_function_location` and `_cmd` cannot be both non-null"
+    if code_function_location:
+        func = pydoc.locate(code_function_location)
+        assert callable(func), f"The function or class `{code_function_location}` is not callable"
         return func
     elif code_parameter:
         code = code_parameter.value.value

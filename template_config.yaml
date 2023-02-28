@@ -210,8 +210,7 @@ plugins:
       icon: feathericons.file
       cls: plynx.plugins.hubs.static_list.StaticListHub
       args:
-        list_module: plynx.demo.COLLECTION
-        #list_module: plynx_deploy.connections.COLLECTION
+        list_nodes_path: /app/nodes.json
     - kind: python-db-hub
       title: Database hub
       icon: feathericons.database

@@ -8,6 +8,7 @@ from typing import Any, List, Optional, Tuple, Type, Union
 from plynx import __version__
 from plynx.service.cache import run_cache
 from plynx.service.execute import run_execute
+from plynx.service.make_operations_meta import run_make_operations_meta
 from plynx.service.users import run_users
 from plynx.service.worker import run_worker
 from plynx.utils.config import get_config, set_parameter
@@ -19,6 +20,8 @@ _config = get_config()
 @dataclass
 class Arg:
     """Common argument tuple"""
+    # pylint: disable=too-many-instance-attributes
+
     flags: Union[Tuple[str], Tuple[str, str]]
     help: str
     action: Optional[str] = None
@@ -26,6 +29,7 @@ class Arg:
     type: Optional[Type] = None
     levels: Optional[List[str]] = None
     required: bool = False
+    nargs: Optional[str] = None
 
 
 def api(args):
@@ -65,6 +69,11 @@ def execute(args):
     run_execute(**args)
 
 
+def make_operations_meta(args):
+    """Execute Operation."""
+    run_make_operations_meta(**args)
+
+
 class CLIFactory:
     """The class that generates PLynx CLI parser"""
     ARGS = {
@@ -78,6 +87,18 @@ class CLIFactory:
         'mode': Arg(
             ('--mode',),
             help='Mode',
+            type=str,
+            ),
+        'collection_module': Arg(
+            ('--collection-module', ),
+            help='Modules with operations to load',
+            required=True,
+            action='append',
+            ),
+        'out': Arg(
+            ('-o', '--out'),
+            help='Output filename',
+            required=True,
             type=str,
             ),
 
@@ -242,6 +263,10 @@ class CLIFactory:
             'func': execute,
             'help': "Execute single node",
             'args': ('verbose', 'filename', 'storage_prefix'),
+        }, {
+            'func': make_operations_meta,
+            'help': "Create metadata of the functions",
+            'args': ('collection_module', 'out'),
         },
     )
 
