@@ -1,10 +1,9 @@
 """Plynx standard Hub based on the fixed list of Operations"""
-
 import copy
-import pydoc
-from typing import Any, Callable, Dict, List, Union
+import json
+import os
+from typing import Any, Dict, List
 
-import plynx.node
 from plynx.base import hub
 from plynx.constants import HubSearchParams
 from plynx.db.node import Node
@@ -12,12 +11,15 @@ from plynx.utils.common import parse_search_string
 from plynx.utils.hub_node_registry import registry
 
 
-def _enhance_list_item(raw_item: Dict) -> Dict:
+def register_list_item(raw_item: Dict) -> Dict:
+    """
+    Register a hub node (node or group) recursevely in the memory.
+    """
     if raw_item['_type'] == 'Group':
         # TODO proper checking
         items = []
         for raw_subitem in raw_item['items']:
-            items.append(_enhance_list_item(raw_subitem))
+            items.append(register_list_item(raw_subitem))
         raw_item['items'] = items
         return raw_item
     # check if the node is valid
@@ -54,17 +56,17 @@ def _recursive_filter(search_parameters: Dict[str, str], search_string: str, lis
 
 class StaticListHub(hub.BaseHub):
     """Plynx standard Hub based on the fixed list of Operations"""
-    def __init__(self, list_module: str):
+    def __init__(self, list_nodes_path: str):
         super().__init__()
 
-        collection: List[Union[Callable, plynx.node.utils.Group]] = pydoc.locate(list_module)   # type: ignore
+        if not os.path.exists(list_nodes_path):
+            raise Exception(f"List of nodes `{list_nodes_path}` not found")
 
-        assert collection is not None, f"Module `{list_module}` not found"
+        with open(list_nodes_path, "r") as f:
+            self.list_of_nodes = json.load(f)
 
-        self.list_of_nodes = []
-        for func_or_group in collection:
-            raw_item = plynx.node.utils.func_or_group_to_dict(func_or_group)
-            self.list_of_nodes.append(_enhance_list_item(raw_item))
+        for node_dict in self.list_of_nodes:
+            register_list_item(node_dict)
 
     def search(self, query: hub.Query) -> Dict[str, Any]:
         # TODO use search_parameters

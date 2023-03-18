@@ -245,8 +245,11 @@ class NodeCollectionManager:
         db_nodes = self.get_db_objects_by_ids(node_ids)
         new_node_db_mapping = {}
 
+        # ------------------------
+        # Update nodes from the DB
+        # ------------------------
         for db_node in db_nodes:
-            original_node_id = db_node['_id']
+            original_node_id = to_object_id(db_node['_id'])
             new_db_node = db_node
             if original_node_id not in new_node_db_mapping:
                 while new_db_node['node_status'] != NodeStatus.READY and 'successor_node_id' in new_db_node and new_db_node['successor_node_id']:
@@ -256,12 +259,29 @@ class NodeCollectionManager:
                     else:
                         break
                 new_node_db_mapping[original_node_id] = new_db_node
-
         new_nodes = [
             NodeCollectionManager._transplant_node(
                 node,
                 Node.from_dict(new_node_db_mapping[to_object_id(node.original_node_id)])
-            ) for node in sub_nodes]
+            ) if to_object_id(node.original_node_id) in new_node_db_mapping else node for node in sub_nodes
+        ]
+
+        # -------------------------
+        # Update nodes from the hub
+        # -------------------------
+        node_locations = list(set(map(lambda node: node.code_function_location, new_nodes)))
+        hub_nodes_mapping = {
+            node.code_function_location: node
+            for node in registry.find_nodes(node_locations)
+        }
+        new_nodes = [
+            NodeCollectionManager._transplant_node(
+                node,
+                hub_nodes_mapping[node.code_function_location]
+            )
+            if node.code_function_location in hub_nodes_mapping and node.code_hash != hub_nodes_mapping[node.code_function_location].code_hash else node
+            for node in new_nodes
+        ]
 
         upgraded_nodes_count = sum(
             1 for node, new_node in zip(sub_nodes, new_nodes) if node.original_node_id != new_node.original_node_id

@@ -5,8 +5,6 @@ PLynx API for generation user Nodes.
 from dataclasses import dataclass, field
 from typing import Any, List, Optional
 
-import cloudpickle
-
 import plynx.node.typing as typings
 import plynx.node.utils as utils  # noqa
 
@@ -148,13 +146,6 @@ def operation(node_type=None, title=None, description="", kind=None, auto_run_en
             outputs=[],
         )
 
-        fn_dumped = cloudpickle.dumps(func_or_class).hex()
-        func_or_class.plynx_params.params.append(ParamItem(
-            name="_pickled_fn",
-            parameter_type="str",
-            value=fn_dumped,
-            widget=None,
-        ))
         return func_or_class
     return decorator
 
