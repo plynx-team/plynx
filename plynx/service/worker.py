@@ -80,7 +80,7 @@ class TickThread:
                         continue
 
                     resp = post_request("update_run", data={"node": self.executor.node.to_dict()})
-                    logging.info(f"Run update res: {resp}")
+                    logging.info(f"TickThread:Run update res: {resp}")
 
 
 class Worker:
@@ -165,7 +165,7 @@ class Worker:
         finally:
             with executor._lock:    # type: ignore
                 resp = post_request("update_run", data={"node": executor.node.to_dict()}, num_retries=3)
-                logging.info(f"Run update res: {resp}")
+                logging.info(f"Worker:Run update res: {resp}")
             with self._run_id_to_executor_lock:
                 del self._run_id_to_executor[executor.node._id]
 

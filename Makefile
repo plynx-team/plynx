@@ -14,6 +14,9 @@ run_tests:
 	@$(MAKE) -f $(THIS_FILE) build_backend
 	docker-compose -f $(DOCKER_COMPOSE_DEV_FILE) up --abort-on-container-exit --scale workers=5 --scale frontend=0 --scale test=1
 
+run_frontend:
+	cd ./ui; DISABLE_ESLINT_PLUGIN=true npm start
+
 up:
 	mkdir -p ./data/resources
 	python -m webbrowser "http://localhost:3001/"

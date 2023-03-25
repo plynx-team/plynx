@@ -226,7 +226,6 @@ plugins:
       executor: plynx.plugins.executors.dag.DAG
       hubs:
         - db-hub
-        - static-hub
     - kind: python-workflow
       title: Python Workflow
       executor: plynx.plugins.executors.python.dag.DAG
