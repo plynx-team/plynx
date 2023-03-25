@@ -1,5 +1,5 @@
 """Common utils of the web service."""
-
+import datetime
 import logging
 import re
 import traceback
@@ -140,9 +140,10 @@ def make_success_response(extra_response: Optional[Dict[str, Any]] = None):
     """Return successful response"""
     return JSONEncoder().encode(dict(
         {
-            'status': ResponseStatus.SUCCESS,
-            'message': 'Success',
-            'settings': g.user.settings.to_dict() if hasattr(g, "user") else None,
+            "status": ResponseStatus.SUCCESS,
+            "message": "Success",
+            "current_time": datetime.datetime.utcnow(),
+            "settings": g.user.settings.to_dict() if hasattr(g, "user") else None,
         }, **(extra_response or {})))
 
 
