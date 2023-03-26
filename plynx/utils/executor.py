@@ -19,7 +19,6 @@ from plynx.utils.config import get_web_config
 from plynx.utils.file_handler import upload_file_stream
 
 CONNECT_POST_TIMEOUT = 1.0
-NUM_RETRIES = 3
 REQUESTS_TIMEOUT = 10
 
 
@@ -30,7 +29,7 @@ def urljoin(base: str, postfix: str) -> str:
     return f"{base}/{postfix}"
 
 
-def post_request(uri, data, num_retries=NUM_RETRIES):
+def post_request(uri, data, num_retries=3):
     """Make post request to the url"""
     url = urljoin(get_web_config().internal_endpoint, uri)
     json_data = JSONEncoder().encode(data)
@@ -135,7 +134,7 @@ class DBJobExecutor:
             logging.warning(f"Execution failed: {e}")
             self.executor.node.node_running_status = NodeRunningStatus.FAILED
         finally:
-            resp = post_request("update_run", data={"node": self.executor.node.to_dict()}, num_retries=3)
+            resp = post_request("update_run", data={"node": self.executor.node.to_dict()})
             logging.info(f"Worker:Run update res: {resp}")
 
             self._killed = True
