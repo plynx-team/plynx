@@ -74,13 +74,64 @@ class TickThread:
         while not self._stop_event.is_set():
             self._stop_event.wait(timeout=TickThread.TICK_TIMEOUT)
             if self.executor.is_updated():
-                # Save logs whe operation is running
-                with self.executor._lock:
-                    if NodeRunningStatus.is_finished(self.executor.node.node_running_status):
-                        continue
+                # Save logs when operation is running
+                if NodeRunningStatus.is_finished(self.executor.node.node_running_status):
+                    break
+                resp = post_request("update_run", data={"node": self.executor.node.to_dict()})
+                logging.info(f"TickThread:Run update res: {resp}")
 
-                    resp = post_request("update_run", data={"node": self.executor.node.to_dict()})
-                    logging.info(f"TickThread:Run update res: {resp}")
+
+class DBJobExecutor:
+    """Executes a single job in an executor and updates its status."""
+
+    def __init__(self, executor: BaseExecutor):
+        assert executor.node, "Executor has no `node` attribute defined"
+        self.executor = executor
+        self._killed = False
+
+    def run(self) -> str:
+        """Run the job in the executor"""
+        assert self.executor.node, "Executor has no `node` attribute defined"
+        try:
+            try:
+                status = NodeRunningStatus.FAILED
+                self.executor.init_executor()
+                with TickThread(self.executor):
+                    status = self.executor.run()
+            except Exception:   # pylint: disable=broad-except
+                try:
+                    f = six.BytesIO()
+                    f.write(traceback.format_exc().encode())
+                    self.executor.node.get_log_by_name('worker').resource_id = upload_file_stream(f)
+                    logging.error(traceback.format_exc())
+                except Exception:   # pylint: disable=broad-except
+                    # This case of `except` has happened before due to I/O failure
+                    logging.critical(traceback.format_exc())
+                    raise
+            finally:
+                self.executor.clean_up_executor()
+
+            logging.info(f"Node {self.executor.node._id} `{self.executor.node.title}` finished with status `{status}`")
+            self.executor.node.node_running_status = status
+        except Exception as e:  # pylint: disable=broad-except
+            logging.warning(f"Execution failed: {e}")
+            self.executor.node.node_running_status = NodeRunningStatus.FAILED
+        finally:
+            resp = post_request("update_run", data={"node": self.executor.node.to_dict()}, num_retries=3)
+            logging.info(f"Worker:Run update res: {resp}")
+
+            self._killed = True
+
+        return status
+
+    def kill(self) -> None:
+        """Kill the running job"""
+        assert self.executor.node, "Executor has no `node` attribute defined"
+        if self._killed:
+            return
+        if NodeRunningStatus.is_finished(self.executor.node.node_running_status):
+            self.executor.kill()
+        self._killed = True
 
 
 class Worker:
@@ -136,38 +187,11 @@ class Worker:
     def execute_job(self, executor: BaseExecutor):
         """Run a single job in the executor"""
         assert executor.node, "Executor has no `node` attribute defined"
-        try:
-            try:
-                status = NodeRunningStatus.FAILED
-                executor.init_executor()
-                with TickThread(executor):
-                    status = executor.run()
-            except Exception:   # pylint: disable=broad-except
-                try:
-                    f = six.BytesIO()
-                    f.write(traceback.format_exc().encode())
-                    executor.node.get_log_by_name('worker').resource_id = upload_file_stream(f)
-                    logging.error(traceback.format_exc())
-                except Exception:   # pylint: disable=broad-except
-                    # This case of `except` has happened before due to I/O failure
-                    logging.critical(traceback.format_exc())
-                    raise
-            finally:
-                executor.clean_up_executor()
+        db_executor = DBJobExecutor(executor)
+        db_executor.run()
 
-            logging.info(f"Node {executor.node._id} `{executor.node.title}` finished with status `{status}`")
-            executor.node.node_running_status = status
-            if executor.node._id in self._killed_run_ids:
-                self._killed_run_ids.remove(executor.node._id)
-        except Exception as e:  # pylint: disable=broad-except
-            logging.warning(f"Execution failed: {e}")
-            executor.node.node_running_status = NodeRunningStatus.FAILED
-        finally:
-            with executor._lock:    # type: ignore
-                resp = post_request("update_run", data={"node": executor.node.to_dict()}, num_retries=3)
-                logging.info(f"Worker:Run update res: {resp}")
-            with self._run_id_to_executor_lock:
-                del self._run_id_to_executor[executor.node._id]
+        with self._run_id_to_executor_lock:
+            del self._run_id_to_executor[executor.node._id]
 
     def _run_db_status_update(self):
         """Syncing with the database."""
@@ -183,7 +207,6 @@ class Worker:
                 if node:
                     logging.info(f"New node found: {node['_id']} {node['node_running_status']} {node['title']}")
                     executor = plynx.utils.executor.materialize_executor(node)
-                    executor._lock = threading.Lock()
 
                     with self._run_id_to_executor_lock:
                         self._run_id_to_executor[executor.node._id] = executor
@@ -208,7 +231,6 @@ class Worker:
                     response = post_request("get_run_cancelations", data={"run_ids": run_ids}, num_retries=1)
                     runs_to_kill = [] if not response else response["run_ids_to_cancel"]
                     for run_id in runs_to_kill:
-                        self._killed_run_ids.add(run_id)
                         self._run_id_to_executor[run_id].kill()
 
                 runs = []
