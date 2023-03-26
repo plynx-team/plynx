@@ -10,7 +10,7 @@ import plynx.plugins.executors.dag
 import plynx.utils.executor
 from plynx.constants import NodeRunningStatus
 from plynx.db.node import Node
-from plynx.utils import node_utils
+from plynx.utils import file_handler, node_utils
 from plynx.utils.common import to_object_id
 
 POOL_SIZE = 3
@@ -32,7 +32,7 @@ def worker_main(job_run_queue: queue.Queue, job_complete_queue: queue.Queue):
             node.node_running_status = NodeRunningStatus.FAILED
 
             err_filename = str(uuid.uuid4())
-            with plynx.utils.file_handler.open(err_filename, "w") as f:
+            with file_handler.open(err_filename, "w") as f:
                 f.write(error_str)
             output = node.get_log_by_name(name="traceback")
             output.values = [err_filename]
