@@ -56,7 +56,7 @@ def execute_run():
     executor = materialize_executor(node)
     db_executor = DBJobExecutor(executor)
     app.logger.warning("Start running")  # pylint: disable=no-member
-    db_executor.run()
+    db_executor.run(app.logger)
     app.logger.warning("End running")   # pylint: disable=no-member
 
     return make_success_response({"node_running_status": node.node_running_status})
