@@ -20,7 +20,7 @@ logger = create_logger(app)
 def execute_run():
     """Execute a run with a given id"""
 
-    print("Endpoint / called")
+    app.logger.warning("Endpoint / called")  # pylint: disable=no-member
 
     if False:   # pylint: disable=using-constant-test
         data = json.loads(request.data)
@@ -32,7 +32,7 @@ def execute_run():
 
         if not isinstance(envelope, dict) or "message" not in envelope:
             msg = "invalid Pub/Sub message format"
-            print(f"error: {msg}")
+            app.logger.error(f"error: {msg}")   # pylint: disable=no-member
             return make_fail_response(f"Bad Request: {msg}"), 400
 
         pubsub_message = envelope["message"]
@@ -55,9 +55,9 @@ def execute_run():
 
     executor = materialize_executor(node)
     db_executor = DBJobExecutor(executor)
-    print("Start running")
+    app.logger.warning("Start running")  # pylint: disable=no-member
     db_executor.run()
-    print("End running")
+    app.logger.warning("End running")   # pylint: disable=no-member
 
     return make_success_response({"node_running_status": node.node_running_status})
 
