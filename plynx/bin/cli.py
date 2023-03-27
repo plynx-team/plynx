@@ -43,7 +43,6 @@ def api(args):
 def worker_server(args):
     """Start worker service."""
     from plynx.service.worker_server import run_worker_server  # noqa: E402  # pylint: disable=import-outside-toplevel
-    print("args", args)
     run_worker_server(**args)
 
 
