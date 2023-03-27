@@ -92,11 +92,11 @@ class TickThread:
         """Run timed ticks"""
         while not self._stop_event.is_set():
             self._stop_event.wait(timeout=TickThread.TICK_TIMEOUT)
-            if self.executor.is_updated():
+            if self.executor.is_updated() and not self._stop_event.is_set():
                 # Save logs when operation is running
                 if NodeRunningStatus.is_finished(self.executor.node.node_running_status):
                     break
-                resp = post_request("update_run", data={"node": self.executor.node.to_dict()})
+                resp = post_request("update_run", data={"tmp": "tick", "node": self.executor.node.to_dict()})
                 logging.info(f"TickThread:Run update res: {resp}")
 
 
@@ -141,7 +141,7 @@ class DBJobExecutor:
             self.executor.node.node_running_status = NodeRunningStatus.FAILED
         finally:
             logger.warning("Update run A")
-            resp = post_request("update_run", data={"node": self.executor.node.to_dict()}, logger=logger)
+            resp = post_request("update_run", data={"tmp": "final", "node": self.executor.node.to_dict()}, logger=logger)
             logger.warning("Update run B")
             logging.info(f"Worker:Run update res: {resp}")
 
