@@ -48,7 +48,7 @@ def update_run():
     data = json.loads(request.data)
 
     node: Node = Node.from_dict(data['node'])
-    app.logger.info(f"updating run {node._id}")     # pylint: disable=no-member
+    app.logger.info(f"updating run {node._id} with node_running_status {node.node_running_status}")     # pylint: disable=no-member
 
     node.save(collection=Collections.RUNS)
     return make_success_response()
