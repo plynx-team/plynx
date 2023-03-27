@@ -35,7 +35,7 @@ def post_request(uri, data, num_retries=3, logger=None):
     json_data = JSONEncoder().encode(data)
     for iter_num in range(num_retries):
         if logger:
-            logger.warning("iter {uri} {iter_num}")
+            logger.warning(f"iter {uri} {iter_num}")
         if iter_num != 0:
             time.sleep(CONNECT_POST_TIMEOUT)
         response = requests.post(url=url, data=json_data, timeout=REQUESTS_TIMEOUT)
@@ -134,6 +134,7 @@ class DBJobExecutor:
                 self.executor.clean_up_executor()
 
             logging.info(f"Node {self.executor.node._id} `{self.executor.node.title}` finished with status `{status}`")
+            logger.info(f"Node {self.executor.node._id} `{self.executor.node.title}` finished with status `{status}`")
             self.executor.node.node_running_status = status
         except Exception as e:  # pylint: disable=broad-except
             logging.warning(f"Execution failed: {e}")
@@ -147,6 +148,7 @@ class DBJobExecutor:
             self._killed = True
 
         logger.warning("Update run Done")
+
         return status
 
     def kill(self) -> None:
