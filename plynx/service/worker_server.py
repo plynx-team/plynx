@@ -1,4 +1,5 @@
 """The serving logic of the worker"""
+import base64
 import json
 import logging
 
@@ -18,7 +19,28 @@ logger = create_logger(app)
 @app.route("/", methods=["POST"])
 def execute_run():
     """Execute a run with a given id"""
-    data = json.loads(request.data)
+
+    if False:   # pylint: disable=using-constant-test
+        data = json.loads(request.data)
+    else:
+        envelope = request.get_json()
+        if not envelope:
+            msg = "no Pub/Sub message received"
+            return make_fail_response(f"Bad Request: {msg}"), 400
+
+        if not isinstance(envelope, dict) or "message" not in envelope:
+            msg = "invalid Pub/Sub message format"
+            print(f"error: {msg}")
+            return make_fail_response(f"Bad Request: {msg}"), 400
+
+        pubsub_message = envelope["message"]
+
+        if isinstance(pubsub_message, dict) and "data" in pubsub_message:
+            message_str = base64.b64decode(pubsub_message["data"]).decode("utf-8")
+            data = json.loads(message_str)
+        else:
+            return make_fail_response(f"Bad Request: {msg}"), 400
+
     run_id = data["run_id"]
 
     response = post_request("get_run", data={"run_id": run_id})
