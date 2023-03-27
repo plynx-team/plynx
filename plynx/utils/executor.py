@@ -108,13 +108,16 @@ class DBJobExecutor:
 
     def run(self) -> str:
         """Run the job in the executor"""
+        print("Start running")
         assert self.executor.node, "Executor has no `node` attribute defined"
         try:
             try:
                 status = NodeRunningStatus.FAILED
                 self.executor.init_executor()
                 with TickThread(self.executor):
+                    print("Start running A")
                     status = self.executor.run()
+                    print("Start running B")
             except Exception:   # pylint: disable=broad-except
                 try:
                     f = six.BytesIO()
@@ -134,11 +137,14 @@ class DBJobExecutor:
             logging.warning(f"Execution failed: {e}")
             self.executor.node.node_running_status = NodeRunningStatus.FAILED
         finally:
+            print("Update run A")
             resp = post_request("update_run", data={"node": self.executor.node.to_dict()})
+            print("Update run B")
             logging.info(f"Worker:Run update res: {resp}")
 
             self._killed = True
 
+        print("Update run Done")
         return status
 
     def kill(self) -> None:

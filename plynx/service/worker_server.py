@@ -20,6 +20,8 @@ logger = create_logger(app)
 def execute_run():
     """Execute a run with a given id"""
 
+    print("Endpoint / called")
+
     if False:   # pylint: disable=using-constant-test
         data = json.loads(request.data)
     else:
@@ -53,7 +55,9 @@ def execute_run():
 
     executor = materialize_executor(node)
     db_executor = DBJobExecutor(executor)
+    print("Start running")
     db_executor.run()
+    print("End running")
 
     return make_success_response({"node_running_status": node.node_running_status})
 
