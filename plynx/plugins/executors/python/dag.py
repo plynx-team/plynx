@@ -8,6 +8,7 @@ from typing import List
 
 import plynx.plugins.executors.dag
 import plynx.utils.executor
+from plynx.base.executor import RunningStatus
 from plynx.constants import NodeRunningStatus
 from plynx.db.node import Node
 from plynx.utils import file_handler, node_utils
@@ -205,3 +206,30 @@ class DAG(plynx.plugins.executors.dag.DAG):
         if self._node_running_status == NodeRunningStatus.FAILED_WAITING:
             self._node_running_status = NodeRunningStatus.FAILED
         return self._node_running_status
+
+
+class ExecutorWithWebWorkerServer(DAG):
+    """This executor is used for testing purposes only."""
+
+    @staticmethod
+    def request_task(url, data):
+        """Send a request to the server"""
+        import requests  # pylint: disable=import-outside-toplevel
+        requests.post(url, json=data)
+
+    @staticmethod
+    def fire_and_forget(url, json):
+        """Fire and forget"""
+        import threading  # pylint: disable=import-outside-toplevel
+        threading.Thread(target=ExecutorWithWebWorkerServer.request_task, args=(url, json)).start()
+
+    def launch(self) -> RunningStatus:
+        """Launch the executor"""
+        import os  # pylint: disable=import-outside-toplevel
+        assert self.node, "Attribute `node` is unassigned"
+        res = super().launch()
+
+        worker_server_url = os.environ.get("WORKER_SERVER_URL")
+        ExecutorWithWebWorkerServer.fire_and_forget(worker_server_url, {"run_id": str(self.node._id)})
+
+        return res
