@@ -2,6 +2,7 @@
 import base64
 import json
 import logging
+import os
 
 from flask import Flask, request
 from flask.logging import create_logger
@@ -16,15 +17,22 @@ app = Flask(__name__)
 logger = create_logger(app)
 
 
+class RunEnv:
+    """Run environment or where the endpoint is running"""
+    HTTP = "HTTP"
+    PUBSUB = "PUBSUB"
+
+
 @app.route("/", methods=["POST"])
 def execute_run():
     """Execute a run with a given id"""
 
     app.logger.info("Will start running")  # pylint: disable=no-member
+    run_env = os.environ.get("PLYNX_RUN_ENV", RunEnv.HTTP)
 
-    if False:   # pylint: disable=using-constant-test
+    if run_env == RunEnv.HTTP:   # pylint: disable=using-constant-test
         data = json.loads(request.data)
-    else:
+    elif run_env == RunEnv.PUBSUB:
         envelope = request.get_json()
         if not envelope:
             msg = "no Pub/Sub message received"
@@ -42,6 +50,8 @@ def execute_run():
             data = json.loads(message_str)
         else:
             return make_fail_response(f"Bad Request: {msg}"), 400
+    else:
+        return make_fail_response(f"Unknown run env: {run_env}"), 400
 
     run_id = data["run_id"]
 
