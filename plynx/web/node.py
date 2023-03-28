@@ -295,6 +295,7 @@ def post_node(collection: str):
         node_in_run = node.clone(NodeClonePolicy.NODE_TO_RUN)
         node_in_run.author = g.user._id
 
+        assert db_node, "db_node should be present"
         db_node_obj = Node.from_dict(db_node)
         db_node_obj.latest_run_id = node_in_run._id
         db_node_obj.save(force=True)

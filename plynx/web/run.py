@@ -7,10 +7,27 @@ import plynx.db.node_collection_manager
 import plynx.db.run_cancellation_manager
 from plynx.constants import Collections
 from plynx.db.node import Node
-from plynx.web.common import app, handle_errors, make_success_response
+from plynx.utils.common import ObjectId
+from plynx.web.common import app, handle_errors, make_fail_response, make_success_response
 
 node_collection_manager = plynx.db.node_collection_manager.NodeCollectionManager(collection=Collections.RUNS)
 run_cancellation_manager = plynx.db.run_cancellation_manager.RunCancellationManager()
+
+
+@app.route('/plynx/api/v0/get_run', methods=['POST'])
+@handle_errors
+def get_a_run():
+    """Find a certain run and return it"""
+    data = json.loads(request.data)
+    run_id_str: str = data["run_id"]
+    run_id = ObjectId(run_id_str)
+
+    node_dict = node_collection_manager.get_db_node(run_id)
+
+    if node_dict is None:
+        return make_fail_response(f"The run with id `{run_id}` is not found"), 404
+
+    return make_success_response({"node": node_dict})
 
 
 @app.route('/plynx/api/v0/pick_run', methods=['POST'])
@@ -31,7 +48,7 @@ def update_run():
     data = json.loads(request.data)
 
     node: Node = Node.from_dict(data['node'])
-    app.logger.info(f"updating run {node._id}")     # pylint: disable=no-member
+    app.logger.info(f"updating run {node._id} with node_running_status {node.node_running_status}")     # pylint: disable=no-member
 
     node.save(collection=Collections.RUNS)
     return make_success_response()

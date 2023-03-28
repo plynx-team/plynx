@@ -59,17 +59,34 @@ services:
             - mongodb
         links:
             - mongodb
+            - worker-server
         volumes:
             - ./data:/data
             - ./plynx:/app/plynx
             - ./config.yaml:/app/config.yaml
         environment:
             - PLYNX_CONFIG=/app/config.yaml
-        command: |
-            watchmedo auto-restart --recursive --pattern="*.py" --directory="/app/plynx" -- bash -c " \
-                python -c 'import plynx.bin as bin; bin.main()' make-operations-meta --collection-module plynx.demo.COLLECTION -o /app/nodes.json && \
-                python -c 'import plynx.bin; plynx.bin.main()' api --db-host mongodb -vvv \
-            "
+            - PLYNX_MODE=api --db-host mongodb
+            - WORKER_SERVER_URL=http://worker-server:5006/
+        command: sh /app/watch.sh
+
+    worker-server:
+        image: plynxteam/backend
+        container_name: "worker-server"
+        ports:
+            - "5006:5006"
+        depends_on:
+            - mongodb
+        links:
+            - mongodb
+        volumes:
+            - ./data:/data
+            - ./plynx:/app/plynx
+            - ./config.yaml:/app/config.yaml
+        environment:
+            - PLYNX_CONFIG=/app/config.yaml
+            - PLYNX_MODE=worker-server --endpoint-port 5006 --internal-endpoint http://internal-api:5005/plynx/api/v0
+        command: sh /app/watch.sh
 
     internal-api:
         image: plynxteam/backend

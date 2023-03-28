@@ -174,7 +174,7 @@ class NodeCollectionManager:
                 if sub_node_dict['code_hash'] != function_location_to_updated_node_dict[sub_node_dict.get(reference_node_id, "unknown")]["code_hash"]:
                     sub_node_dict['node_status'] = NodeStatus.DEPRECATED
 
-    def get_db_node(self, node_id: ObjectId, user_id: Optional[ObjectId] = None):
+    def get_db_node(self, node_id: ObjectId, user_id: Optional[ObjectId] = None) -> Optional[Dict]:
         """Get dict representation of a Node.
 
         Args:
@@ -186,7 +186,7 @@ class NodeCollectionManager:
         """
         res = self.get_db_object(node_id, user_id)
         if not res:
-            return res
+            return None
 
         sub_nodes_dicts: Optional[List[Dict]] = None
         for parameter in res['parameters']:
@@ -203,7 +203,7 @@ class NodeCollectionManager:
 
         return res
 
-    def get_db_object(self, object_id: ObjectId, user_id: Optional[ObjectId] = None) -> Dict:
+    def get_db_object(self, object_id: ObjectId, user_id: Optional[ObjectId] = None) -> Optional[Dict]:
         """Get dict representation of an Object.
 
         Args:
@@ -215,7 +215,7 @@ class NodeCollectionManager:
         """
         res = get_db_connector()[self.collection].find_one({'_id': to_object_id(object_id)})
         if not res:
-            return res
+            return None
 
         res['_readonly'] = (user_id != to_object_id(res['author']))
 

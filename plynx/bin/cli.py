@@ -40,6 +40,12 @@ def api(args):
     run_api(**args)
 
 
+def worker_server(args):
+    """Start worker service."""
+    from plynx.service.worker_server import run_worker_server  # noqa: E402  # pylint: disable=import-outside-toplevel
+    run_worker_server(**args)
+
+
 def cache(args):
     """Show cache options."""
     set_logging_level(args.pop('verbose'))
@@ -100,6 +106,13 @@ class CLIFactory:
             help='Output filename',
             required=True,
             type=str,
+            ),
+
+        'endpoint_port': Arg(
+            ('--endpoint-port', ),
+            help='Port of the endpoint',
+            required=False,
+            type=int,
             ),
 
         # Worker
@@ -247,6 +260,10 @@ class CLIFactory:
             'args': ('verbose', 'secret_key', 'endpoint',
                      'db_host', 'db_port', 'db_user', 'db_password', 'port',
                      'storage_scheme', 'storage_prefix', 'credential_path'),
+        }, {
+            'func': worker_server,
+            'help': 'Run the worker server',
+            'args': ('verbose', 'endpoint_port', 'internal_endpoint')
         }, {
             'func': version,
             'help': "Show the version",
