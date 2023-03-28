@@ -68,7 +68,7 @@ class Worker:
         """Run a single job in the executor"""
         assert executor.node, "Executor has no `node` attribute defined"
         db_executor = DBJobExecutor(executor)
-        db_executor.run(logging)
+        db_executor.run()
 
         with self._run_id_to_executor_lock:
             del self._run_id_to_executor[executor.node._id]

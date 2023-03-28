@@ -20,7 +20,7 @@ logger = create_logger(app)
 def execute_run():
     """Execute a run with a given id"""
 
-    app.logger.warning("Endpoint / called")  # pylint: disable=no-member
+    app.logger.info("Will start running")  # pylint: disable=no-member
 
     if False:   # pylint: disable=using-constant-test
         data = json.loads(request.data)
@@ -55,9 +55,9 @@ def execute_run():
 
     executor = materialize_executor(node)
     db_executor = DBJobExecutor(executor)
-    app.logger.warning("Start running")  # pylint: disable=no-member
-    db_executor.run(app.logger)
-    app.logger.warning("End running")   # pylint: disable=no-member
+    db_executor.run()
+
+    app.logger.info("Finished running the job.")   # pylint: disable=no-member
 
     return make_success_response({"node_running_status": node.node_running_status})
 
