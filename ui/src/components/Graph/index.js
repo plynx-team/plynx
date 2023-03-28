@@ -206,14 +206,17 @@ class Graph extends Component {
               }
           );
       }
+
+      node._editable = this.props.editable;
       this.node_lookup[node._id] = node;
     }
 
+    // Transform PLynx graph to react-flow graph
     const flowNodes = [];
     const flowEdges = [];
     for (let ii = 0; this.nodes && ii < this.nodes.length; ++ii) {
       const node = this.nodes[ii];
-      flowNodes.push(this.nodeToFlowNode(node));
+      flowNodes.push(this.nodeToFlowNode(node, this.props.editable));
 
       for (let jj = 0; jj < node.inputs.length; ++jj) {
         const input = node.inputs[jj];
@@ -601,7 +604,7 @@ class Graph extends Component {
     this.props.onNodeChange(this.graph_node);
   }
 
-  nodeToFlowNode(node) {
+  nodeToFlowNode(node, editable = true) {
     return {
       id: node._id,
       type: "operation",
@@ -612,6 +615,7 @@ class Graph extends Component {
         onRestartClick: () => this.onRestartClick(node),
       },
       selected: this.selectedNodeIds.has(node._id),
+      deletable: editable,
     };
   }
 
@@ -880,7 +884,7 @@ class Graph extends Component {
     node.x = position.x;
     node.y = position.y;
 
-    const flowNode = this.nodeToFlowNode(node);
+    const flowNode = this.nodeToFlowNode(node, );
 
     this.nodes.push(node);
     this.node_lookup[node._id] = node;
@@ -978,7 +982,7 @@ class Graph extends Component {
             />
         }
         {
-            this.state.nodeLookupSearch && this.state.nodeLookupSearchInputsOrOutputs &&
+            this.state.editable && this.state.nodeLookupSearch && this.state.nodeLookupSearchInputsOrOutputs &&
             <HubLookupDialog
                 kind={this.state.graph.kind}
                 a_hubEntryItem={HubResourceTypeBasedEntry}
@@ -1020,6 +1024,7 @@ class Graph extends Component {
             onDrop={event => this.onDrop(event)}
             onDragOver={event => this.onDragOver(event)}
             proOptions={proOptions}
+            nodesConnectable={this.state.editable}
             fitView
             >
             <Background />
