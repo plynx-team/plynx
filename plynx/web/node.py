@@ -188,6 +188,8 @@ def post_node(collection: str):
 
     executor = executor_manager.kind_to_executor_class[node.kind](node)
 
+    logger.info(f"User `{user_id}`(is_admin {is_admin}) is trying to {action} node `{node._id}`")
+
     if action == NodePostAction.SAVE:
         if (is_workflow and not can_create_workflows) or (not is_workflow and not can_create_operations):
             return make_permission_denied('You do not have permission to save this object')
