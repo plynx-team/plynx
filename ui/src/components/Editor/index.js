@@ -792,6 +792,7 @@ export default class Editor extends Component {
                       func: () => {
                         onUploadDialog(plugins_info.operations_dict[operation.kind]);
                       },
+                      enabled: this.state.is_workflow && this.state.editable,
                       key: operation.kind
                     },
                   };
