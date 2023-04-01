@@ -4,7 +4,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import HubPanel from './HubPanel';
-import {HubDraggableEntry, HubResourceTypeBasedEntry, TmpHubEntry} from './HubEntryListNode';
+import {HubDraggableEntry, HubResourceTypeBasedEntry} from './HubEntryListNode';
 import HubLookupDialog from './HubLookupDialog';
 import PreviewDialog from '../Dialogs/PreviewDialog';
 import PropertiesBar from './PropertiesBar';
@@ -985,8 +985,7 @@ class Graph extends Component {
             this.state.editable && this.state.nodeLookupSearch && this.state.nodeLookupSearchInputsOrOutputs &&
             <HubLookupDialog
                 kind={this.state.graph.kind}
-                a_hubEntryItem={HubResourceTypeBasedEntry}
-                hubEntryItem={TmpHubEntry(this.state.nodeLookupSearch, (nodeBody, inputOrOutput) => this.onInsertLookup(nodeBody, inputOrOutput))}
+                hubEntryItem={HubResourceTypeBasedEntry(this.state.nodeLookupSearch, (nodeBody, inputOrOutput) => this.onInsertLookup(nodeBody, inputOrOutput))}
                 hiddenSearch={this.state.nodeLookupSearch}
                 onClose={() => this.handleCloseHubLookupDialog()}
                 defaultX={this.positionToShowDialog.x - 140}
