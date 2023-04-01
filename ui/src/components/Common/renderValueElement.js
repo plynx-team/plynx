@@ -125,7 +125,12 @@ export default function renderValueElement(args) {
               className={className}
               name='value'
               value={value}
-              onChange={(obj) => {handleChange(obj); handleBlur(obj)}}
+              onChange={
+                (obj) => {
+                  handleChange(obj);
+                  handleBlur(obj);
+                }
+              }
               onFocus={handleFocus}
               onBlur={handleBlur}
               readOnly={readOnly}

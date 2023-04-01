@@ -884,7 +884,7 @@ class Graph extends Component {
     node.x = position.x;
     node.y = position.y;
 
-    const flowNode = this.nodeToFlowNode(node, );
+    const flowNode = this.nodeToFlowNode(node,);
 
     this.nodes.push(node);
     this.node_lookup[node._id] = node;

@@ -167,7 +167,7 @@ function CustomNode({ id, data }) {
                       )
                   }
               </div>
-              <div className={`flow-node-footer ${node.node_running_status === NODE_RUNNING_STATUS.STATIC || editable ? "visible": "hidden"}`}>
+              <div className={`flow-node-footer ${node.node_running_status === NODE_RUNNING_STATUS.STATIC || editable ? "visible" : "hidden"}`}>
                 {makeControlCheckbox({
                   text: 'Auto run',
                   enabled: node.auto_run_enabled,
