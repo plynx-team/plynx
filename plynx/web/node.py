@@ -198,7 +198,7 @@ def post_node(collection: str):
         if not (is_author or is_admin or (is_workflow and can_modify_others_workflows)):
             return make_permission_denied('Only the owners or users with CAN_MODIFY_OTHERS_WORKFLOWS role can save it')
 
-        if node.auto_run:
+        if node.auto_run and is_workflow:
             node_in_run, new_node_in_run = node_utils.construct_new_run(node, user_id)
             node_utils.remove_auto_run_disabled(new_node_in_run)
 
