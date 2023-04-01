@@ -263,7 +263,10 @@ export default class Editor extends Component {
       if (!self.state.node || !self.state.node.auto_sync) {
         return;
       }
-      if (self.last_run_is_in_finished_status === true) {
+      if (self.last_run_is_in_finished_status) {
+        return;
+      }
+      if (!self.state.is_workflow) {
         return;
       }
 
@@ -736,7 +739,7 @@ export default class Editor extends Component {
         render: makeControlCheckbox,
         props: {
           text: 'Auto run',
-          enabled: this.state.editable && this.state.collection === COLLECTIONS.TEMPLATES,
+          enabled: this.state.editable && this.state.collection === COLLECTIONS.TEMPLATES && this.state.is_workflow,
           checked: this.state.node && this.state.node.auto_run,
           visible: this.state.editable && this.state.collection === COLLECTIONS.TEMPLATES,
           func: (event) => this.handleChangeNodeParameter("auto_run", event),
@@ -792,6 +795,7 @@ export default class Editor extends Component {
                       func: () => {
                         onUploadDialog(plugins_info.operations_dict[operation.kind]);
                       },
+                      enabled: this.state.is_workflow && this.state.editable,
                       key: operation.kind
                     },
                   };

@@ -42,6 +42,12 @@ def post_request(uri, data, num_retries=3):
     return None
 
 
+def _update_node(node: plynx.db.node.Node):
+    """Update node in the database"""
+    resp = post_request("update_run", data={"node": node.to_dict()})
+    logging.info(f"Run update res: {resp}")
+
+
 def materialize_executor(node: Union[Dict[str, Any], plynx.db.node.Node]) -> BaseExecutor:
     """
     Create a Node object from a dictionary
@@ -94,8 +100,7 @@ class TickThread:
                 # Save logs when operation is running
                 if NodeRunningStatus.is_finished(self.executor.node.node_running_status):
                     break
-                resp = post_request("update_run", data={"tmp": "tick", "node": self.executor.node.to_dict()})
-                logging.info(f"TickThread:Run update res: {resp}")
+                _update_node(self.executor.node)
 
 
 class DBJobExecutor:
@@ -115,7 +120,6 @@ class DBJobExecutor:
                 status = NodeRunningStatus.FAILED
                 self.executor.init_executor()
                 with TickThread(self.executor):
-                    self.executor.node.node_running_status = NodeRunningStatus.RUNNING
                     status = self.executor.run()
             except Exception:   # pylint: disable=broad-except
                 try:
@@ -136,8 +140,7 @@ class DBJobExecutor:
             logging.warning(f"Execution failed: {e}")
             self.executor.node.node_running_status = NodeRunningStatus.FAILED
         finally:
-            resp = post_request("update_run", data={"tmp": "final", "node": self.executor.node.to_dict()})
-            logging.info(f"Worker:Run update res: {resp}")
+            _update_node(self.executor.node)
 
             self._killed = True
 

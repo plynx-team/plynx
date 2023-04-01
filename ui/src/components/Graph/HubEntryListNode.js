@@ -50,7 +50,7 @@ export class HubDraggableEntry extends Component {
   }
 }
 
-export class HubResourceTypeBasedEntry extends Component {
+export class _HubResourceTypeBasedEntry extends Component {
   static propTypes = {
     nodeContent: PropTypes.object.isRequired,
     nodeLookupSearch: PropTypes.string.isRequired,
@@ -114,6 +114,6 @@ export class HubResourceTypeBasedEntry extends Component {
   }
 }
 
-export function TmpHubEntry(nodeLookupSearch, onClick) {
-  return (props) => <HubResourceTypeBasedEntry nodeLookupSearch={nodeLookupSearch} onClick={onClick} {...props}/>;
+export function HubResourceTypeBasedEntry(nodeLookupSearch, onClick) {
+  return (props) => <_HubResourceTypeBasedEntry nodeLookupSearch={nodeLookupSearch} onClick={onClick} {...props}/>;
 }

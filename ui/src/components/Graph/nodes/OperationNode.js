@@ -125,6 +125,8 @@ function CustomNode({ id, data }) {
     outputs = node.outputs;
   }
 
+  const editable = node._editable === null || node._editable;
+
   return (
       <PluginsConsumer>
       {
@@ -165,7 +167,7 @@ function CustomNode({ id, data }) {
                       )
                   }
               </div>
-              <div className={`flow-node-footer ${node.node_running_status === NODE_RUNNING_STATUS.STATIC ? "hidden" : "visible"}`}>
+              <div className={`flow-node-footer ${node.node_running_status === NODE_RUNNING_STATUS.STATIC || editable ? "visible": "hidden"}`}>
                 {makeControlCheckbox({
                   text: 'Auto run',
                   enabled: node.auto_run_enabled,
@@ -209,6 +211,7 @@ CustomNode.propTypes = {
       auto_run_enabled: PropTypes.bool,
       inputs: PropTypes.array.isRequired,
       outputs: PropTypes.array.isRequired,
+      _editable: PropTypes.bool,
     }).isRequired,
     onOutputClick: PropTypes.func.isRequired,
     onRestartClick: PropTypes.func.isRequired,
