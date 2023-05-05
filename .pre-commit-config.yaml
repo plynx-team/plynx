@@ -19,6 +19,14 @@ repos:
 -   repo: local
     hooks:
     - id: system
+      name: $ make pytest
+      entry: make pytest
+      pass_filenames: false
+      language: system
+
+-   repo: local
+    hooks:
+    - id: system
       name: $ mypy plynx --ignore-missing-imports
       entry: mypy plynx --ignore-missing-imports
       pass_filenames: false

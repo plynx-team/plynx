@@ -36,7 +36,7 @@ def create_seq_operation(num):
         })
     )
 
-    cmd_param = node.get_parameter_by_name('_cmd', throw=True)
+    cmd_param = node.get_parameter_by_name('_cmd')
     cmd_param.value.value = 'seq {{{{ params.N }}}} > {{{{ outputs.{0} }}}}\n'.format(SEQ_OUTPUT)
 
     return node
@@ -72,7 +72,7 @@ def create_grep_operation(input_reference, template):
         })
     )
 
-    cmd_param = node.get_parameter_by_name('_cmd', throw=True)
+    cmd_param = node.get_parameter_by_name('_cmd')
     cmd_param.value.value = 'cat {{{{ inputs.{0} }}}} | grep {{{{ params.template }}}} > {{{{ outputs.{1} }}}}\n'.format(
         GREP_INPUT,
         GREP_OUTPUT
@@ -103,7 +103,7 @@ def create_sum_operation(input_references):
         })
     )
 
-    cmd_param = node.get_parameter_by_name('_cmd', throw=True)
+    cmd_param = node.get_parameter_by_name('_cmd')
     CMD = """
 res = 0
 for filename in inputs['{inputs}']:
@@ -139,7 +139,7 @@ def create_dag_executor(N):
     dag_node.title = 'Test sum DAG'
     dag_node.kind = 'basic-dag-workflow'
     dag_node.node_running_status = 'READY'
-    nodes = dag_node.get_parameter_by_name('_nodes', throw=True).value.value
+    nodes = dag_node.get_sub_nodes()
 
     seq_operation = create_seq_operation(N)
     nodes.append(seq_operation)
@@ -178,7 +178,7 @@ def test_dag():
 
     executor.run()
 
-    output_ids = executor.node.get_parameter_by_name('_nodes').value.value[-1].get_output_by_name(SUM_OUTPUT).values
+    output_ids = executor.node.get_sub_nodes()[-1].get_output_by_name(SUM_OUTPUT).values
     assert len(output_ids) == 1, 'Unexpected number of outputs: `{}`'.format(len(output_ids))
 
     res = int(file_handler.get_file_stream(output_ids[0]).read())
