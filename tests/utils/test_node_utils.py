@@ -1,14 +1,13 @@
 """Test the node utils."""
-from typing import Dict, Tuple
-
-from plynx.constants import NodeRunningStatus
-from plynx.db.node import Node, Input, Parameter, Output
-from plynx.utils import node_utils
-from plynx.utils.common import ObjectId
-from plynx.plugins.executors.python.dag import DAG
-from plynx.plugins.executors.python.local import PythonNode
+from typing import Dict
 
 from tests.plugins.executors.test_python_dag import create_graph_flow
+
+from plynx.constants import NodeRunningStatus
+from plynx.db.node import Node
+from plynx.plugins.executors.python.dag import DAG
+from plynx.utils import node_utils
+from plynx.utils.common import ObjectId
 
 
 def test_traverse():
@@ -106,4 +105,3 @@ def test_traverse_left_join():
 
     assert found_count == len(flow_node_a.get_sub_nodes()) - 1, "Did not find all the nodes"
     assert not_found_count == 1, "Did not find all the nodes"
-
