@@ -244,6 +244,20 @@
   filter: blur(10px);
 }
 
+.flow-node-primitive-input .ParameterItem {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.flow-node-primitive-input .ParameterNameCell {
+  display: none;
+}
+
+.flow-node-primitive-input .ParameterValueCell {
+  grid-template-columns: 1fr;
+  padding: 0 5pt 0 5pt;
+}
+
 @keyframes border {
   0%, 100% {
       --a: 0deg;

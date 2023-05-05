@@ -39,6 +39,13 @@ export const PARAMETER_TYPES = [
   },
 ];
 
+export const PRIMITIVE_TYPES =  Object.freeze({
+  str: 'str',
+  int: 'int',
+  float: 'float',
+  bool: 'bool',
+});
+
 export const SPECIAL_TYPE_NAMES = ['code'];
 
 export const ACTION = Object.freeze({
