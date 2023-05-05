@@ -1,6 +1,6 @@
 """Global Node Registry class"""
 import logging
-from typing import Dict, List
+from typing import List
 
 from plynx.db.node import Node
 
@@ -8,8 +8,8 @@ from plynx.db.node import Node
 class Registry:
     """The class keeps record of built-in Operations"""
     def __init__(self):
-        self.code_function_location_to_node: Dict[str, Node] = {}
-        self.code_function_location_to_hash: Dict[str, str] = {}
+        self.code_function_location_to_node = {}
+        self.code_function_location_to_hash = {}
 
     def register_node(self, node: Node):
         """Register Node globally"""

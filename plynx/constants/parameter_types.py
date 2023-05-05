@@ -13,3 +13,11 @@ class ParameterTypes:
     LIST_INT: str = 'list_int'
     LIST_NODE: str = 'list_node'
     CODE: str = 'code'
+
+
+PRIMITIVE_TYPES = {
+    ParameterTypes.BOOL,
+    ParameterTypes.FLOAT,
+    ParameterTypes.INT,
+    ParameterTypes.STR,
+}

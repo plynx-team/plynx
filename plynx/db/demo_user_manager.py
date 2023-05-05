@@ -47,7 +47,7 @@ class DemoUserManager:
         for template_id in DemoUserManager.demo_config.template_ids:
             node_id = to_object_id(template_id)     # may raise bson.objectid.InvalidId
             node_dict = template_collection_manager.get_db_node(node_id, user._id)
-            node: Node = get_class(node_dict['_type']).from_dict(node_dict).clone(NodeClonePolicy.NODE_TO_NODE)
+            node: Node = get_class(node_dict['_type']).from_dict(node_dict).clone(NodeClonePolicy.NODE_TO_NODE)     # type: ignore
             node.author = user._id
             node.latest_run_id = None
             node_utils.reset_nodes(node)

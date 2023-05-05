@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Optional, Union
 
-from plynx.constants import NodeStatus, SpecialNodeId, ValidationCode, ValidationTargetType
+from plynx.constants import PRIMITIVE_TYPES, NodeStatus, SpecialNodeId, ValidationCode, ValidationTargetType
 from plynx.db.node import Node, NodeRunningStatus, Parameter, ParameterListOfNodes, ParameterTypes
 from plynx.db.validation_error import ValidationError
 
@@ -137,11 +137,11 @@ class BaseExecutor(ABC):
                     validation_code=ValidationCode.MISSING_PARAMETER
                 ))
 
-        # Meaning the node is in the graph. Otherwise souldn't be in validation step
+        # Meaning the node is in the graph. Otherwise souldn't be the in validation step
         if not ignore_inputs:
             for input in self.node.inputs:  # pylint: disable=redefined-builtin
                 min_count = input.min_count if input.is_array else 1
-                if len(input.input_references) < min_count:
+                if len(input.input_references) < min_count and input.file_type not in PRIMITIVE_TYPES:
                     violations.append(
                         ValidationError(
                             target=ValidationTargetType.INPUT,

@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict
 import plynx.plugins.executors.bases
 import plynx.plugins.executors.local
 import plynx.utils.plugin_manager
-from plynx.constants import NodeRunningStatus, ParameterTypes
+from plynx.constants import PRIMITIVE_TYPES, NodeRunningStatus, ParameterTypes
 from plynx.db.node import Input, Node, Output, Parameter, ParameterCode
 
 DEFAULT_CMD = """# Python Operation
@@ -34,7 +34,7 @@ def materialize_fn_or_cls(node: Node) -> Callable:
     """Unpickle the function"""
 
     code_function_location = node.code_function_location
-    code_parameter = node.get_parameter_by_name("_cmd", throw=False)
+    code_parameter = node.get_parameter_by_name_safe("_cmd")
     assert not (code_function_location and code_parameter), "`code_function_location` and `_cmd` cannot be both non-null"
     if code_function_location:
         func = pydoc.locate(code_function_location)
@@ -110,6 +110,8 @@ class redirect_to_plynx_logs:   # pylint: disable=invalid-name
                         f.write(fi.read())
                 output = self.node.get_log_by_name(name=logs_name)
                 output.values = [filename]
+            else:
+                os.remove(filename)
 
 
 def prep_args(node: Node) -> Dict[str, Any]:
@@ -120,7 +122,12 @@ def prep_args(node: Node) -> Dict[str, Any]:
         if input.is_array:
             args[input.name] = list(map(func, input.values))
         else:
-            args[input.name] = func(input.values[0])
+            if len(input.values) == 1:
+                args[input.name] = func(input.values[0])
+            elif len(input.values) == 0 and input.file_type in PRIMITIVE_TYPES:
+                args[input.name] = func(input.primitive_override)
+            else:
+                raise ValueError(f"Input {input.name} is not array but has multiple values")
 
     # TODO smater way to determine what parameters to pass
     visible_parameters = list(filter(lambda param: param.widget is not None, node.parameters))

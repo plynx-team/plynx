@@ -19,6 +19,26 @@ class Raw(resource.BaseResource):
     DISPLAY_RAW: bool = True
 
 
+class RawInt(resource.BaseResource):
+    """Raw Resource that will store an integer in the Node."""
+    DISPLAY_RAW: bool = True
+
+    @staticmethod
+    def preprocess_input(value: Any) -> int:
+        """Resource_id to an object"""
+        return int(value)
+
+
+class RawFloat(resource.BaseResource):
+    """Raw Resource that will store an integer in the Node."""
+    DISPLAY_RAW: bool = True
+
+    @staticmethod
+    def preprocess_input(value: Any) -> float:
+        """Resource_id to an object"""
+        return float(value)
+
+
 class File(resource.BaseResource):
     """Raw Resource that will be stored in the file format in the Node."""
 

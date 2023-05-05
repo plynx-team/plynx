@@ -2,7 +2,7 @@
 from __future__ import absolute_import
 
 import json
-from typing import Optional, Set
+from typing import Optional
 
 import bson.objectid
 from flask import g, request
@@ -14,7 +14,7 @@ import plynx.utils.plugin_manager
 from plynx.constants import Collections, IAMPolicies, NodeClonePolicy, NodePostAction, NodePostStatus, NodeRunningStatus, NodeStatus, NodeVirtualCollection
 from plynx.db.node import Node
 from plynx.utils import node_utils
-from plynx.utils.common import ObjectId, to_object_id
+from plynx.utils.common import to_object_id
 from plynx.utils.thumbnails import apply_thumbnails
 from plynx.web.common import app, handle_errors, logger, make_fail_response, make_permission_denied, make_success_response, requires_auth
 
@@ -204,16 +204,22 @@ def post_node(collection: str):
             node_in_run, new_node_in_run = node_utils.construct_new_run(node, user_id)
             node_utils.remove_auto_run_disabled(new_node_in_run)
 
-            old_run_stats = node_utils.calc_status_to_node_ids(node_in_run)
-            new_run_stats = node_utils.calc_status_to_node_ids(new_node_in_run)
+            need_to_run = False
+            if node_in_run is None:
+                need_to_run = True
+            else:
+                for new_subnode, subnode in node_utils.traverse_left_join(new_node_in_run, node_in_run):
+                    if subnode is None:
+                        need_to_run = True
+                        logger.info("Auto run because subnode not found")
+                        break
+                    if not node_utils.node_inputs_and_params_are_identical(new_subnode, subnode):
+                        need_to_run = True
+                        logger.info("Auto run because inputs or params are not identical")
+                        break
+                logger.info(f"Auto run: {need_to_run}")
 
-            awaiting_nodes: Set[ObjectId] = set()
-            for status in NodeRunningStatus._AWAITING_STATUSES | NodeRunningStatus._FINISHED_STATUSES:
-                awaiting_nodes = awaiting_nodes | old_run_stats[status]
-            no_need_to_run = node_in_run and \
-                len(new_run_stats[NodeRunningStatus.READY] - awaiting_nodes) == 0
-
-            if not no_need_to_run:
+            if need_to_run:
                 # TODO check permissions
                 executor._update_node(new_node_in_run)
                 validation_error = executor.validate()

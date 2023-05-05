@@ -48,7 +48,7 @@ class DAG(plynx.plugins.executors.bases.PLynxAsyncExecutor):
         super().__init__(node)
         assert self.node, "Attribute `node` is not defined"
 
-        self.subnodes: List[Node] = self.node.get_parameter_by_name('_nodes', throw=True).value.value
+        self.subnodes: List[Node] = self.node.get_sub_nodes()
 
         self.node_id_to_node: Dict[ObjectId, Node] = {
             node._id: node for node in self.subnodes
@@ -308,7 +308,7 @@ class DAG(plynx.plugins.executors.bases.PLynxAsyncExecutor):
             return validation_error
 
         violations = []
-        sub_nodes = self.node.get_parameter_by_name('_nodes').value.value
+        sub_nodes = self.node.get_sub_nodes()
 
         if len(sub_nodes) == 0:
             violations.append(
