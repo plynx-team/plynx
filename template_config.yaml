@@ -68,7 +68,7 @@ plugins:
 
     - kind: int
       title: int
-      cls: plynx.plugins.resources.common.Raw
+      cls: plynx.plugins.resources.common.RawInt
       icon: plynx.python-int
     - kind: str
       title: str
@@ -81,7 +81,7 @@ plugins:
       icon: plynx.json
     - kind: float
       title: float
-      cls: plynx.plugins.resources.common.Raw
+      cls: plynx.plugins.resources.common.RawFloat
       icon: plynx.python-float
     - kind: list
       title: list
@@ -228,7 +228,8 @@ plugins:
         - db-hub
     - kind: python-workflow
       title: Python Workflow
-      executor: plynx.plugins.executors.python.dag.DAG
+      # executor: plynx.plugins.executors.python.dag.DAG  # Async worker
+      executor: plynx.plugins.executors.python.dag.ExecutorWithWebWorkerServer
       hubs:
         - static-hub
         - python-db-hub
