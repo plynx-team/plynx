@@ -21,7 +21,7 @@ def run_make_operations_meta(collection_module, out):
     """Make metadata"""
     print(collection_module)
     for include_module in collection_module:
-        collection: List[Union[Callable, plynx.node.utils.Group]] = pydoc.locate(include_module)
+        collection: List[Union[Callable, plynx.node.utils.Group]] = pydoc.locate(include_module)    # type: ignore
         if collection is None:
             raise ValueError(f"Cannot open include_module=`{include_module}`. It must be a valid import value.")
 

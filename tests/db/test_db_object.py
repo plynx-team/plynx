@@ -1,5 +1,4 @@
 """Test DB object"""
-
 from plynx.constants import ParameterTypes
 from plynx.db.node import Input, Node, Output, Parameter
 

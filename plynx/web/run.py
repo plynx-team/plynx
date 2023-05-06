@@ -19,8 +19,7 @@ run_cancellation_manager = plynx.db.run_cancellation_manager.RunCancellationMana
 def get_a_run():
     """Find a certain run and return it"""
     data = json.loads(request.data)
-    run_id_str: str = data["run_id"]
-    run_id = ObjectId(run_id_str)
+    run_id = ObjectId(data["run_id"])
 
     node_dict = node_collection_manager.get_db_node(run_id)
 
@@ -47,7 +46,7 @@ def update_run():
     """Update an entry in /runs collections"""
     data = json.loads(request.data)
 
-    node: Node = Node.from_dict(data['node'])
+    node = Node.from_dict(data['node'])
     app.logger.info(f"updating run {node._id} with node_running_status {node.node_running_status}")     # pylint: disable=no-member
 
     node.save(collection=Collections.RUNS)

@@ -5,7 +5,7 @@ from typing import Any, Callable, List, Optional, Union
 from dataclasses_json import dataclass_json
 from past.builtins import basestring
 
-from plynx.constants import Collections, NodeClonePolicy, NodeOrigin, NodeRunningStatus, NodeStatus, ParameterTypes
+from plynx.constants import PRIMITIVE_TYPES, Collections, NodeClonePolicy, NodeOrigin, NodeRunningStatus, NodeStatus, ParameterTypes
 from plynx.db.db_object import DBObject
 from plynx.plugins.resources.common import FILE_KIND
 from plynx.utils.common import ObjectId
@@ -42,7 +42,7 @@ def _clone_update_in_place(node: "Node", node_clone_policy: int, override_finish
         node.node_running_status = NodeRunningStatus.READY
     node.node_status = NodeStatus.CREATED
 
-    sub_nodes = node.get_parameter_by_name('_nodes', throw=False)
+    sub_nodes = node.get_parameter_by_name_safe('_nodes')
     if sub_nodes:
         object_id_mapping = {}
         for sub_node in sub_nodes.value.value:
@@ -59,7 +59,7 @@ def _clone_update_in_place(node: "Node", node_clone_policy: int, override_finish
             for parameter in sub_node.parameters:
                 if not parameter.reference:
                     continue
-                parameter.value = node.get_parameter_by_name(parameter.reference, throw=True).value
+                parameter.value = node.get_parameter_by_name(parameter.reference).value
 
             if sub_node.node_running_status == NodeRunningStatus.STATIC:
                 # do not copy the rest of the elements because they don't change
@@ -101,7 +101,7 @@ class Output(_BaseResource):
 class InputReference(DBObject):
     """Basic Value of the Input structure."""
 
-    node_id: str = ""
+    node_id: ObjectId = field(default_factory=ObjectId)
     output_id: str = ""
 
 
@@ -109,8 +109,17 @@ class InputReference(DBObject):
 @dataclass
 class Input(_BaseResource):
     """Basic Input structure."""
-
+    primitive_override: Any = None
     input_references: List[InputReference] = field(default_factory=list)
+
+    def __post_init__(self):
+        """Set default primitive_override if it is not set and file_type is primitive"""
+        if self.primitive_override is None and self.file_type in PRIMITIVE_TYPES:
+            self.primitive_override = _get_default_by_type(self.file_type)
+
+    def add_input_reference(self, node_id: ObjectId, output_id: str):
+        """Add input reference to the input"""
+        self.input_references.append(InputReference(node_id=node_id, output_id=output_id))
 
 
 @dataclass_json
@@ -229,25 +238,29 @@ class Node(DBObject):
             return arr[-1]
         return None
 
-    def get_input_by_name(self, name: str, throw: bool = True):
+    def get_input_by_name(self, name: str) -> Input:
         """Find Input object"""
-        return self._get_custom_element(self.inputs, name, throw)
+        return self._get_custom_element(self.inputs, name, throw=True)
 
-    def get_parameter_by_name(self, name: str, throw: bool = True):
+    def get_parameter_by_name(self, name: str) -> "Parameter":
         """Find Parameter object"""
-        return self._get_custom_element(self.parameters, name, throw)
+        return self._get_custom_element(self.parameters, name, throw=True)
 
-    def get_output_by_name(self, name: str, throw: bool = True):
+    def get_parameter_by_name_safe(self, name: str) -> Optional["Parameter"]:
+        """Find Parameter object"""
+        return self._get_custom_element(self.parameters, name, throw=False)
+
+    def get_output_by_name(self, name: str) -> Output:
         """Find Output object"""
-        return self._get_custom_element(self.outputs, name, throw)
+        return self._get_custom_element(self.outputs, name, throw=True)
 
-    def get_log_by_name(self, name: str, throw: bool = False):
+    def get_log_by_name(self, name: str) -> Output:
         """Find Log object"""
-        return self._get_custom_element(self.logs, name, throw, default=Node._default_log)
+        return self._get_custom_element(self.logs, name, throw=False, default=Node._default_log)
 
-    def get_sub_nodes(self):
+    def get_sub_nodes(self) -> List["Node"]:
         """Get a list of subnodes"""
-        sub_nodes_parameter = self.get_parameter_by_name('_nodes', throw=False)
+        sub_nodes_parameter = self.get_parameter_by_name_safe('_nodes')
         if not sub_nodes_parameter:
             raise Exception("Subnodes not found")
         return sub_nodes_parameter.value.value

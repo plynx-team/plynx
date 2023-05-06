@@ -1,5 +1,5 @@
 # Use an official Python runtime as a parent image
-FROM python:3.7-slim
+FROM python:3.8-slim
 
 # Set the working directory to /app
 WORKDIR /app
@@ -19,7 +19,7 @@ ADD ./wsgi.py /app/wsgi.py
 ADD ./LICENSE /app
 
 # Copy test data
-ADD ./docker/backend/tests /app/tests
+ADD ./docker/backend/tests /app/integrated_tests
 
 # master / worker port
 EXPOSE 17011
@@ -34,12 +34,14 @@ RUN chmod 1777 /tmp
 
 # Add dev watch script
 COPY ./scripts/watch.sh /app/watch.sh
+COPY ./scripts/run_tests.sh /app/run_tests.sh
 
 # Build PLynx package
 ADD ./plynx /tmp/plynx
 ADD ./setup.py /tmp/setup.py
 ADD ./requirements.txt /tmp/requirements.txt
 ADD ./requirements-dev.txt /tmp/requirements-dev.txt
+ADD ./tests /app/tests
 RUN cd /tmp && python setup.py install
 
 # install extra docker requirements

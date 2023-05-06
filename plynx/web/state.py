@@ -31,7 +31,6 @@ def push_worker_state():
     """Update the worker state"""
     data = json.loads(request.data)
 
-    worker_state: WorkerState = WorkerState.from_dict(data['worker_state'])
-
+    worker_state = WorkerState.from_dict(data['worker_state'])
     worker_state.save()
     return make_success_response()

@@ -125,7 +125,8 @@ class DBJobExecutor:
                 try:
                     f = six.BytesIO()
                     f.write(traceback.format_exc().encode())
-                    self.executor.node.get_log_by_name('worker').resource_id = upload_file_stream(f)
+                    worker_log = self.executor.node.get_log_by_name(name="worker")
+                    worker_log.values = [upload_file_stream(f)]
                     logging.error(traceback.format_exc())
                 except Exception:   # pylint: disable=broad-except
                     # This case of `except` has happened before due to I/O failure

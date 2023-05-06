@@ -240,8 +240,8 @@ class NodeCollectionManager:
             (int):  Number of upgraded Nodes
         """
         assert self.collection == Collections.TEMPLATES
-        sub_nodes = main_node.get_parameter_by_name('_nodes').value.value
-        node_ids = [node.original_node_id for node in sub_nodes]
+        sub_nodes = main_node.get_sub_nodes()
+        node_ids = [node.original_node_id for node in sub_nodes if node.original_node_id]
         db_nodes = self.get_db_objects_by_ids(node_ids)
         new_node_db_mapping = {}
 
@@ -270,9 +270,12 @@ class NodeCollectionManager:
         # Update nodes from the hub
         # -------------------------
         node_locations = list(set(map(lambda node: node.code_function_location, new_nodes)))
+        node_locations_non_empty: List[str] = [
+            node_location for node_location in node_locations if node_location is not None
+        ]
         hub_nodes_mapping = {
             node.code_function_location: node
-            for node in registry.find_nodes(node_locations)
+            for node in registry.find_nodes(node_locations_non_empty)
         }
         new_nodes = [
             NodeCollectionManager._transplant_node(

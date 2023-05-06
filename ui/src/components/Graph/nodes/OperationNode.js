@@ -4,10 +4,11 @@ import { Handle } from 'reactflow';
 import {PluginsConsumer} from '../../../contexts';
 import Tooltip from '../../Common/Tooltip';
 import Icon from '../../Common/Icon';
+import ParameterItem from '../../Common/ParameterItem';
 import './OperationNode.css';
 import { makeControlCheckbox } from '../../Common/controlButton';
 import {
-  NODE_RUNNING_STATUS,
+  NODE_RUNNING_STATUS, PRIMITIVE_TYPES,
 } from '../../../constants';
 
 // TODO: remove the hack with the registry and use built in methods
@@ -41,7 +42,38 @@ const isValidConnection = (connection) => {
   return output.file_type === input.file_type;
 };
 
-function InputItem({input, plugins_dict}) {
+
+function PrimitiveValue({input, onPrimitiveOverrideChange, editable}) {
+  const visible = input.input_references.length === 0;
+  if (!visible || !PRIMITIVE_TYPES.hasOwnProperty(input.file_type) ) {
+    return null;
+  }
+  return (
+        <div className="flow-node-primitive-input">
+          <ParameterItem
+              name={input.name}
+              widget={input.name}
+              value={input.primitive_override}
+              parameterType={input.file_type}
+              readOnly={!editable}
+              onParameterChanged={(name, value) => {onPrimitiveOverrideChange(name, value)}}
+          />
+        </div>
+  );
+}
+
+PrimitiveValue.propTypes = {
+  input: PropTypes.shape({
+    name: PropTypes.string.isRequired,
+    file_type: PropTypes.string.isRequired,
+    input_references: PropTypes.array.isRequired,
+    primitive_override: PropTypes.any,
+  }).isRequired,
+  editable: PropTypes.bool.isRequired,
+  onPrimitiveOverrideChange: PropTypes.func.isRequired,
+};
+
+function InputItem({input, plugins_dict, onPrimitiveOverrideChange, editable}) {
   const type_descriptor = plugins_dict.resources_dict[input.file_type];
   return (
         <div className="flow-node-item flow-node-item-input" key={input.name}>
@@ -49,6 +81,11 @@ function InputItem({input, plugins_dict}) {
               type_descriptor={type_descriptor}
             />
             {input.name}
+            <PrimitiveValue
+              input={input}
+              onPrimitiveOverrideChange={onPrimitiveOverrideChange}
+              editable={editable}
+            />
             <Handle
                 type="target"
                 position="left"
@@ -64,10 +101,13 @@ InputItem.propTypes = {
   input: PropTypes.shape({
     name: PropTypes.string.isRequired,
     file_type: PropTypes.string.isRequired,
+    input_references: PropTypes.array,
   }).isRequired,
   plugins_dict: PropTypes.shape({
     resources_dict: PropTypes.object.isRequired,
   }).isRequired,
+  editable: PropTypes.bool.isRequired,
+  onPrimitiveOverrideChange: PropTypes.func.isRequired,
 };
 
 function OutputItem({output, plugins_dict, onOutputClick}) {
@@ -125,7 +165,7 @@ function CustomNode({ id, data }) {
     outputs = node.outputs;
   }
 
-  const editable = node._editable === null || node._editable;
+  const editable = node._editable === undefined || node._editable;
 
   return (
       <PluginsConsumer>
@@ -154,6 +194,8 @@ function CustomNode({ id, data }) {
                             key={input.name}
                             plugins_dict={plugins_dict}
                             input={input}
+                            editable={editable}
+                            onPrimitiveOverrideChange={data.onPrimitiveOverrideChange}
                           />
                       )
                   }
@@ -215,6 +257,7 @@ CustomNode.propTypes = {
     }).isRequired,
     onOutputClick: PropTypes.func.isRequired,
     onRestartClick: PropTypes.func.isRequired,
+    onPrimitiveOverrideChange: PropTypes.func.isRequired,
   }).isRequired,
 };
 

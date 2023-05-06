@@ -52,6 +52,38 @@ def _generate_parameters_key(node: Node) -> str:
     ).hexdigest()
 
 
+def node_inputs_and_params_are_identical(subnode: Node, other_subnode: Node) -> bool:
+    """
+    Check if two nodes are identical in terms of inputs and parameters
+    """
+    # TODO: check is final state
+    this_cache = _generate_parameters_key(subnode)
+    other_node_cache = _generate_parameters_key(other_subnode)
+
+    if this_cache != other_node_cache:
+        return False
+
+    tmp_inputs = []
+    for input in subnode.inputs:   # pylint: disable=redefined-builtin
+        for input_reference in input.input_references:
+            tmp_inputs.append(f"{input_reference.node_id}-{input_reference.output_id}")
+        if len(input.input_references) == 0:
+            tmp_inputs.append(str(input.primitive_override))
+    sub_node_inputs_hash = ",".join(tmp_inputs)
+
+    tmp_inputs = []
+    for input in other_subnode.inputs:  # pylint: disable=redefined-builtin
+        for input_reference in input.input_references:
+            tmp_inputs.append(f"{input_reference.node_id}-{input_reference.output_id}")
+        if len(input.input_references) == 0:
+            tmp_inputs.append(str(input.primitive_override))
+    other_subnode_inputs_hash = ",".join(tmp_inputs)
+
+    if sub_node_inputs_hash != other_subnode_inputs_hash:
+        return False
+    return True
+
+
 # pylint: disable=too-many-locals
 def augment_node_with_cache(node: Node, other_node: Node) -> None:
     """
@@ -61,63 +93,36 @@ def augment_node_with_cache(node: Node, other_node: Node) -> None:
     # pylint: disable=too-many-branches
     # TODO optimize function and remove too-many-locals
     node._cached_node = None
-    sub_nodes_parameter = node.get_parameter_by_name('_nodes', throw=False)
-    if not sub_nodes_parameter:
+    subnodes_parameter = node.get_parameter_by_name_safe('_nodes')
+    if not subnodes_parameter:
         # TODO check if cacheable
         # TODO probably never called.
         # TODO Update when run augmentation recursevely
         raise NotImplementedError("Subnodes are not found")
 
-    sub_nodes = sub_nodes_parameter.value.value
-    other_sub_nodes = other_node.get_parameter_by_name('_nodes').value.value
-    other_node_id_to_original_id = {}
-    for other_sub_node in other_sub_nodes:
-        other_node_id_to_original_id[other_sub_node._id] = other_sub_node.template_node_id
-
     id_to_node = {}
-    for sub_node in sub_nodes:
-        sub_node._cached_node = None
-        obj_id = to_object_id(sub_node._id)
-        id_to_node[obj_id] = sub_node
+    for subnode in subnodes_parameter.value.value:
+        subnode._cached_node = None
+        obj_id = to_object_id(subnode._id)
+        id_to_node[obj_id] = subnode
 
-    for other_subnode in traverse_in_order(other_node):
-        if other_subnode.template_node_id not in id_to_node:
-            continue
-        sub_node = id_to_node[other_subnode.template_node_id]
-
-        # TODO: check is final state
-        this_cache = _generate_parameters_key(sub_node)
-        other_node_cache = _generate_parameters_key(other_subnode)
-
-        if this_cache != other_node_cache:
+    for subnode, other_subnode in traverse_left_join(node, other_node):
+        if other_subnode is None:
             continue
 
-        tmp_inputs = []
-        for input in sub_node.inputs:   # pylint: disable=redefined-builtin
-            for input_reference in input.input_references:
-                tmp_inputs.append(f"{input_reference.node_id}-{input_reference.output_id}")
-        sub_node_inputs_hash = ",".join(tmp_inputs)
-
-        tmp_inputs = []
-        for input in other_subnode.inputs:  # pylint: disable=redefined-builtin
-            for input_reference in input.input_references:
-                orig_idx = other_node_id_to_original_id.get(to_object_id(input_reference.node_id), 'none')
-                tmp_inputs.append(f"{orig_idx}-{input_reference.output_id}")
-        other_subnode_inputs_hash = ",".join(tmp_inputs)
-
-        if sub_node_inputs_hash != other_subnode_inputs_hash:
+        if not node_inputs_and_params_are_identical(subnode, other_subnode):
             continue
 
-        tmp_refs_is_cached = False
-        for input in sub_node.inputs:
+        tmp_refs_is_cached = True
+        for input in subnode.inputs:    # pylint: disable=redefined-builtin
             for input_reference in input.input_references:
                 ref_node_id = input_reference.node_id
                 if id_to_node[to_object_id(ref_node_id)]._cached_node is None:
-                    tmp_refs_is_cached = True
-        if tmp_refs_is_cached:
+                    tmp_refs_is_cached = False
+        if not tmp_refs_is_cached:
             continue
 
-        sub_node._cached_node = CachedNode(
+        subnode._cached_node = CachedNode(
             node_running_status=other_subnode.node_running_status,
             outputs=other_subnode.outputs,
             logs=other_subnode.logs,
@@ -129,7 +134,7 @@ def traverse_reversed(node: Node):
     Traverse the subnodes in a reversed from the topoligical order.
     """
     # pylint: disable=too-many-branches
-    sub_nodes_parameter = node.get_parameter_by_name('_nodes', throw=False)
+    sub_nodes_parameter = node.get_parameter_by_name_safe('_nodes')
     if not sub_nodes_parameter:
         yield node
         return
@@ -190,9 +195,7 @@ def arrange_auto_layout(node: Node, readonly: bool = False):
     ITEM_HEIGHT = 30
     OUTPUT_ITEM_HEIGHT = 100
     SPACE_HEIGHT = 50
-    LEFT_PADDING = 30
-    TOP_PADDING = 80
-    LEVEL_WIDTH = 252
+    LEVEL_WIDTH = 300
     SPECIAL_PARAMETER_HEIGHT = 20
     SPECIAL_PARAMETER_TYPES = [ParameterTypes.CODE]
     min_node_height = HEADER_HEIGHT + TITLE_HEIGHT + FOOTER_HEIGHT + BORDERS_HEIGHT
@@ -210,7 +213,7 @@ def arrange_auto_layout(node: Node, readonly: bool = False):
     node_ids = {node._id for node in sub_nodes}
     non_zero_node_ids = set()
     for sub_node in sub_nodes:
-        node_id_to_node[node._id] = sub_node
+        node_id_to_node[sub_node._id] = sub_node
         for input in sub_node.inputs:   # pylint: disable=redefined-builtin
             for input_reference in input.input_references:
                 parent_node_id = ObjectId(input_reference.node_id)
@@ -230,7 +233,7 @@ def arrange_auto_layout(node: Node, readonly: bool = False):
         sub_node = node_id_to_node[node_id]
         node_level = max([node_id_to_level[node_id]] + [node_id_to_level[child_id] + 1 for child_id in children_ids[node_id]])
         node_id_to_level[node_id] = node_level
-        for input in node.inputs:   # pylint: disable=redefined-builtin
+        for input in sub_node.inputs:   # pylint: disable=redefined-builtin
             for input_reference in input.input_references:
                 parent_node_id = ObjectId(input_reference.node_id)
                 parent_level = node_id_to_level[parent_node_id]
@@ -303,7 +306,7 @@ def arrange_auto_layout(node: Node, readonly: bool = False):
         return level_to_node_ids, node_id_to_node
 
     cum_heights = [0]
-    for row_height in row_heights:
+    for _, row_height in row_heights.items():
         cum_heights.append(cum_heights[-1] + row_height + SPACE_HEIGHT)
 
     max_height = max(cum_heights)
@@ -314,13 +317,13 @@ def arrange_auto_layout(node: Node, readonly: bool = False):
         level_padding = (max_height - level_height) // 2
         for index, node_id in enumerate(level_node_ids):
             node = node_id_to_node[node_id]
-            node.x = LEFT_PADDING + (max_level - level) * LEVEL_WIDTH
-            node.y = TOP_PADDING + level_padding + cum_heights[index]
+            node.x = (max_level - level) * LEVEL_WIDTH
+            node.y = level_padding + cum_heights[index]
 
 
 def apply_cache(node: Node):
     """Apply cache values to outputs and logs"""
-    sub_nodes_parameter = node.get_parameter_by_name('_nodes', throw=False)
+    sub_nodes_parameter = node.get_parameter_by_name_safe('_nodes')
     if not sub_nodes_parameter:
         # TODO check if cacheable
         raise NotImplementedError("Subnodes not found. Do we want to be here?")
@@ -335,25 +338,6 @@ def apply_cache(node: Node):
         sub_node.logs = sub_node._cached_node.logs
 
         sub_node._cached_node = None
-
-
-def is_all_cached_and_successful(node: Node):
-    """
-    Check if the Node in a run needs recomputing at all.
-    """
-    sub_nodes_parameter = node.get_parameter_by_name('_nodes', throw=False)
-    if not sub_nodes_parameter:
-        # TODO check if cacheable
-        return True
-
-    sub_nodes = sub_nodes_parameter.value.value
-
-    for sub_node in sub_nodes:
-        if not sub_node._cached_node:
-            return False
-        if NodeRunningStatus.is_failed(sub_node._cached_node.node_running_status):
-            return False
-    return True
 
 
 def construct_new_run(node: Node, user_id) -> Tuple[Optional[Node], Node]:
@@ -375,7 +359,6 @@ def construct_new_run(node: Node, user_id) -> Tuple[Optional[Node], Node]:
             logger.warning(f"Failed to load a run with id `{node.latest_run_id}`")
 
     new_node_in_run = node.clone(NodeClonePolicy.NODE_TO_RUN, override_finished_state=False)
-
     return node_in_run, new_node_in_run
 
 
@@ -395,7 +378,7 @@ def remove_auto_run_disabled(node: Node):
     if len(node_ids_to_remove) == 0:
         return
 
-    sub_nodes_parameter = node.get_parameter_by_name('_nodes', throw=False)
+    sub_nodes_parameter = node.get_parameter_by_name_safe('_nodes')
     if not sub_nodes_parameter:
         logger.warning("remove_auto_run_disabled(..): are we supposed to be here?")
         return
@@ -427,3 +410,16 @@ def reset_nodes(node: Node):
         for resource in sub_node.outputs + sub_node.logs:
             resource.values = []
         sub_node._cached_node = None
+
+
+def traverse_left_join(node: Node, other_node: Node):
+    """
+    Traverse two nodes in order and yield pairs of subnodes with the same `_id`.
+    """
+    other_subnode_map = {
+        other_subnode._id: other_subnode
+        for other_subnode in other_node.get_sub_nodes()
+    }
+
+    for subnode in traverse_in_order(node):
+        yield subnode, other_subnode_map.get(subnode._id, None)

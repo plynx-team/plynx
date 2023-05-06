@@ -194,6 +194,7 @@ export default class Editor extends Component {
     const syncNode = (response) => {
       const node = response.data.node;
 
+      console.log('New run_id', node.latest_run_id);
       self.node.latest_run_id = node.latest_run_id;
       self.last_run_is_in_finished_status = response.data.last_run_is_in_finished_status;
 
@@ -270,9 +271,9 @@ export default class Editor extends Component {
         return;
       }
 
-      console.log("Run sync");
+      console.log("Run sync", "latest_run_id", self.node.latest_run_id);
 
-      PLynxApi.endpoints[self.props.collection].getOne({ id: self.node._id})
+      PLynxApi.endpoints[self.props.collection].getOne({id: self.node._id})
         .then(syncNode)
         .catch(handleError);
     }, 1000);
@@ -365,6 +366,9 @@ export default class Editor extends Component {
             message = "No Nodes upgraded";
           }
           self.showAlert(message, 'success');
+        } else if (action === ACTION.REARRANGE_NODES) {
+          self.updateNode(data.node, true);
+          console.log("rearranged", data.node);
         } else if (action === ACTION.GENERATE_CODE) {
           self.setState({
             generatedCode: data.code
@@ -545,6 +549,14 @@ export default class Editor extends Component {
     this.postNode({
       node: this.node,
       action: ACTION.UPGRADE_NODES,
+      reloadOption: RELOAD_OPTIONS.NONE,
+    });
+  }
+
+  handleRearrangeNodes() {
+    this.postNode({
+      node: this.node,
+      action: ACTION.REARRANGE_NODES,
       reloadOption: RELOAD_OPTIONS.NONE,
     });
   }
@@ -758,6 +770,14 @@ export default class Editor extends Component {
           text: 'Upgrade Nodes',
           enabled: this.state.is_graph && this.state.editable,
           func: () => this.handleUpgradeNodes(),
+        },
+      }, {
+        render: makeControlButton,
+        props: {
+          img: 'rearrange.svg',
+          text: 'Auto layout',
+          enabled: this.state.is_graph && this.state.editable,
+          func: () => this.handleRearrangeNodes(),
         },
       }, {
         render: makeControlButton,

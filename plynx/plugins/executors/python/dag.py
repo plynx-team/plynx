@@ -184,6 +184,9 @@ class DAG(plynx.plugins.executors.dag.DAG):
         if preview:
             raise Exception("`preview` is not supported for the DAG")
 
+        if self.worker_pool is None:
+            self.init_executor()
+
         for sub_node in node_utils.traverse_in_order(self.node):
             if NodeRunningStatus.is_finished(sub_node.node_running_status):
                 continue

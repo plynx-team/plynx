@@ -3,16 +3,24 @@ repos:
 -   repo: local
     hooks:
     - id: system
-      name: $ flake8
-      entry: flake8 plynx
+      name: $ flake8 plynx tests
+      entry: flake8 plynx tests
       pass_filenames: false
       language: system
 
 -   repo: local
     hooks:
     - id: system
-      name: $ isort plynx
-      entry: isort plynx
+      name: $ isort plynx tests
+      entry: isort plynx tests
+      pass_filenames: false
+      language: system
+
+-   repo: local
+    hooks:
+    - id: system
+      name: $ make pytest
+      entry: make pytest
       pass_filenames: false
       language: system
 

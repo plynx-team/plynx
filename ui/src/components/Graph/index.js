@@ -118,6 +118,7 @@ const ChangeType = {
   DROP_NODE: "DROP_NODE",
   SELECT_NODE: "SELECT_NODE",
   DESELECT_NODE: "DESELECT_NODE",
+  CHANGE_PRIMITIVE_OVERRIDE: "CHANGE_PRIMITIVE_OVERRIDE",
 };
 
 class Graph extends Component {
@@ -604,6 +605,11 @@ class Graph extends Component {
     this.props.onNodeChange(this.graph_node);
   }
 
+  onPrimitiveOverrideChange(node, inputName, value)
+  {
+    this.applyChanges([{changeType: ChangeType.CHANGE_PRIMITIVE_OVERRIDE, id: node._id, inputName: inputName, value: value, pushToReactflow: false}]);
+  }
+
   nodeToFlowNode(node, editable = true) {
     return {
       id: node._id,
@@ -613,6 +619,7 @@ class Graph extends Component {
         node: node,
         onOutputClick: (outputName, displayRaw) => this.onOutputClick(node._id, outputName, displayRaw),
         onRestartClick: () => this.onRestartClick(node),
+        onPrimitiveOverrideChange: (inputName, value) => this.onPrimitiveOverrideChange(node, inputName, value),
       },
       selected: this.selectedNodeIds.has(node._id),
       deletable: editable,
@@ -792,6 +799,9 @@ class Graph extends Component {
         case ChangeType.DESELECT_NODE:
           this.applyNodeDeselect(change.id);
           break;
+        case ChangeType.CHANGE_PRIMITIVE_OVERRIDE:
+          this.applyChangePrimitiveOverride(change.id, change.inputName, change.value);
+          break;
         default:
           console.error(`Unknown ChangeType: ${change.changeType}`);
       }
@@ -922,6 +932,17 @@ class Graph extends Component {
       this.propertiesBar.setNodeDataArr([...this.selectedNodeIds].map((nid) => this.node_lookup[nid]));
     } else {
       this.propertiesBar.setNodeData(this.graph_node);
+    }
+  }
+
+  applyChangePrimitiveOverride(id, inputName, value) {
+    const node = this.node_lookup[id];
+    const inputs = node.inputs;
+    for (let i = 0; i < inputs.length; i++) {
+      if (inputs[i].name === inputName) {
+        inputs[i].primitive_override = value;
+        break;
+      }
     }
   }
 

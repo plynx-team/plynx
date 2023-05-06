@@ -61,7 +61,7 @@ def execute_run():
     else:
         return make_fail_response("Could not find the run"), 404
 
-    node: Node = Node.from_dict(node_dict)
+    node = Node.from_dict(node_dict)
 
     executor = materialize_executor(node)
     db_executor = DBJobExecutor(executor)

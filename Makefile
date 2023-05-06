@@ -11,6 +11,7 @@ build_frontend:
 build: build_backend build_frontend;
 
 run_tests:
+	mkdir -p $(CURDIR)/data/resources
 	@$(MAKE) -f $(THIS_FILE) build_backend
 	docker-compose -f $(DOCKER_COMPOSE_DEV_FILE) up --abort-on-container-exit --scale workers=5 --scale frontend=0 --scale test=1
 
@@ -33,8 +34,11 @@ dev:
 	mkdir -p ./data/resources
 	PLYNX_IMAGES="backend ui_dev" ./scripts/build_images.sh
 	python -m webbrowser "http://localhost:3001/"
-	docker-compose -f $(DOCKER_COMPOSE_DEV_FILE) up --abort-on-container-exit --scale api=1 --scale test=0 --scale frontend=0
+	docker-compose -f $(DOCKER_COMPOSE_DEV_FILE) up --abort-on-container-exit --scale api=1 --scale test=0 --scale frontend=0 --scale workers=0
 
 build_package:
 	python setup.py sdist
 	python setup.py bdist_wheel
+
+pytest:
+	python -m pytest
