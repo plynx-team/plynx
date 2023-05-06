@@ -137,7 +137,7 @@ class BaseExecutor(ABC):
                     validation_code=ValidationCode.MISSING_PARAMETER
                 ))
 
-        # Meaning the node is in the graph. Otherwise souldn't be the in validation step
+        # Meaning the node is in the graph. Otherwise souldn't be in the validation step
         if not ignore_inputs:
             for input in self.node.inputs:  # pylint: disable=redefined-builtin
                 min_count = input.min_count if input.is_array else 1

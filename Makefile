@@ -1,5 +1,4 @@
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
-ABSOLUTE_PATH := $(notdir $(THIS_FILE))
 DOCKER_COMPOSE_FILE = ./docker-compose.yml
 DOCKER_COMPOSE_DEV_FILE = ./docker-compose-dev.yml
 
