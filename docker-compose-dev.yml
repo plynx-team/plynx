@@ -113,7 +113,7 @@ services:
             - ./data:/data
             - ./plynx:/app/plynx
             - ./config.yaml:/app/config.yaml
-        command: /app/tests/run_tests.sh
+        command: /app/run_tests.sh
 
     frontend:
         image: plynxteam/ui_dev:latest

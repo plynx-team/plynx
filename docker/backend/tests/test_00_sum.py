@@ -1,11 +1,10 @@
 #!/usr/bin/env python
-from plynx.constants import NodeRunningStatus
 import plynx.db.node
-import plynx.utils.file_handler as file_handler
-import plynx.plugins.executors.local as local
 import plynx.plugins.executors.dag as dag
+import plynx.plugins.executors.local as local
 import plynx.plugins.resources.common as common
-
+import plynx.utils.file_handler as file_handler
+from plynx.constants import NodeRunningStatus
 
 SEQ_OUTPUT = 'seq_o'
 GREP_INPUT = 'grep_i'
