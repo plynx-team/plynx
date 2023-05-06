@@ -1,4 +1,5 @@
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
+ABSOLUTE_PATH := $(notdir $(THIS_FILE))
 DOCKER_COMPOSE_FILE = ./docker-compose.yml
 DOCKER_COMPOSE_DEV_FILE = ./docker-compose-dev.yml
 
@@ -11,6 +12,7 @@ build_frontend:
 build: build_backend build_frontend;
 
 run_tests:
+	mkdir -p $(CURDIR)/data/resources
 	@$(MAKE) -f $(THIS_FILE) build_backend
 	docker-compose -f $(DOCKER_COMPOSE_DEV_FILE) up --abort-on-container-exit --scale workers=5 --scale frontend=0 --scale test=1
 
