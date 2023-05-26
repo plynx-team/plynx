@@ -15,6 +15,7 @@ def print_any(value):
 @plynx.node.output(name='dict', var_type=dict)
 @plynx.node.output(name='float', var_type=float)
 @plynx.node.output(name='bool', var_type=bool)
+@plynx.node.output(name='color', var_type="color")
 @plynx.node.operation(
     title="All types",
     description="Echo all types",
@@ -27,6 +28,7 @@ def all_types():
         "dict": {"foo": "woo"},
         "float": math.pi,
         "bool": True,
+        "color": "#FF0000",
     }
 
 
@@ -75,6 +77,15 @@ def print_bool(value):
     print_any(value)
 
 
+@plynx.node.input(name='value', var_type="color")
+@plynx.node.operation(
+    title="Print Color value",
+)
+def print_color(value):
+    """Print input value."""
+    print_any(value)
+
+
 @plynx.node.input(name='value', var_type="py-json-file")
 @plynx.node.output(name='value', var_type=dict)
 @plynx.node.operation(
@@ -108,6 +119,7 @@ GROUP = plynx.node.utils.Group(
         print_dict,
         print_float,
         print_bool,
+        print_color,
         file_to_dict,
         dict_to_file,
     ]

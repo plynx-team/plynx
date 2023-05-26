@@ -5,7 +5,7 @@ import {CODE_LANGUAGES, CODE_THEMES} from '../../constants';
 import 'brace/ext/language_tools';
 import 'brace/ext/searchbox';
 
-import './CodeItem.css';
+import './ValueCodeItem.css';
 
 // Init react-ace
 
@@ -20,7 +20,7 @@ CODE_THEMES.forEach(theme => {
 
 // Finish react-ace
 
-export default class EnumItem extends Component {
+export default class CodeItem extends Component {
   static propTypes = {
     name: PropTypes.string.isRequired,
     readOnly: PropTypes.bool.isRequired,

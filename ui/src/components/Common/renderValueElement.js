@@ -1,7 +1,9 @@
 /* eslint max-classes-per-file: 0 */
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import CodeItem from './CodeItem';
+import ValueCodeItem from './ValueCodeItem';
+import ValueColorItem from './ValueColorItem';
+import { SketchPicker } from 'react-color';
 import './ValueList.css';
 import './NumericInput.css';
 
@@ -91,7 +93,6 @@ export default function renderValueElement(args) {
               onWheel={event => event.currentTarget.blur()}
               autoComplete="off"
               />;
-
     case 'bool':
       return <div className={className}>
               <input
@@ -162,7 +163,7 @@ export default function renderValueElement(args) {
               parameterType="int"
               />;
     case 'code':
-      return <CodeItem
+      return <ValueCodeItem
               className={className}
               name='value'
               value={value}
@@ -174,6 +175,16 @@ export default function renderValueElement(args) {
               height={height || "200px"}
               showEnumOptions={showEnumOptions || false}
               />;
+    case 'color':
+      return <ValueColorItem
+              className={className}
+              name='value'
+              value={value}
+              onChange={handleBlur}
+              readOnly={readOnly}
+              key={parameterType}
+              />
+      //<SketchPicker className={className}/>;
     default:
       return <div>NULL</div>;
   }
