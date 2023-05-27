@@ -13,6 +13,7 @@ class ParameterTypes:
     LIST_INT: str = 'list_int'
     LIST_NODE: str = 'list_node'
     CODE: str = 'code'
+    COLOR: str = 'color'
 
 
 PRIMITIVE_TYPES = {
@@ -20,4 +21,5 @@ PRIMITIVE_TYPES = {
     ParameterTypes.FLOAT,
     ParameterTypes.INT,
     ParameterTypes.STR,
+    ParameterTypes.COLOR,
 }

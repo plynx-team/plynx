@@ -311,6 +311,8 @@ def _get_default_by_type(parameter_type: str):
         return ParameterListOfNodes()
     elif parameter_type == ParameterTypes.CODE:
         return ParameterCode()
+    elif parameter_type == ParameterTypes.COLOR:
+        return '#FF0000'
     else:
         return None
 

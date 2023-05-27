@@ -126,7 +126,7 @@
     margin-right: 8px;
 }
 
-.flow-node-item-output > .flow-node-item-thumbnail {
+.flow-node-item-thumbnail {
     cursor: pointer;
     width: calc(100% - 10px - 2);
     font-size:12px;
@@ -144,7 +144,7 @@
     transition: all .1s ease-in;
 }
 
-.flow-node-item-output > .flow-node-item-thumbnail > .preview-button {
+.flow-node-item-thumbnail > .preview-button {
     width: 100%;
 }
 
@@ -255,7 +255,10 @@
 
 .flow-node-primitive-input .ParameterValueCell {
   grid-template-columns: 1fr;
-  padding: 0 5pt 0 5pt;
+}
+
+.ParameterValueCell .parameter-value {
+  margin: 0 5pt 0 5pt;
 }
 
 @keyframes border {

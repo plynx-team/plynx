@@ -44,6 +44,7 @@ export const PRIMITIVE_TYPES =  Object.freeze({
   int: 'int',
   float: 'float',
   bool: 'bool',
+  color: 'color',
 });
 
 export const SPECIAL_TYPE_NAMES = ['code'];
