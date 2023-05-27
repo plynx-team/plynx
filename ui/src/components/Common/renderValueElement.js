@@ -3,7 +3,6 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import ValueCodeItem from './ValueCodeItem';
 import ValueColorItem from './ValueColorItem';
-import { SketchPicker } from 'react-color';
 import './ValueList.css';
 import './NumericInput.css';
 
@@ -183,8 +182,7 @@ export default function renderValueElement(args) {
               onChange={handleBlur}
               readOnly={readOnly}
               key={parameterType}
-              />
-      //<SketchPicker className={className}/>;
+              />;
     default:
       return <div>NULL</div>;
   }

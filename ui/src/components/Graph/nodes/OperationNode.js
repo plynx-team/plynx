@@ -42,10 +42,9 @@ const isValidConnection = (connection) => {
   return output.file_type === input.file_type;
 };
 
-
 function PrimitiveValue({input, onPrimitiveOverrideChange, editable}) {
   const visible = input.input_references.length === 0;
-  if (!visible || !PRIMITIVE_TYPES.hasOwnProperty(input.file_type) ) {
+  if (!visible || !PRIMITIVE_TYPES.hasOwnProperty(input.file_type)) {
     return null;
   }
   return (
@@ -56,7 +55,9 @@ function PrimitiveValue({input, onPrimitiveOverrideChange, editable}) {
               value={input.primitive_override}
               parameterType={input.file_type}
               readOnly={!editable}
-              onParameterChanged={(name, value) => {onPrimitiveOverrideChange(name, value)}}
+              onParameterChanged={(name, value) => {
+                onPrimitiveOverrideChange(name, value);
+              }}
           />
         </div>
   );

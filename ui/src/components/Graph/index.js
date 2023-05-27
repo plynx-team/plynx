@@ -605,8 +605,7 @@ class Graph extends Component {
     this.props.onNodeChange(this.graph_node);
   }
 
-  onPrimitiveOverrideChange(node, inputName, value)
-  {
+  onPrimitiveOverrideChange(node, inputName, value) {
     this.applyChanges([{changeType: ChangeType.CHANGE_PRIMITIVE_OVERRIDE, id: node._id, inputName: inputName, value: value, pushToReactflow: false}]);
   }
 

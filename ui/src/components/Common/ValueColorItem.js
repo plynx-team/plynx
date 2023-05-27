@@ -1,35 +1,16 @@
-import * as React from 'react';
+import React, { useState } from 'react';
 import Button from '@mui/material/Button';
-import Avatar from '@mui/material/Avatar';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemAvatar from '@mui/material/ListItemAvatar';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemText from '@mui/material/ListItemText';
-import DialogTitle from '@mui/material/DialogTitle';
 import Dialog from '@mui/material/Dialog';
-import Typography from '@mui/material/Typography';
-import { blue } from '@mui/material/colors';
-import { SketchPicker, PhotoshopPicker } from 'react-color';
-import { width } from '@mui/system';
-
-const emails = ['username@gmail.com', 'user02@gmail.com'];
-
-export interface SimpleDialogProps {
-  open: boolean;
-  selectedValue: string;
-  onClose: (value: string) => void;
-}
+import { SketchPicker } from 'react-color';
+import PropTypes from 'prop-types';
 
 function SimpleDialog(props) {
   const { onClose, open, initColor } = props;
-  const [colorValue, setColorValue] = React.useState(initColor);
+  const [colorValue, setColorValue] = useState(initColor);
 
   const handleClose = () => {
     onClose(colorValue.hex);
   };
-
-  console.log("initColor", initColor);
 
   return (
     <Dialog onClose={handleClose} open={open}>
@@ -37,32 +18,38 @@ function SimpleDialog(props) {
         onChange={setColorValue}
         onCancel={handleClose}
         color={colorValue}
-        disableAlpha={true}
+        disableAlpha
         presetColors={['#D0021B', '#F5A623', '#F8E71C', '#8B572A', '#7ED321', '#417505',
-    '#BD10E0', '#9013FE', '#4A90E2', '#50E3C2', '#B8E986', '#000000',
-    '#4A4A4A', '#9B9B9B', '#FFFFFF']}
+          '#BD10E0', '#9013FE', '#4A90E2', '#50E3C2', '#B8E986', '#000000',
+          '#4A4A4A', '#9B9B9B', '#FFFFFF']}
       />
     </Dialog>
   );
 }
 
+SimpleDialog.propTypes = {
+  onClose: PropTypes.func.isRequired,
+  open: PropTypes.bool.isRequired,
+  initColor: PropTypes.string.isRequired,
+};
+
 export default function ValueColorItem({name, value, onChange}) {
-  const [open, setOpen] = React.useState(false);
-  const [colorValue, setColorValue] = React.useState(value);
+  const [open, setOpen] = useState(false);
+  const [colorValue, setColorValue] = useState(value);
 
   const handleClickOpen = () => {
     setOpen(true);
   };
 
-  const handleClose = (value) => {
+  const handleClose = (valueOnClose) => {
     setOpen(false);
-    console.log("value", value);
-    if (value) {
-      setColorValue(value);
+    console.log("valueOnClose", valueOnClose);
+    if (valueOnClose) {
+      setColorValue(valueOnClose);
       onChange({
         target: {
           name: name,
-          value: value,
+          value: valueOnClose,
           type: 'color'
         }
       });
@@ -82,7 +69,7 @@ export default function ValueColorItem({name, value, onChange}) {
             height: "20px",
             border: "1px solid #BBB",
             borderRadius: "2pt",
-            "margin-right": "3pt",
+            marginRight: "3pt",
           }}
           />
           {colorValue}
@@ -95,3 +82,9 @@ export default function ValueColorItem({name, value, onChange}) {
     </div>
   );
 }
+
+ValueColorItem.propTypes = {
+  name: PropTypes.string.isRequired,
+  value: PropTypes.string.isRequired,
+  onChange: PropTypes.func.isRequired,
+};

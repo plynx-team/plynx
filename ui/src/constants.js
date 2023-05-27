@@ -39,7 +39,7 @@ export const PARAMETER_TYPES = [
   },
 ];
 
-export const PRIMITIVE_TYPES =  Object.freeze({
+export const PRIMITIVE_TYPES = Object.freeze({
   str: 'str',
   int: 'int',
   float: 'float',
