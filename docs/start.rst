@@ -13,7 +13,8 @@ Make sure you install docker first. `Get started with Docker <https://docs.docke
     git clone https://github.com/khaxis/plynx.git   # Clone the repo
 
     cd plynx
-
+    
+    cp template_config.yaml config.yaml                 # Make a copy of a config
     make up                                         # to start production services
 
 Then go to http://localhost:3001
