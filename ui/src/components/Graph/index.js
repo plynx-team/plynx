@@ -143,6 +143,7 @@ class Graph extends Component {
       flowNodes: [],
       flowEdges: [],
       lookupResourceKind: undefined,
+      syncCounter: 0,
     };
 
     this.reactFlowInstance = null;
@@ -280,6 +281,8 @@ class Graph extends Component {
     }
 
     this.reactFlowInstance.setNodes(this.nodes.map(node => this.nodeToFlowNode(node)));
+
+    this.setState({syncCounter: this.state.syncCounter + 1});
   }
 
   clearCacheNodes() {
@@ -969,6 +972,7 @@ class Graph extends Component {
       <ReactFlowProvider>
         <div className={'BackgroundLabels ' + (this.state.editable ? 'editable' : 'readonly')}>
           <div className="Title">{this.state.graph.title}</div>
+          <div className="sync-wheel" key={this.state.syncCounter}><div class="lds-ripple"><div></div><div></div></div></div>
         </div>
         {this.state.fileObj &&
           <FileDialog
