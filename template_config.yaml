@@ -91,6 +91,11 @@ plugins:
       title: bool
       cls: plynx.plugins.resources.common.Raw
       icon: plynx.python-bool
+    - kind: color
+      title: color
+      cls: plynx.plugins.resources.common.Raw
+      icon: feathericons.pen-tool
+      color: '#ff33ff'
     - kind: py-json-file
       title: Python JSON file
       cls: plynx.plugins.resources.python.common.Json
