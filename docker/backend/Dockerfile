@@ -48,3 +48,4 @@ RUN cd /tmp && python setup.py install
 ADD ./docker/backend/requirements.txt /app/requirements.txt
 RUN pip install -r /app/requirements.txt
 RUN rm /app/requirements.txt
+RUN echo '[]' > /app/nodes.json

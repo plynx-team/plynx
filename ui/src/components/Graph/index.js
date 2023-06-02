@@ -972,7 +972,7 @@ class Graph extends Component {
       <ReactFlowProvider>
         <div className={'BackgroundLabels ' + (this.state.editable ? 'editable' : 'readonly')}>
           <div className="Title">{this.state.graph.title}</div>
-          <div className="sync-wheel" key={this.state.syncCounter}><div class="lds-ripple"><div></div><div></div></div></div>
+          <div className="sync-wheel" key={this.state.syncCounter}><div className="lds-ripple"><div></div><div></div></div></div>
         </div>
         {this.state.fileObj &&
           <FileDialog
