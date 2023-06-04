@@ -7,10 +7,11 @@ WORKDIR /app
 # Install needed packages
 RUN apt-get update
 RUN apt-get install -y \
-    build-essential \
     iputils-ping \
     curl \
     bc
+RUN apt-get clean
+RUN rm -rf /var/lib/apt/lists/*
 
 # Copy the current directory contents into the container at /app
 ADD ./wsgi.py /app/wsgi.py
