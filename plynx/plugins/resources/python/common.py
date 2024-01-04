@@ -42,4 +42,4 @@ class Json(resource.BaseResource):
             res = json.load(f)
         formatted_text = json.dumps(res, indent=4)
         thumbnail_text = os.linesep.join(formatted_text.split(os.linesep)[:5])
-        return f"<pre style='text-align:left; background:#222; margin:0; width:100%'>{thumbnail_text}...</pre>"
+        return f"""<pre style="text-align:left; background:#222; margin:0; width:100%">{thumbnail_text}...</pre>"""

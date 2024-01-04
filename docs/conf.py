@@ -1,47 +1,47 @@
 import os
 
 # Add any Sphinx extension module names here, as strings. They can be
-# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
+# extensions coming with Sphinx (named "sphinx.ext.*") or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.coverage',
-    'sphinx.ext.viewcode',
-    'sphinxarg.ext',
-    'sphinxcontrib.httpdomain',
-    'sphinx.ext.intersphinx',
-    'autoapi.extension'
+    "sphinx.ext.autodoc",
+    "sphinx.ext.coverage",
+    "sphinx.ext.viewcode",
+    "sphinxarg.ext",
+    "sphinxcontrib.httpdomain",
+    "sphinx.ext.intersphinx",
+    "autoapi.extension"
 ]
 
 autodoc_default_options = {
-    'show-inheritance': True,
-    'members': True
+    "show-inheritance": True,
+    "members": True
 }
 
 viewcode_follow_imported_members = True
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['templates']
+templates_path = ["templates"]
 
 # The suffix of source filenames.
-source_suffix = '.rst'
+source_suffix = ".rst"
 
 # The encoding of source files.
-# source_encoding = 'utf-8-sig'
+# source_encoding = "utf-8-sig"
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = "index"
 
 # General information about the project.
-project = 'Plynx'
-# copyright = ''
+project = "Plynx"
+# copyright = ""
 
-# The version info for the project you're documenting, acts as replacement for
+# The version info for the project you"re documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The short X.Y version.
-version = '1.2.3'
+version = "1.2.3"
 # The full version, including alpha/beta/rc tags.
 release = version
 
@@ -51,9 +51,9 @@ release = version
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
-# today = ''
+# today = ""
 # Else, today_fmt is used as the format for a strftime call.
-# today_fmt = '%B %d, %Y'
+# today_fmt = "%B %d, %Y"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -64,7 +64,7 @@ exclude_patterns = [
 # documents.
 # default_role = None
 
-# If true, '()' will be appended to :func: etc. cross-reference text.
+# If true, "()" will be appended to :func: etc. cross-reference text.
 # add_function_parentheses = True
 
 # If true, the current module name will be prepended to all description
@@ -76,7 +76,7 @@ exclude_patterns = [
 # show_authors = False
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = "sphinx"
 
 # A list of ignored prefixes for module index sorting.
 # modindex_common_prefix = []
@@ -86,16 +86,16 @@ keep_warnings = True
 
 
 intersphinx_mapping = {
-    'mongodb': ('https://api.mongodb.com/python/current/', None),
-    'python': ('https://docs.python.org/3/', None),
-    'requests': ('http://docs.python-requests.org/en/master/', None)
+    "mongodb": ("https://api.mongodb.com/python/current/", None),
+    "python": ("https://docs.python.org/3/", None),
+    "requests": ("http://docs.python-requests.org/en/master/", None)
 }
 
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'sphinx_rtd_theme'
+html_theme = "sphinx_rtd_theme"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -127,16 +127,16 @@ html_short_title = ""
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ['_static']
+# html_static_path = ["_static"]
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
 # directly to the root of the documentation.
 # html_extra_path = []
 
-# If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
+# If not "", a "Last updated on:" timestamp is inserted at every page bottom,
 # using the given strftime format.
-# html_last_updated_fmt = '%b %d, %Y'
+# html_last_updated_fmt = "%b %d, %Y"
 
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
@@ -170,33 +170,33 @@ html_show_copyright = False
 # If true, an OpenSearch description file will be output, and all pages will
 # contain a <link> tag referring to it.  The value of this option must be the
 # base URL from which the finished HTML is served.
-# html_use_opensearch = ''
+# html_use_opensearch = ""
 
 # This is the file name suffix for HTML files (e.g. ".xhtml").
 # html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'Plynxdoc'
+htmlhelp_basename = "Plynxdoc"
 
 # -- Options for LaTeX output ---------------------------------------------
 
 latex_elements = {
-    # The paper size ('letterpaper' or 'a4paper').
-    # 'papersize': 'letterpaper',
+    # The paper size ("letterpaper" or "a4paper").
+    # "papersize": "letterpaper",
 
-    # The font size ('10pt', '11pt' or '12pt').
-    # 'pointsize': '10pt',
+    # The font size ("10pt", "11pt" or "12pt").
+    # "pointsize": "10pt",
 
     # Additional stuff for the LaTeX preamble.
-    # 'preamble': '',
+    # "preamble": "",
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    ('index', 'Plynx.tex', 'Plynx Documentation',
-     'Plynx', 'manual'),
+    ("index", "Plynx.tex", "Plynx Documentation",
+     "Plynx", "manual"),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -225,8 +225,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'plynx', 'Plynx Documentation',
-     ['Apache Plynx'], 1)
+    ("index", "plynx", "Plynx Documentation",
+     ["Apache Plynx"], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -239,10 +239,10 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [(
-    'index', 'Plynx', 'Plynx Documentation',
-    'Apache Plynx', 'Plynx',
-    'Plynx is a system to programmaticaly author, schedule and monitor data pipelines.',
-    'Miscellaneous'
+    "index", "Plynx", "Plynx Documentation",
+    "Apache Plynx", "Plynx",
+    "Plynx is a system to programmaticaly author, schedule and monitor data pipelines.",
+    "Miscellaneous"
 ), ]
 
 # Documents to append as an appendix to all manuals.
@@ -251,10 +251,10 @@ texinfo_documents = [(
 # If false, no module index is generated.
 # texinfo_domain_indices = True
 
-# How to display URL addresses: 'footnote', 'no', or 'inline'.
-# texinfo_show_urls = 'footnote'
+# How to display URL addresses: "footnote", "no", or "inline".
+# texinfo_show_urls = "footnote"
 
-# If true, do not generate a @detailmenu in the "Top" node's menu.
+# If true, do not generate a @detailmenu in the "Top" node"s menu.
 # texinfo_no_detailmenu = False
 
 # sphinx-autoapi configuration
@@ -264,15 +264,15 @@ texinfo_documents = [(
 # Paths (relative or absolute) to the source code that you wish to generate
 # your API documentation from.
 autoapi_dirs = [
-    os.path.abspath('../plynx'),
+    os.path.abspath("../plynx"),
 ]
 
 # A directory that has user-defined templates to override our default templates.
-autoapi_template_dir = 'autoapi_templates'
+autoapi_template_dir = "autoapi_templates"
 
 # A list of patterns to ignore when finding files
 autoapi_ignore = [
-    '*/node_modules/*',
+    "*/node_modules/*",
 ]
 # Keep the AutoAPI generated files on the filesystem after the run.
 # Useful for debugging.
@@ -280,4 +280,4 @@ autoapi_keep_files = False
 
 # Relative path to output the AutoAPI files into. This can also be used to place the generated documentation
 # anywhere in your documentation hierarchy.
-autoapi_root = '_api'
+autoapi_root = "_api"

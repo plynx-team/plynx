@@ -112,7 +112,7 @@ class User(DBObject):
             print(f"Unexpected exception: {e}")
             return None
 
-        user = UserCollectionManager.find_user_by_name(payload['username'])
+        user = UserCollectionManager.find_user_by_name(payload["username"])
         if not user or not user.active:
             return None
         return user
@@ -130,7 +130,7 @@ class UserCollectionManager:
         Return:
             (User)   User object or None
         """
-        user_dict = getattr(get_db_connector(), User.DB_COLLECTION).find_one({'username': username})
+        user_dict = getattr(get_db_connector(), User.DB_COLLECTION).find_one({"username": username})
         if not user_dict:
             return None
 
@@ -146,7 +146,7 @@ class UserCollectionManager:
         Return:
             (User)   User object or None
         """
-        user_dict = getattr(get_db_connector(), User.DB_COLLECTION).find_one({'email': email})
+        user_dict = getattr(get_db_connector(), User.DB_COLLECTION).find_one({"email": email})
         if not user_dict:
             return None
 

@@ -49,7 +49,7 @@ def materialize_fn_or_cls(node: Node) -> Callable:
 
 
 def assign_outputs(node: Node, output_dict: Dict[str, Any]):
-    """Apply output_dict to node's outputs."""
+    """Apply output_dict to node"s outputs."""
     if not output_dict:
         return
     for key, value in output_dict.items():
@@ -86,8 +86,8 @@ class redirect_to_plynx_logs:   # pylint: disable=invalid-name
         self.stderr_redirect = None
 
     def __enter__(self):
-        self.stdout_file = open(self.stdout_filename, 'w')
-        self.stderr_file = open(self.stderr_filename, 'w')
+        self.stdout_file = open(self.stdout_filename, "w")
+        self.stderr_file = open(self.stderr_filename, "w")
 
         self.stdout_redirect = contextlib.redirect_stdout(self.stdout_file)
         self.stderr_redirect = contextlib.redirect_stderr(self.stderr_file)
@@ -166,7 +166,7 @@ class PythonNode(plynx.plugins.executors.bases.PLynxSyncExecutor):
     def get_default_node(cls, is_workflow: bool) -> Node:
         """Generate a new default Node for this executor"""
         if is_workflow:
-            raise Exception('This class cannot be a workflow')
+            raise Exception("This class cannot be a workflow")
         node = super().get_default_node(is_workflow)
         node.inputs.extend(
             [

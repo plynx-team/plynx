@@ -16,14 +16,14 @@ from plynx.web.common import app, handle_errors, logger, make_fail_response, mak
 RESOURCE_TYPES = list(plynx.utils.plugin_manager.get_resource_manager().kind_to_resource_class.keys())
 
 
-@app.route('/plynx/api/v0/resource/<resource_id>', methods=['GET'])
+@app.route("/plynx/api/v0/resource/<resource_id>", methods=["GET"])
 @handle_errors
 def get_resource(resource_id: str):
     """Get the data of the resource"""
-    preview = json.loads(request.args.get('preview', 'false'))
-    file_type = request.args.get('file_type', None)
+    preview = json.loads(request.args.get("preview", "false"))
+    file_type = request.args.get("file_type", None)
     if preview and not file_type:
-        return make_fail_response('In preview mode `file_type` must be specified'), 400
+        return make_fail_response("In preview mode `file_type` must be specified"), 400
     file_stream = get_file_stream(resource_id, preview=preview, file_type=file_type)
     if preview:
         preview_object = plynx.base.resource.PreviewObject(
@@ -37,35 +37,35 @@ def get_resource(resource_id: str):
     )    # type: ignore
 
 
-@app.route('/plynx/api/v0/resource', methods=['POST'])
+@app.route("/plynx/api/v0/resource", methods=["POST"])
 @handle_errors
 @requires_auth
 def post_resource():
     """Upload a new resource"""
-    resource_id = upload_file_stream(request.files['data'])
+    resource_id = upload_file_stream(request.files["data"])
     return make_success_response({
-        'resource_id': resource_id
+        "resource_id": resource_id
     })
 
 
-@app.route('/plynx/api/v0/upload_file', methods=['POST', 'PUT'])
+@app.route("/plynx/api/v0/upload_file", methods=["POST", "PUT"])
 @handle_errors
 @requires_auth
 def upload_file():
     """Upload file"""
     assert len(request.files) == 1
-    title = request.form.get('title', '{title}')
-    description = request.form.get('description', '{description}')
-    file_type = request.form.get('file_type', FILE_KIND)
-    node_kind = request.form.get('node_kind', 'basic-file')
-    do_not_save = str_to_bool(request.form.get('do_not_save', "false"))
+    title = request.form.get("title", "{title}")
+    description = request.form.get("description", "{description}")
+    file_type = request.form.get("file_type", FILE_KIND)
+    node_kind = request.form.get("node_kind", "basic-file")
+    do_not_save = str_to_bool(request.form.get("do_not_save", "false"))
     logger.info(request)
     if file_type not in RESOURCE_TYPES:
         logger.info(file_type)
         logger.info(RESOURCE_TYPES)
         return make_fail_response(f"Unknown file type `{file_type}`"), 400
 
-    resource_id = upload_file_stream(request.files['data'])
+    resource_id = upload_file_stream(request.files["data"])
 
     file = plynx.db.node.Node(
         title=title,
@@ -75,7 +75,7 @@ def upload_file():
         node_status=NodeStatus.READY,
     )
     output = plynx.db.node.Output(
-        name='file',
+        name="file",
         file_type=file_type,
         values=[resource_id],
     )
@@ -88,6 +88,6 @@ def upload_file():
         file.save()
 
     return make_success_response({
-        'resource_id': resource_id,
-        'node': file.to_dict(),
+        "resource_id": resource_id,
+        "node": file.to_dict(),
     })

@@ -3,10 +3,10 @@ from typing import Optional
 
 from plynx.db.user import User, UserCollectionManager
 
-LIST_USERS = 'list_users'
-CREATE_USER = 'create_user'
-ACTIVATE_USER = 'activate_user'
-DEACTIVATE_USER = 'deactivate_user'
+LIST_USERS = "list_users"
+CREATE_USER = "create_user"
+ACTIVATE_USER = "activate_user"
+DEACTIVATE_USER = "deactivate_user"
 MODES = [
     LIST_USERS,
     CREATE_USER,
@@ -19,14 +19,14 @@ def run_list_users() -> None:
     """List all users"""
     for user_dict in User.find_users():
         user = User.from_dict(user_dict)
-        print(','.join(map(str, [user._id, user.username])))
+        print(",".join(map(str, [user._id, user.username])))
 
 
 def run_create_user(email: Optional[str], username: Optional[str], password: Optional[str]) -> User:
     """Create a user"""
     if not username:
-        raise ValueError('Username must be specified')
-    password = password or ''
+        raise ValueError("Username must be specified")
+    password = password or ""
     user = User()
     user.username = username
     user.email = email
@@ -49,7 +49,7 @@ def run_set_activation(username: Optional[str], value: bool) -> None:
     print(f"User`s `{username}` active state changed to {value}")
 
 
-def run_users(mode: str, email: Optional[str] = None, username: Optional[str] = None, password: Optional[str] = ''):
+def run_users(mode: str, email: Optional[str] = None, username: Optional[str] = None, password: Optional[str] = ""):
     """Users CLI entrypoint"""
     if mode not in MODES:
         raise ValueError(f"`mode` must be one of `{MODES}`. Value `{mode}` is given")

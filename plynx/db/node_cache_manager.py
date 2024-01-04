@@ -13,7 +13,7 @@ from plynx.utils.db_connector import get_db_connector
 class NodeCacheManager:
     """The Node cache interface.
 
-    The cache is defined by Node's
+    The cache is defined by Node"s
         - original_node_id
         - inputs
         - parameters
@@ -31,9 +31,9 @@ class NodeCacheManager:
         """
         key = NodeCache.generate_key(node)
         db_node_cache = get_db_connector().node_cache.find({
-            'key': key,
-            'removed': {'$ne': True}
-        }).sort('insertion_date', -1).limit(1)
+            "key": key,
+            "removed": {"$ne": True}
+        }).sort("insertion_date", -1).limit(1)
         caches = list(db_node_cache)
         if len(caches) > 0:
             return NodeCache.from_dict(caches[0])
@@ -52,7 +52,7 @@ class NodeCacheManager:
             True if cache saved else False
         """
         assert node.node_running_status == NodeRunningStatus.SUCCESS, \
-            'Only Nodes with status SUCCESS can be cached'
+            "Only Nodes with status SUCCESS can be cached"
         node_cache = NodeCache.instantiate(node=node, run_id=run_id)
         try:
             node_cache.save()
@@ -80,16 +80,16 @@ class NodeCacheManager:
 
         insertion_query: Dict[str, Union[bool, datetime.datetime]] = {}
         if start_datetime:
-            insertion_query['$gte'] = start_datetime
+            insertion_query["$gte"] = start_datetime
         if end_datetime:
-            insertion_query['$lt'] = end_datetime
+            insertion_query["$lt"] = end_datetime
         if insertion_query:
-            and_query.append({'insertion_date': insertion_query})
+            and_query.append({"insertion_date": insertion_query})
 
         if non_protected_only:
-            and_query.append({'protected': {'$ne': True}})
+            and_query.append({"protected": {"$ne": True}})
 
-        return {'$and': and_query} if and_query else {}
+        return {"$and": and_query} if and_query else {}
 
     @staticmethod
     def get_list(
@@ -112,4 +112,4 @@ class NodeCacheManager:
     def clean_up():
         """Remove NodeCache objects with flag `removed` set
         """
-        return get_db_connector().node_cache.remove({'removed': True})
+        return get_db_connector().node_cache.remove({"removed": True})

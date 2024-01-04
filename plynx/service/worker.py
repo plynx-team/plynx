@@ -26,9 +26,9 @@ class Worker:
         * Create Schedulers for each Graph.
         * Populate the queue of the Jobs.
         * Distribute Jobs accross Workers.
-        * Keep track of Job's statuses.
+        * Keep track of Job"s statuses.
         * Process CANCEL requests.
-        * Update Graph's statuses.
+        * Update Graph"s statuses.
         * Track worker status and last response.
     """
     # pylint: disable=too-many-instance-attributes
@@ -138,7 +138,7 @@ class Worker:
 
 def run_worker(worker_id: Optional[str] = None):
     """Run worker daemon. It will run in the same thread."""
-    logging.info('Init Worker')
+    logging.info("Init Worker")
     worker_config = get_worker_config()
     logging.info(worker_config)
     worker = Worker(worker_config, worker_id)

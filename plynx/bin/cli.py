@@ -36,7 +36,7 @@ def api(args):
     """Start web service."""
     # lazy load because web initializes too many variables
     from plynx.web.common import run_api  # noqa: E402  # pylint: disable=import-outside-toplevel
-    set_logging_level(args['verbose'])
+    set_logging_level(args["verbose"])
     run_api(**args)
 
 
@@ -48,19 +48,19 @@ def worker_server(args):
 
 def cache(args):
     """Show cache options."""
-    set_logging_level(args.pop('verbose'))
+    set_logging_level(args.pop("verbose"))
     run_cache(**args)
 
 
 def worker(args):
     """Start worker service."""
-    set_logging_level(args.pop('verbose'))
+    set_logging_level(args.pop("verbose"))
     run_worker(**args)
 
 
 def users(args):
     """Show users options."""
-    set_logging_level(args.pop('verbose'))
+    set_logging_level(args.pop("verbose"))
     run_users(**args)
 
 
@@ -71,7 +71,7 @@ def version(args):  # pylint: disable=unused-argument
 
 def execute(args):
     """Execute Operation."""
-    set_logging_level(args.pop('verbose'))
+    set_logging_level(args.pop("verbose"))
     run_execute(**args)
 
 
@@ -84,206 +84,206 @@ class CLIFactory:
     """The class that generates PLynx CLI parser"""
     ARGS = {
         # Shared
-        'verbose': Arg(
-            ('-v', '--verbose'),
-            help='Set logging output more verbose',
+        "verbose": Arg(
+            ("-v", "--verbose"),
+            help="Set logging output more verbose",
             default=0,
-            action='count',
+            action="count",
             ),
-        'mode': Arg(
-            ('--mode',),
-            help='Mode',
+        "mode": Arg(
+            ("--mode",),
+            help="Mode",
             type=str,
             ),
-        'collection_module': Arg(
-            ('--collection-module', ),
-            help='Modules with operations to load',
+        "collection_module": Arg(
+            ("--collection-module", ),
+            help="Modules with operations to load",
             required=True,
-            action='append',
+            action="append",
             ),
-        'out': Arg(
-            ('-o', '--out'),
-            help='Output filename',
+        "out": Arg(
+            ("-o", "--out"),
+            help="Output filename",
             required=True,
             type=str,
             ),
 
-        'endpoint_port': Arg(
-            ('--endpoint-port', ),
-            help='Port of the endpoint',
+        "endpoint_port": Arg(
+            ("--endpoint-port", ),
+            help="Port of the endpoint",
             required=False,
             type=int,
             ),
 
         # Worker
-        'kinds': Arg(
+        "kinds": Arg(
             ("-e", "--kinds"),
             help="Kinds the worker is subscribed to",
             default=_config.worker.kinds,
-            action='append',
-            levels=['worker', 'kinds'],
+            action="append",
+            levels=["worker", "kinds"],
             ),
 
         # MongoConfig
-        'db_host': Arg(
-            ('--db-host',),
-            help='Database host',
+        "db_host": Arg(
+            ("--db-host",),
+            help="Database host",
             default=_config.db.host,
             type=str,
-            levels=['mongodb', 'host'],
+            levels=["mongodb", "host"],
             ),
-        'db_port': Arg(
-            ('--db-port',),
-            help='Database port',
+        "db_port": Arg(
+            ("--db-port",),
+            help="Database port",
             default=_config.db.port,
             type=str,
-            levels=['mongodb', 'port'],
+            levels=["mongodb", "port"],
             ),
-        'db_user': Arg(
-            ('--db-user',),
-            help='Database username',
+        "db_user": Arg(
+            ("--db-user",),
+            help="Database username",
             default=None,
             type=str,
-            levels=['mongodb', 'user'],
+            levels=["mongodb", "user"],
             ),
-        'db_password': Arg(
-            ('--db-password',),
-            help='Database password',
+        "db_password": Arg(
+            ("--db-password",),
+            help="Database password",
             default=None,
             type=str,
-            levels=['mongodb', 'password'],
+            levels=["mongodb", "password"],
             ),
 
         # StorageConfig
-        'storage_scheme': Arg(
-            ('--storage-scheme',),
-            help='Storage scheme',
+        "storage_scheme": Arg(
+            ("--storage-scheme",),
+            help="Storage scheme",
             default=_config.storage.scheme,
             type=str,
-            levels=['storage', 'scheme'],
+            levels=["storage", "scheme"],
             ),
-        'storage_prefix': Arg(
-            ('--storage-prefix',),
-            help='Storage prefix',
+        "storage_prefix": Arg(
+            ("--storage-prefix",),
+            help="Storage prefix",
             default=_config.storage.prefix,
             type=str,
-            levels=['storage', 'prefix'],
+            levels=["storage", "prefix"],
             ),
-        'credential_path': Arg(
-            ('--credential-path',),
-            help='Path to the credentials, i.e. $GOOGLE_APPLICATION_CREDENTIALS',
+        "credential_path": Arg(
+            ("--credential-path",),
+            help="Path to the credentials, i.e. $GOOGLE_APPLICATION_CREDENTIALS",
             default=_config.storage.credential_path,
             type=str,
-            levels=['storage', 'credential_path'],
+            levels=["storage", "credential_path"],
             ),
 
         # AuthConfig
-        'secret_key': Arg(
-            ('--secret-key',),
-            help='Secret Key path (used in auth). If not given, a single user mode will be used.',
+        "secret_key": Arg(
+            ("--secret-key",),
+            help="Secret Key path (used in auth). If not given, a single user mode will be used.",
             default=None,
             type=str,
-            levels=['auth', 'secret_key'],
+            levels=["auth", "secret_key"],
             ),
 
         # WebConfig
-        'endpoint': Arg(
-            ('--endpoint',),
-            help='Endpoint of api',
+        "endpoint": Arg(
+            ("--endpoint",),
+            help="Endpoint of api",
             default=_config.web.endpoint,
             type=str,
-            levels=['web', 'endpoint'],
+            levels=["web", "endpoint"],
             ),
-        'port': Arg(
-            ('--port',),
-            help='Endpoint port',
+        "port": Arg(
+            ("--port",),
+            help="Endpoint port",
             default=_config.web.port,
             type=int,
-            levels=['web', 'port'],
+            levels=["web", "port"],
             ),
 
-        'internal_endpoint': Arg(
-            ('--internal-endpoint',),
-            help='Endpoint of api used by internal service',
+        "internal_endpoint": Arg(
+            ("--internal-endpoint",),
+            help="Endpoint of api used by internal service",
             default=_config.web.internal_endpoint,
             type=str,
-            levels=['web', 'internal_endpoint'],
+            levels=["web", "internal_endpoint"],
             ),
 
         # Users
-        'username': Arg(
-            ('--username',),
-            help='Username of the user, required to create/delete a user',
+        "username": Arg(
+            ("--username",),
+            help="Username of the user, required to create/delete a user",
             type=str),
-        'password': Arg(
-            ('--password',),
-            help='Password of the user, required to create a user '
-                 'without --use_random_password',
+        "password": Arg(
+            ("--password",),
+            help="Password of the user, required to create a user "
+                 "without --use_random_password",
             type=str),
 
         # Cache
-        'start_datetime': Arg(
+        "start_datetime": Arg(
             ("--start-datetime", ),
             "End limit time based operation",
             default=None,
             type=str,
             ),
-        'end_datetime': Arg(
+        "end_datetime": Arg(
             ("--end-datetime", ),
             "End limit time based operation",
             default=None,
             type=str,
             ),
-        'yes': Arg(
+        "yes": Arg(
             ("-y", "--yes"),
             "Do not prompt to confirm reset. Use with care!",
             "store_true",
             default=False),
 
         # Execute
-        'filename': Arg(
-            ('-f', '--filename'),
-            help='Path to file',
+        "filename": Arg(
+            ("-f", "--filename"),
+            help="Path to file",
             required=True,
             type=str),
     }
 
     SUBPARSERS = (
         {
-            'func': worker,
-            'help': 'Run Worker',
-            'args': ('verbose', 'db_host', 'db_port', 'db_user', 'db_password', 'kinds', 'internal_endpoint',
-                     'storage_scheme', 'storage_prefix', 'credential_path'),
+            "func": worker,
+            "help": "Run Worker",
+            "args": ("verbose", "db_host", "db_port", "db_user", "db_password", "kinds", "internal_endpoint",
+                     "storage_scheme", "storage_prefix", "credential_path"),
         }, {
-            'func': api,
-            'help': 'Run api server',
-            'args': ('verbose', 'secret_key', 'endpoint',
-                     'db_host', 'db_port', 'db_user', 'db_password', 'port',
-                     'storage_scheme', 'storage_prefix', 'credential_path'),
+            "func": api,
+            "help": "Run api server",
+            "args": ("verbose", "secret_key", "endpoint",
+                     "db_host", "db_port", "db_user", "db_password", "port",
+                     "storage_scheme", "storage_prefix", "credential_path"),
         }, {
-            'func': worker_server,
-            'help': 'Run the worker server',
-            'args': ('verbose', 'endpoint_port', 'internal_endpoint')
+            "func": worker_server,
+            "help": "Run the worker server",
+            "args": ("verbose", "endpoint_port", "internal_endpoint")
         }, {
-            'func': version,
-            'help': "Show the version",
-            'args': tuple(),
+            "func": version,
+            "help": "Show the version",
+            "args": tuple(),
         }, {
-            'func': users,
-            'help': "Users cli utils",
-            'args': ('verbose', 'mode', 'username', 'password', 'db_host'),
+            "func": users,
+            "help": "Users cli utils",
+            "args": ("verbose", "mode", "username", "password", "db_host"),
         }, {
-            'func': cache,
-            'help': "Cache cli utils",
-            'args': ('verbose', 'mode', 'start_datetime', 'end_datetime', 'yes'),
+            "func": cache,
+            "help": "Cache cli utils",
+            "args": ("verbose", "mode", "start_datetime", "end_datetime", "yes"),
         }, {
-            'func': execute,
-            'help': "Execute single node",
-            'args': ('verbose', 'filename', 'storage_prefix'),
+            "func": execute,
+            "help": "Execute single node",
+            "args": ("verbose", "filename", "storage_prefix"),
         }, {
-            'func': make_operations_meta,
-            'help': "Create metadata of the functions",
-            'args': ('collection_module', 'out'),
+            "func": make_operations_meta,
+            "help": "Create metadata of the functions",
+            "args": ("collection_module", "out"),
         },
     )
 
@@ -305,19 +305,19 @@ class CLIFactory:
         """Generate CLI parser"""
         parser = argparse.ArgumentParser()
         subparsers = parser.add_subparsers(
-            help='sub-command help', dest='subcommand')
+            help="sub-command help", dest="subcommand")
         subparsers.required = True
 
         for sub in cls.SUBPARSERS:
-            sp = subparsers.add_parser(sub['func'].__name__.replace("_", "-"), help=sub['help'])
-            for arg in sub['args']:
+            sp = subparsers.add_parser(sub["func"].__name__.replace("_", "-"), help=sub["help"])
+            for arg in sub["args"]:
                 arg = cls.ARGS[arg]
                 kwargs = {
                     f: getattr(arg, f)
-                    for f in arg.__dataclass_fields__ if f not in ['flags', 'levels'] and getattr(arg, f) is not None   # pylint: disable=no-member
+                    for f in arg.__dataclass_fields__ if f not in ["flags", "levels"] and getattr(arg, f) is not None   # pylint: disable=no-member
                 }
                 sp.add_argument(*arg.flags, **kwargs)
-            sp.set_defaults(func=sub['func'], args=sub['args'])
+            sp.set_defaults(func=sub["func"], args=sub["args"])
 
         return parser
 

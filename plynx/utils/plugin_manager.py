@@ -11,7 +11,7 @@ from plynx.utils.config import PluginsConfig, get_plugins
 
 
 def _isinstance_namedtuple(x: Any) -> bool:
-    return isinstance(x, tuple) and getattr(x, '_fields', None) is not None
+    return isinstance(x, tuple) and getattr(x, "_fields", None) is not None
 
 
 def _as_dict(obj: Any):
@@ -36,7 +36,7 @@ class _ResourceManager:
         }
         for kind, resource_class in self.kind_to_resource_class.items():
             logging.info(f"Initializing resource `{kind}`")
-            self.kind_to_resource_dict[kind]['display_raw'] = resource_class.DISPLAY_RAW
+            self.kind_to_resource_dict[kind]["display_raw"] = resource_class.DISPLAY_RAW
 
 
 class _ExecutorManager:
@@ -57,10 +57,10 @@ class _ExecutorManager:
         for kind, executor_class in self.kind_to_executor_class.items():
             logging.info(f"Initializing executor `{kind}`")
             self.kind_info[kind] = {
-                'is_graph': executor_class.IS_GRAPH,
-                'title': self.kind_to_title[kind],
-                'icon': self.kind_to_icon[kind],
-                'color': self.kind_to_color[kind],
+                "is_graph": executor_class.IS_GRAPH,
+                "title": self.kind_to_title[kind],
+                "icon": self.kind_to_icon[kind],
+                "color": self.kind_to_color[kind],
             }
 
 
@@ -148,10 +148,10 @@ def get_plugins_dict():
     global _PLUGINS_DICT
     if not _PLUGINS_DICT:
         _PLUGINS_DICT = {
-            'resources_dict': get_resource_manager().kind_to_resource_dict,
-            'operations_dict': get_operation_manager().kind_to_operation_dict,
-            'hubs_dict': get_hub_manager().kind_to_hub_dict,
-            'workflows_dict': get_workflow_manager().kind_to_workflow_dict,
-            'executors_info': get_executor_manager().kind_info,
+            "resources_dict": get_resource_manager().kind_to_resource_dict,
+            "operations_dict": get_operation_manager().kind_to_operation_dict,
+            "hubs_dict": get_hub_manager().kind_to_hub_dict,
+            "workflows_dict": get_workflow_manager().kind_to_workflow_dict,
+            "executors_info": get_executor_manager().kind_info,
         }
     return _PLUGINS_DICT

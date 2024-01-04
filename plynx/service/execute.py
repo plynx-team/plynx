@@ -10,5 +10,5 @@ def run_execute(filename: str):
     with open(filename) as f:
         node = executor.materialize_executor(json.load(f))
     node.run()
-    print('Success')
+    print("Success")
     return 0

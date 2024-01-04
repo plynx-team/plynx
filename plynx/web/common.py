@@ -22,9 +22,9 @@ from plynx.utils.logs import set_logging_level
 app = Flask(__name__)
 logger = create_logger(app)
 
-DEFAULT_EMAIL = ''
-DEFAULT_USERNAME = 'default'
-DEFAULT_PASSWORD = ''
+DEFAULT_EMAIL = ""
+DEFAULT_USERNAME = "default"
+DEFAULT_PASSWORD = ""
 
 _CONFIG = None
 
@@ -36,17 +36,17 @@ def register_user(username: str, password: str, email: str, picture: str = "", i
     """
     if not username:
         raise RegisterUserException(
-            'Missing username',
+            "Missing username",
             error_code=RegisterUserExceptionCode.EMPTY_USERNAME
         )
     if username != DEFAULT_USERNAME and not is_oauth and not password:
         raise RegisterUserException(
-            'Missing password',
+            "Missing password",
             error_code=RegisterUserExceptionCode.EMPTY_PASSWORD
         )
     if UserCollectionManager.find_user_by_name(username):
         raise RegisterUserException(
-            'Username is taken',
+            "Username is taken",
             error_code=RegisterUserExceptionCode.USERNAME_ALREADY_EXISTS
         )
     if username != DEFAULT_USERNAME and not re.match(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", email):
@@ -56,12 +56,12 @@ def register_user(username: str, password: str, email: str, picture: str = "", i
         )
     if username != DEFAULT_USERNAME and UserCollectionManager.find_user_by_email(email):
         raise RegisterUserException(
-            'Email already exists',
+            "Email already exists",
             error_code=RegisterUserExceptionCode.EMAIL_ALREADY_EXISTS
         )
     if len(username) < 6 or len(username) > 22:
         raise RegisterUserException(
-            'Lenght of the username must be between 6 and 22',
+            "Lenght of the username must be between 6 and 22",
             error_code=RegisterUserExceptionCode.INVALID_LENGTH_OF_USERNAME
         )
 
@@ -102,9 +102,9 @@ def authenticate():
     """Return 401 message"""
     # 401 response
     return Response(
-        'Could not verify your access level for that URL; You have to login with proper credentials',
+        "Could not verify your access level for that URL; You have to login with proper credentials",
         401,
-        {'WWW-Authenticate': 'PlynxBasic realm="Login Required"'}
+        {"WWW-Authenticate": "PlynxBasic realm=\"Login Required\""}
     )
 
 
@@ -115,8 +115,8 @@ def requires_auth(f):
         auth = request.authorization
         if not auth:
             # if auth not provided, try default
-            auth = {'username': DEFAULT_USERNAME, 'password': DEFAULT_PASSWORD}
-        if not verify_password(auth['username'], auth['password']):
+            auth = {"username": DEFAULT_USERNAME, "password": DEFAULT_PASSWORD}
+        if not verify_password(auth["username"], auth["password"]):
             return authenticate()
         return f(*args, **kwargs)
     return decorated
@@ -125,13 +125,13 @@ def requires_auth(f):
 def make_fail_response(message, **kwargs):
     """Return basic fail response"""
     return JSONEncoder().encode({
-        'status': ResponseStatus.FAILED,
-        'message': message,
+        "status": ResponseStatus.FAILED,
+        "message": message,
         **kwargs
     })
 
 
-def make_permission_denied(message: str = 'Permission denied'):
+def make_permission_denied(message: str = "Permission denied"):
     """Return permission error"""
     return make_fail_response(message), 403
 
@@ -155,7 +155,7 @@ def handle_errors(f):
             return f(*args, **kwargs)
         except Exception as e:  # pylint: disable=broad-except
             logger.error(traceback.format_exc())
-            return make_fail_response(f'Internal error: "{repr(e)}"'), 500
+            return make_fail_response(f"Internal error: `{repr(e)}`"), 500
     return decorated
 
 
@@ -166,16 +166,16 @@ def run_api(verbose):
 
     # set up logger level
     set_logging_level(verbose, logger=logger)
-    set_logging_level(verbose, logger=logging.getLogger('werkzeug'))
+    set_logging_level(verbose, logger=logging.getLogger("werkzeug"))
 
     check_connection()
 
     # Create default user if in single user mode
     if not _CONFIG.auth.secret_key:
-        logging.info('Single user mode')
+        logging.info("Single user mode")
         _init_default_user()
     else:
-        logging.info('Multiple user mode')
+        logging.info("Multiple user mode")
 
     CORS(app, resources={r"/*": {"origins": "*"}})
     app.run(

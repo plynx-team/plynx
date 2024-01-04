@@ -42,7 +42,7 @@ def _clone_update_in_place(node: "Node", node_clone_policy: int, override_finish
         node.node_running_status = NodeRunningStatus.READY
     node.node_status = NodeStatus.CREATED
 
-    sub_nodes = node.get_parameter_by_name_safe('_nodes')
+    sub_nodes = node.get_parameter_by_name_safe("_nodes")
     if sub_nodes:
         object_id_mapping = {}
         for sub_node in sub_nodes.value.value:
@@ -62,7 +62,7 @@ def _clone_update_in_place(node: "Node", node_clone_policy: int, override_finish
                 parameter.value = node.get_parameter_by_name(parameter.reference).value
 
             if sub_node.node_running_status == NodeRunningStatus.STATIC:
-                # do not copy the rest of the elements because they don't change
+                # do not copy the rest of the elements because they don"t change
                 continue
 
             if override_finished_state or not NodeRunningStatus.is_succeeded(sub_node.node_running_status):
@@ -232,7 +232,7 @@ class Node(DBObject):
             if obj.name == name:
                 return obj
         if throw:
-            raise Exception(f'Object "{name}" not found in {self.title}')
+            raise Exception(f"Object `{name}` not found in {self.title}")
         if default:
             arr.append(default(name=name))  # type: ignore
             return arr[-1]
@@ -260,7 +260,7 @@ class Node(DBObject):
 
     def get_sub_nodes(self) -> List["Node"]:
         """Get a list of subnodes"""
-        sub_nodes_parameter = self.get_parameter_by_name_safe('_nodes')
+        sub_nodes_parameter = self.get_parameter_by_name_safe("_nodes")
         if not sub_nodes_parameter:
             raise Exception("Subnodes not found")
         return sub_nodes_parameter.value.value
@@ -292,7 +292,7 @@ class ParameterListOfNodes(DBObject):
 # pylint: disable=too-many-return-statements
 def _get_default_by_type(parameter_type: str):
     if parameter_type == ParameterTypes.STR:
-        return ''
+        return ""
     if parameter_type == ParameterTypes.INT:
         return 0
     if parameter_type == ParameterTypes.FLOAT:
@@ -300,7 +300,7 @@ def _get_default_by_type(parameter_type: str):
     if parameter_type == ParameterTypes.BOOL:
         return False
     if parameter_type == ParameterTypes.TEXT:
-        return ''
+        return ""
     if parameter_type == ParameterTypes.ENUM:
         return ParameterEnum()
     if parameter_type == ParameterTypes.LIST_STR:
@@ -312,7 +312,7 @@ def _get_default_by_type(parameter_type: str):
     elif parameter_type == ParameterTypes.CODE:
         return ParameterCode()
     elif parameter_type == ParameterTypes.COLOR:
-        return '#FF0000'
+        return "#FF0000"
     else:
         return None
 

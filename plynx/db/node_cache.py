@@ -68,21 +68,21 @@ class NodeCache(DBObject):
         original_node_id = node.original_node_id
 
         sorted_inputs = sorted(inputs, key=lambda x: x.name)
-        inputs_hash = ','.join([
+        inputs_hash = ",".join([
             f"{input.name}:{','.join(sorted(map(str, input.values)))}"
             for input in sorted_inputs
         ])
 
         sorted_parameters = sorted(parameters, key=lambda x: x.name)
-        parameters_hash = ','.join([
+        parameters_hash = ",".join([
             f"{parameter.name}:{parameter.value}"
             for parameter in sorted_parameters if parameter.name not in IGNORED_CACHE_PARAMETERS
         ])
 
         return hashlib.sha256(
-            ';'.join([
+            ";".join([
                     str(original_node_id),
                     inputs_hash,
                     parameters_hash,
-                ]).encode('utf-8')
+                ]).encode("utf-8")
         ).hexdigest()

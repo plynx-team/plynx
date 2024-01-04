@@ -18,7 +18,7 @@ from plynx.utils.common import to_object_id
 from plynx.utils.thumbnails import apply_thumbnails
 from plynx.web.common import app, handle_errors, logger, make_fail_response, make_permission_denied, make_success_response, requires_auth
 
-PAGINATION_QUERY_KEYS = {'per_page', 'offset', 'status', 'hub', 'node_kinds', 'search', 'user_id'}
+PAGINATION_QUERY_KEYS = {"per_page", "offset", "status", "hub", "node_kinds", "search", "user_id"}
 
 node_collection_managers = {
     collection: plynx.db.node_collection_manager.NodeCollectionManager(collection=collection)
@@ -35,7 +35,7 @@ executor_manager = plynx.utils.plugin_manager.get_executor_manager()
 PLUGINS_DICT = plynx.utils.plugin_manager.get_plugins_dict()
 
 
-@app.route('/plynx/api/v0/search_<collection>', methods=['POST'])
+@app.route("/plynx/api/v0/search_<collection>", methods=["POST"])
 @handle_errors
 @requires_auth
 def post_search_nodes(collection: str):
@@ -43,31 +43,31 @@ def post_search_nodes(collection: str):
     query = json.loads(request.data)
     logger.debug(request.data)
 
-    query['user_id'] = to_object_id(g.user._id)
+    query["user_id"] = to_object_id(g.user._id)
 
-    virtual_collection = query.pop('virtual_collection', None)
+    virtual_collection = query.pop("virtual_collection", None)
 
     if len(query.keys() - PAGINATION_QUERY_KEYS):
         return make_fail_response(f"Unknown keys: `{query.keys() - PAGINATION_QUERY_KEYS}`"), 400
 
-    if collection == 'in_hubs':
-        hub = query.pop('hub')
+    if collection == "in_hubs":
+        hub = query.pop("hub")
         res = hub_manager.kind_to_hub_class[hub].search(plynx.base.hub.Query(**query))
     else:
         if virtual_collection == NodeVirtualCollection.OPERATIONS:
-            query['node_kinds'] = list(operation_manager.kind_to_operation_dict.keys())
+            query["node_kinds"] = list(operation_manager.kind_to_operation_dict.keys())
         elif virtual_collection == NodeVirtualCollection.WORKFLOWS:
-            query['node_kinds'] = list(workflow_manager.kind_to_workflow_dict.keys())
+            query["node_kinds"] = list(workflow_manager.kind_to_workflow_dict.keys())
         res = node_collection_managers[collection].get_db_objects(**query)
 
     return make_success_response({
-        'items': res['list'],
-        'total_count': res['metadata'][0]['total'] if res['metadata'] else 0,
-        'plugins_dict': PLUGINS_DICT,
+        "items": res["list"],
+        "total_count": res["metadata"][0]["total"] if res["metadata"] else 0,
+        "plugins_dict": PLUGINS_DICT,
     })
 
 
-@app.route('/plynx/api/v0/<collection>/<node_link>', methods=['GET'])
+@app.route("/plynx/api/v0/<collection>/<node_link>", methods=["GET"])
 @handle_errors
 @requires_auth
 def get_nodes(collection: str, node_link: Optional[str] = None):
@@ -102,18 +102,18 @@ def get_nodes(collection: str, node_link: Optional[str] = None):
 
         node.author = user_id
         node.save()
-        data['kind'] = kind
+        data["kind"] = kind
         return make_success_response({
-            'node': data,
-            'tour_steps': tour_steps,
-            'plugins_dict': PLUGINS_DICT,
+            "node": data,
+            "tour_steps": tour_steps,
+            "plugins_dict": PLUGINS_DICT,
             })
     else:
         # when node_link is an id of the object
         try:
             node_id = to_object_id(node_link)
         except bson.objectid.InvalidId:     # type: ignore
-            return make_fail_response('Invalid ID'), 404
+            return make_fail_response("Invalid ID"), 404
         node_dict = node_collection_managers[collection].get_db_node(node_id, user_id)
         if not node_dict:
             return make_fail_response(f"Node `{node_link}` was not found"), 404
@@ -150,7 +150,7 @@ def get_nodes(collection: str, node_link: Optional[str] = None):
             })
 
 
-@app.route('/plynx/api/v0/<collection>', methods=['POST'])
+@app.route("/plynx/api/v0/<collection>", methods=["POST"])
 @handle_errors
 @requires_auth
 def post_node(collection: str):
@@ -161,18 +161,18 @@ def post_node(collection: str):
 
     data = json.loads(request.data)
 
-    node: Node = Node.from_dict(data['node'])
+    node: Node = Node.from_dict(data["node"])
     node.starred = False
-    action = data['action']
+    action = data["action"]
     user_id = g.user._id
     db_node = node_collection_managers[collection].get_db_node(node._id, user_id)
 
     if db_node:
         if not node.author:
-            node.author = db_node['author']
-        if node.author != db_node['author']:
+            node.author = db_node["author"]
+        if node.author != db_node["author"]:
             raise Exception("Author of the node does not match the one in the database")
-        is_author = db_node['author'] == g.user._id
+        is_author = db_node["author"] == g.user._id
     else:
         # assign the author
         node.author = g.user._id
@@ -192,13 +192,13 @@ def post_node(collection: str):
 
     if action == NodePostAction.SAVE:
         if (is_workflow and not can_create_workflows) or (not is_workflow and not can_create_operations):
-            return make_permission_denied('You do not have permission to save this object')
+            return make_permission_denied("You do not have permission to save this object")
 
         if node.node_status != NodeStatus.CREATED:
             return make_fail_response(f"Cannot save node with status `{node.node_status}`")
 
         if not (is_author or is_admin or (is_workflow and can_modify_others_workflows)):
-            return make_permission_denied('Only the owners or users with CAN_MODIFY_OTHERS_WORKFLOWS role can save it')
+            return make_permission_denied("Only the owners or users with CAN_MODIFY_OTHERS_WORKFLOWS role can save it")
 
         if node.auto_run and is_workflow:
             node_in_run, new_node_in_run = node_utils.construct_new_run(node, user_id)
@@ -237,15 +237,15 @@ def post_node(collection: str):
 
     elif action == NodePostAction.APPROVE:
         if is_workflow:
-            return make_fail_response('Invalid action for a workflow'), 400
+            return make_fail_response("Invalid action for a workflow"), 400
         if node.node_status != NodeStatus.CREATED:
             return make_fail_response(f"Node status `{NodeStatus.CREATED}` expected. Found `{node.node_status}`")
         validation_error = executor.validate()
         if validation_error:
             return make_success_response({
-                'status': NodePostStatus.VALIDATION_FAILED,
-                'message': 'Node validation failed',
-                'validation_error': validation_error.to_dict()
+                "status": NodePostStatus.VALIDATION_FAILED,
+                "message": "Node validation failed",
+                "validation_error": validation_error.to_dict()
             })
 
         node.node_status = NodeStatus.READY
@@ -257,15 +257,15 @@ def post_node(collection: str):
 
     elif action == NodePostAction.CREATE_RUN:
         if not is_workflow:
-            return make_fail_response('Invalid action for an operation'), 400
+            return make_fail_response("Invalid action for an operation"), 400
         if node.node_status != NodeStatus.CREATED:
             return make_fail_response(f"Node status `{NodeStatus.CREATED}` expected. Found `{node.node_status}`")
         validation_error = executor.validate()
         if validation_error:
             return make_success_response({
-                'status': NodePostStatus.VALIDATION_FAILED,
-                'message': 'Node validation failed',
-                'validation_error': validation_error.to_dict()
+                "status": NodePostStatus.VALIDATION_FAILED,
+                "message": "Node validation failed",
+                "validation_error": validation_error.to_dict()
             })
 
         _, new_node_in_run = node_utils.construct_new_run(node, user_id)
@@ -275,29 +275,29 @@ def post_node(collection: str):
             executor._update_node(new_node_in_run)
             executor.launch()
         else:
-            return make_permission_denied('You do not have CAN_RUN_WORKFLOWS role')
+            return make_permission_denied("You do not have CAN_RUN_WORKFLOWS role")
 
         node.latest_run_id = new_node_in_run._id
         node.save(force=True)
 
         return make_success_response({
-                'status': NodePostStatus.SUCCESS,
-                'message': f"Run(_id=`{new_node_in_run._id}`) successfully created",
-                'run_id': str(new_node_in_run._id),
-                'url': f"/{Collections.RUNS}/{new_node_in_run._id}",
+                "status": NodePostStatus.SUCCESS,
+                "message": f"Run(_id=`{new_node_in_run._id}`) successfully created",
+                "run_id": str(new_node_in_run._id),
+                "url": f"/{Collections.RUNS}/{new_node_in_run._id}",
             })
 
     elif action == NodePostAction.CREATE_RUN_FROM_SCRATCH:
         if not is_workflow:
-            return make_fail_response('Invalid action for an operation'), 400
+            return make_fail_response("Invalid action for an operation"), 400
         if node.node_status != NodeStatus.CREATED:
             return make_fail_response(f"Node status `{NodeStatus.CREATED}` expected. Found `{node.node_status}`")
         validation_error = executor.validate()
         if validation_error:
             return make_success_response({
-                'status': NodePostStatus.VALIDATION_FAILED,
-                'message': 'Node validation failed',
-                'validation_error': validation_error.to_dict()
+                "status": NodePostStatus.VALIDATION_FAILED,
+                "message": "Node validation failed",
+                "validation_error": validation_error.to_dict()
             })
 
         node_in_run = node.clone(NodeClonePolicy.NODE_TO_RUN)
@@ -312,18 +312,18 @@ def post_node(collection: str):
             executor._update_node(node_in_run)
             executor.launch()
         else:
-            return make_permission_denied('You do not have CAN_RUN_WORKFLOWS role')
+            return make_permission_denied("You do not have CAN_RUN_WORKFLOWS role")
 
         return make_success_response({
-                'status': NodePostStatus.SUCCESS,
-                'message': f"Run(_id=`{node_in_run._id}`) successfully created",
-                'run_id': str(node_in_run._id),
-                'url': f"/{Collections.RUNS}/{node_in_run._id}",
+                "status": NodePostStatus.SUCCESS,
+                "message": f"Run(_id=`{node_in_run._id}`) successfully created",
+                "run_id": str(node_in_run._id),
+                "url": f"/{Collections.RUNS}/{node_in_run._id}",
             })
 
     elif action == NodePostAction.CLONE:
         if (is_workflow and not can_create_workflows) or (not is_workflow and not can_create_operations):
-            return make_permission_denied('You do not have the role to create an object')
+            return make_permission_denied("You do not have the role to create an object")
         node_clone_policy: int
         if collection == Collections.TEMPLATES:
             node_clone_policy = NodeClonePolicy.NODE_TO_NODE
@@ -336,9 +336,9 @@ def post_node(collection: str):
         node.save(collection=Collections.TEMPLATES)
 
         return make_success_response({
-                'message': f"Node(_id=`{node._id}`) successfully created",
-                'node_id': str(node._id),
-                'url': f"/{Collections.TEMPLATES}/{node._id}",
+                "message": f"Node(_id=`{node._id}`) successfully created",
+                "node_id": str(node._id),
+                "url": f"/{Collections.TEMPLATES}/{node._id}",
             })
 
     elif action == NodePostAction.VALIDATE:
@@ -346,9 +346,9 @@ def post_node(collection: str):
 
         if validation_error:
             return make_success_response({
-                'status': NodePostStatus.VALIDATION_FAILED,
-                'message': 'Node validation failed',
-                'validation_error': validation_error.to_dict()
+                "status": NodePostStatus.VALIDATION_FAILED,
+                "message": "Node validation failed",
+                "validation_error": validation_error.to_dict()
             })
     elif action == NodePostAction.DEPRECATE:
         if node.node_status == NodeStatus.CREATED:
@@ -359,7 +359,7 @@ def post_node(collection: str):
         if is_author or is_admin:
             node.save(force=True)
         else:
-            return make_permission_denied('You are not an author to deprecate it')
+            return make_permission_denied("You are not an author to deprecate it")
 
     elif action == NodePostAction.MANDATORY_DEPRECATE:
         if node.node_status == NodeStatus.CREATED:
@@ -370,34 +370,34 @@ def post_node(collection: str):
         if is_author or is_admin:
             node.save(force=True)
         else:
-            return make_permission_denied('You are not an author to deprecate it')
+            return make_permission_denied("You are not an author to deprecate it")
 
     elif action == NodePostAction.PREVIEW_CMD:
 
         return make_success_response({
-                'message': 'Successfully created preview',
-                'preview_text': executor.run(preview=True)
+                "message": "Successfully created preview",
+                "preview_text": executor.run(preview=True)
             })
 
     elif action == NodePostAction.REARRANGE_NODES:
         node_utils.arrange_auto_layout(node)
         return make_success_response({
-                'message': 'Successfully created preview',
-                'node': node.to_dict(),
+                "message": "Successfully created preview",
+                "node": node.to_dict(),
             })
     elif action == NodePostAction.UPGRADE_NODES:
         upd = node_collection_managers[collection].upgrade_sub_nodes(node)
         return make_success_response({
-                'message': 'Successfully updated nodes',
-                'node': node.to_dict(),
-                'upgraded_nodes_count': upd,
+                "message": "Successfully updated nodes",
+                "node": node.to_dict(),
+                "upgraded_nodes_count": upd,
             })
     elif action == NodePostAction.CANCEL:
 
         if is_author or is_admin:
             run_cancellation_manager.cancel_run(node._id)
         else:
-            return make_permission_denied('You are not an author to cancel the run')
+            return make_permission_denied("You are not an author to cancel the run")
 
     elif action == NodePostAction.GENERATE_CODE:
         raise NotImplementedError()
@@ -405,5 +405,5 @@ def post_node(collection: str):
         return make_fail_response(f"Unknown action `{action}`")
 
     return make_success_response({
-            'message': f"Node(_id=`{node._id}`) successfully updated"
+            "message": f"Node(_id=`{node._id}`) successfully updated"
         })

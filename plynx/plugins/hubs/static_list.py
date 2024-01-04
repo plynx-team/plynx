@@ -15,12 +15,12 @@ def register_list_item(raw_item: Dict) -> Dict:
     """
     Register a hub node (node or group) recursevely in the memory.
     """
-    if raw_item['_type'] == 'Group':
+    if raw_item["_type"] == "Group":
         # TODO proper checking
         items = []
-        for raw_subitem in raw_item['items']:
+        for raw_subitem in raw_item["items"]:
             items.append(register_list_item(raw_subitem))
-        raw_item['items'] = items
+        raw_item["items"] = items
         return raw_item
     # check if the node is valid
     node = Node.from_dict(raw_item)
@@ -33,9 +33,9 @@ def _recursive_filter(search_parameters: Dict[str, str], search_string: str, lis
     for raw_node in list_of_nodes:
         if raw_node["_type"] == "Group":
             raw_group = copy.deepcopy(raw_node)
-            raw_group['items'] = _recursive_filter(search_parameters, search_string, raw_group['items'])
+            raw_group["items"] = _recursive_filter(search_parameters, search_string, raw_group["items"])
             res.append(raw_group)
-        elif len(search_string) == 0 or search_string.upper() in raw_node['title'].upper():
+        elif len(search_string) == 0 or search_string.upper() in raw_node["title"].upper():
             input_file_type = search_parameters.get(HubSearchParams.INPUT_FILE_TYPE, None)
             output_file_type = search_parameters.get(HubSearchParams.OUTPUT_FILE_TYPE, None)
             if input_file_type:
@@ -75,10 +75,10 @@ class StaticListHub(hub.BaseHub):
 
         res = _recursive_filter(search_parameters, search_string, self.list_of_nodes)
         return {
-            'list': res,
-            'metadata': [
+            "list": res,
+            "metadata": [
                 {
-                    'total': len(res)
+                    "total": len(res)
                 },
             ],
         }

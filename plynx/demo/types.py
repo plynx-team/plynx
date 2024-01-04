@@ -10,12 +10,12 @@ def print_any(value):
     print(value)
 
 
-@plynx.node.output(name='int', var_type=int)
-@plynx.node.output(name='str', var_type=str)
-@plynx.node.output(name='dict', var_type=dict)
-@plynx.node.output(name='float', var_type=float)
-@plynx.node.output(name='bool', var_type=bool)
-@plynx.node.output(name='color', var_type="color")
+@plynx.node.output(name="int", var_type=int)
+@plynx.node.output(name="str", var_type=str)
+@plynx.node.output(name="dict", var_type=dict)
+@plynx.node.output(name="float", var_type=float)
+@plynx.node.output(name="bool", var_type=bool)
+@plynx.node.output(name="color", var_type="color")
 @plynx.node.operation(
     title="All types",
     description="Echo all types",
@@ -32,7 +32,7 @@ def all_types():
     }
 
 
-@plynx.node.input(name='value', var_type=int)
+@plynx.node.input(name="value", var_type=int)
 @plynx.node.operation(
     title="Print Int value",
 )
@@ -41,7 +41,7 @@ def print_int(value):
     print_any(value)
 
 
-@plynx.node.input(name='value', var_type=str)
+@plynx.node.input(name="value", var_type=str)
 @plynx.node.operation(
     title="Print String value",
 )
@@ -50,7 +50,7 @@ def print_str(value):
     print_any(value)
 
 
-@plynx.node.input(name='value', var_type=dict)
+@plynx.node.input(name="value", var_type=dict)
 @plynx.node.operation(
     title="Print Dict value",
 )
@@ -59,7 +59,7 @@ def print_dict(value):
     print_any(value)
 
 
-@plynx.node.input(name='value', var_type=float)
+@plynx.node.input(name="value", var_type=float)
 @plynx.node.operation(
     title="Print Float value",
 )
@@ -68,7 +68,7 @@ def print_float(value):
     print_any(value)
 
 
-@plynx.node.input(name='value', var_type=bool)
+@plynx.node.input(name="value", var_type=bool)
 @plynx.node.operation(
     title="Print Bool value",
 )
@@ -77,7 +77,7 @@ def print_bool(value):
     print_any(value)
 
 
-@plynx.node.input(name='value', var_type="color")
+@plynx.node.input(name="value", var_type="color")
 @plynx.node.operation(
     title="Print Color value",
 )
@@ -86,8 +86,8 @@ def print_color(value):
     print_any(value)
 
 
-@plynx.node.input(name='value', var_type="py-json-file")
-@plynx.node.output(name='value', var_type=dict)
+@plynx.node.input(name="value", var_type="py-json-file")
+@plynx.node.output(name="value", var_type=dict)
 @plynx.node.operation(
     title="File to Dict",
 )
@@ -98,8 +98,8 @@ def file_to_dict(value):
     }
 
 
-@plynx.node.input(name='value', var_type=dict)
-@plynx.node.output(name='value', var_type="py-json-file")
+@plynx.node.input(name="value", var_type=dict)
+@plynx.node.output(name="value", var_type="py-json-file")
 @plynx.node.operation(
     title="Dict to File",
 )

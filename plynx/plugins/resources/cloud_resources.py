@@ -25,7 +25,7 @@ class CloudStorage(resource.BaseResource):
             )
         else:
             with open(filename, "r", encoding="utf8") as f:
-                cloud_filename = json.load(f)['path']
+                cloud_filename = json.load(f)["path"]
         return {
             NodeResources.INPUT: filename,
             NodeResources.CLOUD_INPUT: cloud_filename,
@@ -40,7 +40,7 @@ class CloudStorage(resource.BaseResource):
             uniq_id,
             )
         if not preview:
-            with open(filename, 'w', encoding="utf8") as f:
+            with open(filename, "w", encoding="utf8") as f:
                 json.dump({"path": cloud_filename}, f)
         return {
                 NodeResources.OUTPUT: filename,
