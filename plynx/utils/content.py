@@ -48,9 +48,7 @@ def create_default_templates(user):
             }),
         ],
         outputs=[
-            plynx.db.node.Output({
-                'name': 'out',
-            }),
+            plynx.db.node.Output(name="out"),
         ],
     )
 
@@ -75,8 +73,6 @@ def create_default_templates(user):
             }),
         ],
         outputs=[
-            plynx.db.node.Output({
-                'name': 'out',
-            }),
+            plynx.db.node.Output(name="out"),
         ],
     )
