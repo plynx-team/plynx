@@ -7,12 +7,12 @@ from plynx.utils.common import JSONEncoder
 
 
 def _enhance_list_item(raw_item: Dict) -> Dict:
-    if raw_item['_type'] == 'Group':
+    if raw_item["_type"] == "Group":
         # TODO proper checking
         items = []
-        for raw_subitem in raw_item['items']:
+        for raw_subitem in raw_item["items"]:
             items.append(_enhance_list_item(raw_subitem))
-        raw_item['items'] = items
+        raw_item["items"] = items
         return raw_item
     return raw_item
 

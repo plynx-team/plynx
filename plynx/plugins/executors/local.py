@@ -72,15 +72,15 @@ class _ResourceMerger:
         .. highlight:: python
         .. code-block:: python
         .. {
-        ..     'inputs': {
-        ..         'input_name_0': [],
-        ..         'input_name_1': ['/tmp/1', '/tmp/2'],
-        ..         'input_name_2': '/tmp/3',
+        ..     "inputs": {
+        ..         "input_name_0": [],
+        ..         "input_name_1": ["/tmp/1", "/tmp/2"],
+        ..         "input_name_2": "/tmp/3",
         ..     },
-        ..     'cloud_inputs': {
-        ..         'input_name_0': [],
-        ..         'input_name_1': ['gs://1', 'gs://2'],
-        ..         'input_name_2': 'gs://3',
+        ..     "cloud_inputs": {
+        ..         "input_name_0": [],
+        ..         "input_name_1": ["gs://1", "gs://2"],
+        ..         "input_name_2": "gs://3",
         ..     }
         .. }
         ..
@@ -103,7 +103,7 @@ class BaseBash(plynx.plugins.executors.bases.PLynxAsyncExecutorWithDirectory):
         self.logs_lock = threading.Lock()
         self.output_to_filename: Dict[str, str] = {}
         self._resource_manager = plynx.utils.plugin_manager.get_resource_manager()
-        self._command = 'bash'
+        self._command = "bash"
         self._node_running_status = NodeRunningStatus.READY
 
     def exec_script(self, script_location: str) -> str:
@@ -113,7 +113,7 @@ class BaseBash(plynx.plugins.executors.bases.PLynxAsyncExecutorWithDirectory):
         try:
             def pre_exec():
                 # Restore default signal disposition and invoke setsid
-                for sig in ('SIGPIPE', 'SIGXFZ', 'SIGXFSZ'):
+                for sig in ("SIGPIPE", "SIGXFZ", "SIGXFSZ"):
                     if hasattr(signal, sig):
                         signal.signal(getattr(signal, sig), signal.SIG_DFL)
                 os.setsid()
@@ -121,13 +121,13 @@ class BaseBash(plynx.plugins.executors.bases.PLynxAsyncExecutorWithDirectory):
             env = os.environ.copy()
 
             # append running script to worker log
-            with open(script_location, 'r') as script_f, open(self.logs['worker'], 'a') as worker_f:
+            with open(script_location, "r") as script_f, open(self.logs["worker"], "a") as worker_f:
                 worker_f.write(self._make_debug_text("Running script:"))
                 worker_f.write(script_f.read())
-                worker_f.write('\n')
+                worker_f.write("\n")
                 worker_f.write(self._make_debug_text("End script"))
 
-            with open(self.logs['stdout'], 'wb') as stdout_file, open(self.logs['stderr'], 'wb') as stderr_file:
+            with open(self.logs["stdout"], "wb") as stdout_file, open(self.logs["stderr"], "wb") as stderr_file:
                 self.sp = Popen(    # pylint: disable=subprocess-popen-preexec-fn,consider-using-with
                     [self._command, script_location],
                     stdout=stdout_file, stderr=stderr_file,
@@ -144,19 +144,19 @@ class BaseBash(plynx.plugins.executors.bases.PLynxAsyncExecutorWithDirectory):
             if self._node_running_status != NodeRunningStatus.CANCELED:
                 self._node_running_status = NodeRunningStatus.FAILED
             logging.exception("Job failed")
-            with open(self.logs['worker'], 'a+') as worker_log_file:
+            with open(self.logs["worker"], "a+") as worker_log_file:
                 worker_log_file.write(self._make_debug_text("JOB FAILED"))
                 worker_log_file.write(str(e))
 
         return self._node_running_status
 
     def kill(self):
-        if not hasattr(self, 'sp') or not self.sp:
+        if not hasattr(self, "sp") or not self.sp:
             return
 
         self._node_running_status = NodeRunningStatus.CANCELED
 
-        logging.info('Sending SIGTERM signal to bash process group')
+        logging.info("Sending SIGTERM signal to bash process group")
         try:
             os.killpg(os.getpgid(self.sp.pid), signal.SIGTERM)
             logging.info(f"Killed %d{self.sp.pid}")
@@ -164,15 +164,15 @@ class BaseBash(plynx.plugins.executors.bases.PLynxAsyncExecutorWithDirectory):
             logging.error(f"Error: {e}")
 
     def is_updated(self):
-        logging.info('Tick')
+        logging.info("Tick")
         return self.upload_logs(final=False)
 
     # Hack: do not pickle file
     def __getstate__(self):
-        logging.critical('Run into `__getstate__`! Look ad `logs_lock` variable')
+        logging.critical("Run into `__getstate__`! Look ad `logs_lock` variable")
         dict_copy = dict(self.__dict__)
-        if 'sp' in dict_copy:
-            del dict_copy['sp']
+        if "sp" in dict_copy:
+            del dict_copy["sp"]
         return dict_copy
 
     @staticmethod
@@ -184,23 +184,23 @@ class BaseBash(plynx.plugins.executors.bases.PLynxAsyncExecutorWithDirectory):
     @classmethod
     def get_default_node(cls, is_workflow: bool) -> Node:
         if is_workflow:
-            raise Exception('This class cannot be a workflow')
+            raise Exception("This class cannot be a workflow")
         node = super().get_default_node(is_workflow)
         node.parameters.extend(
             [
                 Parameter(
-                    name='_cmd',
+                    name="_cmd",
                     parameter_type=ParameterTypes.CODE,
                     value=ParameterCode(
-                        mode='sh',
-                        value='set -e\n\necho "hello world"\n',
+                        mode="sh",
+                        value="""set -e\n\necho "hello world"\n""",
                     ),
                     mutable_type=False,
                     publicable=False,
                     removable=False,
                 ),
                 Parameter(
-                    name='_cacheable',
+                    name="_cacheable",
                     parameter_type=ParameterTypes.BOOL,
                     value=False,
                     mutable_type=False,
@@ -208,7 +208,7 @@ class BaseBash(plynx.plugins.executors.bases.PLynxAsyncExecutorWithDirectory):
                     removable=False,
                 ),
                 Parameter(
-                    name='_timeout',
+                    name="_timeout",
                     parameter_type=ParameterTypes.INT,
                     value=600,
                     mutable_type=False,
@@ -220,15 +220,15 @@ class BaseBash(plynx.plugins.executors.bases.PLynxAsyncExecutorWithDirectory):
         node.logs.extend(
             [
                 Output(
-                    name='stderr',
+                    name="stderr",
                     file_type=FILE_KIND,
                 ),
                 Output(
-                    name='stdout',
+                    name="stdout",
                     file_type=FILE_KIND,
                 ),
                 Output(
-                    name='worker',
+                    name="worker",
                     file_type=FILE_KIND,
                 ),
             ]
@@ -253,7 +253,7 @@ class BaseBash(plynx.plugins.executors.bases.PLynxAsyncExecutorWithDirectory):
             else:
                 for i, value in enumerate(input.values):
                     filename = os.path.join(self.workdir, f"i_{i}_{input.name}")
-                    with open(filename, 'wb') as f:
+                    with open(filename, "wb") as f:
                         f.write(get_file_stream(value).read())
                     resource_merger.append(
                         self._resource_manager.kind_to_resource_class[input.file_type].prepare_input(filename, preview),
@@ -298,12 +298,12 @@ class BaseBash(plynx.plugins.executors.bases.PLynxAsyncExecutorWithDirectory):
         for key, filename in outputs.items():
             logging.info(f"Uploading output `{key}` - `{filename}`")
             if os.path.exists(filename):
-                logging.info('path exists')
+                logging.info("path exists")
                 matching_outputs = list(filter(lambda o: o.name == key, self.node.outputs))     # pylint: disable=cell-var-from-loop
                 assert len(matching_outputs) == 1, f"Found more that 1 output with the same name `{key}`"
                 filename = self._resource_manager.kind_to_resource_class[matching_outputs[0].file_type].postprocess_output(filename)
                 logging.info(filename)
-                with open(filename, 'rb') as f:
+                with open(filename, "rb") as f:
                     # resource_id
                     self.node.get_output_by_name(key).values = [upload_file_stream(f)]
                     logging.info(self.node.get_output_by_name(key).to_dict())
@@ -315,7 +315,7 @@ class BaseBash(plynx.plugins.executors.bases.PLynxAsyncExecutorWithDirectory):
 
     def _extract_cmd_text(self) -> str:
         assert self.node, "Attribute `node` is undefined"
-        parameter = self.node.get_parameter_by_name('_cmd')
+        parameter = self.node.get_parameter_by_name("_cmd")
         if parameter.parameter_type == ParameterTypes.CODE:
             return parameter.value.value
         elif parameter.parameter_type == ParameterTypes.TEXT:
@@ -339,7 +339,7 @@ class BaseBash(plynx.plugins.executors.bases.PLynxAsyncExecutorWithDirectory):
                     is_dirty = True
                     log = self.node.get_log_by_name(key)
                     self.logs_sizes[key] = os.stat(filename).st_size
-                    with open(filename, 'rb') as f:
+                    with open(filename, "rb") as f:
                         # resource_id should be None if the file has not been uploaded yet
                         # otherwise assign it
                         log.values = [upload_file_stream(f, log.values[0] if len(log.values) > 0 else None)]
@@ -353,7 +353,7 @@ class BaseBash(plynx.plugins.executors.bases.PLynxAsyncExecutorWithDirectory):
 class BashJinja2(BaseBash):
     """Local executor that uses jinja2 template to format a bash script."""
     HELP_TEMPLATE = """# Use templates: {}
-# For example `{{{{ '{{{{' }}}} params['_timeout'] {{{{ '}}}}' }}}}` or `{{{{ '{{{{' }}}} inputs['abc'] {{{{ '}}}}' }}}}`
+# For example `{{{{ "{{{{" }}}} params["_timeout"] {{{{ "}}}}" }}}}` or `{{{{ "{{{{" }}}} inputs["abc"] {{{{ "}}}}" }}}}`
 
 """
 
@@ -379,7 +379,7 @@ class BashJinja2(BaseBash):
             return cmd_string
 
         script_location = self._get_script_fname()
-        with open(script_location, 'w') as script_file:
+        with open(script_location, "w") as script_file:
             script_file.write(
                 cmd_string
             )
@@ -394,7 +394,7 @@ class BashJinja2(BaseBash):
     @classmethod
     def get_default_node(cls, is_workflow: bool) -> Node:
         node = super().get_default_node(is_workflow)
-        node.title = 'New bash script'
+        node.title = "New bash script"
         return node
 
 
@@ -402,7 +402,7 @@ class PythonNode(BaseBash):
     """Local executor that uses python template to format a bash script."""
     def __init__(self, node: Optional[Node] = None):
         super().__init__(node)
-        self._command = 'python'
+        self._command = "python"
 
     def run(self, preview: bool = False) -> str:
         inputs = self._prepare_inputs(preview)
@@ -426,13 +426,13 @@ class PythonNode(BaseBash):
             "# User code starts there:",
             cmd,
         ])
-        cmd_string = '\n'.join(cmd_array)
+        cmd_string = "\n".join(cmd_array)
 
         if preview:
             return cmd_string
 
-        script_location = self._get_script_fname(extension='.py')
-        with open(script_location, 'w') as script_file:
+        script_location = self._get_script_fname(extension=".py")
+        with open(script_location, "w") as script_file:
             script_file.write(
                 cmd_string
             )
@@ -449,8 +449,8 @@ class PythonNode(BaseBash):
         res = [f"{var_name} = {{}}"]
         for key, value in arguments.items():
             value = repr(cls._pythonize(value))
-            res.append(f'{var_name}["{key}"] = {value}')
-        return '\n'.join(res)
+            res.append(f"{var_name}[\"{key}\"] = {value}")
+        return "\n".join(res)
 
     @staticmethod
     def _pythonize(value: Any) -> Any:
@@ -461,10 +461,10 @@ class PythonNode(BaseBash):
     @classmethod
     def get_default_node(cls, is_workflow: bool) -> Node:
         node = super().get_default_node(is_workflow)
-        node.title = 'New python script'
-        param = list(filter(lambda p: p.name == '_cmd', node.parameters))[0]
-        param.value.mode = 'python'
-        param.value.value = 'print("hello world")'
+        node.title = "New python script"
+        param = list(filter(lambda p: p.name == "_cmd", node.parameters))[0]
+        param.value.mode = "python"
+        param.value.value = "print(\"hello world\")"
         return node
 
 

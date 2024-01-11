@@ -53,4 +53,4 @@ class RunCancellationManager:
         Args:
             runs_cancellation_ids     (list of ObjectID)  List of Run IDs to remove
         """
-        get_db_connector()[Collections.RUN_CANCELLATIONS].delete_many({'_id': {'$in': runs_cancellation_ids}})
+        get_db_connector()[Collections.RUN_CANCELLATIONS].delete_many({"_id": {"$in": runs_cancellation_ids}})

@@ -81,7 +81,7 @@ class BaseExecutor(ABC):
         node = Node()
         if cls.IS_GRAPH:
             nodes_parameter = Parameter(
-                name='_nodes',
+                name="_nodes",
                 parameter_type=ParameterTypes.LIST_NODE,
                 value=ParameterListOfNodes(),
                 mutable_type=False,
@@ -94,15 +94,15 @@ class BaseExecutor(ABC):
                     [
                         Node(
                             _id=SpecialNodeId.INPUT,
-                            title='Input',
-                            kind='dummy',
+                            title="Input",
+                            kind="dummy",
                             node_running_status=NodeRunningStatus.SPECIAL,
                             node_status=NodeStatus.READY,
                         ),
                         Node(
                             _id=SpecialNodeId.OUTPUT,
-                            title='Output',
-                            kind='dummy',
+                            title="Output",
+                            kind="dummy",
                             node_running_status=NodeRunningStatus.SPECIAL,
                             node_status=NodeStatus.READY,
                         ),
@@ -129,15 +129,15 @@ class BaseExecutor(ABC):
 
         violations = []
 
-        if self.node.title == '':
+        if self.node.title == "":
             violations.append(
                 ValidationError(
                     target=ValidationTargetType.PROPERTY,
-                    object_id='title',
+                    object_id="title",
                     validation_code=ValidationCode.MISSING_PARAMETER
                 ))
 
-        # Meaning the node is in the graph. Otherwise souldn't be in the validation step
+        # Meaning the node is in the graph. Otherwise souldn"t be in the validation step
         if not ignore_inputs:
             for input in self.node.inputs:  # pylint: disable=redefined-builtin
                 min_count = input.min_count if input.is_array else 1

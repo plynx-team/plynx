@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional
 
 from plynx.constants import NodeResources
 
-PreviewObject = namedtuple('PreviewObject', ['fp', 'resource_id'])
+PreviewObject = namedtuple("PreviewObject", ["fp", "resource_id"])
 
 
 def _force_decode(byte_array):
@@ -33,7 +33,7 @@ class BaseResource:
         """Prepare output"""
         if not preview:
             # Create file
-            with open(filename, 'a'):
+            with open(filename, "a"):
                 pass
         return {NodeResources.OUTPUT: filename}
 

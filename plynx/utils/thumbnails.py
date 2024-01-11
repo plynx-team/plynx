@@ -19,7 +19,7 @@ def apply_thumbnails(node: plynx.db.node.Node):
     """
     Fill thumbnail field of every subnode
     """
-    sub_nodes_parameter = node.get_parameter_by_name_safe('_nodes')
+    sub_nodes_parameter = node.get_parameter_by_name_safe("_nodes")
     if not sub_nodes_parameter:
         logging.warning("no subnodes found in `apply_thumbnails`")
         return

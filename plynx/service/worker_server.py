@@ -77,7 +77,7 @@ def run_worker_server(verbose, endpoint_port: int):
 
     # set up logger level
     set_logging_level(verbose, logger=logger)
-    set_logging_level(verbose, logger=logging.getLogger('werkzeug'))
+    set_logging_level(verbose, logger=logging.getLogger("werkzeug"))
 
     CORS(app, resources={r"/*": {"origins": "*"}})
     app.run(

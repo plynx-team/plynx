@@ -6,17 +6,17 @@ from bson.objectid import ObjectId
 
 class NodeRunningStatus:
     """Running status enum"""
-    STATIC: str = 'STATIC'
-    CREATED: str = 'CREATED'
-    READY: str = 'READY'
-    IN_QUEUE: str = 'IN_QUEUE'
-    RUNNING: str = 'RUNNING'
-    SUCCESS: str = 'SUCCESS'
-    RESTORED: str = 'RESTORED'
-    FAILED: str = 'FAILED'
-    FAILED_WAITING: str = 'FAILED_WAITING'
-    CANCELED: str = 'CANCELED'
-    SPECIAL: str = 'SPECIAL'
+    STATIC: str = "STATIC"
+    CREATED: str = "CREATED"
+    READY: str = "READY"
+    IN_QUEUE: str = "IN_QUEUE"
+    RUNNING: str = "RUNNING"
+    SUCCESS: str = "SUCCESS"
+    RESTORED: str = "RESTORED"
+    FAILED: str = "FAILED"
+    FAILED_WAITING: str = "FAILED_WAITING"
+    CANCELED: str = "CANCELED"
+    SPECIAL: str = "SPECIAL"
 
     _FAILED_STATUSES: Set[str] = {
         FAILED,
@@ -67,34 +67,34 @@ class NodeRunningStatus:
 
 class NodeStatus:
     """Node permanent status"""
-    CREATED: str = 'CREATED'
-    READY: str = 'READY'
-    DEPRECATED: str = 'DEPRECATED'
-    MANDATORY_DEPRECATED: str = 'MANDATORY_DEPRECATED'
+    CREATED: str = "CREATED"
+    READY: str = "READY"
+    DEPRECATED: str = "DEPRECATED"
+    MANDATORY_DEPRECATED: str = "MANDATORY_DEPRECATED"
 
 
 class NodePostAction:
     """HTTP post action"""
-    SAVE: str = 'SAVE'
-    APPROVE: str = 'APPROVE'
-    CREATE_RUN: str = 'CREATE_RUN'
-    CREATE_RUN_FROM_SCRATCH: str = 'CREATE_RUN_FROM_SCRATCH'
-    CLONE: str = 'CLONE'
-    VALIDATE: str = 'VALIDATE'
-    DEPRECATE: str = 'DEPRECATE'
-    MANDATORY_DEPRECATE: str = 'MANDATORY_DEPRECATE'
-    PREVIEW_CMD: str = 'PREVIEW_CMD'
-    REARRANGE_NODES: str = 'REARRANGE_NODES'
-    UPGRADE_NODES: str = 'UPGRADE_NODES'
-    CANCEL: str = 'CANCEL'
-    GENERATE_CODE: str = 'GENERATE_CODE'
+    SAVE: str = "SAVE"
+    APPROVE: str = "APPROVE"
+    CREATE_RUN: str = "CREATE_RUN"
+    CREATE_RUN_FROM_SCRATCH: str = "CREATE_RUN_FROM_SCRATCH"
+    CLONE: str = "CLONE"
+    VALIDATE: str = "VALIDATE"
+    DEPRECATE: str = "DEPRECATE"
+    MANDATORY_DEPRECATE: str = "MANDATORY_DEPRECATE"
+    PREVIEW_CMD: str = "PREVIEW_CMD"
+    REARRANGE_NODES: str = "REARRANGE_NODES"
+    UPGRADE_NODES: str = "UPGRADE_NODES"
+    CANCEL: str = "CANCEL"
+    GENERATE_CODE: str = "GENERATE_CODE"
 
 
 class NodePostStatus:
     """Standard HTTP response status"""
-    SUCCESS: str = 'SUCCESS'
-    FAILED: str = 'FAILED'
-    VALIDATION_FAILED: str = 'VALIDATION_FAILED'
+    SUCCESS: str = "SUCCESS"
+    FAILED: str = "FAILED"
+    VALIDATION_FAILED: str = "VALIDATION_FAILED"
 
 
 class NodeClonePolicy:
@@ -106,14 +106,14 @@ class NodeClonePolicy:
 
 class NodeVirtualCollection:
     """Virtual collection"""
-    OPERATIONS: str = 'operations'
-    WORKFLOWS: str = 'workflows'
+    OPERATIONS: str = "operations"
+    WORKFLOWS: str = "workflows"
 
 
 class SpecialNodeId:
     """Special Node IDs in the workflows"""
-    INPUT: ObjectId = ObjectId('2419f9500000000000000000')
-    OUTPUT: ObjectId = ObjectId('56274ccc0000000000000000')
+    INPUT: ObjectId = ObjectId("2419f9500000000000000000")
+    OUTPUT: ObjectId = ObjectId("56274ccc0000000000000000")
 
 
 class NodeOrigin:
@@ -122,4 +122,4 @@ class NodeOrigin:
     BUILT_IN_HUBS: str = "BUILT_IN_HUBS"
 
 
-IGNORED_CACHE_PARAMETERS = {'cmd', '_timeout'}
+IGNORED_CACHE_PARAMETERS = {"cmd", "_timeout"}

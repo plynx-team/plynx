@@ -10,7 +10,7 @@ import typing_inspect
 from plynx.utils.common import ObjectId
 from plynx.utils.db_connector import get_db_connector
 
-DBObjectType = TypeVar('DBObjectType', bound='_DBObject')   # pylint: disable=invalid-name
+DBObjectType = TypeVar("DBObjectType", bound="_DBObject")   # pylint: disable=invalid-name
 
 _registry = {}
 
@@ -40,7 +40,7 @@ class _DBObject:
     """
 
     # Name of the collection in the database
-    DB_COLLECTION = ''
+    DB_COLLECTION = ""
 
     @classmethod
     def load(cls: Type[DBObjectType], _id: ObjectId, collection: Optional[str] = None) -> DBObjectType:
@@ -50,7 +50,7 @@ class _DBObject:
             _id     (ObjectId):    ID of the object in DB
         """
         collection = collection or cls.DB_COLLECTION
-        obj_dict = getattr(get_db_connector(), collection).find_one({'_id': _id})
+        obj_dict = getattr(get_db_connector(), collection).find_one({"_id": _id})
         if not obj_dict:
             raise DBObjectNotFound(f"Object `{_id}` not found in `{collection}` collection")
         return cls.from_dict(obj_dict)
@@ -70,7 +70,7 @@ class _DBObject:
         obj_dict["update_date"] = now
 
         getattr(get_db_connector(), collection).find_one_and_update(
-            {'_id': obj_dict['_id']},
+            {"_id": obj_dict["_id"]},
             {
                 "$setOnInsert": {"insertion_date": now},
                 "$set": obj_dict
@@ -97,7 +97,7 @@ class _DBObject:
         return {}
 
     def __str__(self) -> str:
-        id_val = self.__dict__.get('_id', str(self.to_dict()))
+        id_val = self.__dict__.get("_id", str(self.to_dict()))
         return f"{self.__class__.__name__}({id_val})"
 
     def __repr__(self) -> str:

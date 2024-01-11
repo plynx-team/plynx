@@ -53,7 +53,7 @@ class PLynxAsyncExecutorWithDirectory(PLynxAsyncExecutor):
 
     def __init__(self, node):
         super().__init__(node)
-        self.workdir = os.path.join('/tmp', str(uuid.uuid1()))
+        self.workdir = os.path.join("/tmp", str(uuid.uuid1()))
 
     def init_executor(self):
         """Make tmp dir if it does not exist"""

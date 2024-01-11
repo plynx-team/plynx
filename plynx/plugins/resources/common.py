@@ -56,7 +56,7 @@ class PDF(resource.BaseResource):
     def preview(cls, preview_object: resource.PreviewObject) -> str:
         """Generate preview html body"""
         src_url = f"{WEB_CONFIG.endpoint}/resource/{preview_object.resource_id}"
-        return f'<iframe src="{src_url}" title="preview" type="application/pdf" width="100%"/>'
+        return f"""<iframe src="{src_url}" title="preview" type="application/pdf" width="100%"/>"""
 
 
 class Image(resource.BaseResource):
@@ -67,20 +67,20 @@ class Image(resource.BaseResource):
     def preview(cls, preview_object: resource.PreviewObject) -> str:
         """Generate preview html body"""
         src_url = f"{WEB_CONFIG.endpoint}/resource/{preview_object.resource_id}"
-        return f'<img src="{src_url}" width="100%" alt="preview" />'
+        return f"""<img src="{src_url}" width="100%" alt="preview" />"""
 
     @classmethod
     def thumbnail(cls, output: Any) -> Optional[str]:
         if len(output.values) != 1:
             return None
         src_url = f"{WEB_CONFIG.endpoint}/resource/{output.values[0]}"
-        return f'<img src="{src_url}" width="100%" alt="preview" />'
+        return f"""<img src="{src_url}" width="100%" alt="preview" />"""
 
 
 class _BaseSeparated(resource.BaseResource):
     """Base Separated file, i.e. csv, tsv"""
     SEPARATOR: Optional[str] = None
-    _ROW_CLASSES: List[str] = ['even', 'odd']
+    _ROW_CLASSES: List[str] = ["even", "odd"]
     _NUM_ROW_CLASSES: int = len(_ROW_CLASSES)
 
     @classmethod
@@ -88,23 +88,23 @@ class _BaseSeparated(resource.BaseResource):
         """Generate preview html body"""
         preview_object.fp.truncate(1024 ** 2)
         formated_lines = []
-        for idx, line in enumerate(preview_object.fp.read().decode('utf-8').split('\n')):
+        for idx, line in enumerate(preview_object.fp.read().decode("utf-8").split("\n")):
             even_or_odd = cls._ROW_CLASSES[idx % cls._NUM_ROW_CLASSES]
-            formated_cells = ''.join(map(lambda s: f'<td class="preview-table-col">{s}</td>', line.split(cls.SEPARATOR)))
-            formated_line = f'<tr class="preview-table-row-{even_or_odd}">{formated_cells}</tr>'
+            formated_cells = "".join(map(lambda s: f"""<td class="preview-table-col">{s}</td>""", line.split(cls.SEPARATOR)))
+            formated_line = f"""<tr class="preview-table-row-{even_or_odd}">{formated_cells}</tr>"""
             formated_lines.append(formated_line)
-        all_lines = '\n'.join(formated_lines)
-        return f'<table class="preview-table">{all_lines}</table>'
+        all_lines = "\n".join(formated_lines)
+        return f"""<table class="preview-table">{all_lines}</table>"""
 
 
 class CSV(_BaseSeparated):
     """CSV file"""
-    SEPARATOR: str = ','
+    SEPARATOR: str = ","
 
 
 class TSV(_BaseSeparated):
     """TSV file"""
-    SEPARATOR: str = '\t'
+    SEPARATOR: str = "\t"
 
 
 class Json(resource.BaseResource):
@@ -115,7 +115,7 @@ class Json(resource.BaseResource):
         if preview_object.fp.getbuffer().nbytes > 1024 ** 2:
             return super(Json, cls).preview(preview_object)
         try:
-            readable_json = json.dumps(json.loads(preview_object.fp.read().decode('utf-8')), indent=2)
+            readable_json = json.dumps(json.loads(preview_object.fp.read().decode("utf-8")), indent=2)
             return f"<pre>{readable_json}</pre>"
         except json.JSONDecodeError as e:
             return f"Failed to parse json: {e}"
@@ -160,17 +160,17 @@ class Directory(resource.BaseResource):
     def postprocess_output(value: str) -> str:
         """Compress folder to a zip file"""
         zip_filename = f"{value}.zip"
-        with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zf:
+        with zipfile.ZipFile(zip_filename, "w", zipfile.ZIP_DEFLATED) as zf:
             zipdir(value, zf)
         return zip_filename
 
     @classmethod
     def preview(cls, preview_object: resource.PreviewObject) -> str:
         """Generate preview html body"""
-        with zipfile.ZipFile(preview_object.fp, 'r') as zf:
-            content_stream = '\n'.join(zf.namelist())
+        with zipfile.ZipFile(preview_object.fp, "r") as zf:
+            content_stream = "\n".join(zf.namelist())
 
         return f"<pre>{content_stream}</pre>"
 
 
-FILE_KIND = 'file'
+FILE_KIND = "file"

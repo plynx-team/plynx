@@ -14,7 +14,7 @@ node_collection_manager = plynx.db.node_collection_manager.NodeCollectionManager
 run_cancellation_manager = plynx.db.run_cancellation_manager.RunCancellationManager()
 
 
-@app.route('/plynx/api/v0/get_run', methods=['POST'])
+@app.route("/plynx/api/v0/get_run", methods=["POST"])
 @handle_errors
 def get_a_run():
     """Find a certain run and return it"""
@@ -29,7 +29,7 @@ def get_a_run():
     return make_success_response({"node": node_dict})
 
 
-@app.route('/plynx/api/v0/pick_run', methods=['POST'])
+@app.route("/plynx/api/v0/pick_run", methods=["POST"])
 @handle_errors
 def pick_a_run():
     """Find a single run and return it"""
@@ -40,20 +40,20 @@ def pick_a_run():
     return make_success_response({"node": node_dict})
 
 
-@app.route('/plynx/api/v0/update_run', methods=['POST'])
+@app.route("/plynx/api/v0/update_run", methods=["POST"])
 @handle_errors
 def update_run():
     """Update an entry in /runs collections"""
     data = json.loads(request.data)
 
-    node = Node.from_dict(data['node'])
+    node = Node.from_dict(data["node"])
     app.logger.info(f"updating run {node._id} with node_running_status {node.node_running_status}")     # pylint: disable=no-member
 
     node.save(collection=Collections.RUNS)
     return make_success_response()
 
 
-@app.route('/plynx/api/v0/get_run_cancelations', methods=['POST'])
+@app.route("/plynx/api/v0/get_run_cancelations", methods=["POST"])
 def get_run_cancelations():
     """Ask the server if there is a cancelation"""
     data = json.loads(request.data)

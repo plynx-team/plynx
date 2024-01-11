@@ -10,9 +10,9 @@ from typing import Any, Dict, Tuple, Union
 
 from bson import ObjectId
 
-SearchParameter = collections.namedtuple('SearchParameter', ['key', 'value'])
+SearchParameter = collections.namedtuple("SearchParameter", ["key", "value"])
 
-SEARCH_RGX = re.compile(r'[^\s]+:[^\s]+')
+SEARCH_RGX = re.compile(r"[^\s]+:[^\s]+")
 TRUES = ["true", "t"]
 FALSES = ["false", "f"]
 
@@ -46,41 +46,41 @@ def zipdir(path: str, zf: zipfile.ZipFile):
 def parse_search_string(search_string: str) -> Tuple[Dict, str]:
     """Separate keywords fro mserach string"""
     found_matches = re.findall(SEARCH_RGX, search_string)
-    search_parameters = dict([match.split(':') for match in found_matches])
+    search_parameters = dict([match.split(":") for match in found_matches])
 
-    return search_parameters, ' '.join(re.sub(SEARCH_RGX, '', search_string).split())
+    return search_parameters, " ".join(re.sub(SEARCH_RGX, "", search_string).split())
 
 
-def query_yes_no(question: str, default: str = 'yes') -> bool:
+def query_yes_no(question: str, default: str = "yes") -> bool:
     """Ask a yes/no question via input() and return their answer.
 
     Args:
         question    (str):  String that is presented to the user.
-        default     (str):  'yes' or 'no' default value
+        default     (str):  "yes" or "no" default value
 
-    The 'answer' return value is True for 'yes' or False for 'no'.
+    The "answer" return value is True for "yes" or False for "no".
     """
-    valid = {'yes': True, 'y': True, 'ye': True,
-             'no': False, 'n': False}
+    valid = {"yes": True, "y": True, "ye": True,
+             "no": False, "n": False}
     if default is None:
-        prompt = ' [y/n] '
-    elif default == 'yes':
-        prompt = ' [Y/n] '
-    elif default == 'no':
-        prompt = ' [y/N] '
+        prompt = " [y/n] "
+    elif default == "yes":
+        prompt = " [Y/n] "
+    elif default == "no":
+        prompt = " [y/N] "
     else:
         raise ValueError(f"Invalid default answer: `{default}`")
 
     while True:
         sys.stdout.write(question + prompt)
         choice = input().lower()
-        if default is not None and choice == '':
+        if default is not None and choice == "":
             return valid[default]
         elif choice in valid:
             return valid[choice]
         else:
-            sys.stdout.write("Please respond with 'yes' or 'no' "
-                             "(or 'y' or 'n').\n")
+            sys.stdout.write("Please respond with `yes` or `no` "
+                             "(or `y` or `n`).\n")
 
 
 def str_to_bool(val: Union[str, bool]) -> bool:

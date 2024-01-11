@@ -11,10 +11,10 @@ def parse_requirements(filename):
 
 
 DIR = os.path.dirname(os.path.abspath(__file__))
-install_requires = parse_requirements(os.path.join(DIR, 'requirements.txt'))
+install_requires = parse_requirements(os.path.join(DIR, "requirements.txt"))
 
 # Extra dependencies for storage
-dev_reqs = parse_requirements(os.path.join(DIR, 'requirements-dev.txt'))
+dev_reqs = parse_requirements(os.path.join(DIR, "requirements-dev.txt"))
 gs = [
     "google-cloud-storage>=1.13.0",
 ]
@@ -27,57 +27,57 @@ ssh = [
 all_reqs = dev_reqs + gs + s3 + ssh
 
 setup(
-    name='plynx',
+    name="plynx",
     version=plynx.__version__,
-    description='ML platform',
-    long_description='Interactive, Scalable, Shareable and Reproducible ML experiments',
-    url='https://plynx.com',
-    author='Ivan Khomyakov',
-    author_email='ivan@plynx.com',
+    description="ML platform",
+    long_description="Interactive, Scalable, Shareable and Reproducible ML experiments",
+    url="https://plynx.com",
+    author="Ivan Khomyakov",
+    author_email="ivan@plynx.com",
     classifiers=[
-        'Development Status :: 4 - Beta',
+        "Development Status :: 4 - Beta",
 
-        'Environment :: Console',
-        'Environment :: Web Environment',
+        "Environment :: Console",
+        "Environment :: Web Environment",
 
-        'Intended Audience :: Developers',
-        'Intended Audience :: Education',
-        'Intended Audience :: Information Technology',
-        'Intended Audience :: Science/Research',
+        "Intended Audience :: Developers",
+        "Intended Audience :: Education",
+        "Intended Audience :: Information Technology",
+        "Intended Audience :: Science/Research",
 
-        'License :: OSI Approved :: Apache Software License',
+        "License :: OSI Approved :: Apache Software License",
 
-        'Operating System :: POSIX',
+        "Operating System :: POSIX",
 
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.7',
-        'Programming Language :: Python :: 3.8',
-        'Programming Language :: Python :: 3.9',
-        'Programming Language :: Python :: 3.10',
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
 
-        'Topic :: Scientific/Engineering :: Artificial Intelligence',
-        'Topic :: Scientific/Engineering :: Information Analysis',
-        'Topic :: Scientific/Engineering :: Visualization',
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Scientific/Engineering :: Information Analysis",
+        "Topic :: Scientific/Engineering :: Visualization",
     ],
-    keywords='data science, machine learning, pipeline, workflow, experiments',
-    packages=find_packages(exclude=['scripts', 'docker']),
+    keywords="data science, machine learning, pipeline, workflow, experiments",
+    packages=find_packages(exclude=["scripts", "docker"]),
     install_requires=install_requires,
     extras_require={
-        'all': all_reqs,
-        'dev': dev_reqs,
-        'gs': gs,
-        's3': s3,
-        'ssh': ssh,
+        "all": all_reqs,
+        "dev": dev_reqs,
+        "gs": gs,
+        "s3": s3,
+        "ssh": ssh,
     },
     package_data={},
     entry_points={
-        'console_scripts': [
-            'plynx=plynx.bin:main',
+        "console_scripts": [
+            "plynx=plynx.bin:main",
         ],
     },
     project_urls={
-        'Demo': 'https://plynx.com',
-        'Source': 'https://github.com/plynx-team/plynx',
+        "Demo": "https://plynx.com",
+        "Source": "https://github.com/plynx-team/plynx",
     },
     # plynx.graph.base_nodes.collection uses reference to __file__
     zip_safe=False,

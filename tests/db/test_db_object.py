@@ -6,8 +6,8 @@ from plynx.db.node import Input, Node, Output, Parameter
 def get_test_node():
     """Create test node"""
     node = Node()
-    node.title = 'Command 1x1'
-    node.description = 'Any command with 1 arg'
+    node.title = "Command 1x1"
+    node.description = "Any command with 1 arg"
     node.kind = "dummy"
 
     node.inputs = []

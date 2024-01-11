@@ -21,7 +21,7 @@ def create_add_1_operation():
     ]
     node.get_parameter_by_name("_cmd").value.value = (
         "def operation(input_a, input_b):\n"
-        "    return {'out': input_a + input_b + 1}\n"
+        "    return {\"out\": input_a + input_b + 1}\n"
     )
 
     return node
@@ -37,7 +37,7 @@ def create_graph_flow():
     """
     dag_node = DAG.get_default_node(is_workflow=True)
     dag_node.title = "Graph"
-    dag_node.kind = 'python-workflow'
+    dag_node.kind = "python-workflow"
     nodes = dag_node.get_sub_nodes()
 
     add_a = create_add_1_operation()

@@ -13,10 +13,10 @@ from plynx.db.node_cache import NodeCache
 from plynx.db.node_cache_manager import NodeCacheManager
 from plynx.utils.common import query_yes_no
 
-OutputListTuple = namedtuple('OutputListTuple', ['node_cache_id', 'insertion_date', 'resource_type', 'name', 'file_type', 'resource_id', 'protected'])
+OutputListTuple = namedtuple("OutputListTuple", ["node_cache_id", "insertion_date", "resource_type", "name", "file_type", "resource_id", "protected"])
 
-LIST_CACHE = 'list'
-CLEAN_CACHE = 'clean'
+LIST_CACHE = "list"
+CLEAN_CACHE = "clean"
 MODES = [
     CLEAN_CACHE,
     LIST_CACHE,
@@ -31,13 +31,13 @@ def run_list_cache(start_datetime: Optional[datetime], end_datetime: datetime):
     file_writer.writerow(OutputListTuple._fields)
     for node_cache_dict in node_cache_manager.get_list(start_datetime, end_datetime):   # pylint: disable=use-sequence-for-iteration
         node_cache = NodeCache.from_dict(node_cache_dict)
-        for resource_type in {'outputs', 'logs'}:   # pylint: disable=use-sequence-for-iteration
+        for resource_type in {"outputs", "logs"}:   # pylint: disable=use-sequence-for-iteration
             for resource in getattr(node_cache, resource_type):
                 if resource.resource_id:
                     file_writer.writerow(
                         OutputListTuple(
                             node_cache_id=node_cache._id,
-                            insertion_date=node_cache_dict['insertion_date'].isoformat(),
+                            insertion_date=node_cache_dict["insertion_date"].isoformat(),
                             resource_type=resource_type,
                             name=resource.name,
                             file_type=resource.file_type,
@@ -52,17 +52,17 @@ def run_clean_cache(start_datetime: Optional[datetime], end_datetime: datetime, 
     query = node_cache_manager.get_list(start_datetime, end_datetime, non_protected_only=True)
     query_count = query.count()
     if query_count == 0:
-        logging.critical('No cached results to remove')
+        logging.critical("No cached results to remove")
         return
-    if not yes and not query_yes_no(f"Are you sure you want to remove `{query_count}` cached results?", default='no'):
-        print('Canceled')
+    if not yes and not query_yes_no(f"Are you sure you want to remove `{query_count}` cached results?", default="no"):
+        print("Canceled")
         return
 
     logging.info(f"Start removing `{query_count}` objects")
     for node_cache_dict in query:
         node_cache = NodeCache.from_dict(node_cache_dict)
         try:
-            for resource_type in {'outputs', 'logs'}:   # pylint: disable=use-sequence-for-iteration
+            for resource_type in {"outputs", "logs"}:   # pylint: disable=use-sequence-for-iteration
                 for resource in getattr(node_cache, resource_type):
                     if resource.resource_id:
                         raise NotImplementedError()

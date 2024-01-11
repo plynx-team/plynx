@@ -35,32 +35,32 @@ def generate_key(node: Node) -> str:
     """
 
     sorted_inputs = sorted(node.inputs, key=lambda x: x.name)
-    inputs_hash = ','.join([
+    inputs_hash = ",".join([
         f"{input.name}:{input.file_type}:{input.is_array}:{input.min_count}"
         for input in sorted_inputs
     ])
 
     sorted_parameters = sorted(node.parameters, key=lambda x: x.name)
-    parameters_hash = ','.join([
+    parameters_hash = ",".join([
         f"{parameter.name}:{parameter.parameter_type}"
         for parameter in sorted_parameters
     ])
 
     sorted_outputs = sorted(node.outputs, key=lambda x: x.name)
-    outputs_hash = ','.join([
+    outputs_hash = ",".join([
         f"{output.name}:{output.file_type}:{output.is_array}:{output.min_count}"
         for output in sorted_outputs
     ])
 
     assert node.code_function_location, "`code_function_location` must not be empty"
-    hash_str = ';'.join([
+    hash_str = ";".join([
         node.code_function_location,
         inputs_hash,
         parameters_hash,
         outputs_hash,
     ])
 
-    return hashlib.sha256(hash_str.encode('utf-8')).hexdigest()
+    return hashlib.sha256(hash_str.encode("utf-8")).hexdigest()
 
 
 def func_or_group_to_dict(func_or_group: Union[Callable, Group]):

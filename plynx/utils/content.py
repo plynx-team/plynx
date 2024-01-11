@@ -18,7 +18,7 @@ def create_template(user, kind, cmd, title, description, inputs=None, parameters
     node.description = description
     node.kind = kind
 
-    cmd_parameter = next(filter(lambda parameter: parameter.name == '_cmd', node.parameters))
+    cmd_parameter = next(filter(lambda parameter: parameter.name == "_cmd", node.parameters))
     cmd_parameter.value.value = cmd
 
     node.inputs.extend(inputs or [])
@@ -27,7 +27,7 @@ def create_template(user, kind, cmd, title, description, inputs=None, parameters
 
     validation_error = executor_manager.kind_to_executor_class[kind](node).validate()
     if validation_error:
-        raise Exception('Validation failed')
+        raise Exception("Validation failed")
 
     node.node_status = plynx.constants.NodeStatus.READY
 
@@ -37,46 +37,42 @@ def create_template(user, kind, cmd, title, description, inputs=None, parameters
 def create_default_templates(user):
     create_template(
         user=user,
-        kind='basic-bash-jinja2-operation',
-        cmd='cat {{inputs["in"] | join(" ")}} | paste -sd+ | bc >> {{outputs["out"]}}',
-        title='Sum of numbers',
-        description='sum',
+        kind="basic-bash-jinja2-operation",
+        cmd="cat {{inputs[\"in\"] | join(\" \")}} | paste -sd+ | bc >> {{outputs[\"out\"]}}",
+        title="Sum of numbers",
+        description="sum",
         inputs=[
             plynx.db.node.Input({
-                'name': 'in',
-                'is_array': True,
+                "name": "in",
+                "is_array": True,
             }),
         ],
         outputs=[
-            plynx.db.node.Output({
-                'name': 'out',
-            }),
+            plynx.db.node.Output(name="out"),
         ],
     )
 
     create_template(
         user=user,
-        kind='basic-bash-jinja2-operation',
-        cmd='seq {{params["from"]}} {{params["to"]}} >> {{outputs["out"]}}',
-        title='Numbers A to B',
-        description='Print text',
+        kind="basic-bash-jinja2-operation",
+        cmd="seq {{params[\"from\"]}} {{params[\"to\"]}} >> {{outputs[\"out\"]}}",
+        title="Numbers A to B",
+        description="Print text",
         parameters=[
             plynx.db.node.Parameter({
-                'name': 'from',
-                'type': plynx.constants.ParameterTypes.INT,
-                'value': '1',
-                'widget': 'From',
+                "name": "from",
+                "type": plynx.constants.ParameterTypes.INT,
+                "value": "1",
+                "widget": "From",
             }),
             plynx.db.node.Parameter({
-                'name': 'to',
-                'type': plynx.constants.ParameterTypes.INT,
-                'value': '100',
-                'widget': 'To',
+                "name": "to",
+                "type": plynx.constants.ParameterTypes.INT,
+                "value": "100",
+                "widget": "To",
             }),
         ],
         outputs=[
-            plynx.db.node.Output({
-                'name': 'out',
-            }),
+            plynx.db.node.Output(name="out"),
         ],
     )

@@ -112,10 +112,10 @@ class DAGParallel(plynx.plugins.executors.dag.DAG):
         if NodeRunningStatus.is_finished(node.node_running_status):     # NodeRunningStatus.SPECIAL
             return
 
-        logging.info(f'Execute {node} {node.title}')
+        logging.info(f"Execute {node} {node.title}")
         node.node_running_status = NodeRunningStatus.RUNNING
         # TODO somehow optimize `update_node`?
-        # If not copy but original sent, the dependencies list won't be updated
+        # If not copy but original sent, the dependencies list won"t be updated
         self.job_run_queue.put(node.copy())
 
     def kill(self):

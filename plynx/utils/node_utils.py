@@ -40,15 +40,15 @@ def _generate_parameters_key(node: Node) -> str:
     parameters = node.parameters
 
     sorted_parameters = sorted(parameters, key=lambda x: x.name)
-    parameters_hash = ','.join([
+    parameters_hash = ",".join([
         f"{parameter.name}:{parameter.value}"
         for parameter in sorted_parameters if parameter.name not in IGNORED_CACHE_PARAMETERS
     ])
 
     return hashlib.sha256(
-        ';'.join([
+        ";".join([
                 parameters_hash,
-            ]).encode('utf-8')
+            ]).encode("utf-8")
     ).hexdigest()
 
 
@@ -93,7 +93,7 @@ def augment_node_with_cache(node: Node, other_node: Node) -> None:
     # pylint: disable=too-many-branches
     # TODO optimize function and remove too-many-locals
     node._cached_node = None
-    subnodes_parameter = node.get_parameter_by_name_safe('_nodes')
+    subnodes_parameter = node.get_parameter_by_name_safe("_nodes")
     if not subnodes_parameter:
         # TODO check if cacheable
         # TODO probably never called.
@@ -134,7 +134,7 @@ def traverse_reversed(node: Node):
     Traverse the subnodes in a reversed from the topoligical order.
     """
     # pylint: disable=too-many-branches
-    sub_nodes_parameter = node.get_parameter_by_name_safe('_nodes')
+    sub_nodes_parameter = node.get_parameter_by_name_safe("_nodes")
     if not sub_nodes_parameter:
         yield node
         return
@@ -205,7 +205,7 @@ def arrange_auto_layout(node: Node, readonly: bool = False):
     queued_node_ids = set()
     children_ids = defaultdict(set)
 
-    sub_nodes = node.get_parameter_by_name('_nodes').value.value
+    sub_nodes = node.get_parameter_by_name("_nodes").value.value
 
     if len(sub_nodes) == 0:
         return
@@ -323,7 +323,7 @@ def arrange_auto_layout(node: Node, readonly: bool = False):
 
 def apply_cache(node: Node):
     """Apply cache values to outputs and logs"""
-    sub_nodes_parameter = node.get_parameter_by_name_safe('_nodes')
+    sub_nodes_parameter = node.get_parameter_by_name_safe("_nodes")
     if not sub_nodes_parameter:
         # TODO check if cacheable
         raise NotImplementedError("Subnodes not found. Do we want to be here?")
@@ -378,7 +378,7 @@ def remove_auto_run_disabled(node: Node):
     if len(node_ids_to_remove) == 0:
         return
 
-    sub_nodes_parameter = node.get_parameter_by_name_safe('_nodes')
+    sub_nodes_parameter = node.get_parameter_by_name_safe("_nodes")
     if not sub_nodes_parameter:
         logger.warning("remove_auto_run_disabled(..): are we supposed to be here?")
         return

@@ -221,7 +221,7 @@ class DAG(plynx.plugins.executors.bases.PLynxAsyncExecutor):
     @staticmethod
     def _cacheable(node: Node) -> bool:
         for parameter in node.parameters:
-            if parameter.name == '_cacheable':
+            if parameter.name == "_cacheable":
                 return parameter.value
         return False
 
@@ -249,7 +249,7 @@ class DAG(plynx.plugins.executors.bases.PLynxAsyncExecutor):
                 removable=False
             )
         )
-        node.title = 'New DAG workflow'
+        node.title = "New DAG workflow"
         return node
 
     def _execute_node(self, node: Node):

@@ -27,12 +27,12 @@ class WorkerState(DBObject):
 
 def get_worker_states() -> List[WorkerState]:
     """Get all of the workers with latest states"""
-    states = getattr(get_db_connector(), Collections.WORKER_STATE).find({}).sort('insertion_date', -1)
+    states = getattr(get_db_connector(), Collections.WORKER_STATE).find({}).sort("insertion_date", -1)
 
     unique_worker_states = {}
     for state_dict in states:
-        if state_dict['worker_id'] in unique_worker_states:
+        if state_dict["worker_id"] in unique_worker_states:
             continue
-        unique_worker_states[state_dict['worker_id']] = WorkerState.from_dict(state_dict)
+        unique_worker_states[state_dict["worker_id"]] = WorkerState.from_dict(state_dict)
 
     return list(sorted(unique_worker_states.values(), key=lambda state: state.worker_id))

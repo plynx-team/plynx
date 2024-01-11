@@ -7,8 +7,8 @@ import time
 import plynx.node
 
 
-@plynx.node.param(name='value', var_type=int, default=1)
-@plynx.node.output(name='x', var_type=int)
+@plynx.node.param(name="value", var_type=int, default=1)
+@plynx.node.output(name="x", var_type=int)
 @plynx.node.operation(
     title="Make integer"
 )
@@ -19,8 +19,8 @@ def make_int(value):
     }
 
 
-@plynx.node.param(name='value', var_type="enum", default={"values": ["a", "b", "c"], "index": 0})
-@plynx.node.output(name='x', var_type=str)
+@plynx.node.param(name="value", var_type="enum", default={"values": ["a", "b", "c"], "index": 0})
+@plynx.node.output(name="x", var_type=str)
 @plynx.node.operation(
     title="Make Enum"
 )
@@ -31,10 +31,10 @@ def make_enum(value):
     }
 
 
-@plynx.node.input(name='x', var_type=int)
-@plynx.node.input(name='y', var_type=int)
-@plynx.node.output(name='res', var_type=str)
-@plynx.node.param(name='coef', var_type=int, default=1)
+@plynx.node.input(name="x", var_type=int)
+@plynx.node.input(name="y", var_type=int)
+@plynx.node.output(name="res", var_type=str)
+@plynx.node.param(name="coef", var_type=int, default=1)
 @plynx.node.operation(
     title="Multiple inputs",
     description="x * coef + y * pi",
@@ -45,12 +45,12 @@ def example_func(x, y, coef):
     print(f"y: {type(y)}")
     print(f"coef {type(coef)}")
     res = x * coef + y * math.pi
-    return {'res': str(res)}
+    return {"res": str(res)}
 
 
-@plynx.node.input(name='x', var_type=int, is_array=True, min_count=0)
-@plynx.node.param(name='timeout', var_type=int, default=3)
-@plynx.node.output(name='x', var_type=int)
+@plynx.node.input(name="x", var_type=int, is_array=True, min_count=0)
+@plynx.node.param(name="timeout", var_type=int, default=3)
+@plynx.node.output(name="x", var_type=int)
 @plynx.node.operation(
     title="Sleep",
     description="Sleep for timeout sec and add 1.",
@@ -64,8 +64,8 @@ def sleep(x, timeout):
     }
 
 
-@plynx.node.input(name='x', var_type=int, is_array=True, min_count=0)
-@plynx.node.output(name='x', var_type=int)
+@plynx.node.input(name="x", var_type=int, is_array=True, min_count=0)
+@plynx.node.output(name="x", var_type=int)
 @plynx.node.operation(
     title="Raise exception",
     description="Always raise exception",
@@ -75,8 +75,8 @@ def error(x):
     raise Exception("Expected exception")
 
 
-@plynx.node.input(name='x', var_type=int, is_array=True, min_count=0)
-@plynx.node.output(name='x', var_type=int)
+@plynx.node.input(name="x", var_type=int, is_array=True, min_count=0)
+@plynx.node.output(name="x", var_type=int)
 @plynx.node.operation(
     title="Stateful sum",
     description="Add 1 and keep the previous value",
@@ -99,8 +99,8 @@ class Statefull:
         }
 
 
-@plynx.node.input(name='x', var_type=int, is_array=True, min_count=0)
-@plynx.node.output(name='x', var_type=int)
+@plynx.node.input(name="x", var_type=int, is_array=True, min_count=0)
+@plynx.node.output(name="x", var_type=int)
 @plynx.node.operation(
     title="Wait manual run",
     auto_run_enabled=False
