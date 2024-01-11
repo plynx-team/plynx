@@ -43,7 +43,7 @@ def create_seq_operation(num):
 
 def create_grep_operation(input_reference, template):
     node = local.BashJinja2.get_default_node(is_workflow=False)
-    node.title = "Template "{}"".format(template)
+    node.title = "Template `{}`".format(template)
     node.kind = "basic-bash-jinja2-operation"
     node.node_running_status = NodeRunningStatus.READY
 
