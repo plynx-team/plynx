@@ -157,7 +157,7 @@
   left: 0px;
   width: 100%;
   height: calc(100% - 80px);
-  z-index: 22000;
+  z-index: 1000;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
 }
