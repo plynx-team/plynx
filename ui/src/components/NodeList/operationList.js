@@ -56,6 +56,7 @@ export default class OperationListPage extends Component {
                             onClose={() => this.handleCloseDialog()}
                             uploadOperation={this.state.uploadOperation}
                             plugins_info={plugins_info}
+                            onUpload={() => window.location.reload()}
                           />
                      }
                      </PluginsConsumer>
