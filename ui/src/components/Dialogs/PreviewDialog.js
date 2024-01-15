@@ -1,9 +1,14 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import Dialog from './Dialog';
 import LoadingScreen from '../LoadingScreen';
 import { PLynxApi } from '../../API';
 import { API_ENDPOINT } from '../../configConsts';
+import PaperComponent from './DraggableComponent';
+
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+
 import './PreviewDialog.css';
 
 const FileDownload = require('react-file-download');
@@ -92,24 +97,34 @@ export default class PreviewDialog extends Component {
               onClose={() => {
                 this.props.onClose();
               }}
-              width={900}
-              height={700}
-              title={this.state.title}
-              enableResizing
+              open
+              scroll='paper'
+              fullWidth
+              PaperComponent={PaperComponent}
+              aria-labelledby="draggable-dialog-title"
+              aria-describedby="scroll-dialog-description"
       >
         {this.state.loading &&
           <div className='LoadHolder'>
             <LoadingScreen />
           </div>
         }
-        <div className="PreviewBoxContent selectable">
+        <DialogTitle className='mui-dialog-title'>{this.state.title}</DialogTitle>
+        <DialogContent
+          sx={{
+            padding: "0px",
+            margin: "3px",
+            borderRadius: "10px",
+            backgroundColor: "#333",
+          }}
+        >
           <div>
             {!this.state.display_raw && this.previewMessage(this.state.values[0], this.state.download_name)}
             <div
               dangerouslySetInnerHTML={{ __html: this.state.content }}           // eslint-disable-line react/no-danger
             />
           </div>
-        </div>
+        </DialogContent>
 
       </Dialog>
     );

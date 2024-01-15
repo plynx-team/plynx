@@ -52,7 +52,12 @@ export default class TextViewDialog extends Component {
       >
         <DialogTitle className='mui-dialog-title'>{this.state.title}</DialogTitle>
         <DialogContent
-          sx={{padding: "0px"}}
+          sx={{
+            padding: "0px",
+            margin: "3px",
+            borderRadius: "10px",
+            backgroundColor: "#333",
+          }}
         >
           <DialogContentText>
             <pre>
