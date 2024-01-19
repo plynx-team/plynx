@@ -1,11 +1,28 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import Dialog from './Dialog';
+// import Dialog from './Dialog';
 import { PLynxApi } from '../../API';
 import LoadingScreen from '../LoadingScreen';
 import Icon from '../Common/Icon';
 import { RESPONCE_STATUS } from '../../constants';
+import PaperComponent from './DraggableComponent';
 import './FileUploadDialog.css';
+
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import MenuItem from '@mui/material/MenuItem';
+import InputLabel from '@mui/material/InputLabel';
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
+import Select from '@mui/material/Select';
+
+import {StyledListItemIcon} from '../Common/MuiComponents';
+
+import FileUploadIcon from '@mui/icons-material/FileUpload';
+import FileOpenIcon from '@mui/icons-material/FileOpen';
+
+import { FormControl } from '@mui/material';
 
 const DEFAULT_TITLE = 'File';
 
@@ -48,7 +65,7 @@ export default class FileUploadDialog extends Component {
     if (name === 'file-dialog') {
       console.log(event.target.files[0]);
       this.file = event.target.files[0];
-      if (this.file.name) {
+      if (this.file && this.file.name) {
         const extension = this.file.name.split('.').pop().toUpperCase();
 
         for (const resource of this.props.uploadOperation.resources) {
@@ -126,118 +143,113 @@ export default class FileUploadDialog extends Component {
 
   render() {
     return (
-      <Dialog className=''
+      <Dialog className="mui-dialog"
+              open
               onClose={() => {
                 this.props.onClose();
               }}
-              width={400}
-              height={null}
-              title={'Upload file'}
-              enableResizing={false}
+              aria-labelledby="draggable-dialog-title"
+              aria-describedby="scroll-dialog-description"
+              fullWidth
+              PaperComponent={PaperComponent}
       >
+      <DialogTitle className='mui-dialog-title'>Upload a File</DialogTitle>
       {this.state.loading &&
         <div className='LoadHolder'>
           <LoadingScreen />
         </div>
       }
-      <div className='FileUploadDialogBody selectable'>
-          <div className='MainBlock'>
+      <DialogContent
+        className="mui-dialog-content"
+        >
+          <div
+            className='mui-dialog-file-upload'
+          >
+            <TextField
+              id="standard-basic"
+              label="Title"
+              variant="outlined"
+              value={this.state.title}
+              name="title"
+              onChange={(e) => this.handleChange(e)}
+              error={this.state.title === ''}
+              className='mui-text-field'
+            />
 
-            <div className='Title'>
-              {this.state.title || 'No title'}
-            </div>
+            <TextField
+              id="standard-basic"
+              label="Description"
+              variant="outlined"
+              value={this.state.description}
+              name="description"
+              onChange={(e) => this.handleChange(e)}
+              className='mui-text-field'
+            />
 
-            <div className={'Type'}>
-              <div className='Widget'>
-                <Icon
-                  type_descriptor={this.props.plugins_info.resources_dict[this.state.file_type]}
-                  width={"20"}
-                  height={"20"}
-                />
-                {this.props.plugins_info.resources_dict[this.state.file_type].title}
-              </div>
-            </div>
-          </div>
+            <FormControl fullWidth>
+              <InputLabel id="demo-simple-select-label">File type</InputLabel>
+              <Select
+                labelId="demo-simple-select-label"
+                id="demo-simple-select"
+                label="File type"
 
-          <div className='Summary'>
-            <div className='Item'>
-              <div className={'Name'}>Title:</div>
-              <input type='text'
-                     name='title'
-                     onChange={(e) => this.handleChange(e)}
-                     value={this.state.title}
-                    />
-            </div>
-
-            <div className='Item'>
-              <div className={'Name'}>Description:</div>
-              <input type='text'
-                     name='description'
-                     onChange={(e) => this.handleChange(e)}
-                     value={this.state.description}
-                    />
-            </div>
-
-            <div className='Item'>
-              <div className={'Name'}>Type:</div>
-              <select className='Type'
-                type='text'
                 name='file_type'
                 value={this.state.file_type}
                 onChange={(e) => this.handleChange(e)}
               >
-              {
-                Object.values(this.props.uploadOperation.resources).map((description) => <option
+                {
+                  Object.values(this.props.uploadOperation.resources).map((description) => <MenuItem
                     value={description.kind}
                     key={description.kind}
                     >
-                    {description.title}
-                    </option>
-                )
-              }
-              </select>
-            </div>
+                      <StyledListItemIcon>
+                        <Icon
+                          type_descriptor={this.props.plugins_info.resources_dict[description.kind]}
+                          width={"20"}
+                          height={"20"}
+                        />
+                      </StyledListItemIcon>
+                      {description.title}
+                  </MenuItem>
+                  )
+                }
 
-            <div className='Item'>
-              <div className={'Name'}>File:</div>
-              <div
-                 onClick={(e) => {
-                   e.preventDefault();
-                   this.handleChooseFile();
-                 }}
-                 className={"control-button file-dialog-upload-button " + (this.state.file_name ? ' selected' : '')}>
-                  <Icon
-                    type_descriptor={{icon: 'feathericons.plus-square', color: "#eee"}}
-                    className={`file-dialog-upload-button-icon`}
-                    width={20}
-                    height={20}
-                  />
-                  <div className="file-dialog-upload-button-text">{this.state.file_name || 'Choose file'}</div>
-                  <div className='progress-bar'></div>
-              </div>
-            </div>
-          </div>
+              </Select>
+            </FormControl>
 
-          <input
-            name="file-dialog"
-            type="file"
-            onChange={(e) => this.handleChange(e)}
-            ref={(ref) => this.uploadDialog = ref} style={{ display: 'none' }}
-          />
+            {/* Upload dialgo */}
+            <input
+              name="file-dialog"
+              type="file"
+              onChange={(e) => this.handleChange(e)}
+              ref={(ref) => this.uploadDialog = ref} style={{ display: 'none' }}
+            />
+            <Button
+              onClick={(e) => {
+                e.preventDefault();
+                this.handleChooseFile();
+              }}
+              variant='outlined'
+              color={this.state.file_name ? 'success' : 'error'}
+              sx={{height: "120px", width: "100%"}}
+            >
+              <FileOpenIcon/>
+              <div className="file-dialog-upload-button-text">{this.state.file_name || 'Choose file'}</div>
+            </Button>
 
-          <div className='Controls noselect'>
-            <div
-               onClick={(e) => {
-                 e.preventDefault();
-                 if (this.state.file_name) {
-                   this.upload(1);
-                 }
-               }}
+            <Button
+              variant='outlined'
+              onClick={(e) => {
+                e.preventDefault();
+                if (this.state.file_name) {
+                  this.upload(1);
+                }
+              }}
                className="control-button">
-               <img src="/icons/upload.svg" alt="uplaod"/> Upload
-            </div>
+              <FileUploadIcon/> Upload
+            </Button>
           </div>
-        </div>
+        </DialogContent>
       </Dialog>
     );
   }

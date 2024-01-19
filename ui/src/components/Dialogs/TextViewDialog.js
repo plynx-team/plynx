@@ -1,7 +1,14 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { makeControlPanel, makeControlButton } from '../Common/controlButton';
-import Dialog from './Dialog';
+import PaperComponent from './DraggableComponent';
+
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogActions from '@mui/material/DialogActions';
+import { Button } from '@mui/material';
+// import Box from '@mui/material/Box';
 
 export default class TextViewDialog extends Component {
   static propTypes = {
@@ -19,27 +26,6 @@ export default class TextViewDialog extends Component {
     };
   }
 
-  makeControls() {
-    const items = [
-      {
-        render: makeControlButton,
-        props: {
-          img: 'copy.svg',
-          text: 'Copy',
-          func: () => this.handleCopy(),
-        },
-      },
-    ];
-
-    return makeControlPanel(
-      {
-        props: {
-          items: items,
-          key: 1
-        },
-      });
-  }
-
   handleCopy() {
     const copyText = this.state.text;
     const textArea = document.createElement('textarea');
@@ -53,22 +39,50 @@ export default class TextViewDialog extends Component {
 
   render() {
     return (
-      <Dialog className='TextViewDialog'
+      <Dialog
               onClose={() => {
                 this.props.onClose();
               }}
-              width={900}
-              height={600}
-              title={this.state.title}
-              enableResizing
+              open
+              scroll='paper'
+              fullWidth
+              PaperComponent={PaperComponent}
+              aria-labelledby="draggable-dialog-title"
+              aria-describedby="scroll-dialog-description"
       >
-        {this.makeControls()}
-        <div className="PreviewBoxContent selectable">
-          <pre>
-            {this.state.text}
-          </pre>
-        </div>
-
+        <DialogTitle className='mui-dialog-title'>{this.state.title}</DialogTitle>
+        <DialogContent
+          sx={{
+            padding: "0px",
+            margin: "3px",
+            borderRadius: "10px",
+            backgroundColor: "#333",
+          }}
+        >
+          <DialogContentText>
+            <pre>
+              {this.state.text}
+            </pre>
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              this.handleCopy();
+            }}
+            color="primary"
+          >
+            Copy
+          </Button>
+          <Button
+            onClick={() => {
+              this.props.onClose();
+            }}
+            color="error"
+          >
+            Close
+          </Button>
+        </DialogActions>
       </Dialog>
     );
   }
