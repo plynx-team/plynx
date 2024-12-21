@@ -1,9 +1,9 @@
-google-cloud-storage==1.13.0
-boto3==1.9.62
-paramiko==2.4.2
-python-dateutil==2.8.1
+google-cloud-storage==2.19.0
+boto3==1.35.86
+paramiko==3.5.0
+python-dateutil==2.9.0.post0
 
 # test and development:
-coverage==5.0.4
-pytest==6.2.2
-watchdog==2.2.0
+coverage==7.6.9
+pytest==8.3.4
+watchdog==6.0.0
