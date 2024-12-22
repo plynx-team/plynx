@@ -33,7 +33,7 @@ jobs:
           name: python package instalation
           command:
             # make build_package
-            sudo python setup.py install
+            python setup.py install
 
   build_docker:
     machine: true
