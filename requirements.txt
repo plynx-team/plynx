@@ -8,8 +8,8 @@ Flask-Cors>=4.0.0
 Flask-HTTPAuth>=4.8.0
 gevent>=23.9.1
 smart-open>=7.1.0
-requests==2.32.3
-types-requests==2.32.0.20241016
+requests>=2.32.3
+types-requests>=2.32.0.20241016
 future>=1.0.0
 dataclasses-json>=0.6.7
 urllib3>=2.2.3
