@@ -16,4 +16,3 @@ urllib3>=2.2.3
 google-api-python-client>=2.111.0
 six>=1.17.0
 python-dateutil>=2.9.0.post0
-setuptools>=75.6.0
