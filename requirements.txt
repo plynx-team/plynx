@@ -13,3 +13,6 @@ types-requests==2.32.0.20241016
 future>=1.0.0
 dataclasses-json>=0.6.7
 urllib3>=2.2.3
+google-api-python-client>=2.111.0
+six>=1.17.0
+python-dateutil>=2.9.0.post0
