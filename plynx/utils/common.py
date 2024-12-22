@@ -97,7 +97,7 @@ def str_to_bool(val: Union[str, bool]) -> bool:
 def update_dict_recursively(dest: Dict[Any, Any], donor: Dict[Any, Any]) -> Dict[Any, Any]:
     """Update dictionary in place"""
     for k, v in donor.items():
-        if isinstance(v, collections.Mapping):
+        if isinstance(v, collections.abc.Mapping):
             dest[k] = update_dict_recursively(dest.get(k, {}), v)   # type: ignore
         else:
             dest[k] = v

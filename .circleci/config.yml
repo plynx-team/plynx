@@ -3,7 +3,7 @@ jobs:
   build_package:
     working_directory: ~/plynx
     docker:
-      - image: circleci/python:3.8
+      - image: cimg/python:3.10
     steps:
       - checkout
       - run:
@@ -33,7 +33,7 @@ jobs:
           name: python package instalation
           command:
             # make build_package
-            sudo python setup.py install
+            python setup.py install
 
   build_docker:
     machine: true

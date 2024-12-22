@@ -7,7 +7,7 @@ services:
             - MONGO_DATA_DIR=/data/db
             - MONGO_LOG_DIR=/dev/null
         volumes:
-            - ./data/db:/data/db
+            - mongodata:/data/db
         ports:
             - 27017:27017
         command: mongod --logpath=/dev/null # --quiet
@@ -128,3 +128,6 @@ services:
             - ./ui:/app
         tty: true
         command: sh -c "npm install && npm start"
+
+volumes:
+    mongodata:
