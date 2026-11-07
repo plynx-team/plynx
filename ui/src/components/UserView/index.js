@@ -6,13 +6,14 @@ import ParameterItem from '../Common/ParameterItem';
 import { makeControlPanel, makeControlButton } from '../Common/controlButton';
 import { COLLECTIONS, IAM_POLICIES, USER_POST_ACTION, RESPONCE_STATUS } from '../../constants';
 import { validatePassword } from '../Common/passwordUtils';
-import { User } from 'react-feather';
-import cookie from 'react-cookies';
+import { FeatherIcon } from '../Common/Icon';
+import cookie from '../../cookie';
 
 import './style.css';
 
-export default class LogIn extends Component {
+export default class UserView extends Component {
   static propTypes = {
+    history: PropTypes.object,
     match: PropTypes.shape({
       params: PropTypes.shape({
         username: PropTypes.string.isRequired
@@ -211,6 +212,7 @@ export default class LogIn extends Component {
         <APIObject
             collection={COLLECTIONS.USERS}
             object_id={username}
+            history={this.props.history}
             onUpdateData={data => {
               this.loadUser(data.user);
             }}
@@ -226,7 +228,7 @@ export default class LogIn extends Component {
               <img src={this.state.user.settings.picture} className="user-icon" alt="Google profile pic" referrerPolicy="no-referrer"/>
             }
             {
-              !this.state.user.settings.picture && <User className='user-icon' />
+              !this.state.user.settings.picture && <FeatherIcon name="user" className="user-icon" />
             }
             <div className="user-display-name">
               {this.state.user.settings.display_name ? this.state.user.settings.display_name : this.state.user.username}

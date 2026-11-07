@@ -1,24 +1,16 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import AceEditor from 'react-ace';
-import {CODE_LANGUAGES, CODE_THEMES} from '../../constants';
-import 'brace/ext/language_tools';
-import 'brace/ext/searchbox';
+import { CODE_LANGUAGES } from '../../constants';
+import 'ace-builds/src-noconflict/mode-python';
+import 'ace-builds/src-noconflict/mode-sh';
+import 'ace-builds/src-noconflict/snippets/python';
+import 'ace-builds/src-noconflict/snippets/sh';
+import 'ace-builds/src-noconflict/theme-chaos';
+import 'ace-builds/src-noconflict/ext-language_tools';
+import 'ace-builds/src-noconflict/ext-searchbox';
 
 import './ValueCodeItem.css';
-
-// Init react-ace
-
-CODE_LANGUAGES.forEach(lang => {
-  require(`brace/mode/${lang}`);        // eslint-disable-line global-require
-  require(`brace/snippets/${lang}`);    // eslint-disable-line global-require
-});
-
-CODE_THEMES.forEach(theme => {
-  require(`brace/theme/${theme}`);      // eslint-disable-line global-require
-});
-
-// Finish react-ace
 
 export default class CodeItem extends Component {
   static propTypes = {
@@ -52,8 +44,8 @@ export default class CodeItem extends Component {
           mode: this.state.mode,
           value: this.state.value,
         },
-        type: 'code'
-      }
+        type: 'code',
+      },
     });
   }
 
@@ -62,7 +54,7 @@ export default class CodeItem extends Component {
       return;
     }
 
-    this.setState({value: value}, () => {
+    this.setState({ value: value }, () => {
       this.handleCommunacation();
     });
   }
@@ -72,7 +64,7 @@ export default class CodeItem extends Component {
       return;
     }
     if (event.target.name === 'index') {
-      this.setState({mode: CODE_LANGUAGES[event.target.value]}, () => {
+      this.setState({ mode: CODE_LANGUAGES[event.target.value] }, () => {
         this.handleCommunacation();
       });
     }
@@ -80,36 +72,33 @@ export default class CodeItem extends Component {
 
   render() {
     return (
-      <div className='CodeItem'
-           onMouseDown={(e) => {
-             e.stopPropagation();
-           }}
+      <div
+        className="CodeItem"
+        onMouseDown={(e) => {
+          e.stopPropagation();
+        }}
       >
-        <div className='code-mode'>
-          <select className='code-mode-select'
-              type='text'
-              name='index'
-              value={CODE_LANGUAGES.indexOf(this.state.mode)}
-              onChange={(e) => {
-                this.handleChangeMode(e);
-              }}
-              readOnly={this.state.readOnly}
-            >
-              {
-                CODE_LANGUAGES.map((value, index) => <option
-                    value={index}
-                    key={index}
-                    >
-                    {value}
-                    </option>
-                )
-              }
+        <div className="code-mode">
+          <select
+            className="code-mode-select"
+            name="index"
+            value={CODE_LANGUAGES.indexOf(this.state.mode)}
+            onChange={(e) => {
+              this.handleChangeMode(e);
+            }}
+            disabled={this.state.readOnly}
+          >
+            {CODE_LANGUAGES.map((value, index) => (
+              <option value={index} key={index}>
+                {value}
+              </option>
+            ))}
           </select>
         </div>
         <AceEditor
           mode={this.state.mode}
           onChange={this.handleChange}
-          editorProps={{$blockScrolling: true}}
+          editorProps={{ $blockScrolling: true }}
           value={this.state.value}
           theme="chaos"
           fontSize={14}
@@ -120,6 +109,7 @@ export default class CodeItem extends Component {
           width="auto"
           height={this.props.height}
           setOptions={{
+            useWorker: false,
             enableBasicAutocompletion: false,
             enableLiveAutocompletion: false,
             enableSnippets: false,

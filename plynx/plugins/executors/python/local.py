@@ -25,7 +25,7 @@ def operation(int_a, int_b):
 """
 
 stateful_init_mutex = threading.Lock()
-stateful_class_registry = {}
+stateful_class_registry: Dict[str, Any] = {}
 
 _resource_manager = plynx.utils.plugin_manager.get_resource_manager()
 

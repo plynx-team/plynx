@@ -10,19 +10,18 @@ import PreviewDialog from '../Dialogs/PreviewDialog';
 import PropertiesBar from './PropertiesBar';
 import FileDialog from '../Dialogs/FileDialog';
 import ParameterSelectionDialog from '../Dialogs/ParameterSelectionDialog';
-import {ObjectID} from 'bson';
-import {HotKeys} from 'react-hotkeys';
+import HotKeys from '../Common/HotKeys';
 import {
   VALIDATION_CODES,
   NODE_RUNNING_STATUS,
   KEY_MAP,
   SPECIAL_NODE_IDS,
 } from '../../constants';
-import { storeToClipboard, loadFromClipboard, addStyleToTourSteps } from '../../utils';
+import { storeToClipboard, loadFromClipboard, addStyleToTourSteps, generateObjectId } from '../../utils';
 
-// eslint-disable-next-line no-unused-vars
-import ReactFlow, { Controls, Background, MiniMap, ReactFlowProvider, fitView } from 'reactflow';
-import styled from 'styled-components';
+ 
+import ReactFlow, { Controls, Background, MiniMap, ReactFlowProvider } from 'reactflow';
+import { styled } from '@mui/material/styles';
 import OperationNode from './nodes/OperationNode';
 import 'reactflow/dist/style.css';
 
@@ -516,7 +515,7 @@ class Graph extends Component {
     this.selectedNodeIds.clear();
 
     for (const node of copyBody.nodes) {
-      const newNodeId = new ObjectID().toString();
+      const newNodeId = generateObjectId();
       oldNodeIdToNewId[node._id] = newNodeId;
       node._id = newNodeId;
       this.selectedNodeIds.add(node._id);
@@ -551,7 +550,7 @@ class Graph extends Component {
     this.reactFlowInstance.setNodes(
           (nds) => {
             for (let ii = 0; ii < nds.length; ++ii) {
-              nds[ii].selected = this.selectedNodeIds.has(nds[ii].id);  // eslint-disable-line no-param-reassign
+              nds[ii].selected = this.selectedNodeIds.has(nds[ii].id);   
             }
             return nds;
           }
@@ -652,8 +651,8 @@ class Graph extends Component {
   }
 
   onDragOver(event) {
-    event.preventDefault();     // eslint-disable-line no-param-reassign
-    event.dataTransfer.dropEffect = 'move';     // eslint-disable-line no-param-reassign
+    event.preventDefault();      
+    event.dataTransfer.dropEffect = 'move';      
   }
 
   onDrop(event) {
@@ -742,7 +741,7 @@ class Graph extends Component {
     const node = JSON.parse(JSON.stringify(nodeBody));
     this.handleCloseHubLookupDialog();
 
-    node._id = new ObjectID().toString();
+    node._id = generateObjectId();
 
     const changesToApply = [];
     changesToApply.push({
@@ -889,7 +888,7 @@ class Graph extends Component {
       node.original_node_id = node._id;
     }
     if (replaceNodeId) {
-      node._id = new ObjectID().toString();
+      node._id = generateObjectId();
     }
     node.parent_node_id = null;
     node.successor_node_id = null;

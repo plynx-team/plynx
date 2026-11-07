@@ -1,33 +1,26 @@
-FROM node:16-alpine
+FROM node:22-alpine AS build
 
-# Set the working directory to /app
 WORKDIR /app
 
-# Copy files
-ADD ./ui/README.md                  /app
-ADD ./ui/generate-build-version.js  /app
-ADD ./ui/package-lock.json          /app
-ADD ./ui/package.json               /app
-ADD ./ui/public                     /app/public
-ADD ./ui/src                        /app/src
-
-# Copy licence
-ADD ./LICENSE /app
-
-# Build
-ENV NODE_OPTIONS "--max-old-space-size=8192"
-ENV NODE_ENV production
+COPY ./ui/package.json ./package.json
+COPY ./ui/package-lock.json* ./
 RUN npm install
+
+COPY ./ui/README.md ./README.md
+COPY ./ui/index.html ./index.html
+COPY ./ui/vite.config.js ./vite.config.js
+COPY ./ui/generate-build-version.js ./generate-build-version.js
+COPY ./ui/public ./public
+COPY ./ui/src ./src
+COPY ./LICENSE ./LICENSE
+
 RUN npm run build
 
+FROM nginx:1.27-alpine
 
-# Use second stage nginx image
-FROM nginx:1.17-alpine
-
-COPY --from=0 /app/build /var/www
-ADD ./ui/nginx.conf /etc/nginx/nginx.conf
-ADD ./LICENSE /app
+COPY --from=build /app/build /var/www
+COPY ./ui/nginx.conf /etc/nginx/nginx.conf
+COPY ./LICENSE /app/LICENSE
 EXPOSE 80
-ENV NODE_ENV production
 
-ENTRYPOINT ["nginx","-g","daemon off;"]
+ENTRYPOINT ["nginx", "-g", "daemon off;"]

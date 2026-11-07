@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
-import ReactDOM from 'react-dom';
 import AlertContainer from '../3rd_party/react-alert';
-import cookie from 'react-cookies';
+import cookie from '../../cookie';
 import { PLynxApi } from '../../API';
 import List from './List';
 import ReactPaginate from 'react-paginate';
@@ -46,8 +45,9 @@ export default class ListPage extends Component {
       search = this.props.search;
     }
 
-    this.canCreateOperations = user.policies.indexOf(IAM_POLICIES.CAN_CREATE_OPERATIONS) > -1;
-    this.canCreateWorkflows = user.policies.indexOf(IAM_POLICIES.CAN_CREATE_WORKFLOWS) > -1;
+    const policies = (user && user.policies) || [];
+    this.canCreateOperations = policies.indexOf(IAM_POLICIES.CAN_CREATE_OPERATIONS) > -1;
+    this.canCreateWorkflows = policies.indexOf(IAM_POLICIES.CAN_CREATE_WORKFLOWS) > -1;
 
     this.state = {
       items: [],
@@ -102,7 +102,9 @@ export default class ListPage extends Component {
           pageCount: Math.ceil(data.total_count / self.perPage)
         });
       loading = false;
-      ReactDOM.findDOMNode(self.itemList).scrollTop = 0;
+      if (self.itemList && self.itemList.scrollToTop) {
+        self.itemList.scrollToTop();
+      }
     }
 
     function handleError(error) {
@@ -125,8 +127,8 @@ export default class ListPage extends Component {
       }
     }
 
-    /* eslint-disable no-await-in-loop */
-    /* eslint-disable no-unmodified-loop-condition */
+     
+     
     while (loading) {
       await PLynxApi.endpoints[`search_${this.props.collection}`].create({
         offset: self.state.offset,
@@ -141,8 +143,8 @@ export default class ListPage extends Component {
         sleepPeriod = Math.min(sleepPeriod + sleepStep, sleepMaxPeriod);
       }
     }
-    /* eslint-enable no-unmodified-loop-condition */
-    /* eslint-enable no-await-in-loop */
+     
+     
 
     // Stop loading
     self.setState({

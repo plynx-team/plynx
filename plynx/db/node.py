@@ -3,7 +3,6 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, List, Optional, Union
 
 from dataclasses_json import dataclass_json
-from past.builtins import basestring
 
 from plynx.constants import PRIMITIVE_TYPES, Collections, NodeClonePolicy, NodeOrigin, NodeRunningStatus, NodeStatus, ParameterTypes
 from plynx.db.db_object import DBObject
@@ -319,7 +318,7 @@ def _get_default_by_type(parameter_type: str):
 
 def _value_is_valid(value, parameter_type: str):
     if parameter_type == ParameterTypes.STR:
-        return isinstance(value, basestring)
+        return isinstance(value, str)
     if parameter_type == ParameterTypes.INT:
         try:
             int(value)
@@ -335,7 +334,7 @@ def _value_is_valid(value, parameter_type: str):
     if parameter_type == ParameterTypes.BOOL:
         return isinstance(value, int)
     if parameter_type == ParameterTypes.TEXT:
-        return isinstance(value, basestring)
+        return isinstance(value, str)
     if parameter_type == ParameterTypes.ENUM:
         return isinstance(value, ParameterEnum)
     if parameter_type == ParameterTypes.LIST_STR:

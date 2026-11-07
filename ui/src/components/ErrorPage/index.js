@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { AlertOctagon } from 'react-feather';
+import { FeatherIcon } from '../Common/Icon';
 
 import './style.css';
 
@@ -24,7 +24,7 @@ export default class NotFound extends Component {
     return (
         <div className='login-redirect'>
           <div className="login-redirect-logo">
-              <AlertOctagon className="error-icon" />
+              <FeatherIcon name="alert-octagon" className="error-icon" />
               <div className="error-text">
                 {this.errorText}
               </div>

@@ -5,7 +5,7 @@ import InOutList from './InOutList';
 import ParameterList from './ParameterList';
 import PreviewDialog from '../Dialogs/PreviewDialog';
 import { PluginsProvider, PluginsConsumer } from '../../contexts';
-import { HotKeys } from 'react-hotkeys';
+import HotKeys from '../Common/HotKeys';
 import { KEY_MAP } from '../../constants';
 import { addStyleToTourSteps } from '../../utils';
 
@@ -55,7 +55,7 @@ export default class Node extends Component {
 
   keyHandlers = {
     escPressed: () => {
-      this.closeAllDialogs();
+      this.handleCloseDialogs();
     },
   };
 

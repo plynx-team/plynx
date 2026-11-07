@@ -10,6 +10,14 @@ export default class List extends Component {
     tag: PropTypes.string.isRequired,
   };
 
+  containerRef = React.createRef();
+
+  scrollToTop() {
+    if (this.containerRef.current) {
+      this.containerRef.current.scrollTop = 0;
+    }
+  }
+
   render() {
     const headerItems = this.props.header.map(
         (headerDescriptor) => listTextElement('header-item ' + headerDescriptor.tag, headerDescriptor.title, headerDescriptor.title)
@@ -19,7 +27,7 @@ export default class List extends Component {
     );
 
     return (
-      <div className='list'>
+      <div className='list' ref={this.containerRef}>
         <div className={this.props.tag + ' list-header'}>
           {headerItems}
         </div>

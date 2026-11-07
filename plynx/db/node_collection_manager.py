@@ -4,7 +4,6 @@ import logging
 from collections import OrderedDict
 from typing import Any, Dict, List, Optional, Union
 
-from past.builtins import basestring
 from pymongo import ReturnDocument
 
 from plynx.constants import Collections, HubSearchParams, NodeRunningStatus, NodeStatus
@@ -46,9 +45,9 @@ class NodeCollectionManager:
             (list of dict)  List of Nodes in dict format
         """
         # pylint: disable=too-many-branches
-        if status and isinstance(status, basestring):
+        if status and isinstance(status, str):
             status = [status]
-        if node_kinds and isinstance(node_kinds, basestring):
+        if node_kinds and isinstance(node_kinds, str):
             node_kinds = [node_kinds]
 
         aggregate_list: List[Dict[str, Any]] = []
@@ -217,7 +216,7 @@ class NodeCollectionManager:
         if not res:
             return None
 
-        res["_readonly"] = (user_id != to_object_id(res["author"]))
+        res["_readonly"] = user_id != to_object_id(res["author"])
 
         return res
 

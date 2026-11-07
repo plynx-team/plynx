@@ -1,8 +1,7 @@
 import React, { Component } from 'react';
-import PropTypes from 'prop-types';
-import cookie from 'react-cookies';
+import cookie from '../../cookie';
 import { UserMenuContext } from '../../contexts';
-import { User } from 'react-feather';
+import { FeatherIcon } from '../Common/Icon';
 
 import './style.css';
 
@@ -18,42 +17,49 @@ export default class UserButton extends Component {
   }
 
   handleLogIn() {
-    console.log("Sign Up / Log in");
-    window.location = "/login";
+    console.log('Sign Up / Log in');
+    window.location = '/login';
   }
 
   render() {
     return (
       <div className="UserButton">
-        {this.state.refreshTokenExists &&
-          <UserMenuContext.Consumer>{(context) => {
-            return (
-                <div className="inner-user-button">
-                  <a className="user-menu" href={`/users/${this.state.user.username}`} onClick={(e) => {
+        {this.state.refreshTokenExists && (
+          <UserMenuContext.Consumer>
+            {(context) => (
+              <div className="inner-user-button">
+                <a
+                  className="user-menu"
+                  href={`/users/${this.state.user.username}`}
+                  onClick={(e) => {
                     context.toggleModal();
                     e.preventDefault();
-                  }}>
-                    { this.state.user.settings.picture &&
-                      <img src={this.state.user.settings.picture} className="user-icon" alt="Google profile pic" referrerPolicy="no-referrer"/>
-                    }
-                    { !this.state.user.settings.picture && <User className="user-icon"/> }
-                  </a>
-                </div>
-            );
-          }}</UserMenuContext.Consumer>
-        }
-        {!this.state.refreshTokenExists &&
+                  }}
+                >
+                  {this.state.user.settings.picture && (
+                    <img
+                      src={this.state.user.settings.picture}
+                      className="user-icon"
+                      alt="Google profile pic"
+                      referrerPolicy="no-referrer"
+                    />
+                  )}
+                  {!this.state.user.settings.picture && (
+                    <FeatherIcon name="user" className="user-icon" />
+                  )}
+                </a>
+              </div>
+            )}
+          </UserMenuContext.Consumer>
+        )}
+        {!this.state.refreshTokenExists && (
           <div className="inner-user-button">
             <div className="action" onClick={() => this.handleLogIn()}>
               Sign up / Log in
             </div>
           </div>
-        }
+        )}
       </div>
     );
   }
 }
-
-UserButton.propTypes = {
-  onAPIDialogClick: PropTypes.func,
-};

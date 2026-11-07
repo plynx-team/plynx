@@ -1,5 +1,3 @@
-import { ObjectID } from 'bson';
-
 export const PARAMETER_TYPES = [
   {
     type: 'str', // same as in parameter_types.py
@@ -180,8 +178,8 @@ export const VIRTUAL_COLLECTIONS = Object.freeze({
 });
 
 export const SPECIAL_NODE_IDS = Object.freeze({
-  INPUT: new ObjectID('2419f9500000000000000000').toString(),
-  OUTPUT: new ObjectID('56274ccc0000000000000000').toString(),
+  INPUT: '2419f9500000000000000000',
+  OUTPUT: '56274ccc0000000000000000',
 });
 
 export const IAM_POLICIES = Object.freeze({

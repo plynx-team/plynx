@@ -1,6 +1,6 @@
 import { API_ENDPOINT } from './configConsts';
 import { COLLECTIONS } from './constants';
-import cookie from 'react-cookies';
+import cookie from './cookie';
 
 import axios from 'axios';
 

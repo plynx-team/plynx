@@ -6,7 +6,7 @@ from typing import Dict, List, Optional, Union
 
 import jwt
 from dataclasses_json import dataclass_json
-from passlib.apps import custom_app_context as pwd_context
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from plynx.constants import Collections, TokenType
 from plynx.db.db_object import DBObject
@@ -46,7 +46,7 @@ class User(DBObject):
         Args:
             password    (str)   Real password string
         """
-        self.password_hash = pwd_context.encrypt(password) if password else ""  # pylint: disable=attribute-defined-outside-init
+        self.password_hash = generate_password_hash(password) if password else ""  # pylint: disable=attribute-defined-outside-init
 
     def verify_password(self, password: str) -> bool:
         """Verify password.
@@ -57,7 +57,9 @@ class User(DBObject):
         Return:
             (bool)    True if password matches else False
         """
-        return pwd_context.verify(password, self.password_hash)
+        if not self.password_hash:
+            return not password and self.username == "default"
+        return check_password_hash(self.password_hash, password)
 
     def check_role(self, role: str) -> bool:
         """Check if the user has a given role"""

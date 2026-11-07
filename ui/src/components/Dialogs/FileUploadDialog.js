@@ -153,7 +153,7 @@ export default class FileUploadDialog extends Component {
               fullWidth
               PaperComponent={PaperComponent}
       >
-      <DialogTitle className='mui-dialog-title'>Upload a File</DialogTitle>
+      <DialogTitle id="draggable-dialog-title" className='mui-dialog-title'>Upload a File</DialogTitle>
       {this.state.loading &&
         <div className='LoadHolder'>
           <LoadingScreen />

@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import PropTypes from 'prop-types';
 import Navigation from './navigation';
 import UserButton from './UserButton';
 import UserMenu from './UserMenu';
@@ -63,12 +62,8 @@ export default class Header extends Component {
             <img src="/icons/menu.svg" alt="menu" />
           </div>
         }
-        <UserButton onAPIDialogClick={() => this.props.onAPIDialogClick()}/>
+        <UserButton />
       </div>
     );
   }
 }
-
-Header.propTypes = {
-  onAPIDialogClick: PropTypes.func,
-};

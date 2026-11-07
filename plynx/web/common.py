@@ -113,10 +113,14 @@ def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         auth = request.authorization
-        if not auth:
+        if auth:
+            username = auth.username or ""
+            password = auth.password or ""
+        else:
             # if auth not provided, try default
-            auth = {"username": DEFAULT_USERNAME, "password": DEFAULT_PASSWORD}
-        if not verify_password(auth["username"], auth["password"]):
+            username = DEFAULT_USERNAME
+            password = DEFAULT_PASSWORD
+        if not verify_password(username, password):
             return authenticate()
         return f(*args, **kwargs)
     return decorated
@@ -142,7 +146,7 @@ def make_success_response(extra_response: Optional[Dict[str, Any]] = None):
         {
             "status": ResponseStatus.SUCCESS,
             "message": "Success",
-            "current_time": datetime.datetime.utcnow(),
+            "current_time": datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
             "settings": g.user.settings.to_dict() if hasattr(g, "user") else None,
         }, **(extra_response or {})))
 

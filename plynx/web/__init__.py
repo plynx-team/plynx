@@ -2,8 +2,6 @@
 Service endpoints.
 """
 # flake8: noqa
-from gevent.pywsgi import WSGIServer
-
 import plynx.web.health
 import plynx.web.node
 import plynx.web.resource

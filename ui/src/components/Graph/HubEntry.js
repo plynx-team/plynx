@@ -1,6 +1,5 @@
 /* eslint max-classes-per-file: 0 */
 import React, { Component } from 'react';
-import ReactDOM from 'react-dom';
 import PropTypes from 'prop-types';
 import { PLynxApi } from '../../API';
 import HubEntryList from './HubEntryList';
@@ -113,8 +112,8 @@ export default class HubEntry extends Component {
       }
     };
 
-    /* eslint-disable no-await-in-loop */
-    /* eslint-disable no-unmodified-loop-condition */
+     
+     
     while (loading) {
       await PLynxApi.endpoints.search_in_hubs.create({
         offset: self.state.offset,
@@ -130,8 +129,8 @@ export default class HubEntry extends Component {
         sleepPeriod = Math.min(sleepPeriod + sleepStep, sleepMaxPeriod);
       }
     }
-    /* eslint-enable no-unmodified-loop-condition */
-    /* eslint-enable no-await-in-loop */
+     
+     
 
     // Stop loading
     self.setState({
@@ -150,7 +149,9 @@ export default class HubEntry extends Component {
     this.setState({offset: offset}, () => {
       this.loadNodes();
     });
-    ReactDOM.findDOMNode(this.nodeList).scrollTop = 0;
+    if (this.nodeList && this.nodeList.scrollToTop) {
+      this.nodeList.scrollToTop();
+    }
   };
 
   handleUpdateFilter(search) {

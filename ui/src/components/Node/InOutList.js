@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import InOutItem from './InOutItem';
 import './InOut.css';
 
@@ -19,7 +19,7 @@ export default class InOutList extends Component {
     const self = this;
     this.counter = 0;
     props.items.forEach((obj) => {
-      obj._key = self.counter.toString();   // eslint-disable-line no-param-reassign
+      obj._key = self.counter.toString();    
       ++self.counter;
     });
     this.state = {
@@ -93,10 +93,11 @@ export default class InOutList extends Component {
             {(provided, snapshot) => (
               <div className={'InOutListBackground' + (snapshot.isDraggingOver ? ' InOutListBackgroundDragging' : '')}
                 ref={provided.innerRef}
+                {...provided.droppableProps}
               >
               {this.state.items.map((item, index) => (
                 <Draggable key={item._key} draggableId={item._key} index={index} isDragDisabled={this.state.readOnly}>
-                  {(provided, snapshot) => (      // eslint-disable-line no-shadow
+                  {(provided, snapshot) => (       
                     <div>
                       <div className={'InOutDiv' + (snapshot.isDragging ? ' InOutDivDragging' : '')}
                         ref={provided.innerRef}
@@ -109,8 +110,8 @@ export default class InOutList extends Component {
                             item={item}
                             index={index}
                             varName={this.props.varName}
-                            onChanged={(index, name, value) => this.handleChanged(index, name, value)}  // eslint-disable-line no-shadow
-                            onRemove={(index) => this.handleRemoveItem(index)}                          // eslint-disable-line no-shadow
+                            onChanged={(index, name, value) => this.handleChanged(index, name, value)}   
+                            onRemove={(index) => this.handleRemoveItem(index)}                           
                             readOnly={this.state.readOnly}
                             nodeKind={this.props.nodeKind}
                             onPreview={(previewData) => this.handlePreview(previewData)}
@@ -122,8 +123,8 @@ export default class InOutList extends Component {
                             item={item}
                             index={index}
                             varName={this.props.varName}
-                            onChanged={(index, name, value) => this.handleChanged(index, name, value)}  // eslint-disable-line no-shadow
-                            onRemove={(index) => this.handleRemoveItem(index)}                          // eslint-disable-line no-shadow
+                            onChanged={(index, name, value) => this.handleChanged(index, name, value)}   
+                            onRemove={(index) => this.handleRemoveItem(index)}                           
                             readOnly={this.state.readOnly}
                             nodeKind={this.props.nodeKind}
                             onPreview={(previewData) => this.handlePreview(previewData)}

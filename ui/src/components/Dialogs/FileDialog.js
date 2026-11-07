@@ -6,8 +6,7 @@ import {PluginsConsumer} from '../../contexts';
 import Icon from '../Common/Icon';
 import { NODE_STATUS } from '../../constants';
 import { API_ENDPOINT } from '../../configConsts';
-
-const FileDownload = require('react-file-download');
+import { downloadBlob } from '../../utils';
 
 export default class FileDialog extends Component {
   static propTypes = {
@@ -47,7 +46,7 @@ export default class FileDialog extends Component {
       responseType: 'blob'
     })
       .then((response) => {
-        FileDownload(response.data, filename);
+        downloadBlob(response.data, filename);
       })
       .catch((error) => {
         console.error(error);

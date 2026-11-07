@@ -9,7 +9,6 @@ from subprocess import Popen
 from typing import Any, Dict, List, Optional, Union
 
 import jinja2
-from past.builtins import basestring
 
 import plynx.plugins.executors.bases
 import plynx.utils.plugin_manager
@@ -454,8 +453,6 @@ class PythonNode(BaseBash):
 
     @staticmethod
     def _pythonize(value: Any) -> Any:
-        if isinstance(value, basestring):
-            repr(value)
         return value
 
     @classmethod

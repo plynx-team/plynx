@@ -41,7 +41,7 @@ class ListItem extends Component {
                 href={`/runs/${run._id}`}
                 key={run._id}
                 className="node-link"
-                style={{"text-decoration": "none"}}
+                style={{ textDecoration: 'none' }}
 
             >
                 <NodeItem
@@ -119,8 +119,8 @@ export default class MasterState extends Component {
       }
     };
 
-    /* eslint-disable no-await-in-loop */
-    /* eslint-disable no-unmodified-loop-condition */
+     
+     
     while (loading) {
       await PLynxApi.endpoints.worker_states.getAll({})
       .then(handleResponse)
@@ -130,8 +130,8 @@ export default class MasterState extends Component {
         sleepPeriod = Math.min(sleepPeriod + sleepStep, sleepMaxPeriod);
       }
     }
-    /* eslint-enable no-unmodified-loop-condition */
-    /* eslint-enable no-await-in-loop */
+     
+     
 
     // Stop loading
     self.setState({

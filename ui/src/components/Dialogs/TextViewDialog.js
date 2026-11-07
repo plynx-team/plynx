@@ -8,7 +8,6 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
 import { Button } from '@mui/material';
-// import Box from '@mui/material/Box';
 
 export default class TextViewDialog extends Component {
   static propTypes = {
@@ -22,47 +21,52 @@ export default class TextViewDialog extends Component {
     super(props);
     this.state = {
       text: props.text,
-      title: props.title
+      title: props.title,
     };
   }
 
   handleCopy() {
     const copyText = this.state.text;
-    const textArea = document.createElement('textarea');
-    textArea.textContent = copyText;
-    document.body.append(textArea);
-    textArea.select();
-    document.execCommand("copy");
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(copyText);
+    } else {
+      const textArea = document.createElement('textarea');
+      textArea.textContent = copyText;
+      document.body.append(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      textArea.remove();
+    }
 
-    this.props.showAlert("Copied", 'success');
+    this.props.showAlert('Copied', 'success');
   }
 
   render() {
     return (
       <Dialog
-              onClose={() => {
-                this.props.onClose();
-              }}
-              open
-              scroll='paper'
-              fullWidth
-              PaperComponent={PaperComponent}
-              aria-labelledby="draggable-dialog-title"
-              aria-describedby="scroll-dialog-description"
+        onClose={() => {
+          this.props.onClose();
+        }}
+        open
+        scroll="paper"
+        fullWidth
+        PaperComponent={PaperComponent}
+        aria-labelledby="draggable-dialog-title"
+        aria-describedby="scroll-dialog-description"
       >
-        <DialogTitle className='mui-dialog-title'>{this.state.title}</DialogTitle>
+        <DialogTitle id="draggable-dialog-title" className="mui-dialog-title">
+          {this.state.title}
+        </DialogTitle>
         <DialogContent
           sx={{
-            padding: "0px",
-            margin: "3px",
-            borderRadius: "10px",
-            backgroundColor: "#333",
+            padding: '0px',
+            margin: '3px',
+            borderRadius: '10px',
+            backgroundColor: '#333',
           }}
         >
-          <DialogContentText>
-            <pre>
-              {this.state.text}
-            </pre>
+          <DialogContentText component="div">
+            <pre>{this.state.text}</pre>
           </DialogContentText>
         </DialogContent>
         <DialogActions>

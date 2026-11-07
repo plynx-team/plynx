@@ -122,7 +122,7 @@ function OutputItem({output, plugins_dict, onOutputClick}) {
             {output.values.length > 0 &&
                 <a
                   className="flow-node-item-thumbnail"
-                  dangerouslySetInnerHTML={{ __html: output.thumbnail ? output.thumbnail : PREVIEW_BUTTON }}           // eslint-disable-line react/no-danger
+                  dangerouslySetInnerHTML={{ __html: output.thumbnail ? output.thumbnail : PREVIEW_BUTTON }}            
                   onClick={() => {
                     onOutputClick(output.name, type_descriptor.display_raw);
                   }}

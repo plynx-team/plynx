@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Route, Switch, withRouter } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { ThemeProvider } from '@mui/material/styles';
 import Header from './components/Header';
@@ -7,9 +7,10 @@ import LogIn from './components/LogIn';
 import LogInRedirect from './components/LogInRedirect';
 import Dashboard from './components/Dashboard';
 import ErrorPage from './components/ErrorPage';
-import CacheBuster from 'react-cache-buster';
+import CacheBuster from './components/Common/CacheBuster';
 import { UserMenuContextProvider } from './contexts';
 import { COLLECTIONS, VIRTUAL_COLLECTIONS, SPECIAL_USERS } from './constants';
+import { withRouter } from './router';
 
 import Editor from './components/Editor';
 import UserView from './components/UserView';
@@ -21,6 +22,16 @@ import theme from './theme';
 import packageInfo from '../package.json';
 
 import './App.css';
+
+const RoutedLogInRedirect = withRouter(LogInRedirect);
+const RoutedDashboard = withRouter(Dashboard);
+const RoutedLogIn = withRouter(LogIn);
+const RoutedOperationList = withRouter(OperationList);
+const RoutedWorkflowList = withRouter(WorkflowList);
+const RoutedRunList = withRouter(RunList);
+const RoutedEditor = withRouter(Editor);
+const RoutedUserView = withRouter(UserView);
+const RoutedErrorPage = withRouter(ErrorPage);
 
 class App extends Component {
   constructor(props) {
@@ -34,23 +45,27 @@ class App extends Component {
   }
 
   componentDidUpdate(prevProps) {
-    /* A trick: reload the page every time when the url does not end with '$'*/
+    /* A trick: reload the page every time when the url does not end with '$' */
     const prevPathTuple = this.getPathTuple(prevProps.location.pathname);
     const pathTuple = this.getPathTuple(this.props.location.pathname);
     if (this.props.location !== prevProps.location) {
-      if (this.props.location.pathname.endsWith("$")) {
+      if (this.props.location.pathname.endsWith('$')) {
         this.reloadOnChangePath = false;
         this.props.history.replace(this.props.location.pathname.replace(/\$+$/, ''));
-      } else if (this.reloadOnChangePath &&
-                 prevPathTuple[1] === pathTuple[1] &&
-                 prevPathTuple[2] !== pathTuple[2] &&
-                 prevPathTuple[2] !== '' &&
-                 pathTuple[2] !== '' &&
-                 prevPathTuple[2] !== 'new') {
+      } else if (
+        this.reloadOnChangePath &&
+        prevPathTuple[1] === pathTuple[1] &&
+        prevPathTuple[2] !== pathTuple[2] &&
+        prevPathTuple[2] !== '' &&
+        pathTuple[2] !== '' &&
+        prevPathTuple[2] !== 'new'
+      ) {
         window.location.reload();
-      } else if (this.reloadOnChangePath &&
-                prevPathTuple[1] !== pathTuple[1] &&
-                prevPathTuple[2] !== pathTuple[2]) {
+      } else if (
+        this.reloadOnChangePath &&
+        prevPathTuple[1] !== pathTuple[1] &&
+        prevPathTuple[2] !== pathTuple[2]
+      ) {
         // Case /templates/abc -> /runs/abc
         window.location.reload();
       } else {
@@ -64,41 +79,41 @@ class App extends Component {
 
     console.log(`VERSION ${packageInfo.version}:${process.env.NODE_ENV}`);
     return (
-        <CacheBuster
-            currentVersion={packageInfo.version}
-            isEnabled={isProduction} // If false, the library is disabled.
-            isVerboseMode={false} // If true, the library writes verbose logs to console.
-            loadingComponent={<LoadingScreen />} // If not pass, nothing appears at the time of new version check.
-            metaFileDirectory={'.'} // If public assets are hosted somewhere other than root on your server.
-          >
-            <div className="App">
-              <ThemeProvider theme={theme}>
-                <UserMenuContextProvider>
-                  <Header />
-                  <div className="Content">
-                    <Switch>
-                      <Route exact path="/" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.REDIRECT} maxTry={6} />}/>
-                      <Route exact path="/default" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEFAULT} maxTry={6} />}/>
-                      <Route exact path="/demo" render={(props) => <LogInRedirect {...props} specialUser={SPECIAL_USERS.DEMO} maxTry={3} />}/>
-                      <Route exact path="/dashboard" component={Dashboard} />
-                      <Route exact path="/login" component={LogIn} />
+      <CacheBuster
+        currentVersion={packageInfo.version}
+        isEnabled={isProduction}
+        isVerboseMode={false}
+        loadingComponent={<LoadingScreen />}
+        metaFileDirectory="."
+      >
+        <div className="App">
+          <ThemeProvider theme={theme}>
+            <UserMenuContextProvider>
+              <Header />
+              <div className="Content">
+                <Routes>
+                  <Route path="/" element={<RoutedLogInRedirect specialUser={SPECIAL_USERS.REDIRECT} maxTry={6} />} />
+                  <Route path="/default" element={<RoutedLogInRedirect specialUser={SPECIAL_USERS.DEFAULT} maxTry={6} />} />
+                  <Route path="/demo" element={<RoutedLogInRedirect specialUser={SPECIAL_USERS.DEMO} maxTry={3} />} />
+                  <Route path="/dashboard" element={<RoutedDashboard />} />
+                  <Route path="/login" element={<RoutedLogIn />} />
 
-                      <Route exact path={`/${VIRTUAL_COLLECTIONS.OPERATIONS}`} component={OperationList}/>
-                      <Route exact path={`/${VIRTUAL_COLLECTIONS.WORKFLOWS}`} component={WorkflowList}/>
-                      <Route exact path={`/${VIRTUAL_COLLECTIONS.RUNS}`} render={(props) => <RunList {...props} showControlls />}/>
-                      <Route exact path={`/${COLLECTIONS.USERS}`} render={(props) => <RunList {...props} showControlls />}/>
+                  <Route path={`/${VIRTUAL_COLLECTIONS.OPERATIONS}`} element={<RoutedOperationList />} />
+                  <Route path={`/${VIRTUAL_COLLECTIONS.WORKFLOWS}`} element={<RoutedWorkflowList />} />
+                  <Route path={`/${VIRTUAL_COLLECTIONS.RUNS}`} element={<RoutedRunList showControlls />} />
+                  <Route path={`/${COLLECTIONS.USERS}`} element={<RoutedRunList showControlls />} />
 
-                      <Route path={`/${COLLECTIONS.TEMPLATES}/:node_id`} render={(props) => <Editor {...props} collection={COLLECTIONS.TEMPLATES} />} />
-                      <Route path={`/${COLLECTIONS.RUNS}/:node_id`} render={(props) => <Editor {...props} collection={COLLECTIONS.RUNS} />} />
-                      <Route path={`/${COLLECTIONS.USERS}/:username`} render={(props) => <UserView {...props} />} />
+                  <Route path={`/${COLLECTIONS.TEMPLATES}/:node_id`} element={<RoutedEditor collection={COLLECTIONS.TEMPLATES} />} />
+                  <Route path={`/${COLLECTIONS.RUNS}/:node_id`} element={<RoutedEditor collection={COLLECTIONS.RUNS} />} />
+                  <Route path={`/${COLLECTIONS.USERS}/:username`} element={<RoutedUserView />} />
 
-                      <Route path="/permission_denied" render={(props) => <ErrorPage {...props} errorCode={403} />} />
-                      <Route path="*" render={(props) => <ErrorPage {...props} errorCode={404} />} />
-                    </Switch>
-                  </div>
-                </UserMenuContextProvider>
-              </ThemeProvider>
-            </div>
+                  <Route path="/permission_denied" element={<RoutedErrorPage errorCode={403} />} />
+                  <Route path="*" element={<RoutedErrorPage errorCode={404} />} />
+                </Routes>
+              </div>
+            </UserMenuContextProvider>
+          </ThemeProvider>
+        </div>
       </CacheBuster>
     );
   }

@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import cookie from 'react-cookies';
+import cookie from '../../cookie';
 import PropTypes from 'prop-types';
 import OutputItem from './OutputItem';
 import ParameterItem from '../Common/ParameterItem';
@@ -81,8 +81,8 @@ export default class PropertiesBar extends Component {
   }
 
   // TODO replace it with more general functions
-  /* eslint-disable max-params */
-  /* eslint-disable no-param-reassign */
+   
+   
   setNodeData(node) {
     this.setNodeDataArr([node]);
   }
@@ -90,8 +90,8 @@ export default class PropertiesBar extends Component {
   setNodeDataArr(nodes) {
     this.setState(this.getStateDict(nodes));
   }
-  /* eslint-enable no-param-reassign */
-  /* eslint-enable max-params */
+   
+   
 
   handleParameterChanged(name, value) {
     this.props.onParameterChanged(this.state.nodes.map(node => node._id), name, value);

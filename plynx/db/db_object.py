@@ -1,18 +1,18 @@
 """
 The class defines `DBObject`. This is an abstraction of all of the objects in database.
 """
+import dataclasses
 import datetime
 import inspect
-from typing import Any, Dict, Optional, Type, TypeVar, no_type_check
-
-import typing_inspect
+import types
+from typing import Any, Dict, Optional, Type, TypeVar, Union, get_args, get_origin, no_type_check
 
 from plynx.utils.common import ObjectId
 from plynx.utils.db_connector import get_db_connector
 
 DBObjectType = TypeVar("DBObjectType", bound="_DBObject")   # pylint: disable=invalid-name
 
-_registry = {}
+_registry: Dict[str, Type[Any]] = {}
 
 
 def register_class(target_class):
@@ -64,7 +64,7 @@ class _DBObject:
                 f"Class `{self.__class__.__name__}` is not savable."
             )
 
-        now = datetime.datetime.utcnow()
+        now = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
 
         obj_dict = self.to_dict()
         obj_dict["update_date"] = now
@@ -123,16 +123,20 @@ class DBObject(_DBObject, metaclass=Meta):
     """
 
     def __post_init__(self):
-        for (name, field_type) in self.__annotations__.items():     # pylint: disable=no-member
-            value = self.__dict__[name]
-            if typing_inspect.is_optional_type(field_type) and value is not None:
-                # Process case of Optional[Cls]
-                types = typing_inspect.get_args(field_type)
-                assert len(types) == 2, "Must be exactly two classes: [CustomClass, None]"
-                type_cls = types[0]
-                if not isinstance(value, type_cls):
-                    setattr(self, name, type_cls(getattr(self, name)))
-            if inspect.isclass(field_type) and not isinstance(value, _DBObject):
+        if not dataclasses.is_dataclass(self):
+            return
+        for dc_field in dataclasses.fields(self):
+            name = dc_field.name
+            field_type = dc_field.type
+            value = getattr(self, name)
+            origin = get_origin(field_type)
+            if origin in (Union, types.UnionType) and value is not None:
+                non_none_types = [arg for arg in get_args(field_type) if arg is not types.NoneType]
+                if len(non_none_types) == 1 and inspect.isclass(non_none_types[0]):
+                    type_cls = non_none_types[0]
+                    if not isinstance(value, type_cls):
+                        converted = type_cls.from_dict(value) if issubclass(type_cls, _DBObject) and isinstance(value, dict) else type_cls(value)
+                        setattr(self, name, converted)
+            elif inspect.isclass(field_type) and value is not None and not isinstance(value, (field_type, _DBObject)):
                 # Process external type, such as ObjectId
-                # dataclass_json should handle the rest dataclasses and primitive types
-                setattr(self, name, field_type(getattr(self, name)))
+                setattr(self, name, field_type(value))

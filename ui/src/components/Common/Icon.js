@@ -14,25 +14,49 @@ const DEFAULT_PROPS = {
   strokeLinejoin: 'round',
 };
 
+export function FeatherIcon({ name, size = 24, ...props }) {
+  const iconData = icons[name];
+  return (
+    <svg
+      {...DEFAULT_PROPS}
+      width={size}
+      height={size}
+      {...props}
+      dangerouslySetInnerHTML={{ __html: iconData ? iconData.contents : '' }}
+    />
+  );
+}
+
+FeatherIcon.propTypes = {
+  name: PropTypes.string.isRequired,
+  size: PropTypes.number,
+};
+
 const RenderIcon = ({ family, name, ...props }) => {
   if (family === 'plynx') {
-    return <img
-      className='file-type-icon'
-      src={"/icons/file_types/" + name + ".svg"}
-      {...DEFAULT_PROPS}
-      {...props}
-      alt={name}
-      />;
+    return (
+      <img
+        className="file-type-icon"
+        src={`/icons/file_types/${name}.svg`}
+        width={DEFAULT_PROPS.width}
+        height={DEFAULT_PROPS.height}
+        {...props}
+        alt={name}
+      />
+    );
   }
   if (family === 'feathericons') {
-    return <svg
-      className='file-type-icon'
-      {...DEFAULT_PROPS}
-      {...props}
-      dangerouslySetInnerHTML={{ __html: icons[name] }}           // eslint-disable-line react/no-danger
-    />;
+    const iconData = icons[name];
+    return (
+      <svg
+        className="file-type-icon"
+        {...DEFAULT_PROPS}
+        {...props}
+        dangerouslySetInnerHTML={{ __html: iconData ? iconData.contents : '' }}
+      />
+    );
   }
-  throw new Error("Unknown icon family " + family);
+  throw new Error(`Unknown icon family ${family}`);
 };
 
 RenderIcon.propTypes = {
@@ -40,8 +64,8 @@ RenderIcon.propTypes = {
   name: PropTypes.string.isRequired,
 };
 
-export default function icon(props) {
-  const {type_descriptor} = props;
+export default function Icon(props) {
+  const { type_descriptor, ...restProps } = props;
   const icon_descriptor = type_descriptor.icon.split('.');
   let icon_family;
   let icon_name;
@@ -51,20 +75,22 @@ export default function icon(props) {
   } else {
     console.warn(type_descriptor, 'is not a valid descriptor');
     icon_family = 'feathericons';
-    icon_family = 'file';
+    icon_name = 'file';
   }
 
-  return <RenderIcon
-    family={icon_family}
-    name={icon_name}
-    stroke={type_descriptor.color}
-    {...props}
-  />;
+  return (
+    <RenderIcon
+      family={icon_family}
+      name={icon_name}
+      stroke={type_descriptor.color}
+      {...restProps}
+    />
+  );
 }
 
-icon.propTypes = {
+Icon.propTypes = {
   type_descriptor: PropTypes.shape({
     icon: PropTypes.string.isRequired,
     color: PropTypes.string.isRequired,
-  }).isRequired
+  }).isRequired,
 };

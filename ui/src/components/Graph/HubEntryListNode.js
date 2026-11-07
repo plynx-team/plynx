@@ -6,8 +6,8 @@ import Icon from '../Common/Icon';
 import {PluginsConsumer} from '../../contexts';
 
 const onDragStart = (event, nodeType) => {
-  event.dataTransfer.setData('application/reactflow', nodeType);    // eslint-disable-line no-param-reassign
-  event.dataTransfer.effectAllowed = 'move';    // eslint-disable-line no-param-reassign
+  event.dataTransfer.setData('application/reactflow', nodeType);     
+  event.dataTransfer.effectAllowed = 'move';     
 };
 
 export class HubDraggableEntry extends Component {

@@ -17,6 +17,14 @@ export default class HubEntryList extends Component {
     level: 0,
   };
 
+  containerRef = React.createRef();
+
+  scrollToTop() {
+    if (this.containerRef.current) {
+      this.containerRef.current.scrollTop = 0;
+    }
+  }
+
   render() {
     const listItems = this.props.items.map(
       (entry) => {
@@ -37,7 +45,7 @@ export default class HubEntryList extends Component {
     );
 
     return (
-      <div className={`hub-entry-list ${this.props.extraClassName}`}>
+      <div className={`hub-entry-list ${this.props.extraClassName}`} ref={this.containerRef}>
         {listItems}
       </div>
     );

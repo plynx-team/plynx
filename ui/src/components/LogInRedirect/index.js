@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { PLynxApi } from '../../API';
 import {SimpleLoader} from '../LoadingScreen';
 import { SPECIAL_USERS, DEFAULT_WORKFLOW_KIND } from '../../constants';
-import cookie from 'react-cookies';
+import cookie from '../../cookie';
 
 import './style.css';
 
@@ -80,8 +80,8 @@ export default class LogInRedirect extends Component {
       this.setState({errorText: error.message});
     };
 
-    /* eslint-disable no-await-in-loop */
-    /* eslint-disable no-unmodified-loop-condition */
+     
+     
     while (loading) {
       await promise
       .then(handleResponse)
@@ -91,8 +91,8 @@ export default class LogInRedirect extends Component {
         sleepPeriod = Math.min(sleepPeriod + sleepStep, sleepMaxPeriod);
       }
     }
-    /* eslint-enable no-unmodified-loop-condition */
-    /* eslint-enable no-await-in-loop */
+     
+     
   }
 
   render() {

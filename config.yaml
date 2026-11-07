@@ -1,0 +1,253 @@
+mongodb:
+  user:
+  password:
+  host: 'mongodb'
+  port: 27017
+
+storage:
+  scheme: file
+  prefix: /data/resources/
+
+auth:
+  secret_key:
+
+web:
+  host: '0.0.0.0'
+  port: 5005
+  endpoint: http://localhost:5005/plynx/api/v0/
+  debug: true
+
+demo:
+  enabled: false
+  template_ids:
+    - 639f4aa730bb7ecf8c4c97de
+    - 639f4ad130bb7ecf8c4c97e9
+
+plugins:
+  resources:
+    - kind: file
+      title: File
+      cls: plynx.plugins.resources.common.File
+      icon: feathericons.file
+      color: '#fff'
+    - kind: pdf
+      title: PDF file
+      cls: plynx.plugins.resources.common.PDF
+      icon: plynx.pdf
+    - kind: image
+      title: Image
+      cls: plynx.plugins.resources.common.Image
+      icon: plynx.image
+    - kind: csv
+      title: CSV file
+      cls: plynx.plugins.resources.common.CSV
+      icon: plynx.csv
+    - kind: tsv
+      title: TSV file
+      cls: plynx.plugins.resources.common.TSV
+      icon: plynx.tsv
+    - kind: json
+      title: JSON file
+      cls: plynx.plugins.resources.common.Json
+      icon: plynx.json
+    - kind: executable
+      title: Executable
+      cls: plynx.plugins.resources.common.Executable
+      icon: feathericons.play
+      color: '#fcff57'
+    - kind: directory
+      title: Directory
+      cls: plynx.plugins.resources.common.Directory
+      icon: feathericons.folder
+      color: '#f44'
+    - kind: cloud-storage
+      title: Cloud Storage
+      cls: plynx.plugins.resources.cloud_resources.CloudStorage
+      icon: feathericons.hard-drive
+      color: '#5ed1ff'
+
+    - kind: int
+      title: int
+      cls: plynx.plugins.resources.common.RawInt
+      icon: plynx.python-int
+    - kind: str
+      title: str
+      cls: plynx.plugins.resources.common.Raw
+      icon: feathericons.type
+      color: '#f44'
+    - kind: dict
+      title: dict
+      cls: plynx.plugins.resources.common.Raw
+      icon: plynx.json
+    - kind: float
+      title: float
+      cls: plynx.plugins.resources.common.RawFloat
+      icon: plynx.python-float
+    - kind: list
+      title: list
+      cls: plynx.plugins.resources.common.Raw
+      icon: plynx.python-list
+    - kind: bool
+      title: bool
+      cls: plynx.plugins.resources.common.Raw
+      icon: plynx.python-bool
+    - kind: color
+      title: color
+      cls: plynx.plugins.resources.common.Raw
+      icon: feathericons.pen-tool
+      color: '#ff33ff'
+    - kind: py-json-file
+      title: Python JSON file
+      cls: plynx.plugins.resources.python.common.Json
+      icon: feathericons.file-text
+      color: '#ff3333'
+      extensions:
+        - "json"
+    - kind: py-tmp-file
+      title: Python TMP txt file
+      cls: plynx.plugins.resources.python.common.Json
+      icon: feathericons.file-text
+      color: '#33ff33'
+      extensions:
+        - "txt"
+
+  operations:
+    - kind: basic-file
+      title: File
+      executor: plynx.plugins.executors.local.File
+      icon: feathericons.file
+      color: '#fff'
+      is_static: true
+      resources:
+        - file
+        - pdf
+        - image
+        - csv
+        - tsv
+        - json
+        - executable
+        - directory
+        - cloud-storage
+    - kind: basic-bash-jinja2-operation
+      title: BashJinja2 Operation
+      executor: plynx.plugins.executors.local.BashJinja2
+      icon: feathericons.terminal
+      color: '#0f0'
+      resources:
+        - file
+        - pdf
+        - image
+        - csv
+        - tsv
+        - json
+        - executable
+        - directory
+        - cloud-storage
+    - kind: basic-python-node-operation
+      title: Python Operation
+      executor: plynx.plugins.executors.local.PythonNode
+      icon: plynx.python-logo-notext
+      color: ''
+      resources:
+        - file
+        - pdf
+        - image
+        - csv
+        - tsv
+        - json
+        - executable
+        - directory
+        - cloud-storage
+    - kind: python-code-operation
+      title: Python Code Operation
+      executor: plynx.plugins.executors.python.local.PythonNode
+      icon: plynx.python-logo-notext
+      color: ''
+      resources:
+        - int
+        - str
+        - dict
+        - float
+        - bool
+        - py-json-file
+        - py-tmp-file
+    - kind: basic-dag-operation
+      title: Composite Operation
+      executor: plynx.plugins.executors.dag.DAG
+      icon: feathericons.grid
+      color: '#5ed1ff'
+      hubs:
+        - db-hub
+        - static-hub
+      resources:
+        - file
+        - pdf
+        - image
+        - csv
+        - tsv
+        - json
+        - executable
+        - directory
+        - cloud-storage
+    - kind: python-basic-file
+      title: Python File
+      executor: plynx.plugins.executors.local.File
+      icon: feathericons.file
+      color: '#ff0'
+      is_static: true
+      resources:
+        - py-json-file
+        - py-tmp-file
+  hubs:
+    - kind: db-hub
+      title: Database hub
+      icon: feathericons.database
+      cls: plynx.plugins.hubs.collection.CollectionHub
+      args:
+        operations:
+          - basic-file
+          - basic-bash-jinja2-operation
+          - basic-python-node-operation
+          - basic-dag-operation
+        collection: templates
+    - kind: static-hub
+      title: Static hub
+      icon: feathericons.file
+      cls: plynx.plugins.hubs.static_list.StaticListHub
+      args:
+        list_nodes_path: /app/nodes.json
+    - kind: python-db-hub
+      title: Database hub
+      icon: feathericons.database
+      cls: plynx.plugins.hubs.collection.CollectionHub
+      args:
+        operations:
+          - python-code-operation
+          - python-basic-file
+        collection: templates
+  workflows:
+    - kind: basic-dag-workflow
+      title: Basic DAG Workflow
+      executor: plynx.plugins.executors.dag.DAG
+      hubs:
+        - db-hub
+    - kind: python-workflow
+      title: Python Workflow
+      # executor: plynx.plugins.executors.python.dag.DAG  # Async worker
+      executor: plynx.plugins.executors.python.dag.ExecutorWithWebWorkerServer
+      hubs:
+        - static-hub
+        - python-db-hub
+      static_operation_kinds:
+        - python-basic-file
+
+default_policies:
+  - CAN_VIEW_OTHERS_OPERATIONS
+  - CAN_VIEW_OTHERS_WORKFLOWS
+  - CAN_VIEW_OPERATIONS
+  - CAN_VIEW_WORKFLOWS
+  - CAN_CREATE_OPERATIONS
+  - CAN_CREATE_WORKFLOWS
+  - CAN_MODIFY_OTHERS_WORKFLOWS
+  - CAN_RUN_WORKFLOWS
+  - IS_ADMIN

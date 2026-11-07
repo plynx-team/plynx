@@ -1,7 +1,6 @@
 """Node Cache and utils"""
 
 import hashlib
-from builtins import str
 from dataclasses import dataclass, field
 from typing import List, Optional
 

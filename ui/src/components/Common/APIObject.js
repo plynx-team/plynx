@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import AlertContainer from '../3rd_party/react-alert';
 import { PLynxApi } from '../../API';
-import cookie from 'react-cookies';
+import cookie from '../../cookie';
 import LoadingScreen from '../LoadingScreen';
 import { ALERT_OPTIONS } from '../../constants';
 
@@ -34,7 +34,7 @@ export default class APIObject extends Component {
   }
 
   sleep(ms) {
-    // eslint-disable-next-line no-promise-executor-return
+     
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
@@ -79,19 +79,19 @@ export default class APIObject extends Component {
       }
     };
 
-      /* eslint-disable no-await-in-loop */
-      /* eslint-disable no-unmodified-loop-condition */
+       
+       
     while (loading) {
       await PLynxApi.endpoints[self.props.collection].getOne({ id: this.props.object_id})
         .then(loadObject)
         .catch(handleError);
       if (loading) {
-        self.sleep(sleepPeriod);
+        await self.sleep(sleepPeriod);
         sleepPeriod = Math.min(sleepPeriod + sleepStep, sleepMaxPeriod);
       }
     }
-      /* eslint-enable no-unmodified-loop-condition */
-      /* eslint-enable no-await-in-loop */
+       
+       
 
       // Stop loading
     self.setState({

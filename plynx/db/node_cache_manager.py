@@ -109,7 +109,18 @@ class NodeCacheManager:
         return get_db_connector().node_cache.find(NodeCacheManager._make_query(start_datetime, end_datetime, non_protected_only))
 
     @staticmethod
+    def count(
+            start_datetime: Optional[datetime.datetime] = None,
+            end_datetime: Optional[datetime.datetime] = None,
+            non_protected_only: bool = False
+            ) -> int:
+        """Count matching NodeCache objects in database."""
+        return get_db_connector().node_cache.count_documents(
+            NodeCacheManager._make_query(start_datetime, end_datetime, non_protected_only)
+        )
+
+    @staticmethod
     def clean_up():
         """Remove NodeCache objects with flag `removed` set
         """
-        return get_db_connector().node_cache.remove({"removed": True})
+        return get_db_connector().node_cache.delete_many({"removed": True})

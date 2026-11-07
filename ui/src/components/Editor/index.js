@@ -1,10 +1,9 @@
 import React, { Component } from 'react';
-import Tour from 'reactour';
+import Tour from '../Common/Tour';
 import PropTypes from 'prop-types';
-import queryString from 'query-string';
 import AlertContainer from '../3rd_party/react-alert';
 import { PLynxApi } from '../../API';
-import cookie from 'react-cookies';
+import cookie from '../../cookie';
 import LoadingScreen from '../LoadingScreen';
 import {
   ACTION,
@@ -77,7 +76,7 @@ export default class Editor extends Component {
     this.schedule = null;
     this.syncInterval = null;
     this.last_run_is_in_finished_status = false;
-    console.log(global.appVersion);
+    console.log(globalThis.appVersion);
   }
 
   sleep(ms) {
@@ -114,16 +113,13 @@ export default class Editor extends Component {
     const sleepStep = 1000;
 
     const loadNode = (response) => {
-      const searchValues = queryString.parse(this.props.location.search);
+      const searchParams = new URLSearchParams(this.props.location.search);
+      const subNodeIds = searchParams.getAll('sub_node_id');
       let node = response.data.node;
 
-      if (searchValues.sub_node_id) {
+      if (subNodeIds.length > 0) {
         let sub_nodes = null;
-        if (!Array.isArray(searchValues.sub_node_id)) {
-          searchValues.sub_node_id = [searchValues.sub_node_id];
-        }
-        let sub_node_id;
-        for (sub_node_id of searchValues.sub_node_id) {
+        for (let sub_node_id of subNodeIds) {
           sub_node_id = sub_node_id.replace(/^\$+|\$+$/g, '');
           for (let i = 0; i < node.parameters.length; ++i) {
             if (node.parameters[i].name === '_nodes') {
@@ -148,11 +144,11 @@ export default class Editor extends Component {
       const is_graph = executor_info.is_graph;
 
       let view_mode = is_graph ? VIEW_MODE.GRAPH : VIEW_MODE.NODE;
-      if ('view_mode' in searchValues) {
-        view_mode = Math.max(parseInt(searchValues['view_mode'], 10), is_graph ? 0 : 1);
+      if (searchParams.has('view_mode')) {
+        view_mode = Math.max(parseInt(searchParams.get('view_mode'), 10), is_graph ? 0 : 1);
       }
 
-      const selectedNode = searchValues.nid;
+      const selectedNode = searchParams.get('nid') || undefined;
 
       self.setState({
         plugins_dict: response.data.plugins_dict,
@@ -165,7 +161,7 @@ export default class Editor extends Component {
       this.tour_steps = addStyleToTourSteps(response.data.tour_steps || []);
 
       console.log('node_id:', node_id);
-      if (!node_id.startsWith(self.node._id) && !searchValues.sub_node_id) {
+      if (!node_id.startsWith(self.node._id) && subNodeIds.length === 0) {
         self.props.history.replace("/" + self.props.collection + "/" + self.node._id + '$');
       }
 
@@ -238,8 +234,8 @@ export default class Editor extends Component {
       }
     };
 
-    /* eslint-disable no-await-in-loop */
-    /* eslint-disable no-unmodified-loop-condition */
+     
+     
     while (loading) {
       await PLynxApi.endpoints[self.props.collection].getOne({ id: node_id})
       .then(loadNode)
@@ -249,8 +245,8 @@ export default class Editor extends Component {
         sleepPeriod = Math.min(sleepPeriod + sleepStep, sleepMaxPeriod);
       }
     }
-    /* eslint-enable no-unmodified-loop-condition */
-    /* eslint-enable no-await-in-loop */
+     
+     
 
     // Stop loading
     self.setState({
@@ -613,11 +609,11 @@ export default class Editor extends Component {
 
   handleSetViewMode(view_mode) {
     this.setState({view_mode: view_mode});
-    const searchValues = queryString.parse(this.props.location.search);
-    searchValues.view_mode = view_mode;
+    const searchParams = new URLSearchParams(this.props.location.search);
+    searchParams.set('view_mode', String(view_mode));
 
     this.props.history.push({
-      search: '?' + queryString.stringify(searchValues)
+      search: '?' + searchParams.toString()
     });
   }
 

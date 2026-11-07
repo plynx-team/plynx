@@ -43,7 +43,7 @@ const theme = createTheme({
         },
       },
     },
-    ListItemIcon: {
+    MuiListItemIcon: {
       styleOverrides: {
         root: {
           minWidth: "20px",

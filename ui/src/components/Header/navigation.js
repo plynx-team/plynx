@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { NavLink } from 'react-router-dom';
 import { separator } from './common';
-import cookie from 'react-cookies';
+import cookie from '../../cookie';
 import { VIRTUAL_COLLECTIONS } from '../../constants';
 import { UserMenuContext } from '../../contexts';
 

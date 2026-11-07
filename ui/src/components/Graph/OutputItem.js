@@ -4,9 +4,8 @@ import { PLynxApi } from '../../API';
 import Icon from '../Common/Icon';
 import { PluginsConsumer } from '../../contexts';
 import { API_ENDPOINT } from '../../configConsts';
+import { downloadBlob } from '../../utils';
 import './OutputItem.css';
-
-const FileDownload = require('react-file-download');
 
 export default class OutputItem extends Component {
   download() {
@@ -19,7 +18,7 @@ export default class OutputItem extends Component {
     })
       .then((response) => {
         console.log(response);
-        FileDownload(response.data, resourceId);
+        downloadBlob(response.data, resourceId);
       })
       .catch((error) => {
         console.error(error);

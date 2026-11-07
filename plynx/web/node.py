@@ -1,6 +1,4 @@
 """All of the endpoints related to the Nodes or simial DB structures"""
-from __future__ import absolute_import
-
 import json
 from typing import Optional
 
