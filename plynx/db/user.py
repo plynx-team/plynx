@@ -16,6 +16,7 @@ from plynx.utils.db_connector import get_db_connector
 
 DEFAULT_POLICIES = get_iam_policies_config().default_policies
 JWT_ENCODE_ALGORITHM = "HS256"
+DEFAULT_SECRET_KEY: str = "plynx-default-secret-key-change-me"
 
 
 @dataclass_json
@@ -92,7 +93,8 @@ class User(DBObject):
         else:
             raise ValueError(f"`token_type` is unknown value `{token_type}`")
 
-        token = jwt.encode(payload, get_auth_config().secret_key, algorithm=JWT_ENCODE_ALGORITHM)
+        secret_key = get_auth_config().secret_key or DEFAULT_SECRET_KEY
+        token = jwt.encode(payload, secret_key, algorithm=JWT_ENCODE_ALGORITHM)
 
         return token
 
@@ -107,7 +109,8 @@ class User(DBObject):
             (User)   User object or None
         """
         try:
-            payload = jwt.decode(token, get_auth_config().secret_key, algorithms=[JWT_ENCODE_ALGORITHM])
+            secret_key = get_auth_config().secret_key or DEFAULT_SECRET_KEY
+            payload = jwt.decode(token, secret_key, algorithms=[JWT_ENCODE_ALGORITHM])
         except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
             return None
         except Exception as e:  # pylint: disable=broad-except
