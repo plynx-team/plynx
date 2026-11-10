@@ -150,9 +150,10 @@ def post_register_with_oauth2():
 
     try:
         idinfo = id_token.verify_oauth2_token(token, g_requests.Request(), GOOGLE_CLIENT_ID)
-    except ValueError:
+    except Exception as e:
+        logger.error(f"Failed to verify oauth2 token: {e}")
         # Invalid token
-        return make_fail_response("Invalid request"), 400
+        return make_fail_response(f"Invalid request: {e}"), 400
 
     if not idinfo["email_verified"]:
         return make_fail_response("Unable to verify the email"), 401
