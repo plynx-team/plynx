@@ -88,19 +88,20 @@ def get_nodes(collection: str, node_link: Optional[str] = None):
             return make_permission_denied()
         if kind in operation_manager.kind_to_operation_dict and (not can_view_operations or not can_create_operations):
             return make_permission_denied()
-        node: Node = executor_manager.kind_to_executor_class[kind].get_default_node(
+        node_or_tuple = executor_manager.kind_to_executor_class[kind].get_default_node(
             is_workflow=kind in workflow_manager.kind_to_workflow_dict
         )
-        if isinstance(node, tuple):
-            data = node[0].to_dict()
-            tour_steps = node[1]
+        if isinstance(node_or_tuple, tuple):
+            node = node_or_tuple[0]
+            tour_steps = node_or_tuple[1]
         else:
-            data = node.to_dict()
+            node = node_or_tuple
             tour_steps = []
 
         node.author = user_id
+        node.kind = kind
         node.save()
-        data["kind"] = kind
+        data = node.to_dict()
         return make_success_response({
             "node": data,
             "tour_steps": tour_steps,
@@ -170,6 +171,8 @@ def post_node(collection: str):
             node.author = db_node["author"]
         if node.author != db_node["author"]:
             raise Exception("Author of the node does not match the one in the database")
+        if not node.latest_run_id and db_node.get("latest_run_id"):
+            node.latest_run_id = db_node["latest_run_id"]
         is_author = db_node["author"] == g.user._id
     else:
         # assign the author
@@ -403,5 +406,6 @@ def post_node(collection: str):
         return make_fail_response(f"Unknown action `{action}`")
 
     return make_success_response({
-            "message": f"Node(_id=`{node._id}`) successfully updated"
+            "message": f"Node(_id=`{node._id}`) successfully updated",
+            "latest_run_id": str(node.latest_run_id) if node.latest_run_id else None,
         })

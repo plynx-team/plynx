@@ -260,6 +260,9 @@ class Graph extends Component {
 
     this.graph_node = newGraph;
     this.reactFlowInstance.setNodes(newNodes.map(node => this.nodeToFlowNode(node)));
+    if (this.propertiesBar) {
+      this.applySelection();
+    }
   }
 
   syncNodes(newNodes) {
@@ -280,6 +283,9 @@ class Graph extends Component {
     }
 
     this.reactFlowInstance.setNodes(this.nodes.map(node => this.nodeToFlowNode(node)));
+    if (this.propertiesBar) {
+      this.applySelection();
+    }
 
     this.setState({syncCounter: this.state.syncCounter + 1});
   }
@@ -687,8 +693,8 @@ class Graph extends Component {
 
   onNodeDrag(event, node, nodes) {
     for (const n of nodes) {
-      this.node_lookup[n.id].x = n.position.x;
-      this.node_lookup[n.id].y = n.position.y;
+      this.node_lookup[n.id].x = Math.round(n.position.x);
+      this.node_lookup[n.id].y = Math.round(n.position.y);
     }
   }
 
@@ -776,23 +782,29 @@ class Graph extends Component {
   }
 
   applyChanges(changes) {
+    let graphChanged = false;
     for (let ii = 0; ii < changes.length; ++ii) {
       const change = changes[ii];
       switch (change.changeType) {
         case ChangeType.DELETE_EDGE:
           this.applyDeleteEdge(change.edge);
+          graphChanged = true;
           break;
         case ChangeType.CREATE_EDGE:
           this.applyCreateEdge(change.connection, change.pushToReactflow);
+          graphChanged = true;
           break;
         case ChangeType.MOVE_NODE:
           this.applyMoveNode(change.node);
+          graphChanged = true;
           break;
         case ChangeType.DELETE_NODE:
           this.applyDeleteNode(change.id);
+          graphChanged = true;
           break;
         case ChangeType.DROP_NODE:
           this.applyDropNode(change.node, change.replaceNodeId, change.replaceOriginalNode, change.position);
+          graphChanged = true;
           break;
         case ChangeType.SELECT_NODE:
           this.applyNodeSelect(change.id);
@@ -802,12 +814,13 @@ class Graph extends Component {
           break;
         case ChangeType.CHANGE_PRIMITIVE_OVERRIDE:
           this.applyChangePrimitiveOverride(change.id, change.inputName, change.value);
+          graphChanged = true;
           break;
         default:
           console.error(`Unknown ChangeType: ${change.changeType}`);
       }
     }
-    if (changes.length > 0) {
+    if (graphChanged) {
       this.props.onNodeChange(this.graph_node);
     }
   }
@@ -863,8 +876,8 @@ class Graph extends Component {
 
   applyMoveNode(node) {
     const node_to_apply = this.node_lookup[node.id];
-    node_to_apply.x = node.position.x;
-    node_to_apply.y = node.position.y;
+    node_to_apply.x = Math.round(node.position.x);
+    node_to_apply.y = Math.round(node.position.y);
   }
 
   applyDeleteNode(node_id) {
@@ -892,8 +905,9 @@ class Graph extends Component {
     }
     node.parent_node_id = null;
     node.successor_node_id = null;
-    node.x = position.x;
-    node.y = position.y;
+    node._editable = this.props.editable;
+    node.x = Math.round(position.x);
+    node.y = Math.round(position.y);
 
     const flowNode = this.nodeToFlowNode(node,);
 

@@ -5,7 +5,7 @@ import { PLynxApi } from '../../API';
 import List from './List';
 import ReactPaginate from 'react-paginate';
 import LoadingScreen from '../LoadingScreen';
-import { ALERT_OPTIONS, IAM_POLICIES, VIRTUAL_COLLECTIONS } from '../../constants';
+import { ACTIVE_NODE_RUNNING_STATUSES, ALERT_OPTIONS, COLLECTIONS, IAM_POLICIES, VIRTUAL_COLLECTIONS } from '../../constants';
 import SearchBar from '../Common/SearchBar';
 import { makeControlPanel, makeControlLink, makeControlButton, makeControlSeparator } from '../Common/controlButton';
 import {PluginsProvider, PluginsConsumer} from '../../contexts';
@@ -71,10 +71,47 @@ export default class ListPage extends Component {
 
   componentDidMount() {
     this.mounted = true;
+    if (this.props.collection === COLLECTIONS.RUNS) {
+      this.refreshInterval = setInterval(() => {
+        if (!this.mounted || this.state.loading) {
+          return;
+        }
+        const hasActiveRuns = (this.state.items || []).some(
+          item => item.node_running_status && ACTIVE_NODE_RUNNING_STATUSES.has(item.node_running_status.toUpperCase())
+        );
+        if (hasActiveRuns) {
+          this.refreshItemsSilently();
+        }
+      }, 2000);
+    }
   }
 
   componentWillUnmount() {
     this.mounted = false;
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+    }
+  }
+
+  refreshItemsSilently() {
+    PLynxApi.endpoints[`search_${this.props.collection}`].create({
+      offset: this.state.offset,
+      per_page: this.perPage,
+      search: this.state.search,
+      ...this.props.extraSearch,
+    })
+    .then((response) => {
+      if (!this.mounted) {
+        return;
+      }
+      const data = response.data;
+      this.setState({
+        items: data.items,
+        plugins_dict: data.plugins_dict,
+        pageCount: Math.ceil(data.total_count / this.perPage),
+      });
+    })
+    .catch(() => {});
   }
 
   async loadItems() {

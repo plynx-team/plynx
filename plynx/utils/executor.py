@@ -91,6 +91,7 @@ class TickThread:
 
     def __exit__(self, type_cls, value, traceback_val):
         self._stop_event.set()
+        self._tick_thread.join()
 
     def call_executor_tick(self):
         """Run timed ticks"""
@@ -118,6 +119,8 @@ class DBJobExecutor:
         try:
             try:
                 status = NodeRunningStatus.FAILED
+                self.executor.node.node_running_status = NodeRunningStatus.RUNNING
+                _update_node(self.executor.node)
                 self.executor.init_executor()
                 with TickThread(self.executor):
                     status = self.executor.run()

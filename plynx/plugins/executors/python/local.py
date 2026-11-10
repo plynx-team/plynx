@@ -110,8 +110,7 @@ class redirect_to_plynx_logs:   # pylint: disable=invalid-name
                         f.write(fi.read())
                 output = self.node.get_log_by_name(name=logs_name)
                 output.values = [filename]
-            else:
-                os.remove(filename)
+            os.remove(filename)
 
 
 def prep_args(node: Node) -> Dict[str, Any]:

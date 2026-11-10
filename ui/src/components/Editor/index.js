@@ -260,7 +260,7 @@ export default class Editor extends Component {
       if (!self.state.node || !self.state.node.auto_sync) {
         return;
       }
-      if (self.last_run_is_in_finished_status) {
+      if (self.schedule || !self.node.latest_run_id || self.last_run_is_in_finished_status) {
         return;
       }
       if (!self.state.is_workflow) {
@@ -344,6 +344,10 @@ export default class Editor extends Component {
         }
 
         if (action === ACTION.SAVE) {
+          if (data.latest_run_id) {
+            self.node.latest_run_id = data.latest_run_id;
+            self.last_run_is_in_finished_status = false;
+          }
           if (!silent) {
             self.showAlert("Saved", 'success');
           }
@@ -371,6 +375,7 @@ export default class Editor extends Component {
           });
         } else if (action === ACTION.CREATE_RUN) {
           self.showAlert("Created new run with id: " + response.data.run_id, 'success');
+          self.node.latest_run_id = response.data.run_id;
           if (this.state.node.auto_sync) {
             self.last_run_is_in_finished_status = false;
           } else {

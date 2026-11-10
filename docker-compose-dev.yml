@@ -23,6 +23,7 @@ services:
             - api
             - internal-api
         volumes:
+            - ./data:/data
             - ./plynx:/app/plynx
             - ./config.yaml:/app/config.yaml
         environment:
@@ -96,6 +97,7 @@ services:
             - mongodb
         volumes:
             - ./data:/data
+            - ./plynx:/app/plynx
             - ./config.yaml:/app/config.yaml
         environment:
             - PLYNX_CONFIG=/app/config.yaml

@@ -14,7 +14,7 @@ from plynx.constants import RegisterUserExceptionCode, ResponseStatus
 from plynx.db.user import User, UserCollectionManager
 from plynx.utils.common import JSONEncoder
 from plynx.utils.config import get_config
-from plynx.utils.content import create_default_templates
+from plynx.utils.content import create_default_templates, repair_corrupted_templates
 from plynx.utils.db_connector import check_connection
 from plynx.utils.exceptions import RegisterUserException
 from plynx.utils.logs import set_logging_level
@@ -82,6 +82,7 @@ def _init_default_user():
         create_default_templates(user)
     else:
         logging.info(f"Default user `{DEFAULT_USERNAME}` already exists")
+        repair_corrupted_templates()
 
 
 def verify_password(username_or_token: str, password: str):

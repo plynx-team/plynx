@@ -35,7 +35,7 @@ dev:
 	mkdir -p ./data/resources
 	PLYNX_IMAGES="backend ui_dev" ./scripts/build_images.sh
 	python3 -m webbrowser "http://localhost:3001/"
-	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_DEV_FILE) up --abort-on-container-exit --scale api=1 --scale test=0 --scale frontend=1 --scale workers=0
+	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_DEV_FILE) up --abort-on-container-exit --scale api=1 --scale test=0 --scale frontend=1 --scale workers=2
 
 build_package:
 	python3 -m build

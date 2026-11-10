@@ -22,6 +22,8 @@ def worker_main(job_run_queue: queue.Queue, job_complete_queue: queue.Queue):
     logging.info("Created pool worker")
     while True:
         node = job_run_queue.get()
+        if node is None:
+            break
         executor = plynx.utils.executor.materialize_executor(node)
 
         try:
@@ -165,6 +167,7 @@ class DAG(plynx.plugins.executors.dag.DAG):
     def clean_up_executor(self):
         """Clean up the environment created by executor"""
         if self.worker_pool:
+            self.job_run_queue.put(None)
             self.worker_pool.terminate()
         self.worker_pool = None
 
@@ -230,9 +233,12 @@ class ExecutorWithWebWorkerServer(DAG):
         """Launch the executor"""
         import os  # pylint: disable=import-outside-toplevel
         assert self.node, "Attribute `node` is unassigned"
+        worker_server_url = os.environ.get("WORKER_SERVER_URL")
+        if worker_server_url:
+            self.node.node_running_status = NodeRunningStatus.RUNNING
         res = super().launch()
 
-        worker_server_url = os.environ.get("WORKER_SERVER_URL")
-        ExecutorWithWebWorkerServer.fire_and_forget(worker_server_url, {"run_id": str(self.node._id)})
+        if worker_server_url:
+            ExecutorWithWebWorkerServer.fire_and_forget(worker_server_url, {"run_id": str(self.node._id)})
 
         return res

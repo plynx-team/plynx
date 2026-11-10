@@ -68,13 +68,13 @@ export default class PropertiesBar extends Component {
         _link_visibility: false,
       });
     }
-    const overridenOutputs = nodes.filter(node => node._cached_node !== null).map(node => node._cached_node.outputs).flat(1);
-    const overridenLogs = nodes.filter(node => node._cached_node !== null).map(node => node._cached_node.logs).flat(1);
+    const overridenOutputs = nodes.filter(node => Boolean(node._cached_node)).map(node => node._cached_node.outputs).flat(1);
+    const overridenLogs = nodes.filter(node => Boolean(node._cached_node)).map(node => node._cached_node.logs).flat(1);
     return {
       nodes: nodes,
       parameters: commonParameters,
       outputs: overridenOutputs.length !== 0 ? overridenOutputs : nodes.map(node => node.outputs).flat(1),
-      logs: overridenLogs !== 0 ? overridenLogs : nodes.map(node => node.logs).flat(1),
+      logs: overridenLogs.length !== 0 ? overridenLogs : nodes.map(node => node.logs).flat(1),
       nodeId: nodes.map(node => node._id).join(),
       editable: this.props.editable,
     };

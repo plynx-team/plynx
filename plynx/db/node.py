@@ -1,4 +1,5 @@
 """Node DB Object and utils"""
+import ast
 from dataclasses import dataclass, field
 from typing import Any, Callable, List, Optional, Union
 
@@ -104,6 +105,19 @@ class InputReference(DBObject):
     output_id: str = ""
 
 
+def _extract_corrupted_name_dict(name_val: Any) -> Optional[dict]:
+    if isinstance(name_val, dict):
+        return name_val
+    if isinstance(name_val, str) and name_val.startswith("{") and name_val.endswith("}"):
+        try:
+            parsed = ast.literal_eval(name_val)
+            if isinstance(parsed, dict) and "name" in parsed:
+                return parsed
+        except (ValueError, SyntaxError):
+            return None
+    return None
+
+
 @dataclass_json
 @dataclass
 class Input(_BaseResource):
@@ -113,6 +127,12 @@ class Input(_BaseResource):
 
     def __post_init__(self):
         """Set default primitive_override if it is not set and file_type is primitive"""
+        raw_dict = _extract_corrupted_name_dict(self.name)
+        if raw_dict is not None:
+            self.name = raw_dict.get("name", "")
+            self.file_type = raw_dict.get("file_type", self.file_type)
+            self.is_array = raw_dict.get("is_array", self.is_array)
+            self.min_count = raw_dict.get("min_count", self.min_count)
         if self.primitive_override is None and self.file_type in PRIMITIVE_TYPES:
             self.primitive_override = _get_default_by_type(self.file_type)
 
@@ -367,6 +387,12 @@ class Parameter(DBObject):
     reference: Optional[str] = None
 
     def __post_init__(self):
+        raw_dict = _extract_corrupted_name_dict(self.name)
+        if raw_dict is not None:
+            self.name = raw_dict.get("name", "")
+            self.parameter_type = raw_dict.get("parameter_type", raw_dict.get("type", self.parameter_type))
+            self.value = raw_dict.get("value", self.value)
+            self.widget = raw_dict.get("widget", self.widget)
         # `value` field is a special case: the type depends on `parameter_type`
         if self.value is None:
             self.value = _get_default_by_type(self.parameter_type)

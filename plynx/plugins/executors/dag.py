@@ -119,10 +119,10 @@ class DAG(plynx.plugins.executors.bases.PLynxAsyncExecutor):
         for executor in self.monitoring_executors:
             assert executor.node, "executor node must be defined at this point"
             running_status = executor.get_running_status()
+            self.update_node(executor.node)
 
             # check status
             if NodeRunningStatus.is_finished(running_status.node_running_status):
-                self.update_node(executor.node)
                 finished_node_ids.add(executor.node._id)
         self.monitoring_executors = [ex for ex in self.monitoring_executors if ex.node._id not in finished_node_ids]    # type: ignore
 
@@ -172,6 +172,12 @@ class DAG(plynx.plugins.executors.bases.PLynxAsyncExecutor):
         """
         assert self.node, "Attribute `node` is unassigned"
         dest_node = self.node_id_to_node[node._id]
+        # TODO smarter copy
+        dest_node.parameters = node.parameters
+        dest_node.logs = node.logs
+        dest_node.outputs = node.outputs
+        dest_node.cache_url = node.cache_url
+
         if node.node_running_status == NodeRunningStatus.SUCCESS \
                 and dest_node.node_running_status != node.node_running_status \
                 and DAG._cacheable(node):
@@ -181,11 +187,6 @@ class DAG(plynx.plugins.executors.bases.PLynxAsyncExecutor):
             return
 
         self._set_node_status(node._id, node.node_running_status)
-        # TODO smarter copy
-        dest_node.parameters = node.parameters
-        dest_node.logs = node.logs
-        dest_node.outputs = node.outputs
-        dest_node.cache_url = node.cache_url
 
     def _set_node_status(self, node_id: ObjectId, node_running_status: str):
         node = self.node_id_to_node[node_id]
