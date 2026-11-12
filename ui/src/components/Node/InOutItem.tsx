@@ -1,4 +1,12 @@
 import React, { Component, ChangeEvent } from 'react';
+import Switch from '@mui/material/Switch';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Select, { SelectChangeEvent } from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
+import CloseIcon from '@mui/icons-material/Close';
 import Icon from '../Common/Icon';
 import { PluginsConsumer } from '../../contexts';
 import OutputItem from '../Graph/OutputItem';
@@ -59,19 +67,28 @@ export default class InOutItem extends Component<InOutItemProps, InOutItemState>
     }
   }
 
-  handleChange(event: ChangeEvent<any>) {
+  handleChange(event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     if (this.state.readOnly) {
       return;
     }
     const name = event.target.name;
-    let value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
-    if (name === 'is_array') {
-      value = event.target.checked;
-    } else if (name === 'min_count') {
-      value = parseInt(value, 10);
+    const value =
+      event.target.type === 'checkbox'
+        ? (event.target as HTMLInputElement).checked
+        : event.target.value;
+    this.item[name] = value;
+    this.setState({ item: this.item });
+    if (this.props.onChanged) {
+      this.props.onChanged(this.props.index, name, value);
+    }
+  }
+
+  handleSelectChange(name: string, value: any) {
+    if (this.state.readOnly) {
+      return;
     }
     this.item[name] = value;
-    this.setState({ item: { ...this.item } });
+    this.setState({ item: this.item });
     if (this.props.onChanged) {
       this.props.onChanged(this.props.index, name, value);
     }
@@ -91,16 +108,27 @@ export default class InOutItem extends Component<InOutItemProps, InOutItemState>
     const values = this.state.item.values || [];
 
     return (
-      <div className="InOutItem">
+      <div className="InOutItem" style={{ position: 'relative' }}>
         {!this.state.readOnly && (
-          <div
-            className={`Remove${this.state.remove_hover ? ' hover' : ''}`}
-            onMouseOver={() => this.setState({ remove_hover: true })}
-            onMouseLeave={() => this.setState({ remove_hover: false })}
+          <IconButton
+            size="small"
+            className="Remove"
             onClick={() => this.handleRemoveItem()}
+            sx={{
+              position: 'absolute',
+              top: 4,
+              right: 4,
+              color: '#888',
+              padding: '2px',
+              '&:hover': {
+                color: '#f44336',
+                backgroundColor: 'rgba(244, 67, 54, 0.08)',
+              },
+            }}
+            title="Remove"
           >
-            &#215;
-          </div>
+            <CloseIcon fontSize="small" />
+          </IconButton>
         )}
         <div className="InOutRow">
           <div className="InOutCellTitle">Name:</div>
@@ -115,6 +143,7 @@ export default class InOutItem extends Component<InOutItemProps, InOutItemState>
             />
           </div>
         </div>
+
         <div className="InOutRow">
           <div className="InOutCellTitle">Type:</div>
           <PluginsConsumer>
@@ -124,23 +153,35 @@ export default class InOutItem extends Component<InOutItemProps, InOutItemState>
               const resourceDesc = plugins_dict.resources_dict[this.state.item.file_type];
 
               return (
-                <div className="InOutCellValue">
-                  <select
-                    className="InOutValue"
-                    name="file_type"
-                    value={this.state.item.file_type}
-                    onChange={this.handleChange}
-                    disabled={this.state.readOnly}
-                  >
-                    {resources.map((description: any) => (
-                      <option value={description.kind} key={description.kind}>
-                        {description.title}
-                      </option>
-                    ))}
-                  </select>
-                  {resourceDesc && (
-                    <Icon type_descriptor={resourceDesc} />
-                  )}
+                <div className="InOutCellValue" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <FormControl size="small" sx={{ minWidth: 120 }}>
+                    <Select
+                      className="InOutValue"
+                      value={this.state.item.file_type || ''}
+                      onChange={(e: SelectChangeEvent) => this.handleSelectChange('file_type', e.target.value)}
+                      disabled={this.state.readOnly}
+                      sx={{
+                        height: 28,
+                        fontSize: '0.85rem',
+                        color: '#fff',
+                        backgroundColor: '#262626',
+                        '& .MuiSelect-select': {
+                          paddingY: '2px',
+                          paddingLeft: '8px',
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#444',
+                        },
+                      }}
+                    >
+                      {resources.map((description: any) => (
+                        <MenuItem value={description.kind} key={description.kind} sx={{ fontSize: '0.85rem' }}>
+                          {description.title}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  {resourceDesc && <Icon type_descriptor={resourceDesc} />}
                 </div>
               );
             }}
@@ -150,18 +191,23 @@ export default class InOutItem extends Component<InOutItemProps, InOutItemState>
         <div className="InOutRow">
           <div className="InOutCellTitle">Array:</div>
           <div className="InOutCellValue">
-            <div className="InOutValue">
-              <input
-                type="checkbox"
-                name="is_array"
-                onChange={this.handleChange}
-                checked={Boolean(this.state.item.is_array)}
-                disabled={this.state.readOnly}
-              />
-              <label className="BoolLabel">
-                {this.state.item.is_array ? 'True' : 'False'}
-              </label>
-            </div>
+            <FormControlLabel
+              control={
+                <Switch
+                  size="small"
+                  name="is_array"
+                  checked={Boolean(this.state.item.is_array)}
+                  disabled={this.state.readOnly}
+                  onChange={this.handleChange}
+                  color="primary"
+                />
+              }
+              label={
+                <Typography variant="body2" sx={{ color: '#eee', fontSize: '0.85rem' }}>
+                  {this.state.item.is_array ? 'True' : 'False'}
+                </Typography>
+              }
+            />
           </div>
         </div>
 

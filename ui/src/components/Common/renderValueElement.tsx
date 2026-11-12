@@ -1,4 +1,16 @@
 import React, { Component, ChangeEvent, FocusEvent, KeyboardEvent, WheelEvent } from 'react';
+import Switch from '@mui/material/Switch';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
+import Button from '@mui/material/Button';
+import Box from '@mui/material/Box';
+import Slider from '@mui/material/Slider';
+import CloseIcon from '@mui/icons-material/Close';
+import AddIcon from '@mui/icons-material/Add';
 import ValueCodeItem from './ValueCodeItem';
 import ValueColorItem from './ValueColorItem';
 import './ValueList.css';
@@ -31,6 +43,9 @@ export interface RenderValueElementArgs {
   className?: string;
   showEnumOptions?: boolean;
   height?: string;
+  min?: number;
+  max?: number;
+  step?: number;
 }
 
 export default function renderValueElement(args: RenderValueElementArgs): React.ReactNode {
@@ -107,21 +122,59 @@ export default function renderValueElement(args: RenderValueElementArgs): React.
           autoComplete="off"
         />
       );
+    case 'slider':
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', paddingX: 1 }} key={parameterType}>
+          <Slider
+            size="small"
+            value={typeof value === 'number' ? value : Number(value) || 0}
+            min={args.min ?? 0}
+            max={args.max ?? 100}
+            step={args.step ?? 1}
+            disabled={readOnly}
+            onChange={(_e, val) => {
+              if (handleChange) {
+                handleChange({ target: { name: 'value', value: val, type: 'float' } });
+              }
+            }}
+            valueLabelDisplay="auto"
+            sx={{ color: '#2196F3' }}
+          />
+          <Typography variant="caption" sx={{ color: '#eee', minWidth: 35, textAlign: 'right' }}>
+            {value}
+          </Typography>
+        </Box>
+      );
     case 'bool':
       return (
-        <div className={className}>
-          <input
-            type="checkbox"
-            name="value"
-            onChange={handleChange}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            checked={Boolean(value)}
-            disabled={readOnly}
-            key={parameterType}
-          />
-          <label className="BoolLabel">{value ? 'True' : 'False'}</label>
-        </div>
+        <FormControlLabel
+          key={parameterType}
+          className={className}
+          control={
+            <Switch
+              size="small"
+              checked={Boolean(value)}
+              disabled={readOnly}
+              onChange={(e) => {
+                if (handleChange) {
+                  handleChange({
+                    target: {
+                      name: 'value',
+                      value: e.target.checked,
+                      type: 'bool',
+                    },
+                  });
+                }
+              }}
+              color="primary"
+            />
+          }
+          label={
+            <Typography variant="body2" sx={{ color: '#eee', fontSize: '0.85rem' }}>
+              {value ? 'True' : 'False'}
+            </Typography>
+          }
+        />
       );
     case 'text':
       return (
@@ -291,7 +344,7 @@ export class ValueList extends Component<ValueListProps, ValueListState> {
     return (
       <div className="ValueList">
         {this.state.items.map((item, index) => (
-          <div className="row" key={index}>
+          <div className="row" key={index} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             {renderValueElement({
               parameterType: this.props.parameterType,
               value: item,
@@ -302,21 +355,41 @@ export class ValueList extends Component<ValueListProps, ValueListState> {
               className: 'ParameterValueCell',
             })}
             {!this.state.readOnly && (
-              <div
-                className="remove"
+              <IconButton
+                size="small"
                 onClick={() => this.handleRemoveItem(index)}
+                sx={{
+                  color: '#888',
+                  padding: '2px',
+                  '&:hover': {
+                    color: '#f44336',
+                    backgroundColor: 'rgba(244, 67, 54, 0.08)',
+                  },
+                }}
+                title="Remove item"
               >
-                {' '}
-                ×{' '}
-              </div>
+                <CloseIcon fontSize="small" />
+              </IconButton>
             )}
           </div>
         ))}
 
         {!this.state.readOnly && (
-          <div className="add" onClick={() => this.handleAddItem()}>
-            +
-          </div>
+          <Button
+            size="small"
+            startIcon={<AddIcon fontSize="small" />}
+            onClick={() => this.handleAddItem()}
+            sx={{
+              color: '#2196F3',
+              textTransform: 'none',
+              fontSize: '0.8rem',
+              padding: '2px 8px',
+              marginTop: 0.5,
+              alignSelf: 'flex-start',
+            }}
+          >
+            Add item
+          </Button>
         )}
       </div>
     );
@@ -389,22 +462,38 @@ export class EnumItem extends Component<EnumItemProps, EnumItemState> {
   render() {
     return (
       <div className="EnumItem">
-        <select
-          className="Index"
-          name="index"
-          value={this.state.index}
-          onChange={this.handleChange}
-          disabled={this.state.readOnly}
-        >
-          {this.state.values.map((val, idx) => (
-            <option value={idx} key={idx}>
-              {val}
-            </option>
-          ))}
-        </select>
+        <FormControl size="small" sx={{ minWidth: 120 }}>
+          <Select
+            className="Index"
+            value={Number(this.state.index)}
+            onChange={(e) => this.handleChange({ target: { name: 'index', value: e.target.value } })}
+            disabled={this.state.readOnly}
+            sx={{
+              height: 28,
+              fontSize: '0.85rem',
+              color: '#fff',
+              backgroundColor: '#262626',
+              '& .MuiSelect-select': {
+                paddingY: '2px',
+                paddingLeft: '8px',
+              },
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: '#444',
+              },
+            }}
+          >
+            {this.state.values.map((val, idx) => (
+              <MenuItem value={idx} key={idx} sx={{ fontSize: '0.85rem' }}>
+                {val}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
         {this.props.showEnumOptions && (
-          <div>
-            <div>Options:</div>
+          <Box sx={{ marginTop: 1 }}>
+            <Typography variant="caption" sx={{ color: '#aaa', fontWeight: 600 }}>
+              Options:
+            </Typography>
             <ValueList
               name="values"
               items={this.state.values}
@@ -412,7 +501,7 @@ export class EnumItem extends Component<EnumItemProps, EnumItemState> {
               readOnly={this.state.readOnly}
               parameterType="str"
             />
-          </div>
+          </Box>
         )}
       </div>
     );

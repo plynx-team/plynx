@@ -1,4 +1,8 @@
 import React, { Component, ChangeEvent, KeyboardEvent } from 'react';
+import OutlinedInput from '@mui/material/OutlinedInput';
+import InputAdornment from '@mui/material/InputAdornment';
+import SearchIcon from '@mui/icons-material/Search';
+import Box from '@mui/material/Box';
 import './SearchBar.css';
 
 const WAIT_INTERVAL = 400;
@@ -82,17 +86,38 @@ export default class SearchBar extends Component<SearchBarProps, SearchBarState>
 
   render() {
     return (
-      <div className="SearchBar">
-        <input
+      <Box className="SearchBar" sx={{ display: 'inline-flex', width: '100%', minWidth: { xs: 200, sm: 380, md: 500 } }}>
+        <OutlinedInput
           className="Bar"
+          fullWidth
+          size="small"
           placeholder={this.props.placeholder || 'Search for...'}
           value={this.state.search}
-          onChange={(e) => this.handleInputChange(e)}
-          onKeyDown={(e) => this.handleKeyPress(e)}
-          type="search"
+          onChange={(e: ChangeEvent<HTMLInputElement>) => this.handleInputChange(e)}
+          onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => this.handleKeyPress(e)}
           autoFocus={this.props.autoFocus !== false}
+          startAdornment={
+            <InputAdornment position="start">
+              <SearchIcon fontSize="small" sx={{ color: '#888' }} />
+            </InputAdornment>
+          }
+          sx={{
+            backgroundColor: '#2b2b2b',
+            color: '#fff',
+            fontSize: '11pt',
+            borderRadius: '4px',
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#444',
+            },
+            '&:hover .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#666',
+            },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#2196F3',
+            },
+          }}
         />
-      </div>
+      </Box>
     );
   }
 }

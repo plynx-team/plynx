@@ -1,4 +1,11 @@
-import React, { Component, ChangeEvent } from 'react';
+import React, { Component } from 'react';
+import Select, { SelectChangeEvent } from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import IconButton from '@mui/material/IconButton';
+import CloseIcon from '@mui/icons-material/Close';
 import { PARAMETER_TYPES } from '../../constants';
 import renderValueElement from '../Common/renderValueElement';
 import './ParameterItem.css';
@@ -75,10 +82,10 @@ export default class ParameterItem extends Component<NodeParameterItemProps, Nod
 
   componentDidUpdate(prevProps: NodeParameterItemProps) {
     if (
-      prevProps.value !== this.props.value ||
-      prevProps.parameter_type !== this.props.parameter_type ||
       prevProps.name !== this.props.name ||
       prevProps.widget !== this.props.widget ||
+      prevProps.parameter_type !== this.props.parameter_type ||
+      prevProps.value !== this.props.value ||
       prevProps.readOnly !== this.props.readOnly
     ) {
       this.setState({
@@ -87,66 +94,52 @@ export default class ParameterItem extends Component<NodeParameterItemProps, Nod
         value: this.props.value,
         widget: this.props.widget,
         readOnly: this.props.readOnly,
-        mutable_type: this.props.mutable_type,
-        publicable: this.props.publicable,
-        removable: this.props.removable,
       });
     }
   }
 
-  handleChange(event: ChangeEvent<any>) {
+  handleChange(event: any) {
     if (this.state.readOnly) {
       return;
     }
     const name = event.target.name;
-    const value = event.target.type === 'checkbox' ? event.target.checked : event.target.value;
-    let widget = null;
-    let newParameterValue = null;
-
-    if (!this.state.mutable_type && (name === 'parameter_type' || name === 'name')) {
-      return;
-    }
-
+    let value = event.target.value;
     if (name === 'widget_checkbox') {
-      widget = null;
-      if (value) {
-        widget = this.state.name;
-      }
-      this.setState({ widget }, () => {
-        if (this.props.onChanged) {
-          this.props.onChanged(this.props.index, 'widget', widget);
-        }
-      });
-      return;
-    } else if (name === 'widget_alias') {
-      this.setState({ widget: value }, () => {
-        if (this.props.onChanged) {
-          this.props.onChanged(this.props.index, 'widget', this.state.widget);
-        }
-      });
-      return;
-    } else if (name === 'name' && this.state.widget === this.state.name) {
-      widget = value;
-      this.setState({ widget }, () => {
-        if (this.props.onChanged) {
-          this.props.onChanged(this.props.index, 'widget', widget);
-        }
-      });
-    } else if (name === 'parameter_type') {
-      if (value !== this.state.parameter_type) {
-        newParameterValue = getDefaultParameterValue(value);
-        this.setState({ value: newParameterValue });
-      }
-      this.setState({ parameter_type: value }, () => {
-        if (this.props.onChanged) {
-          this.props.onChanged(this.props.index, 'value', newParameterValue);
-        }
-      });
+      value = event.target.checked ? this.state.name : null;
     }
-
+    if (name === 'parameter_type') {
+      this.setState({
+        value: getDefaultParameterValue(value),
+      });
+      if (this.props.onChanged) {
+        this.props.onChanged(this.props.index, 'value', getDefaultParameterValue(value));
+      }
+    }
+    if (name === 'widget_alias') {
+      this.setState({ widget: value });
+      if (this.props.onChanged) {
+        this.props.onChanged(this.props.index, 'widget', value);
+      }
+      return;
+    }
     this.setState({ [name]: value } as any);
-    if (name !== 'widget_checkbox' && name !== 'widget_alias' && this.props.onChanged) {
+    if (this.props.onChanged) {
       this.props.onChanged(this.props.index, name, value);
+    }
+  }
+
+  handleTypeChange(newType: string) {
+    if (this.state.readOnly && this.state.mutable_type) {
+      return;
+    }
+    const defaultValue = getDefaultParameterValue(newType);
+    this.setState({
+      parameter_type: newType,
+      value: defaultValue,
+    });
+    if (this.props.onChanged) {
+      this.props.onChanged(this.props.index, 'parameter_type', newType);
+      this.props.onChanged(this.props.index, 'value', defaultValue);
     }
   }
 
@@ -158,7 +151,7 @@ export default class ParameterItem extends Component<NodeParameterItemProps, Nod
 
   render() {
     return (
-      <div className={`ParameterListItem parameter-${this.state.name.replace(' ', '_')}`}>
+      <div className={`ParameterListItem parameter-${this.state.name.replace(' ', '_')}`} style={{ position: 'relative' }}>
         <div className="ParameterFirstItem">
           <div className="ParameterRow">
             <div className="ParameterCellTitle">Name:</div>
@@ -177,35 +170,54 @@ export default class ParameterItem extends Component<NodeParameterItemProps, Nod
           <div className="ParameterRow">
             <div className="ParameterCellTitle">Type:</div>
             <div className="ParameterCellValue">
-              <select
-                className="ParameterValue"
-                name="parameter_type"
-                value={this.state.parameter_type}
-                onChange={this.handleChange}
-                disabled={Boolean(this.state.readOnly && this.state.mutable_type)}
-              >
-                {PARAMETER_TYPES.map((description) => (
-                  <option value={description.type} key={description.type}>
-                    {description.alias}
-                  </option>
-                ))}
-              </select>
+              <FormControl size="small" sx={{ minWidth: 120 }}>
+                <Select
+                  className="ParameterValue"
+                  value={this.state.parameter_type}
+                  onChange={(e: SelectChangeEvent) => this.handleTypeChange(e.target.value)}
+                  disabled={Boolean(this.state.readOnly && this.state.mutable_type)}
+                  sx={{
+                    height: 28,
+                    fontSize: '0.85rem',
+                    color: '#fff',
+                    backgroundColor: '#262626',
+                    '& .MuiSelect-select': {
+                      paddingY: '2px',
+                      paddingLeft: '8px',
+                    },
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#444',
+                    },
+                  }}
+                >
+                  {PARAMETER_TYPES.map((description) => (
+                    <MenuItem value={description.type} key={description.type} sx={{ fontSize: '0.85rem' }}>
+                      {description.alias}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </div>
           </div>
 
           {this.state.publicable && (
             <div className="ParameterRow">
               <div className="ParameterCellTitle">Widget:</div>
-              <div className="ParameterCellValue">
-                <input
-                  id="checkBox"
-                  type="checkbox"
-                  name="widget_checkbox"
-                  onChange={this.handleChange}
-                  checked={this.state.widget !== null && this.state.widget !== undefined}
-                  disabled={this.state.readOnly}
-                />{' '}
-                Public
+              <div className="ParameterCellValue" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      size="small"
+                      name="widget_checkbox"
+                      onChange={this.handleChange}
+                      checked={this.state.widget !== null && this.state.widget !== undefined}
+                      disabled={this.state.readOnly}
+                      sx={{ color: '#888', '&.Mui-checked': { color: '#2196F3' } }}
+                    />
+                  }
+                  label="Public"
+                  sx={{ margin: 0, '& .MuiFormControlLabel-label': { fontSize: '0.85rem', color: '#eee' } }}
+                />
                 {this.state.widget !== null && this.state.widget !== undefined && (
                   <input
                     className="ParameterValue"
@@ -222,14 +234,25 @@ export default class ParameterItem extends Component<NodeParameterItemProps, Nod
         </div>
         <div className="ParameterSecondItem">
           {!this.state.readOnly && this.state.removable && (
-            <div
-              className={`Remove${this.state.remove_hover ? ' hover' : ''}`}
-              onMouseOver={() => this.setState({ remove_hover: true })}
-              onMouseLeave={() => this.setState({ remove_hover: false })}
+            <IconButton
+              size="small"
+              className="Remove"
               onClick={() => this.handleRemoveItem()}
+              sx={{
+                position: 'absolute',
+                top: 4,
+                right: 4,
+                color: '#888',
+                padding: '2px',
+                '&:hover': {
+                  color: '#f44336',
+                  backgroundColor: 'rgba(244, 67, 54, 0.08)',
+                },
+              }}
+              title="Remove"
             >
-              &#215;
-            </div>
+              <CloseIcon fontSize="small" />
+            </IconButton>
           )}
           <div className="ParameterSecondItemTitle">Value:</div>
           <div className="ParameterSecondItemValue">

@@ -1,4 +1,7 @@
 import React, { Component, ChangeEvent, FocusEvent } from 'react';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import LinkIcon from '@mui/icons-material/Link';
 import renderValueElement from './renderValueElement';
 import './ParameterItem.css';
 
@@ -76,7 +79,7 @@ export default class ParameterItem extends Component<CommonParameterItemProps, C
     return (
       <div className="ParameterItem">
         <div className="ParameterNameCell">{this.props.widget}</div>
-        <div className="ParameterValueCell">
+        <div className="ParameterValueCell" style={{ display: 'flex', alignItems: 'center' }}>
           {!this.props.reference &&
             renderValueElement({
               parameterType: this.state.parameterType,
@@ -89,14 +92,24 @@ export default class ParameterItem extends Component<CommonParameterItemProps, C
             })}
           {this.props.reference && <div className="reference">{this.props.reference}</div>}
           {this.props._link_visibility && (
-            <div
-              className="link-button control-button"
-              onClick={() => {
-                this.handleLinkClick();
-              }}
-            >
-              <img className="icon" src="/icons/link-2.svg" alt="link" />
-            </div>
+            <Tooltip title="Link parameter">
+              <IconButton
+                size="small"
+                onClick={() => this.handleLinkClick()}
+                className="link-button"
+                sx={{
+                  color: '#888',
+                  padding: '2px',
+                  marginLeft: '4px',
+                  '&:hover': {
+                    color: '#2196F3',
+                    backgroundColor: 'rgba(33, 150, 243, 0.08)',
+                  },
+                }}
+              >
+                <LinkIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           )}
         </div>
       </div>

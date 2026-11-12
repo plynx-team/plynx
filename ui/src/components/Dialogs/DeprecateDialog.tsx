@@ -1,5 +1,7 @@
 import React, { Component, ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
 import Dialog from './Dialog';
 import NodeItem from '../Common/NodeItem';
 import { PLynxApi } from '../../API';
@@ -192,35 +194,47 @@ export default class DeprecateDialog extends Component<DeprecateDialogProps, Dep
             </div>
           </div>
 
-          <div className="Controls">
-            <div
+          <Stack direction="row" spacing={1.5} justifyContent="flex-end" sx={{ marginTop: 2 }}>
+            <Button
+              variant="outlined"
+              color="warning"
+              size="small"
+              startIcon={<img src="/icons/alert-circle.svg" alt="deprecate" width="16" height="16" />}
               onClick={(e) => {
                 e.preventDefault();
                 this.handleDeprecate('optionally');
               }}
-              className="control-button"
+              sx={{ textTransform: 'none' }}
             >
-              <img src="/icons/alert-circle.svg" alt="deprecate" /> Deprecate (optionally)
-            </div>
-            <div
+              Deprecate (optionally)
+            </Button>
+            <Button
+              variant="contained"
+              color="error"
+              size="small"
+              startIcon={<img src="/icons/alert-octagon.svg" alt="deprecate" width="16" height="16" />}
               onClick={(e) => {
                 e.preventDefault();
                 this.handleDeprecate('mandatory');
               }}
-              className="control-button"
+              sx={{ textTransform: 'none' }}
             >
-              <img src="/icons/alert-octagon.svg" alt="deprecate" /> Deprecate (mandatory)
-            </div>
-            <div
+              Deprecate (mandatory)
+            </Button>
+            <Button
+              variant="outlined"
+              color="inherit"
+              size="small"
+              startIcon={<img src="/icons/x.svg" alt="cancel" width="16" height="16" />}
               onClick={(e) => {
                 e.preventDefault();
                 this.handleCancel();
               }}
-              className="control-button"
+              sx={{ textTransform: 'none', borderColor: '#555' }}
             >
-              <img src="/icons/x.svg" alt="cancel" /> Cancel
-            </div>
-          </div>
+              Cancel
+            </Button>
+          </Stack>
         </div>
       </Dialog>
     );

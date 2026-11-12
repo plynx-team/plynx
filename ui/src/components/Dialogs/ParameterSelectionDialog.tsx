@@ -1,4 +1,5 @@
 import React, { Component, ChangeEvent } from 'react';
+import Radio from '@mui/material/Radio';
 import ParameterItem from '../Common/ParameterItem';
 import Dialog from './Dialog';
 import { NodeParameter } from '../../types';
@@ -61,14 +62,21 @@ export default class ParameterSelectionDialog extends Component<
       >
         <div className="properties-list">
           {this.state.parameters.map((parameter, index) => (
-            <div className="option-block" key={parameter.name}>
+            <div className="option-block" key={parameter.name} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div className="radio">
-                <input
-                  type="radio"
+                <Radio
                   name="radioname"
                   value={index}
                   checked={index === this.state.index}
                   onChange={(e) => this.onIndexChanged(e)}
+                  size="small"
+                  disabled={this.props.readOnly}
+                  sx={{
+                    color: '#888',
+                    '&.Mui-checked': {
+                      color: '#2196F3',
+                    },
+                  }}
                 />
               </div>
 

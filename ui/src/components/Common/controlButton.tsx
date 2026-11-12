@@ -2,6 +2,7 @@ import React, { ChangeEvent, MouseEvent } from 'react';
 import SearchBar from './SearchBar';
 import { styled } from '@mui/material/styles';
 import Switch from '@mui/material/Switch';
+import Divider from '@mui/material/Divider';
 
 export interface ControlButtonProps {
   func?: (e?: MouseEvent<any>) => void;
@@ -76,7 +77,20 @@ export interface ControlSeparatorProps {
 }
 
 export function makeControlSeparator(props: ControlSeparatorProps) {
-  return <div className="control-separator" key={props.key} />;
+  return (
+    <Divider
+      orientation="vertical"
+      flexItem
+      className="control-separator"
+      key={props.key}
+      sx={{
+        backgroundColor: '#444',
+        margin: '6px 8px',
+        alignSelf: 'stretch',
+        height: 'auto',
+      }}
+    />
+  );
 }
 
 export interface ToggleItem extends ControlButtonProps {

@@ -1,4 +1,6 @@
 import React, { Component, MouseEvent } from 'react';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
 import Dialog from './Dialog';
 import { PLynxApi } from '../../API';
 import { PluginsConsumer } from '../../contexts';
@@ -124,32 +126,47 @@ export default class FileDialog extends Component<FileDialogProps> {
               </div>
             )}
           </div>
-          <div className="Controls">
-            <div onClick={(e) => this.handlePreviewClick(e)} className="control-button">
-              <img src="/icons/preview.svg" alt="preview" /> Preview
-            </div>
-            <div
+          <Stack direction="row" spacing={1.5} justifyContent="flex-end" sx={{ marginTop: 2 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              size="small"
+              startIcon={<img src="/icons/preview.svg" alt="preview" width="16" height="16" />}
+              onClick={(e) => this.handlePreviewClick(e)}
+              sx={{ textTransform: 'none' }}
+            >
+              Preview
+            </Button>
+            <Button
+              variant="outlined"
+              color="inherit"
+              size="small"
+              startIcon={<img src="/icons/download2.svg" alt="download" width="16" height="16" />}
               onClick={(e) => {
                 e.preventDefault();
                 this.download();
               }}
-              className="control-button"
+              sx={{ textTransform: 'none', borderColor: '#555' }}
             >
-              <img src="/icons/download2.svg" alt="download" /> Download
-            </div>
+              Download
+            </Button>
             {fileObj.node_status === NODE_STATUS.READY && !this.props.hideDeprecate && (
-              <div
+              <Button
+                variant="outlined"
+                color="error"
+                size="small"
+                startIcon={<img src="/icons/x.svg" alt="deprecate" width="16" height="16" />}
                 onClick={(e) => {
                   e.preventDefault();
                   this.props.onDeprecate(fileObj);
                   this.props.onClose();
                 }}
-                className="control-button"
+                sx={{ textTransform: 'none' }}
               >
-                <img src="/icons/x.svg" alt="deprecate" /> Deprecate
-              </div>
+                Deprecate
+              </Button>
             )}
-          </div>
+          </Stack>
         </div>
       </Dialog>
     );

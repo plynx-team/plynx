@@ -1,4 +1,5 @@
 import React, { Component, ChangeEvent, KeyboardEvent } from 'react';
+import Button from '@mui/material/Button';
 // @ts-ignore
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import cookie from '../../cookie';
@@ -251,9 +252,22 @@ export default class LogIn extends Component<any, LogInState> {
           </div>
 
           {isLogIn && (
-            <button className="loginButton" onClick={() => this.handleLogin()}>
+            <Button
+              variant="contained"
+              color="primary"
+              fullWidth
+              className="loginButton"
+              onClick={() => this.handleLogin()}
+              sx={{
+                marginTop: '15px',
+                padding: '8px 16px',
+                fontWeight: 600,
+                fontSize: '14pt',
+                textTransform: 'none',
+              }}
+            >
               Login
-            </button>
+            </Button>
           )}
 
           <div className="toggleState" onClick={() => this.toggleForms()}>

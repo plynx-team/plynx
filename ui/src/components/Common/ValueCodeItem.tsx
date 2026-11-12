@@ -1,5 +1,12 @@
-import React, { Component, ChangeEvent } from 'react';
+import React, { Component } from 'react';
 import AceEditor from 'react-ace';
+import Paper from '@mui/material/Paper';
+import Box from '@mui/material/Box';
+import Select, { SelectChangeEvent } from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import FormControl from '@mui/material/FormControl';
+import Typography from '@mui/material/Typography';
+import CodeIcon from '@mui/icons-material/Code';
 import { CODE_LANGUAGES } from '../../constants';
 import 'ace-builds/src-noconflict/mode-python';
 import 'ace-builds/src-noconflict/mode-sh';
@@ -67,43 +74,79 @@ export default class CodeItem extends Component<ValueCodeItemProps, ValueCodeIte
     });
   }
 
-  handleChangeMode(event: ChangeEvent<HTMLSelectElement>) {
+  handleChangeMode(event: SelectChangeEvent<number>) {
     if (this.state.readOnly) {
       return;
     }
-    if (event.target.name === 'index') {
-      const selectedIndex = parseInt(event.target.value, 10);
-      this.setState({ mode: CODE_LANGUAGES[selectedIndex] }, () => {
-        this.handleCommunacation();
-      });
-    }
+    const selectedIndex = Number(event.target.value);
+    const newMode = CODE_LANGUAGES[selectedIndex] || 'python';
+    this.setState({ mode: newMode }, () => {
+      this.handleCommunacation();
+    });
   }
 
   render() {
+    const languageIndex = Math.max(0, CODE_LANGUAGES.indexOf(this.state.mode));
+
     return (
-      <div
+      <Paper
         className="CodeItem"
+        elevation={2}
+        sx={{
+          backgroundColor: '#1b1b1b',
+          border: '1px solid #333',
+          borderRadius: '4px',
+          overflow: 'hidden',
+        }}
         onMouseDown={(e) => {
           e.stopPropagation();
         }}
       >
-        <div className="code-mode">
-          <select
-            className="code-mode-select"
-            name="index"
-            value={CODE_LANGUAGES.indexOf(this.state.mode)}
-            onChange={(e) => {
-              this.handleChangeMode(e);
-            }}
-            disabled={this.state.readOnly}
-          >
-            {CODE_LANGUAGES.map((val, index) => (
-              <option value={index} key={index}>
-                {val}
-              </option>
-            ))}
-          </select>
-        </div>
+        <Box
+          className="code-mode"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '4px 8px',
+            backgroundColor: '#262626',
+            borderBottom: '1px solid #333',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <CodeIcon fontSize="small" sx={{ color: '#888' }} />
+            <Typography variant="caption" sx={{ color: '#aaa', fontWeight: 600 }}>
+              CODE EDITOR
+            </Typography>
+          </Box>
+          <FormControl size="small" variant="outlined" sx={{ minWidth: 110 }}>
+            <Select
+              className="code-mode-select"
+              value={languageIndex}
+              onChange={(e) => this.handleChangeMode(e)}
+              disabled={this.state.readOnly}
+              sx={{
+                height: 26,
+                fontSize: '0.8rem',
+                color: '#fff',
+                backgroundColor: '#333',
+                '& .MuiSelect-select': {
+                  paddingY: 0,
+                  paddingLeft: 1,
+                },
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#444',
+                },
+              }}
+            >
+              {CODE_LANGUAGES.map((val, index) => (
+                <MenuItem value={index} key={val} sx={{ fontSize: '0.85rem' }}>
+                  {val}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
         <AceEditor
           mode={this.state.mode}
           onChange={this.handleChange}
@@ -115,7 +158,7 @@ export default class CodeItem extends Component<ValueCodeItemProps, ValueCodeIte
           showGutter
           highlightActiveLine
           readOnly={this.state.readOnly}
-          width="auto"
+          width="100%"
           height={this.props.height || '300px'}
           setOptions={{
             useWorker: false,
@@ -126,7 +169,7 @@ export default class CodeItem extends Component<ValueCodeItemProps, ValueCodeIte
             tabSize: 4,
           }}
         />
-      </div>
+      </Paper>
     );
   }
 }
