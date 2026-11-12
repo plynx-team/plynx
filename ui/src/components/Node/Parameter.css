@@ -53,11 +53,18 @@
   position: relative;
 }
 
+.ParameterSecondItemHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 22px;
+  margin-bottom: 2px;
+}
+
 .ParameterSecondItemTitle {
   font-weight: 600;
   font-size: 10pt;
   color: #ddd;
-  margin-bottom: 2px;
 }
 
 .ParameterSecondItemValue {
@@ -65,14 +72,13 @@
 }
 
 .ParameterSecondItem .Remove {
-  color: pink;
-  float: right;
+  color: #888;
   cursor: pointer;
-  width: 12px;
+  padding: 2px;
 }
 
-.ParameterSecondItem .Remove.hover {
-  color: red;
+.ParameterSecondItem .Remove:hover {
+  color: #f44336;
 }
 
 .ParameterRow {

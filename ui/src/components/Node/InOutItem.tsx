@@ -108,31 +108,10 @@ export default class InOutItem extends Component<InOutItemProps, InOutItemState>
     const values = this.state.item.values || [];
 
     return (
-      <div className="InOutItem" style={{ position: 'relative' }}>
-        {!this.state.readOnly && (
-          <IconButton
-            size="small"
-            className="Remove"
-            onClick={() => this.handleRemoveItem()}
-            sx={{
-              position: 'absolute',
-              top: 4,
-              right: 4,
-              color: '#888',
-              padding: '2px',
-              '&:hover': {
-                color: '#f44336',
-                backgroundColor: 'rgba(244, 67, 54, 0.08)',
-              },
-            }}
-            title="Remove"
-          >
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        )}
+      <div className="InOutItem">
         <div className="InOutRow">
           <div className="InOutCellTitle">Name:</div>
-          <div className="InOutCellValue">
+          <div className="InOutCellValue" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <input
               type="text"
               className="InOutValue"
@@ -140,7 +119,27 @@ export default class InOutItem extends Component<InOutItemProps, InOutItemState>
               value={this.state.item.name}
               onChange={this.handleChange}
               readOnly={this.state.readOnly}
+              style={{ flex: 1, minWidth: 0 }}
             />
+            {!this.state.readOnly && (
+              <IconButton
+                size="small"
+                className="Remove"
+                onClick={() => this.handleRemoveItem()}
+                sx={{
+                  color: '#888',
+                  padding: '2px',
+                  flexShrink: 0,
+                  '&:hover': {
+                    color: '#f44336',
+                    backgroundColor: 'rgba(244, 67, 54, 0.08)',
+                  },
+                }}
+                title="Remove"
+              >
+                <CloseIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            )}
           </div>
         </div>
 

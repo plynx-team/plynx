@@ -35,14 +35,13 @@
 }
 
 .InOutItem .Remove {
-  color: pink;
-  float: right;
+  color: #888;
   cursor: pointer;
-  width: 12px;
+  padding: 2px;
 }
 
-.InOutItem .Remove.hover {
-  color: red;
+.InOutItem .Remove:hover {
+  color: #f44336;
 }
 
 .InOutRow {
@@ -52,10 +51,6 @@
   grid-row-gap: 3px;
   box-sizing: border-box;
   align-items: center;
-}
-
-.InOutItem .InOutRow:first-of-type .InOutCellValue {
-  padding-right: 24px;
 }
 
 .InOutCellTitle {

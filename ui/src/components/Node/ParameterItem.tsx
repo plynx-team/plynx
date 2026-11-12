@@ -233,28 +233,27 @@ export default class ParameterItem extends Component<NodeParameterItemProps, Nod
           )}
         </div>
         <div className="ParameterSecondItem">
-          {!this.state.readOnly && this.state.removable && (
-            <IconButton
-              size="small"
-              className="Remove"
-              onClick={() => this.handleRemoveItem()}
-              sx={{
-                position: 'absolute',
-                top: 4,
-                right: 4,
-                color: '#888',
-                padding: '2px',
-                '&:hover': {
-                  color: '#f44336',
-                  backgroundColor: 'rgba(244, 67, 54, 0.08)',
-                },
-              }}
-              title="Remove"
-            >
-              <CloseIcon fontSize="small" />
-            </IconButton>
-          )}
-          <div className="ParameterSecondItemTitle">Value:</div>
+          <div className="ParameterSecondItemHeader">
+            <div className="ParameterSecondItemTitle">Value:</div>
+            {!this.state.readOnly && this.state.removable && (
+              <IconButton
+                size="small"
+                className="Remove"
+                onClick={() => this.handleRemoveItem()}
+                sx={{
+                  color: '#888',
+                  padding: '2px',
+                  '&:hover': {
+                    color: '#f44336',
+                    backgroundColor: 'rgba(244, 67, 54, 0.08)',
+                  },
+                }}
+                title="Remove"
+              >
+                <CloseIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            )}
+          </div>
           <div className="ParameterSecondItemValue">
             {renderValueElement({
               parameterType: this.state.parameter_type,
