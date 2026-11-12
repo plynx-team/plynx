@@ -92,21 +92,19 @@ const minimapStyle = {
 
 const proOptions = { hideAttribution: true };
 
-const ControlsStyled = styled(Controls)`
-  button {
-    background-color: #2b2b2b;
-    color: #eee;
-    border-bottom: 1px solid #444;
-
-    &:hover {
-      background-color: #444;
-    }
-
-    path {
-      fill: currentColor;
-    }
-  }
-`;
+const ControlsStyled = styled(Controls)({
+  '& button': {
+    backgroundColor: '#2b2b2b',
+    color: '#eee',
+    borderBottom: '1px solid #444',
+    '&:hover': {
+      backgroundColor: '#444',
+    },
+    '& path': {
+      fill: 'currentColor',
+    },
+  },
+});
 
 const ChangeType = {
   DELETE_EDGE: "DELETE_EDGE",

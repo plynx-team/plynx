@@ -1,3 +1,16 @@
+/* Isolated graph node styles to prevent external/global CSS interference */
+.flow-node,
+.flow-node *,
+.react-flow__handle {
+  box-sizing: content-box;
+}
+
+.flow-node input,
+.flow-node select,
+.flow-node textarea {
+  box-sizing: border-box;
+}
+
 .flow-node {
     width: 210px;
     border: 2px solid #333;
@@ -201,8 +214,6 @@
 }
 
 .flow-button-icon {
-  width: 16px;
-  height: 16px;
   padding: 4px;
   border-radius: 2px;
 }
@@ -214,6 +225,11 @@
 
 .flow-button:active .flow-button-icon {
   background-color: #62a6f3;
+}
+
+.flow-button-icon {
+  width: 16px;
+  height: 16px;
 }
 
 @property --a{
