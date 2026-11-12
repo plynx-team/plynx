@@ -50,6 +50,18 @@
   border-left: 1px solid white;
   min-width: 0;
   overflow: hidden;
+  position: relative;
+}
+
+.ParameterSecondItemTitle {
+  font-weight: 600;
+  font-size: 10pt;
+  color: #ddd;
+  margin-bottom: 2px;
+}
+
+.ParameterSecondItemValue {
+  padding-left: 2px;
 }
 
 .ParameterSecondItem .Remove {

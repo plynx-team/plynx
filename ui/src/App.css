@@ -61,10 +61,14 @@ body{
 
 .control-panel {
   background-color: #2b2b2b;
-  padding: 3px;
+  padding: 4px 8px;
   border-top: 1px solid #000;
   border-bottom: 1px solid #000;
   display: flex;
+  align-items: center;
+  gap: 4px;
+  box-sizing: border-box;
+  min-height: 40px;
 }
 
 div:focus {

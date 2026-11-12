@@ -73,18 +73,43 @@
 }
 
 .EditNodeList .Add {
-  font-family: monospace;
-  font-size: 35px;
-  text-align: center;
-  margin: 9px;
-  color: #fff;
-  background-color: #777;
-  border-radius: 5px;
-  border: 1px solid #888;
+  margin: 8px;
+  display: flex;
+  justify-content: center;
 }
 
-.EditNodeList .Add.hover {
-  color: #2196F3;
+.EditNodeList .Add .control-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 14px;
+  height: 32px;
+  font-family: 'Source Sans Pro', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #fff;
+  background-color: #383838;
+  border: 1px solid #555;
+  border-radius: 4px;
   cursor: pointer;
-  background-color: #aaa;
+}
+
+.EditNodeList .Add .control-button:hover {
+  background-color: #4a4a4a;
+  border-color: #2196F3;
+}
+
+.EditNodeList .Add .control-button img {
+  width: 14px;
+  height: 14px;
+  max-width: 14px;
+  max-height: 14px;
+  display: block;
+}
+
+.EditNodeList .Add .control-button .control-button-text {
+  display: inline-flex !important;
+  align-items: center;
+  line-height: 1;
 }

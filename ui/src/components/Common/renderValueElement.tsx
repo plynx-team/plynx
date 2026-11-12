@@ -174,6 +174,12 @@ export default function renderValueElement(args: RenderValueElementArgs): React.
               {value ? 'True' : 'False'}
             </Typography>
           }
+          sx={{
+            margin: '4px 0 4px 6px',
+            '& .MuiFormControlLabel-label': {
+              marginLeft: '6px',
+            },
+          }}
         />
       );
     case 'text':

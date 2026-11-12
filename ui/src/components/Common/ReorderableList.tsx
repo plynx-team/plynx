@@ -132,7 +132,8 @@ export default class ReorderableList<T extends { _key?: string }> extends Compon
         {!readOnly && onAddItem && (
           <div className={addButtonClassName} onClick={onAddItem}>
             <div className="control-button">
-              <img src="/icons/plus.svg" alt="add" /> {addButtonText}
+              <img src="/icons/plus.svg" alt="add" />
+              <span className="control-button-text">{addButtonText}</span>
             </div>
           </div>
         )}
