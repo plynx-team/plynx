@@ -94,6 +94,10 @@ export default class ParameterList extends Component<ParameterListProps, Paramet
         onAddItem={() => this.handleAddItem()}
         addButtonText="Add Parameter"
         className="ParameterList"
+        droppableClassName="ParameterListBackground"
+        droppableDraggingClassName="ParameterListBackgroundDragging"
+        itemClassName="ParameterDiv"
+        itemDraggingClassName="ParameterDivDragging"
         renderItem={(item, index) => (
           <ParameterItem
             key={item._key || index}

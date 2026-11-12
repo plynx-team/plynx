@@ -92,6 +92,10 @@ export default class InOutList extends Component<InOutListProps, InOutListState>
               onAddItem={() => this.handleAddItem(resourcesDict)}
               addButtonText={`Add ${this.props.varName}`}
               className="InOutList"
+              droppableClassName="InOutListBackground"
+              droppableDraggingClassName="InOutListBackgroundDragging"
+              itemClassName="InOutDiv"
+              itemDraggingClassName="InOutDivDragging"
               renderItem={(item, index) => (
                 <InOutItem
                   key={item._key || index}

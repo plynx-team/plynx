@@ -15,6 +15,10 @@ export interface ReorderableListProps<T extends { _key?: string }> {
   renderItem: (item: T, index: number, isDragging: boolean) => ReactNode;
   droppableId?: string;
   className?: string;
+  droppableClassName?: string;
+  droppableDraggingClassName?: string;
+  itemClassName?: string;
+  itemDraggingClassName?: string;
   onAddItem?: () => void;
   addButtonText?: string;
   addButtonClassName?: string;
@@ -76,17 +80,29 @@ export default class ReorderableList<T extends { _key?: string }> extends Compon
   }
 
   render() {
-    const { readOnly, droppableId = 'droppable', className = '', renderItem, onAddItem, addButtonText = 'Add', addButtonClassName = 'Add' } = this.props;
+    const {
+      readOnly,
+      droppableId = 'droppable',
+      className = '',
+      droppableClassName = 'droppable-container',
+      droppableDraggingClassName = '',
+      itemClassName = 'draggable-item',
+      itemDraggingClassName = '',
+      renderItem,
+      onAddItem,
+      addButtonText = 'Add',
+      addButtonClassName = 'Add',
+    } = this.props;
 
     return (
       <div className={className}>
         <DragDropContext onDragEnd={this.onDragEnd}>
           <Droppable droppableId={droppableId} isDropDisabled={readOnly}>
-            {(provided) => (
+            {(provided, snapshot) => (
               <div
                 ref={provided.innerRef}
                 {...provided.droppableProps}
-                className="droppable-container"
+                className={`${droppableClassName}${snapshot.isDraggingOver && droppableDraggingClassName ? ` ${droppableDraggingClassName}` : ''}`}
               >
                 {this.state.items.map((item, index) => (
                   <Draggable
@@ -95,14 +111,14 @@ export default class ReorderableList<T extends { _key?: string }> extends Compon
                     index={index}
                     isDragDisabled={readOnly}
                   >
-                    {(draggableProvided, snapshot) => (
+                    {(draggableProvided, draggableSnapshot) => (
                       <div
                         ref={draggableProvided.innerRef}
                         {...draggableProvided.draggableProps}
                         {...draggableProvided.dragHandleProps}
-                        className="draggable-item"
+                        className={`${itemClassName}${draggableSnapshot.isDragging && itemDraggingClassName ? ` ${itemDraggingClassName}` : ''}`}
                       >
-                        {renderItem(item, index, snapshot.isDragging)}
+                        {renderItem(item, index, draggableSnapshot.isDragging)}
                       </div>
                     )}
                   </Draggable>

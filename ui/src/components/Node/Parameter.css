@@ -1,7 +1,7 @@
 .ParameterListBackground {
-  padding: grid;
   min-height: 100%;
   padding: 2px;
+  box-sizing: border-box;
 }
 
 .ParameterListBackgroundDragging {
@@ -12,9 +12,10 @@
   user-select: none;
   padding: 7px;
   margin: 0;
-
-  /* change background colour if dragging */
   background: transparent;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
 }
 
 .ParameterDivDragging {
@@ -22,6 +23,7 @@
 }
 
 .ParameterListItem {
+  box-sizing: border-box;
   background-color: #404040;
   color: white;
   padding: 3px;
@@ -31,16 +33,23 @@
 
   display: grid;
   width: 100%;
-  grid-template-columns: 200px 1fr;
+  max-width: 100%;
+  grid-template-columns: 200px minmax(0, 1fr);
+  min-width: 0;
 }
 
 .ParameterFirstItem {
+  box-sizing: border-box;
   padding-right: 8px;
+  min-width: 0;
 }
 
 .ParameterSecondItem {
+  box-sizing: border-box;
   padding: 0 8px 0 8px;
   border-left: 1px solid white;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .ParameterSecondItem .Remove {
@@ -54,30 +63,35 @@
   color: red;
 }
 
-
 .ParameterRow {
   display: grid;
-
   grid-template-columns: 30% 70%;
   grid-row-gap: 3px;
+  box-sizing: border-box;
+  align-items: center;
 }
 
 .ParameterCellTitle {
   float: left;
-  padding-left: 5px
+  padding-left: 5px;
+  box-sizing: border-box;
 }
 
 .ParameterCellValue {
   float: left;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .ParameterCellValue > .ParameterValue {
   width: 100%;
+  box-sizing: border-box;
 }
 
 .ParameterMonoText {
   font-family: monospace;
   font-size: 11pt;
   width: 100%;
-  resize:vertical;
+  resize: vertical;
+  box-sizing: border-box;
 }
