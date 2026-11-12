@@ -1,23 +1,25 @@
+/* Paginated entity lists (/operations, /workflows, /runs) */
+
 .ListPage {
-  overflow:auto;
+  overflow: auto;
   background-color: #202020;
   width: 100%;
   height: 100%;
-  padding: 0px;
+  padding: 0;
   display: flex;
   flex-direction: column;
 }
 
 .ListPage > .List {
   flex: 1;
-  overflow:auto;
-  border: 1px solid darkgrey;
+  overflow: auto;
+  border: 1px solid #444;
 }
 
 .list {
   background-color: #2b2b2b;
   overflow: auto;
-  flex: 1 1;
+  flex: 1 1 auto;
 }
 
 .list-item-link {
@@ -35,17 +37,13 @@
   text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
-
   display: inline-grid;
-
-  -moz-transition: all .1s ease-in;
-  -o-transition: all .1s ease-in;
-  -webkit-transition: all .1s ease-in;
-  transition: all .1s ease-in;
+  transition: all 0.1s ease-in;
   background-color: #404040;
 }
 
-.header-item .list-field, .list-item .list-field {
+.header-item .list-field,
+.list-item .list-field {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

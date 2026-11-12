@@ -1,51 +1,54 @@
+/* Output item in PropertiesBar */
+
 .OutputItem {
   display: grid;
   grid-template-columns: 40% 60%;
+  align-items: center;
+  padding: 2px 0;
 }
 
 .OutputNameCell {
-  display: contents;
-  float: left;
-  padding-left: 10px;
+  padding-left: 8px;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
 }
 
 .OutputItemPreview {
-  color: #337ab7;
+  color: #2196F3;
   cursor: pointer;
 }
 
 .OutputItemPreview .file-type-icon {
-    width: 10px;
-    height: 10px;
-    padding-right: 3px;
+  width: 12px;
+  height: 12px;
+  padding-right: 3px;
 }
 
 .OutputItemPreview img {
-  vertical-align:middle;
+  vertical-align: middle;
 }
 
 .OutputItemPreview:hover {
   text-decoration: underline;
-  color: white;
+  color: #fff;
 }
 
 .OutputValueCell {
-  float: right;
   cursor: pointer;
-  color: lightgray;
+  color: #ccc;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
+  text-align: right;
+  padding-right: 8px;
 }
 
 .OutputValueCell:hover {
   text-decoration: underline;
-  color: white;
+  color: #fff;
 }
 
 .OutputValueCell img {
-  vertical-align:middle;
+  vertical-align: middle;
 }

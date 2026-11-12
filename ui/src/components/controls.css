@@ -1,80 +1,4 @@
-.menu-button {
-  display: inline-block;
-  border-radius: 2px;
-  padding: 2px 10px 2px 10px;
-  text-align: center;
-  cursor: pointer;
-  color: #3363b0;
-  font-weight: 600;
-  font-size: 13pt;
-  text-decoration: none;
-
-  -moz-transition: all .1s ease-in;
-  -o-transition: all .1s ease-in;
-  -webkit-transition: all .1s ease-in;
-  transition: all .1s ease-in;
-}
-
-.menu-button:hover {
-  display: inline-block;
-  background-color: #ccc;
-  border-radius: 2px;
-  padding: 2px 10px 2px 10px;
-  text-align: center;
-  text-decoration: underline;
-}
-
-
-.menu-button:active {
-  background-color: #62a6f3;
-}
-
-.pagination {
-  padding-left: 0px;
-  margin: 3px;
-  user-select: none;
-  font-size: 13pt;
-  font-weight: 400;
-}
-
-.pagination ul {
-    display: inline-block;
-}
-
-.pagination li {
-    display: inline-flex;
-    border-radius: 2px;
-    color: #ddd;
-    font-weight: 400;
-    font-size: 13pt;
-    white-space: nowrap;
-    -moz-transition: all .1s ease-in;
-    -o-transition: all .1s ease-in;
-    -webkit-transition: all .1s ease-in;
-    transition: all .1s ease-in;
-}
-
-.pagination li:hover {
-  background-color: #555;
-}
-
-.pagination li.active {
-    background-color: #3f6da0;
-}
-
-.pagination li.break-me {
-    border: 0px;
-    cursor: inherit;
-}
-
-.pagination li a {
-    padding: 2px 10px 2px 10px;
-    cursor: pointer;
-}
-
-.control-button.demo-button {
-    font-weight: 600;
-}
+/* Control buttons and toolbar widgets */
 
 .control-button {
   display: inline-flex;
@@ -94,15 +18,11 @@
   text-decoration: none;
   background-color: #2b2b2b;
   border: 1px solid #444;
-  margin: 0px 2px;
+  margin: 0 2px;
   box-sizing: border-box;
   white-space: nowrap;
   line-height: 1;
-
-  -moz-transition: all .1s ease-in;
-  -o-transition: all .1s ease-in;
-  -webkit-transition: all .1s ease-in;
-  transition: all .1s ease-in;
+  transition: all 0.1s ease-in;
 }
 
 .control-button img {
@@ -126,10 +46,11 @@
   background-color: #3f6da0;
 }
 
+.control-button.demo-button {
+  font-weight: 600;
+}
+
 .control-button.demo:hover {
-  -webkit-animation: none;
-  -moz-animation: none;
-  -o-animation: none;
   animation: none;
   background-color: #444;
 }
@@ -138,6 +59,9 @@
   background-color: #62a6f3;
 }
 
+.control-button.disabled {
+  display: none;
+}
 
 .control-button-text {
   padding-left: 2px;
@@ -148,22 +72,29 @@
   line-height: 1;
 }
 
+/* Control Separator */
 .control-separator {
   margin-right: 20px;
   display: inline;
 }
 
+/* Control Toggles */
 .control-toggle {
   display: inline-flex;
+  align-items: center;
 }
 
 .control-toggle > .control-button {
-  border-radius: 0px;
-  margin: 0px;
+  border-radius: 0;
+  margin: 0;
 }
 
-.control-button.disabled {
-  display: none;
+.control-toggle > .first {
+  border-radius: 4px 0 0 4px;
+}
+
+.control-toggle > .last {
+  border-radius: 0 4px 4px 0;
 }
 
 .control-toggle > .control-button.disabled {
@@ -173,29 +104,18 @@
   color: #777;
 }
 
-.control-toggle > .first {
-  border-radius: 15px 0px 0px 15px;
-}
-
-.control-toggle > .last {
-  border-radius: 0px 15px 15px 0px;
-}
-
-/* The switch - the box around the slider */
+/* Control Checkbox */
 .control-checkbox {
   display: inline-flex;
-  padding: 2px 0px 2px 10px;
+  align-items: center;
+  padding: 2px 0 2px 10px;
   text-align: center;
   color: #eee;
   font-weight: 300;
   font-size: 12pt;
   text-decoration: none;
-  margin: 0px 1px 0px 1px;
-
-  -moz-transition: all .1s ease-in;
-  -o-transition: all .1s ease-in;
-  -webkit-transition: all .1s ease-in;
-  transition: all .1s ease-in;
+  margin: 0 1px;
+  transition: all 0.1s ease-in;
 }
 
 .control-checkbox.hidden {
@@ -206,14 +126,77 @@
   color: #333;
 }
 
-/* mobile */
-
-.control-button-text {
-  display: none;
+/* Pagination */
+.pagination {
+  padding-left: 0;
+  margin: 3px;
+  user-select: none;
+  font-size: 13pt;
+  font-weight: 400;
 }
 
-@media (min-width: 1100px) {
+.pagination ul {
+  display: inline-block;
+  padding: 0;
+  margin: 0;
+}
+
+.pagination li {
+  display: inline-flex;
+  border-radius: 2px;
+  color: #ddd;
+  font-weight: 400;
+  font-size: 13pt;
+  white-space: nowrap;
+  transition: all 0.1s ease-in;
+}
+
+.pagination li:hover {
+  background-color: #555;
+}
+
+.pagination li.active {
+  background-color: #3f6da0;
+}
+
+.pagination li.break-me {
+  border: 0;
+  cursor: inherit;
+}
+
+.pagination li a {
+  padding: 2px 10px;
+  cursor: pointer;
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Menu Button */
+.menu-button {
+  display: inline-block;
+  border-radius: 2px;
+  padding: 2px 10px;
+  text-align: center;
+  cursor: pointer;
+  color: #3363b0;
+  font-weight: 600;
+  font-size: 13pt;
+  text-decoration: none;
+  transition: all 0.1s ease-in;
+}
+
+.menu-button:hover {
+  background-color: #ccc;
+  text-decoration: underline;
+}
+
+.menu-button:active {
+  background-color: #62a6f3;
+}
+
+/* Mobile responsive */
+@media (max-width: 1099px) {
   .control-button-text {
-    display: flex;
+    display: none;
   }
 }

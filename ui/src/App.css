@@ -1,19 +1,12 @@
 @import url('https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,300,400,600,700,900,200italic,300italic,400italic,600italic,700italic,900italic');
 
-html{
-  height: 100%;
-  max-height: 100%;
-  background-color: #111111;
-}
-body{
-  margin:0;
-  height: 100%;
-  max-height: 100%;
-}
-
+html,
+body,
 #root {
   height: 100%;
   max-height: 100%;
+  background-color: #111111;
+  margin: 0;
 }
 
 .App {
@@ -25,6 +18,7 @@ body{
 
 .Header {
   height: 40px;
+  flex-shrink: 0;
 }
 
 .Content {
@@ -39,26 +33,16 @@ body{
   height: 100%;
 }
 
+/* User selection helpers */
 .noselect {
-  -webkit-touch-callout: none; /* iOS Safari */
-    -webkit-user-select: none; /* Safari */
-     -khtml-user-select: none; /* Konqueror HTML */
-       -moz-user-select: none; /* Firefox */
-        -ms-user-select: none; /* Internet Explorer/Edge */
-            user-select: none; /* Non-prefixed version, currently
-                                  supported by Chrome and Opera */
+  user-select: none;
 }
 
 .selectable {
-  -webkit-touch-callout: text; /* iOS Safari */
-    -webkit-user-select: text; /* Safari */
-     -khtml-user-select: text; /* Konqueror HTML */
-       -moz-user-select: text; /* Firefox */
-        -ms-user-select: text; /* Internet Explorer/Edge */
-            user-select: text; /* Non-prefixed version, currently
-                                  supported by Chrome and Opera */
+  user-select: text;
 }
 
+/* Common control panel / toolbar */
 .control-panel {
   background-color: #2b2b2b;
   padding: 4px 8px;
@@ -69,25 +53,16 @@ body{
   gap: 4px;
   box-sizing: border-box;
   min-height: 40px;
+  flex-wrap: wrap;
 }
 
 div:focus {
   outline: 0;
-  outline: none;
 }
 
-/* Mobile dependent */
-
-.Header {
-  height: 80px;
-}
-
-@media (min-width: 1100px) {
+/* Responsive adjustments */
+@media (max-width: 1099px) {
   .Header {
-    height: 40px;
-  }
-
-  .ControlButtons {
-    top: 50px;
+    height: 80px;
   }
 }

@@ -201,6 +201,8 @@
 }
 
 .flow-button-icon {
+  width: 16px;
+  height: 16px;
   padding: 4px;
   border-radius: 2px;
 }
@@ -212,11 +214,6 @@
 
 .flow-button:active .flow-button-icon {
   background-color: #62a6f3;
-}
-
-.flow-button-icon {
-  width: 16px;
-  height: 16px;
 }
 
 @property --a{

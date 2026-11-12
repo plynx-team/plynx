@@ -1,34 +1,30 @@
+/* Top application header */
+
 .Header {
   display: block;
-  vertical-align: middle;
-  /*padding: 8px 16px;*/
   background-color: #111;
   font-size: 17pt;
   font-family: monospace;
   text-align: left;
+  position: relative;
+  height: 40px;
 }
 
-.Header .menu-sl-show {
-  display: block;
+.Header .logo,
+.Header .menu-button-sl,
+.Header .user-menu,
+.user-icon {
+  transition: all 0.1s ease-in;
 }
 
-.Header .menu-sl-hide {
-  display: none;
+.Header .logo:hover,
+.Header .menu-button-sl:hover {
+  color: #fff;
+  background-color: #333;
 }
 
-.Header .logo, .Header .menu-button-sl, .Header .user-menu, .user-icon {
-  -moz-transition: all .1s ease-in;
-  -o-transition: all .1s ease-in;
-  -webkit-transition: all .1s ease-in;
-  transition: all .1s ease-in;
-}
-
-.Header .logo:hover, .Header .menu-button-sl:hover {
-    color: white;
-    background-color: #333;
-}
-
-.Header .logo:active, .Header .menu-button-sl:active {
+.Header .logo:active,
+.Header .menu-button-sl:active {
   background-color: #62a6f3;
 }
 
@@ -41,241 +37,175 @@
   font-weight: 300;
   color: #ccc;
   font-family: 'Source Sans Pro', sans-serif;
+  top: 6px;
+  left: 180px;
+  display: flex;
 }
 
 .Header .NavigationItems {
-  text-align:left;
-  background-color:inherit;
-  color:inherit;
+  text-align: left;
+  background-color: inherit;
+  color: inherit;
+  display: block;
+  padding: 0;
+  font-size: 17pt;
 }
 
 .Header .NavigationItems .Item {
-    display:inline-block;
-    padding: 0px 18px 0px 18px;
-    box-sizing: border-box;
-    text-align:left;
-    background-color:inherit;
-    color:inherit;
-    border:none;
-    outline:none;
-    white-space:normal;
-    text-decoration: none;
-
-    -moz-transition: all .1s ease-in;
-    -o-transition: all .1s ease-in;
-    -webkit-transition: all .1s ease-in;
-    transition: all .1s ease-in;
+  display: inline-block;
+  padding: 0 18px;
+  box-sizing: border-box;
+  text-align: left;
+  background-color: inherit;
+  color: inherit;
+  border: none;
+  outline: none;
+  text-decoration: none;
+  transition: all 0.1s ease-in;
 }
 
+.Header .NavigationItems .Item:hover:not(.active) {
+  border-bottom: 1px solid #fff;
+}
+
+.Header .NavigationItems .active {
+  color: #2196F3;
+  border-bottom: 3px solid #2196F3;
+}
+
+.Header .separator {
+  display: inline-block;
+  border-left: 1px solid #333;
+  width: 0;
+  height: 100%;
+}
+
+.Header .logo {
+  position: fixed;
+  top: 4px;
+  left: 14px;
+  padding: 0 20px;
+}
+
+.Header > .logo > .icon {
+  vertical-align: middle;
+  height: 34px;
+}
+
+/* User Account button in header */
 .UserButton {
   position: fixed;
   top: 8px;
   right: 10px;
   font-family: 'Source Sans Pro', sans-serif;
-  color: white;
+  color: #fff;
   display: flex;
+  align-items: center;
+  font-size: 17pt;
 }
 
 .UserButton .button {
   display: inline-block;
-  padding: 0px 15px 0px 15px;;
-  color: white;
+  padding: 0 15px;
+  color: #fff;
   cursor: pointer;
   text-decoration: none;
 }
 
 .UserButton .action {
-  display: none;
+  display: inline-block;
+  cursor: pointer;
+  padding-left: 10px;
+  transition: all 0.1s ease-in;
 }
 
 .UserButton .action:hover {
-  color: #337ab7;
+  color: #2196F3;
   text-decoration: underline;
 }
 
-/* Mobile dependent */
-
-.Header .logo {
-  top: 8px;
-  left: 0%;
-  margin-left: 80px;
-  position: fixed;  /*fixing bug with disapearring header*/
-  padding: 3px 15px 3px 15px;
-}
-
-.Header > .logo > .icon {
-  vertical-align: middle;
-  height: 60px;
-}
-
-.cog {
-  height: 20px;
-  margin-left: 15px;
-}
-
-.cog > g > .cogPath {
-  fill: white;
-}
-
-.cog:hover > g > .cogPath {
-  fill: #337ab7;
-}
-
-.Header .menu-button-sl {
-  padding: 5px;
-  position: absolute;
-  top: 5px;
-  left: 10px;
-  cursor: pointer;
-  display: flex;
-}
-
-.Header .menu-button-sl img {
-  display:block;
-  width: 60px;
-  height: 60px;
-}
-
-.Header .NavigationItems {
-  display: flex;
-  flex-direction: column;
-  width: 50%;
-  padding: 5px;
-  background-color: #111;
-  font-size: 25pt;
-  position: fixed;  /*fixing bug with disapearring header*/
-}
-
-.Header .separator {
-  display: inline-block;
-  border-bottom: 1px #333 solid;
-  height: 0px;
-}
-
-.Header .Navigation {
-  top: 80px;
-  left: 0px;
-  width: 100%;
-  height: calc(100% - 80px);
-  z-index: 1000;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-}
-
-.Header .NavigationItems .Item:hover:not(.active) {
-    color: white;
-    background-color: #333;
-}
-
-.Header .NavigationItems .Item {
-  padding: 8px;
-  margin: 5px;
-}
-
-.Header .NavigationItems .active {
-    color: #2196F3;
-    border-left: 3px solid #2196F3;
-}
-
-.Header .NavigationItems .active:hover {
-    background-color: #134177;
-}
-
-.UserButton {
-  top: 8px;
-  font-size: 20pt;
-  display: block;
-}
-
 .UserButton .user-icon {
-  height: 64px;
-  width: 64px;
-  padding: 0px;
+  height: 24px;
+  width: 24px;
   border-radius: 50%;
   border: 2px solid #505050;
 }
 
-.user-menu {
-  color: white;
-  text-decoration: none;
-  width: 100%;
-  height: 100%;
-  display: flex;
-}
-
- .user-icon:hover {
+.user-icon:hover {
   border-color: #2196F3;
 }
 
-@media (min-width: 1100px) {
+.user-menu {
+  color: #fff;
+  text-decoration: none;
+  display: flex;
+}
+
+/* Mobile responsive menu */
+@media (max-width: 1099px) {
+  .Header {
+    height: 80px;
+  }
 
   .Header .logo {
-    top: 4px;
-    left: 14px;
-    margin-left: 0;
-    padding: 0 20px 0 20px;
+    top: 8px;
+    left: 80px;
+    padding: 3px 15px;
   }
 
   .Header > .logo > .icon {
-    height: 34px;
+    height: 60px;
   }
 
-  .Header .NavigationItems {
+  .Header .menu-button-sl {
+    position: absolute;
+    top: 5px;
+    left: 10px;
+    cursor: pointer;
+    display: flex;
+  }
+
+  .Header .menu-button-sl img {
     display: block;
-    padding: 0;
-    font-size: 17pt;
-    width: auto;
-  }
-
-  .Header .separator {
-    display: inline-block;
-    border-left: 1px #333 solid;
-    width: 0px;
-    height: auto;
+    width: 60px;
+    height: 60px;
   }
 
   .Header .Navigation {
-    top: 6px;
-    left: 180px;
-    width: auto;
-    height: auto;
-    padding-left: 10px;
-    padding-right: 10px;
-    background-color: inherit;
+    top: 80px;
+    left: 0;
+    width: 100%;
+    height: calc(100% - 80px);
+    z-index: 1000;
+    background-color: rgba(0, 0, 0, 0.5);
   }
 
-  .Header .NavigationItems .Item:hover:not(.active) {
-    border-bottom: 1px solid white;
-  }
-
-  .Header .NavigationItems .active {
-    border-left: 0;
-    border-bottom: 3px solid #2196F3;
+  .Header .NavigationItems {
+    display: flex;
+    flex-direction: column;
+    width: 50%;
+    padding: 5px;
+    background-color: #111;
+    font-size: 25pt;
   }
 
   .Header .NavigationItems .Item {
-    padding: 0px 18px 0px 18px;
-    margin: 0px;
+    padding: 8px;
+    margin: 5px;
+  }
+
+  .Header .NavigationItems .active {
+    border-left: 3px solid #2196F3;
+    border-bottom: 0;
   }
 
   .UserButton {
     top: 8px;
-    font-size: 17pt;
+    font-size: 20pt;
   }
 
   .UserButton .user-icon {
-    height: 24px;
-    width: 24px;
+    height: 64px;
+    width: 64px;
   }
-
-  .UserButton .action {
-    display: inline-block;
-    cursor: pointer;
-    padding-left: 10px;
-    -moz-transition: all .1s ease-in;
-    -o-transition: all .1s ease-in;
-    -webkit-transition: all .1s ease-in;
-    transition: all .1s ease-in;
-  }
-
 }

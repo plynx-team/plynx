@@ -1,14 +1,17 @@
+/* Node editor parameter item */
+
 .ParameterNameCell {
   float: left;
-  padding-left: 5px
+  padding-left: 5px;
 }
 
 .ParameterSecondItemValue > .Value {
   width: 100%;
 }
 
-.ParameterSecondItemValue > .Value,textarea {
+.ParameterSecondItemValue > .Value,
+.ParameterSecondItemValue textarea {
   font-family: monospace;
-  font-size: 12pt;
+  font-size: 11pt;
   resize: vertical;
 }
