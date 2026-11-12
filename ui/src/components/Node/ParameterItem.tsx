@@ -170,20 +170,20 @@ export default class ParameterItem extends Component<NodeParameterItemProps, Nod
           <div className="ParameterRow">
             <div className="ParameterCellTitle">Type:</div>
             <div className="ParameterCellValue">
-              <FormControl size="small" sx={{ minWidth: 120 }}>
+              <FormControl size="small" fullWidth>
                 <Select
                   className="ParameterValue"
                   value={this.state.parameter_type}
                   onChange={(e: SelectChangeEvent) => this.handleTypeChange(e.target.value)}
                   disabled={Boolean(this.state.readOnly && this.state.mutable_type)}
                   sx={{
-                    height: 28,
-                    fontSize: '0.85rem',
+                    height: 24,
+                    fontSize: '11pt',
                     color: '#fff',
                     backgroundColor: '#262626',
                     '& .MuiSelect-select': {
-                      paddingY: '2px',
-                      paddingLeft: '8px',
+                      paddingY: '1px',
+                      paddingLeft: '6px',
                     },
                     '& .MuiOutlinedInput-notchedOutline': {
                       borderColor: '#444',

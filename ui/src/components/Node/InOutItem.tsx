@@ -153,21 +153,21 @@ export default class InOutItem extends Component<InOutItemProps, InOutItemState>
               const resourceDesc = plugins_dict.resources_dict[this.state.item.file_type];
 
               return (
-                <div className="InOutCellValue" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <FormControl size="small" sx={{ minWidth: 120 }}>
+                <div className="InOutCellValue" style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
+                  <FormControl size="small" sx={{ flex: 1, minWidth: 0 }}>
                     <Select
                       className="InOutValue"
                       value={this.state.item.file_type || ''}
                       onChange={(e: SelectChangeEvent) => this.handleSelectChange('file_type', e.target.value)}
                       disabled={this.state.readOnly}
                       sx={{
-                        height: 28,
-                        fontSize: '0.85rem',
+                        height: 24,
+                        fontSize: '11pt',
                         color: '#fff',
                         backgroundColor: '#262626',
                         '& .MuiSelect-select': {
-                          paddingY: '2px',
-                          paddingLeft: '8px',
+                          paddingY: '1px',
+                          paddingLeft: '6px',
                         },
                         '& .MuiOutlinedInput-notchedOutline': {
                           borderColor: '#444',
@@ -203,10 +203,11 @@ export default class InOutItem extends Component<InOutItemProps, InOutItemState>
                 />
               }
               label={
-                <Typography variant="body2" sx={{ color: '#eee', fontSize: '0.85rem' }}>
+                <Typography variant="body2" sx={{ color: '#fff', fontSize: '11pt', marginLeft: '6px' }}>
                   {this.state.item.is_array ? 'True' : 'False'}
                 </Typography>
               }
+              sx={{ margin: 0 }}
             />
           </div>
         </div>

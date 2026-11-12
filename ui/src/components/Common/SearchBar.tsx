@@ -86,7 +86,7 @@ export default class SearchBar extends Component<SearchBarProps, SearchBarState>
 
   render() {
     return (
-      <Box className="SearchBar" sx={{ display: 'inline-flex', width: '100%', minWidth: { xs: 200, sm: 380, md: 500 } }}>
+      <Box className="SearchBar" sx={{ display: 'inline-flex', width: '100%' }}>
         <OutlinedInput
           className="Bar"
           fullWidth
@@ -97,15 +97,20 @@ export default class SearchBar extends Component<SearchBarProps, SearchBarState>
           onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => this.handleKeyPress(e)}
           autoFocus={this.props.autoFocus !== false}
           startAdornment={
-            <InputAdornment position="start">
-              <SearchIcon fontSize="small" sx={{ color: '#888' }} />
+            <InputAdornment position="start" sx={{ marginRight: '6px' }}>
+              <SearchIcon fontSize="small" sx={{ color: '#888', width: 18, height: 18 }} />
             </InputAdornment>
           }
           sx={{
+            height: '32px',
             backgroundColor: '#2b2b2b',
             color: '#fff',
-            fontSize: '11pt',
-            borderRadius: '4px',
+            fontSize: '0.9rem',
+            borderRadius: '3px',
+            paddingLeft: '8px',
+            '& .MuiOutlinedInput-input': {
+              padding: '4px 6px 4px 0',
+            },
             '& .MuiOutlinedInput-notchedOutline': {
               borderColor: '#444',
             },

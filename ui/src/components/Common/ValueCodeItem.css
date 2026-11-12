@@ -1,4 +1,25 @@
+.CodeItem {
+  width: 100%;
+}
+
 .CodeItem > .code-mode {
-  width: 100px;
-  margin: 5px 0px 5px 0px;
+  width: auto;
+  margin: 0 0 6px 0;
+  display: flex;
+  align-items: center;
+}
+
+.code-mode-select {
+  background-color: #2b2b2b;
+  color: #fff;
+  border: 1px solid #444;
+  border-radius: 3px;
+  padding: 3px 8px;
+  font-size: 0.85rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.code-mode-select:focus {
+  border-color: #2196F3;
 }

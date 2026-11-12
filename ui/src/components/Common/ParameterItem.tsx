@@ -79,7 +79,7 @@ export default class ParameterItem extends Component<CommonParameterItemProps, C
     return (
       <div className="ParameterItem">
         <div className="ParameterNameCell">{this.props.widget}</div>
-        <div className="ParameterValueCell" style={{ display: 'flex', alignItems: 'center' }}>
+        <div className="ParameterValueCell">
           {!this.props.reference &&
             renderValueElement({
               parameterType: this.state.parameterType,
