@@ -204,7 +204,7 @@
 }
 
 /* Mobile responsive */
-@media (max-width: 1099px) {
+@media (max-width: 768px) {
   .control-button-text {
     display: none;
   }

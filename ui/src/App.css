@@ -58,10 +58,3 @@ body,
 div:focus {
   outline: 0;
 }
-
-/* Responsive adjustments */
-@media (max-width: 1099px) {
-  .Header {
-    height: 80px;
-  }
-}
