@@ -2,7 +2,7 @@ import React, { Component, ReactNode } from 'react';
 // @ts-ignore
 import AlertContainer from '../3rd_party/react-alert';
 import cookie from '../../cookie';
-import { PLynxApi } from '../../API';
+import { PLynxApi } from '../../api';
 import List, { HeaderDescriptor } from './List';
 // @ts-ignore
 import ReactPaginate from 'react-paginate';
@@ -21,7 +21,7 @@ import {
   makeControlButton,
   makeControlSeparator,
   PanelItem,
-} from '../Common/controlButton';
+} from '../Common/ControlButton';
 import { PluginsProvider, PluginsConsumer } from '../../contexts';
 import { NodeData, PluginsDict } from '../../types';
 import './list.css';

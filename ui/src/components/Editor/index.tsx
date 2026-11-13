@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import Tour from '../Common/Tour';
 import AlertContainer from '../3rd_party/react-alert';
-import { PLynxApi } from '../../API';
+import { PLynxApi } from '../../api';
 import cookie from '../../cookie';
 import LoadingScreen from '../LoadingScreen';
 import {
@@ -18,12 +18,12 @@ import {
 } from '../../constants';
 import Graph from '../Graph';
 import Node from '../Node';
-import RunList from '../NodeList/runList';
+import RunList from '../NodeList/RunList';
 import DeprecateDialog from '../Dialogs/DeprecateDialog';
 import TextViewDialog from '../Dialogs/TextViewDialog';
 import FileUploadDialog from '../Dialogs/FileUploadDialog';
 import { PluginsProvider, PluginsConsumer } from '../../contexts';
-import { makeControlPanel, makeControlCheckbox, makeControlToggles, makeControlButton, makeControlSeparator } from '../Common/controlButton';
+import { makeControlPanel, makeControlCheckbox, makeControlToggles, makeControlButton, makeControlSeparator } from '../Common/ControlButton';
 import { addStyleToTourSteps } from '../../utils';
 import { ReactFlowProvider } from 'reactflow';
 import { RouterHistory, RouterLocation } from '../../router';

@@ -1,9 +1,9 @@
 import React, { Component } from 'react';
-import BaseList from './baseList';
+import BaseList from './BaseList';
 import FileUploadDialog from '../Dialogs/FileUploadDialog';
-import { makeControlSeparator } from '../Common/controlButton';
+import { makeControlSeparator } from '../Common/ControlButton';
 import { COLLECTIONS, VIRTUAL_COLLECTIONS } from '../../constants';
-import { renderNodeItem, NODE_ITEM_HEADER } from './common';
+import { renderNodeItem, NODE_ITEM_HEADER } from './NodeListItem';
 import { PluginsConsumer } from '../../contexts';
 import { PluginsDict } from '../../types';
 

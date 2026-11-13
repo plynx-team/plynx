@@ -1,5 +1,5 @@
 import React, { Component, ReactNode, createRef } from 'react';
-import { listTextElement } from '../Common/listElements';
+import { listTextElement } from '../Common/ListElements';
 
 export interface HeaderDescriptor {
   title: string;

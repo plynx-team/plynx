@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import LoadingScreen from '../LoadingScreen';
-import { PLynxApi } from '../../API';
-import { API_ENDPOINT } from '../../configConsts';
+import { PLynxApi } from '../../api';
+import { API_ENDPOINT } from '../../config';
 import { downloadBlob } from '../../utils';
 import Dialog from './Dialog';
 import { PreviewData } from '../../types';

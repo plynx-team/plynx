@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { PLynxApi } from '../../API';
+import { PLynxApi } from '../../api';
 import { SimpleLoader } from '../LoadingScreen';
 import NodeItem from '../Common/NodeItem';
 import { utcTimeToLocal } from '../../utils';

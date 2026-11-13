@@ -1,5 +1,5 @@
 import React, { Component, ChangeEvent } from 'react';
-import { PLynxApi } from '../../API';
+import { PLynxApi } from '../../api';
 import LoadingScreen from '../LoadingScreen';
 import Icon from '../Common/Icon';
 import { RESPONCE_STATUS } from '../../constants';

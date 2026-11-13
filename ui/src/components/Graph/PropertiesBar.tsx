@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import cookie from '../../cookie';
 import OutputItem from './OutputItem';
 import ParameterItem from '../Common/ParameterItem';
-import makePropertiesBox from '../Common/makePropertiesBox';
+import makePropertiesBox from '../Common/PropertiesBox';
 import { COLLECTIONS, IAM_POLICIES } from '../../constants';
 import { NodeData, NodeOutput, NodeParameter, PreviewData } from '../../types';
 import './style.css';

@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { PLynxApi } from '../../API';
+import { PLynxApi } from '../../api';
 import HubEntryList from './HubEntryList';
 // @ts-ignore
 import ReactPaginate from 'react-paginate';

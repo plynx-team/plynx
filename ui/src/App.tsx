@@ -13,9 +13,9 @@ import { withRouter, RouterHistory, RouterLocation } from './router';
 
 import Editor from './components/Editor';
 import UserView from './components/UserView';
-import OperationList from './components/NodeList/operationList';
-import WorkflowList from './components/NodeList/workflowList';
-import RunList from './components/NodeList/runList';
+import OperationList from './components/NodeList/OperationList';
+import WorkflowList from './components/NodeList/WorkflowList';
+import RunList from './components/NodeList/RunList';
 import LoadingScreen from './components/LoadingScreen';
 import theme from './theme';
 import packageInfo from '../package.json';

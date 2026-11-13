@@ -4,7 +4,7 @@ import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import Dialog from './Dialog';
 import NodeItem from '../Common/NodeItem';
-import { PLynxApi } from '../../API';
+import { PLynxApi } from '../../api';
 import { ACTION, COLLECTIONS } from '../../constants';
 import { NodeData } from '../../types';
 

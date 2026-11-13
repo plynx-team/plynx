@@ -1,5 +1,5 @@
 import axios, { AxiosPromise, AxiosRequestConfig } from 'axios';
-import { API_ENDPOINT } from './configConsts';
+import { API_ENDPOINT } from './config';
 import { COLLECTIONS } from './constants';
 import cookie from './cookie';
 

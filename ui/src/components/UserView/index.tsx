@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
 import APIObject from '../Common/APIObject';
-import makePropertiesBox from '../Common/makePropertiesBox';
+import makePropertiesBox from '../Common/PropertiesBox';
 import ParameterItem from '../Common/ParameterItem';
-import { makeControlPanel, makeControlButton } from '../Common/controlButton';
+import { makeControlPanel, makeControlButton } from '../Common/ControlButton';
 import { COLLECTIONS, IAM_POLICIES, USER_POST_ACTION, RESPONCE_STATUS } from '../../constants';
 import { validatePassword } from '../Common/passwordUtils';
 import { FeatherIcon } from '../Common/Icon';

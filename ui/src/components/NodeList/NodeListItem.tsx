@@ -1,7 +1,7 @@
 import React from 'react';
 import { PluginsConsumer } from '../../contexts';
 import Icon from '../Common/Icon';
-import { listTextElement, renderStatus } from '../Common/listElements';
+import { listTextElement, renderStatus } from '../Common/ListElements';
 import { utcTimeToLocal } from '../../utils';
 import { NodeData, PluginsDict } from '../../types';
 import '../controls.css';

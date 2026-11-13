@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
-import BaseList from './baseList';
-import { makeControlSeparator } from '../Common/controlButton';
+import BaseList from './BaseList';
+import { makeControlSeparator } from '../Common/ControlButton';
 import { COLLECTIONS, VIRTUAL_COLLECTIONS } from '../../constants';
-import { renderNodeItem, NODE_ITEM_HEADER } from './common';
+import { renderNodeItem, NODE_ITEM_HEADER } from './NodeListItem';
 
 const renderItem = renderNodeItem(COLLECTIONS.TEMPLATES, 'node_status');
 

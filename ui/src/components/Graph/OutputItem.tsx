@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
-import { PLynxApi } from '../../API';
+import { PLynxApi } from '../../api';
 import Icon from '../Common/Icon';
 import { PluginsConsumer } from '../../contexts';
-import { API_ENDPOINT } from '../../configConsts';
+import { API_ENDPOINT } from '../../config';
 import { downloadBlob } from '../../utils';
 import { PreviewData, PluginsDict } from '../../types';
 import './OutputItem.css';

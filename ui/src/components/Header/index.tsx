@@ -1,5 +1,5 @@
 import React, { Component, createRef, MouseEvent } from 'react';
-import Navigation from './navigation';
+import Navigation from './Navigation';
 import UserButton from './UserButton';
 import UserMenu from './UserMenu';
 

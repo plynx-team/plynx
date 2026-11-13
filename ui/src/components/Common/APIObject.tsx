@@ -1,7 +1,7 @@
 import React, { Component, ReactNode } from 'react';
 // @ts-ignore
 import AlertContainer from '../3rd_party/react-alert';
-import { PLynxApi } from '../../API';
+import { PLynxApi } from '../../api';
 import cookie from '../../cookie';
 import LoadingScreen from '../LoadingScreen';
 import { ALERT_OPTIONS } from '../../constants';

@@ -6,7 +6,7 @@ import cookie from '../../cookie';
 
 // @ts-ignore
 import AlertContainer from '../3rd_party/react-alert';
-import { PLynxApi } from '../../API';
+import { PLynxApi } from '../../api';
 import { ALERT_OPTIONS, REGISTER_USER_EXCEPTION_CODE } from '../../constants';
 
 import './style.css';

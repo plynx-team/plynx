@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { PLynxApi } from '../../API';
+import { PLynxApi } from '../../api';
 import { SimpleLoader } from '../LoadingScreen';
 import { SPECIAL_USERS, DEFAULT_WORKFLOW_KIND } from '../../constants';
 import cookie from '../../cookie';

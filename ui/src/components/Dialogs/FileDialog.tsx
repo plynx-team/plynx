@@ -2,11 +2,11 @@ import React, { Component, MouseEvent } from 'react';
 import Button from '@mui/material/Button';
 import Stack from '@mui/material/Stack';
 import Dialog from './Dialog';
-import { PLynxApi } from '../../API';
+import { PLynxApi } from '../../api';
 import { PluginsConsumer } from '../../contexts';
 import Icon from '../Common/Icon';
 import { NODE_STATUS } from '../../constants';
-import { API_ENDPOINT } from '../../configConsts';
+import { API_ENDPOINT } from '../../config';
 import { downloadBlob } from '../../utils';
 import { PreviewData, PluginsDict } from '../../types';
 

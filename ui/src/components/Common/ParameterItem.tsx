@@ -2,7 +2,7 @@ import React, { Component, ChangeEvent, FocusEvent } from 'react';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import LinkIcon from '@mui/icons-material/Link';
-import renderValueElement from './renderValueElement';
+import renderValueElement from './RenderValueElement';
 import './ParameterItem.css';
 
 export interface CommonParameterItemProps {

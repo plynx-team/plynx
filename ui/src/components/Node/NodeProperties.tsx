@@ -2,7 +2,7 @@ import React, { Component, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { COLLECTIONS } from '../../constants';
 import ParameterItem from '../Common/ParameterItem';
-import makePropertiesBox from '../Common/makePropertiesBox';
+import makePropertiesBox from '../Common/PropertiesBox';
 import './NodeProperties.css';
 import { utcTimeToLocal } from '../../utils';
 import { ExecutorInfo } from '../../types';

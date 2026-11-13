@@ -7,7 +7,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
 import { PARAMETER_TYPES } from '../../constants';
-import renderValueElement from '../Common/renderValueElement';
+import renderValueElement from '../Common/RenderValueElement';
 import './ParameterItem.css';
 
 export function getDefaultParameterValue(parameter_type: string): any {

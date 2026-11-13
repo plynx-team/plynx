@@ -5,7 +5,7 @@ import Tooltip from '../../Common/Tooltip';
 import Icon from '../../Common/Icon';
 import ParameterItem from '../../Common/ParameterItem';
 import './OperationNode.css';
-import { makeControlCheckbox } from '../../Common/controlButton';
+import { makeControlCheckbox } from '../../Common/ControlButton';
 import { NODE_RUNNING_STATUS, PRIMITIVE_TYPES } from '../../../constants';
 import { NodeData, NodeInput, NodeOutput, PluginsDict } from '../../../types';
 
