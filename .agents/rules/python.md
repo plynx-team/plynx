@@ -31,9 +31,9 @@ description: Python coding style, architecture patterns, and required checks for
 All changes must pass these checks (Pylint requires a 10.0 score):
 
 ```bash
-flake8 plynx tests
-isort plynx tests
-mypy plynx --ignore-missing-imports
-pylint --disable=F0401 plynx
+uv run flake8 plynx tests
+uv run isort plynx tests
+uv run mypy plynx --ignore-missing-imports
+uv run pylint --disable=F0401 plynx
 make pytest
 ```

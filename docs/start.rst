@@ -37,3 +37,4 @@ Other `make` commands
 - :code:`make up` - run the services locally.
 - :code:`make down` - shut down services.
 - :code:`make dev` - run developer version of PLynx.
+- :code:`make pytest` - run unit tests with uv.

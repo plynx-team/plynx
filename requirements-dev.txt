@@ -7,6 +7,7 @@ pre-commit>=4.0.1
 pylint>=3.3.0
 pytest>=8.3.4
 setuptools>=68.0
+uv>=0.4.0
 watchdog>=6.0.0
 wheel>=0.44.0
 
