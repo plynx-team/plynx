@@ -25,8 +25,8 @@ jobs:
           name: install requirements
           command: |
             set -x
-            pip install --upgrade pip
-            pip install -e ".[all]"
+            pip install uv
+            uv pip install --system -e ".[all]"
 
       # Run linters and unit tests
       - run:
@@ -43,13 +43,13 @@ jobs:
           command: pylint --disable=F0401 plynx
       - run:
           name: pytest
-          command: python -m pytest
+          command: uv run pytest
 
       - run:
           name: python package build and installation
           command: |
-            python -m build
-            pip install dist/*.whl
+            uv build
+            uv pip install --system dist/*.whl
 
   build_docker:
     machine: true

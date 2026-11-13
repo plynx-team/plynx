@@ -38,7 +38,8 @@ dev:
 	$(DOCKER_COMPOSE) -f $(DOCKER_COMPOSE_DEV_FILE) up --abort-on-container-exit --scale api=1 --scale test=0 --scale frontend=1 --scale workers=2
 
 build_package:
-	python3 -m build
+	uv build
 
 pytest:
-	python3 -m pytest
+	uv run pytest
+

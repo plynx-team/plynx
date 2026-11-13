@@ -7,7 +7,7 @@ from setuptools import find_packages, setup
 
 
 def parse_requirements(filename):
-    """Load requirements from a pip requirements file."""
+    """Load requirements from a requirements file."""
     with open(filename, encoding="utf-8") as req_file:
         return [
             line.strip()

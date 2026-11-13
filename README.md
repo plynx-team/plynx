@@ -83,6 +83,7 @@ By default it will start the following services:
 - `make run_tests` - build docker images and run the tests.
 - `make up` - run the services locally.
 - `make dev` - run developer version of PLynx.
+- `make pytest` - run unit tests with uv.
 
 
 ### Config
@@ -110,7 +111,7 @@ Plynx config location is can be set in env variable `PLYNX_CONFIG_PATH`. Default
 
 Run:
 ```
-pip install -e .[all]
+uv pip install -e ".[all]"
 
 pre-commit install
 ```

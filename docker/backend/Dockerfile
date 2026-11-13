@@ -1,6 +1,9 @@
 # Use an official Python runtime as a parent image
 FROM python:3.12-slim
 
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
 # Set the working directory to /app
 WORKDIR /app
 
@@ -46,9 +49,9 @@ COPY ./LICENSE /tmp/build/LICENSE
 COPY ./requirements.txt /tmp/build/requirements.txt
 COPY ./requirements-dev.txt /tmp/build/requirements-dev.txt
 COPY ./tests /app/tests
-RUN pip install --no-cache-dir /tmp/build && rm -rf /tmp/build
+RUN uv pip install --system --no-cache /tmp/build && rm -rf /tmp/build
 
 # Install extra docker requirements
 COPY ./docker/backend/requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt && rm /app/requirements.txt
+RUN uv pip install --system --no-cache -r /app/requirements.txt && rm /app/requirements.txt
 RUN echo '[]' > /app/nodes.json
