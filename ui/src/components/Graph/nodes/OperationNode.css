@@ -13,14 +13,14 @@
 
 .flow-node {
     width: 210px;
-    border: 2px solid #333;
+    border: 2px solid #3c3c3c;
     border-radius: 10px;
-    background-color: #050505;
+    background-color: #2a2a2a;
     user-select: none;
 }
 
 .selected > .flow-node {
-    border: 2px solid #00BFFF;
+    border: 2px solid var(--color-primary);
 }
 
 .flow-node-header {
@@ -28,14 +28,14 @@
 
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
-  border-bottom: 1px solid #353535;
+  border-bottom: 1px solid #383838;
 
   height: 23px;
 
   font-size: 13px;
   letter-spacing: 1px;
 
-  color:white;
+  color: var(--text-primary);
   font-weight: 600;
   text-transform: uppercase;
 
@@ -87,16 +87,23 @@
   background-color: rgba(0, 70, 70, 0.7);
 }
 
-.node-running-status-failed > .flow-node-header {
+.node-running-status-failed > .flow-node-header,
+.node-running-status-failed_waiting > .flow-node-header {
   background-color: rgba(80, 0, 0, 0.7);
 }
 
-.node-running-status-success > .flow-node-header {
+.node-running-status-success > .flow-node-header,
+.node-running-status-restored > .flow-node-header,
+.node-running-status-special > .flow-node-header {
   background-color: rgba(0, 70, 0, 0.7);
 }
 
 .node-running-status-static > .flow-node-header {
   background-color: rgba(128, 96, 44, 0.6);
+}
+
+.node-running-status-canceled > .flow-node-header {
+  background-color: rgba(70, 0, 70, 0.7);
 }
 
 .node-status-deprecated > .flow-node-header {
@@ -162,34 +169,34 @@
 }
 
 .flow-node-item-thumbnail:hover {
-    border-color: #3f6da0;
-    background-color: #444;
+    border-color: var(--color-primary);
+    background-color: var(--bg-card-hover);
 }
 
 .flow-node-item-thumbnail:active {
-    border-color: #00BFFF;
+    border-color: var(--color-primary-active);
 }
 
 .react-flow__minimap-mask {
-  fill: rgba(128, 128, 128, 0.5);
+  fill: rgba(30, 30, 30, 0.6);
 }
 
 .react-flow__minimap-node {
-  fill: #999;
+  fill: #666;
   stroke: none;
 }
 
 
 .react-flow__edge .react-flow__edge-path {
-  stroke: #ccc;
-  stroke-opacity: 0.75;
+  stroke: #777;
+  stroke-opacity: 0.7;
 }
 
 .react-flow__edge.selected .react-flow__edge-path,
 .react-flow__edge:focus .react-flow__edge-path,
 .react-flow__edge:focus-visible .react-flow__edge-path {
-  stroke: #00BFFF !important;
-  stroke-opacity: 0.75;
+  stroke: var(--color-primary) !important;
+  stroke-opacity: 0.9;
 }
 
 .flow-node-item .react-flow__handle {
@@ -197,11 +204,11 @@
 }
 
 .flow-node-item .react-flow__handle-connecting {
-  background: #c00;
+  background: var(--color-error);
 }
 
 .flow-node-item .react-flow__handle-valid {
-  background: #0c0;
+  background: var(--color-success);
 }
 
 .flow-node-footer {
@@ -220,11 +227,11 @@
 
 .flow-button:hover .flow-button-icon {
   cursor: pointer;
-  background-color: #444;
+  background-color: var(--bg-card-hover);
 }
 
 .flow-button:active .flow-button-icon {
-  background-color: #62a6f3;
+  background-color: var(--color-primary);
 }
 
 .flow-button-icon {
@@ -249,7 +256,7 @@
   top: 0px;
   left: 0px;
   border-radius: 10px;
-  background: conic-gradient(from var(--a), rgba(0, 0, 0, 0), #00BFFF, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0), rgba(0, 0, 0, 0), rgba(0, 0, 0, 0), rgba(0, 0, 0, 0));
+  background: conic-gradient(from var(--a), rgba(0, 0, 0, 0), var(--color-status-running), rgba(0, 0, 0, 0), rgba(0, 0, 0, 0), rgba(0, 0, 0, 0), rgba(0, 0, 0, 0), rgba(0, 0, 0, 0));
   animation: border 2s linear infinite;
 }
 

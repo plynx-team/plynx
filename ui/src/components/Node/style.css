@@ -15,10 +15,10 @@
 }
 
 .EditNodeHeader {
-  background-color: #3b3b3b;
+  background-color: var(--bg-panel);
   width: 100%;
   padding: 3px;
-  border-bottom: 1px solid black;
+  border-bottom: 1px solid var(--border-subtle);
   box-sizing: border-box;
   flex-shrink: 0;
 }
@@ -29,7 +29,7 @@
   height: 100%;
   min-width: 0;
   box-sizing: border-box;
-  background-color: #5b5b5b;
+  background-color: var(--bg-panel);
 }
 
 .EditNodeComponents {
@@ -45,8 +45,9 @@
   font-weight: var(--font-weight-semibold);
   font-size: var(--font-size-lg);
   text-align: center;
-  background-color: #2b2b2b;
-  color: #fff;
+  background-color: var(--bg-header);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
   padding: 4px 0;
   flex-shrink: 0;
   box-sizing: border-box;
@@ -69,14 +70,14 @@
   width: 250px;
   min-width: 250px;
   flex-shrink: 0;
-  border-right: 1px solid #333;
+  border-right: 1px solid var(--border-subtle);
 }
 
 .EditNodeOutputs {
   width: 250px;
   min-width: 250px;
   flex-shrink: 0;
-  border-left: 1px solid #333;
+  border-left: 1px solid var(--border-subtle);
 }
 
 .EditNodeList .Add {
@@ -95,16 +96,16 @@
   font-family: var(--font-sans);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-regular);
-  color: #fff;
-  background-color: #383838;
-  border: 1px solid #555;
+  color: var(--text-primary);
+  background-color: var(--bg-button);
+  border: 1px solid var(--border-default);
   border-radius: 4px;
   cursor: pointer;
 }
 
 .EditNodeList .Add .control-button:hover {
-  background-color: #4a4a4a;
-  border-color: #2196F3;
+  background-color: var(--bg-button-hover);
+  border-color: var(--color-primary);
 }
 
 .EditNodeList .Add .control-button img {

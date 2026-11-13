@@ -5,7 +5,7 @@
 }
 
 .ParameterListBackgroundDragging {
-  background: lightblue;
+  background: var(--color-primary-subtle);
 }
 
 .ParameterDiv {
@@ -24,10 +24,10 @@
 
 .ParameterListItem {
   box-sizing: border-box;
-  background-color: #404040;
-  color: white;
+  background-color: var(--bg-card);
+  color: var(--text-primary);
   padding: 3px;
-  border: 1px solid #202020;
+  border: 1px solid var(--border-subtle);
   border-radius: 4px;
   margin: 0px;
 
@@ -47,7 +47,7 @@
 .ParameterSecondItem {
   box-sizing: border-box;
   padding: 0 8px 0 8px;
-  border-left: 1px solid white;
+  border-left: 1px solid var(--border-default);
   min-width: 0;
   overflow: hidden;
   position: relative;
@@ -64,7 +64,7 @@
 .ParameterSecondItemTitle {
   font-weight: var(--font-weight-semibold);
   font-size: var(--font-size-base);
-  color: #ddd;
+  color: var(--text-primary);
 }
 
 .ParameterSecondItemValue {

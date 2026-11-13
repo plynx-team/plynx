@@ -12,9 +12,9 @@
 }
 
 .code-mode-select {
-  background-color: #2b2b2b;
-  color: #fff;
-  border: 1px solid #444;
+  background-color: var(--bg-button);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
   border-radius: 3px;
   padding: 3px 8px;
   font-family: var(--font-sans);
@@ -24,5 +24,5 @@
 }
 
 .code-mode-select:focus {
-  border-color: #2196F3;
+  border-color: var(--color-primary);
 }

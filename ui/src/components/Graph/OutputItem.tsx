@@ -44,6 +44,7 @@ export default class OutputItem extends Component<GraphOutputItemProps> {
         values: this.props.item.values,
         download_name: this.props.item.name,
         display_raw: displayRaw,
+        is_array: this.props.item.is_array,
       });
     }
   }

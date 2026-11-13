@@ -3,12 +3,8 @@ import LoadingScreen from '../LoadingScreen';
 import { PLynxApi } from '../../API';
 import { API_ENDPOINT } from '../../configConsts';
 import { downloadBlob } from '../../utils';
-import PaperComponent from './DraggableComponent';
+import Dialog from './Dialog';
 import { PreviewData } from '../../types';
-
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
 
 import './PreviewDialog.css';
 
@@ -36,13 +32,37 @@ export default class PreviewDialog extends Component<PreviewDialogProps, Preview
     const values = props.values || (props.resource_id ? [props.resource_id] : []);
     const displayRaw = Boolean(props.display_raw);
     const downloadName = props.download_name || props.title;
+    const isArray = Boolean(props.is_array);
+
+    let initialContent = '';
+    if (displayRaw) {
+      let targetValue: any = values;
+      // In Plynx data model, Output.values is always a List[Any].
+      // When is_array is false, unbox the singular value from values[0].
+      if (!isArray && Array.isArray(values) && values.length === 1) {
+        targetValue = values[0];
+      }
+
+      if (typeof targetValue === 'string') {
+        initialContent = targetValue;
+      } else if (typeof targetValue === 'number' || typeof targetValue === 'boolean') {
+        initialContent = String(targetValue);
+      } else if (targetValue !== undefined && targetValue !== null) {
+        try {
+          initialContent = JSON.stringify(targetValue, null, 2);
+        } catch {
+          initialContent = String(targetValue);
+        }
+      }
+    }
+
     this.state = {
       title: props.title,
       file_type: props.file_type,
       values,
       display_raw: displayRaw,
       download_name: downloadName,
-      content: displayRaw ? JSON.stringify(values) : '',
+      content: initialContent,
       loading: !displayRaw,
     };
   }
@@ -91,15 +111,20 @@ export default class PreviewDialog extends Component<PreviewDialogProps, Preview
 
   previewMessage(resourceId: string, downloadName: string) {
     return (
-      <div className="note">
-        {'This is a preview and might not the entire file. You can download the entire file here:'}
+      <div className="preview-note-banner">
+        <div className="preview-note-text">
+          This is a preview and might not be the entire file. You can download the entire file here:
+        </div>
         <div
-          className="preview-download-link"
+          className="preview-download-button"
           onClick={() => {
             this.download(resourceId, downloadName);
           }}
+          role="button"
+          tabIndex={0}
         >
-          <img src="/icons/download.svg" alt="download" /> {resourceId}
+          <img src="/icons/download.svg" alt="download" />
+          <span>{downloadName || resourceId}</span>
         </div>
       </div>
     );
@@ -108,39 +133,31 @@ export default class PreviewDialog extends Component<PreviewDialogProps, Preview
   render() {
     return (
       <Dialog
-        className="FileDialog"
+        className="PreviewDialogWindow"
         onClose={() => {
           this.props.onClose();
         }}
-        open
-        scroll="paper"
-        fullWidth
-        PaperComponent={PaperComponent}
-        aria-labelledby="draggable-dialog-title"
-        aria-describedby="scroll-dialog-description"
+        width={640}
+        title={this.state.title}
+        contentPadding={0}
       >
         {this.state.loading && (
           <div className="LoadHolder">
             <LoadingScreen />
           </div>
         )}
-        <DialogTitle id="draggable-dialog-title" className="mui-dialog-title">
-          {this.state.title}
-        </DialogTitle>
-        <DialogContent
-          sx={{
-            padding: '0px',
-            margin: '3px',
-            borderRadius: '10px',
-            backgroundColor: '#333',
-          }}
-        >
-          <div>
-            {!this.state.display_raw && this.state.values.length > 0 &&
-              this.previewMessage(this.state.values[0], this.state.download_name)}
-            <div dangerouslySetInnerHTML={{ __html: this.state.content }} />
-          </div>
-        </DialogContent>
+        {!this.state.display_raw && this.state.values.length > 0 &&
+          this.previewMessage(this.state.values[0], this.state.download_name)}
+        <div className="preview-content-box selectable">
+          {this.state.display_raw ? (
+            <pre className="preview-code-block">{this.state.content}</pre>
+          ) : (
+            <div
+              className="preview-code-block"
+              dangerouslySetInnerHTML={{ __html: this.state.content }}
+            />
+          )}
+        </div>
       </Dialog>
     );
   }

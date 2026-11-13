@@ -6,6 +6,49 @@
   --font-size-lg: 16px;
   --font-weight-regular: 400;
   --font-weight-semibold: 600;
+
+  /* Photoshop-inspired Gray & Blue Theme */
+  --bg-app: #1e1e1e;
+  --bg-canvas: #232323;
+  --bg-header: #262626;
+  --bg-panel: #2b2b2b;
+  --bg-panel-secondary: #242424;
+  --bg-card: #333333;
+  --bg-card-hover: #3e3e3e;
+  --bg-button: #303030;
+  --bg-button-hover: #3d3d3d;
+
+  --border-subtle: #363636;
+  --border-default: #404040;
+  --border-strong: #525252;
+
+  --color-primary: #2680eb;
+  --color-primary-hover: #3d91f5;
+  --color-primary-active: #1b6cd4;
+  --color-primary-selected: #244b7a;
+  --color-primary-subtle: rgba(38, 128, 235, 0.18);
+
+  --text-primary: #ebebeb;
+  --text-secondary: #b0b0b0;
+  --text-tertiary: #787878;
+
+  /* Status Colors */
+  --color-status-success: #38c172;
+  --color-status-ready: #48bb78;
+  --color-status-running: #00d8ff;
+  --color-status-in-queue: #ffa726;
+  --color-status-failed: #f44336;
+  --color-status-canceled: #d946ef;
+  --color-status-created: #b0b0b0;
+  --color-status-static: #ecc94b;
+  --color-status-deprecated: #f44336;
+  --color-status-mandatory-deprecated: #b71c1c;
+
+  /* Semantic Feedback */
+  --color-success: #38c172;
+  --color-warning: #ffa726;
+  --color-error: #f44336;
+  --color-info: #00d8ff;
 }
 
 body {
@@ -14,8 +57,8 @@ body {
   font-family: var(--font-sans);
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-regular);
-  background-color: #111;
-  color: #eee;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
 }
 
 /* Base form elements */
@@ -24,16 +67,16 @@ select,
 textarea {
   box-sizing: border-box;
   font-family: var(--font-sans);
-  border: 1px solid #202020;
+  border: 1px solid var(--border-default);
   border-radius: 2px;
-  background-color: #2b2b2b;
-  color: #eee;
+  background-color: var(--bg-panel-secondary);
+  color: var(--text-primary);
 }
 
 input:read-only,
 select:disabled,
 textarea:read-only {
-  color: #999;
+  color: var(--text-tertiary);
 }
 
 .EnumItem select {
@@ -47,14 +90,14 @@ textarea:read-only {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1e1e1e;
+  background: var(--bg-app);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #444;
+  background: var(--border-default);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #666;
+  background: var(--border-strong);
 }

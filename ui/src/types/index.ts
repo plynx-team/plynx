@@ -110,4 +110,5 @@ export interface PreviewData {
   values?: any[];
   download_name: string;
   display_raw?: boolean;
+  is_array?: boolean;
 }

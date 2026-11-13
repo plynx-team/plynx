@@ -12,13 +12,13 @@
   max-height: 32px;
   text-align: center;
   cursor: pointer;
-  color: #eee;
+  color: var(--text-primary);
   font-family: var(--font-sans);
   font-weight: var(--font-weight-regular);
   font-size: var(--font-size-base);
   text-decoration: none;
-  background-color: #2b2b2b;
-  border: 1px solid #444;
+  background-color: var(--bg-button);
+  border: 1px solid var(--border-default);
   margin: 0 2px;
   box-sizing: border-box;
   white-space: nowrap;
@@ -36,15 +36,18 @@
 }
 
 .control-button:hover {
-  background-color: #444;
+  background-color: var(--bg-button-hover);
+  border-color: var(--border-strong);
 }
 
 .control-button:active {
-  background-color: #62a6f3;
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .control-button.selected {
-  background-color: #3f6da0;
+  background-color: var(--color-primary-selected);
+  border-color: var(--color-primary);
 }
 
 .control-button.demo-button {
@@ -53,11 +56,11 @@
 
 .control-button.demo:hover {
   animation: none;
-  background-color: #444;
+  background-color: var(--bg-button-hover);
 }
 
 .control-button.demo:active {
-  background-color: #62a6f3;
+  background-color: var(--color-primary);
 }
 
 .control-button.disabled {
@@ -100,9 +103,10 @@
 
 .control-toggle > .control-button.disabled {
   display: inline-flex;
-  background-color: #444;
+  background-color: var(--bg-panel-secondary);
   cursor: default;
-  color: #777;
+  color: var(--text-tertiary);
+  border-color: var(--border-subtle);
 }
 
 /* Control Checkbox */
@@ -111,7 +115,7 @@
   align-items: center;
   padding: 2px 0 2px 10px;
   text-align: center;
-  color: #eee;
+  color: var(--text-primary);
   font-family: var(--font-sans);
   font-weight: var(--font-weight-regular);
   font-size: var(--font-size-base);
@@ -125,7 +129,7 @@
 }
 
 .disabled .control-checkbox-text {
-  color: #333;
+  color: var(--text-tertiary);
 }
 
 /* Pagination */
@@ -146,7 +150,7 @@
 .pagination li {
   display: inline-flex;
   border-radius: 2px;
-  color: #ddd;
+  color: var(--text-secondary);
   font-weight: var(--font-weight-regular);
   font-size: var(--font-size-base);
   white-space: nowrap;
@@ -154,11 +158,12 @@
 }
 
 .pagination li:hover {
-  background-color: #555;
+  background-color: var(--bg-card-hover);
 }
 
 .pagination li.active {
-  background-color: #3f6da0;
+  background-color: var(--color-primary-selected);
+  color: var(--text-primary);
 }
 
 .pagination li.break-me {
@@ -180,7 +185,7 @@
   padding: 2px 10px;
   text-align: center;
   cursor: pointer;
-  color: #3363b0;
+  color: var(--color-primary);
   font-family: var(--font-sans);
   font-weight: var(--font-weight-semibold);
   font-size: var(--font-size-base);
@@ -189,12 +194,13 @@
 }
 
 .menu-button:hover {
-  background-color: #ccc;
+  background-color: var(--bg-card-hover);
   text-decoration: underline;
 }
 
 .menu-button:active {
-  background-color: #62a6f3;
+  background-color: var(--color-primary);
+  color: #fff;
 }
 
 /* Mobile responsive */

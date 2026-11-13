@@ -3,18 +3,18 @@ import { createTheme } from '@mui/material/styles';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#2196F3',
-      light: '#42a5f5',
-      dark: '#1565c0',
+      main: '#2680eb',
+      light: '#3d91f5',
+      dark: '#1b6cd4',
       contrastText: '#fff',
     },
     background: {
-      default: '#333',
-      paper: '#404040',
+      default: '#222222',
+      paper: '#2a2a2a',
     },
     text: {
-      primary: '#fff',
-      secondary: '#eee',
+      primary: '#ebebeb',
+      secondary: '#b0b0b0',
     },
   },
   typography: {
@@ -30,16 +30,21 @@ const theme = createTheme({
       styleOverrides: {
         paper: {
           fontFamily: "'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+          backgroundColor: '#2a2a2a',
+          color: '#ebebeb',
         },
       },
     },
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
-          color: '#eee',
-          borderRadius: '5pt',
+          color: '#ebebeb',
+          borderRadius: '4px',
           fieldset: {
-            borderColor: '#999',
+            borderColor: '#404040',
+          },
+          '&:hover fieldset': {
+            borderColor: '#525252',
           },
         },
       },
@@ -47,7 +52,7 @@ const theme = createTheme({
     MuiInputLabel: {
       styleOverrides: {
         root: {
-          color: '#999',
+          color: '#b0b0b0',
         },
       },
     },

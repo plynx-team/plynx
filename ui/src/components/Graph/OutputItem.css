@@ -15,7 +15,7 @@
 }
 
 .OutputItemPreview {
-  color: #2196F3;
+  color: var(--color-primary);
   cursor: pointer;
 }
 
@@ -31,12 +31,12 @@
 
 .OutputItemPreview:hover {
   text-decoration: underline;
-  color: #fff;
+  color: var(--color-primary-hover);
 }
 
 .OutputValueCell {
   cursor: pointer;
-  color: #ccc;
+  color: var(--text-secondary);
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
@@ -46,7 +46,7 @@
 
 .OutputValueCell:hover {
   text-decoration: underline;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .OutputValueCell img {

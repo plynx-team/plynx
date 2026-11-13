@@ -2,12 +2,13 @@
 
 .Header {
   display: block;
-  background-color: #111;
+  background-color: var(--bg-header);
   font-size: var(--font-size-lg);
   font-family: var(--font-sans);
   text-align: left;
   position: relative;
   height: 40px;
+  z-index: 1000;
 }
 
 .Header .logo,
@@ -19,13 +20,13 @@
 
 .Header .logo:hover,
 .Header .menu-button-sl:hover {
-  color: #fff;
-  background-color: #333;
+  color: var(--text-primary);
+  background-color: var(--bg-card-hover);
 }
 
 .Header .logo:active,
 .Header .menu-button-sl:active {
-  background-color: #62a6f3;
+  background-color: var(--color-primary);
 }
 
 .Header a:hover {
@@ -35,7 +36,7 @@
 .Header .Navigation {
   position: absolute;
   font-weight: var(--font-weight-regular);
-  color: #ccc;
+  color: var(--text-secondary);
   font-family: var(--font-sans);
   top: 0;
   height: 40px;
@@ -73,19 +74,19 @@
 }
 
 .Header .NavigationItems .Item:hover:not(.active) {
-  border-bottom: 3px solid #fff;
+  border-bottom: 3px solid var(--border-strong);
 }
 
 .Header .NavigationItems .active {
-  color: #2196F3;
+  color: var(--color-primary);
   font-weight: var(--font-weight-semibold);
-  border-bottom: 3px solid #2196F3;
+  border-bottom: 3px solid var(--color-primary);
 }
 
 .Header .separator {
   display: inline-flex;
   align-self: center;
-  border-left: 1px solid #333;
+  border-left: 1px solid var(--border-default);
   width: 0;
   height: 20px;
   font-size: 0;
@@ -138,7 +139,7 @@
 }
 
 .UserButton .action:hover {
-  color: #2196F3;
+  color: var(--color-primary);
   text-decoration: underline;
 }
 
@@ -146,11 +147,11 @@
   height: 24px;
   width: 24px;
   border-radius: 50%;
-  border: 2px solid #505050;
+  border: 2px solid var(--border-strong);
 }
 
 .user-icon:hover {
-  border-color: #2196F3;
+  border-color: var(--color-primary);
 }
 
 .user-menu {
@@ -215,7 +216,7 @@
   }
 
   .Header .NavigationItems .active {
-    border-left: 3px solid #2196F3;
+    border-left: 3px solid var(--color-primary);
     border-bottom: 0;
   }
 

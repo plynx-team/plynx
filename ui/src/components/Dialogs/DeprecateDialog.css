@@ -1,7 +1,8 @@
 /* Deprecate operation dialog */
 
 .DeprecateDialogWindow {
-  background-color: #404040;
+  background-color: var(--bg-panel);
+  color: var(--text-primary);
 }
 
 .DeprecateDialog {
@@ -44,11 +45,12 @@
 }
 
 .DeprecateDialog > .MainBlock > .Row > .Col > a {
-  color: #ccc;
+  color: var(--color-primary);
   text-decoration: none;
 }
 
 .DeprecateDialog > .MainBlock > .Row > .Col > a:hover {
+  color: var(--color-primary-hover);
   text-decoration: underline;
 }
 

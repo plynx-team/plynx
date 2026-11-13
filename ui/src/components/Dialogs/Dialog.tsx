@@ -18,11 +18,12 @@ export interface DialogProps {
   className?: string;
   defaultX?: number;
   defaultY?: number;
+  contentPadding?: number | string;
 }
 
 export default class Dialog extends Component<DialogProps> {
   render() {
-    const { title, onClose, children, className, width, height } = this.props;
+    const { title, onClose, children, className, width, height, contentPadding } = this.props;
 
     return (
       <MuiDialog
@@ -38,8 +39,9 @@ export default class Dialog extends Component<DialogProps> {
             maxWidth: '92vw',
             height: height ? `${height}px` : 'auto',
             maxHeight: '92vh',
-            backgroundColor: '#2b2b2b',
-            color: '#fff',
+            backgroundColor: 'var(--bg-panel)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border-default)',
             borderRadius: '6px',
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.45)',
           },
@@ -52,13 +54,13 @@ export default class Dialog extends Component<DialogProps> {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            backgroundColor: '#202020',
+            backgroundColor: 'var(--bg-header)',
             padding: '10px 16px',
-            borderBottom: '1px solid #383838',
+            borderBottom: '1px solid var(--border-subtle)',
             userSelect: 'none',
           }}
         >
-          <Typography variant="subtitle1" component="div" sx={{ fontWeight: 'var(--font-weight-semibold)', fontSize: 'var(--font-size-lg)', color: '#fff' }}>
+          <Typography variant="subtitle1" component="div" sx={{ fontWeight: 'var(--font-weight-semibold)', fontSize: 'var(--font-size-lg)', color: 'var(--text-primary)' }}>
             {title}
           </Typography>
           <IconButton
@@ -66,10 +68,10 @@ export default class Dialog extends Component<DialogProps> {
             onClick={onClose}
             size="small"
             sx={{
-              color: '#888',
+              color: 'var(--text-secondary)',
               '&:hover': {
-                color: '#fff',
-                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                color: 'var(--text-primary)',
+                backgroundColor: 'var(--bg-card-hover)',
               },
             }}
           >
@@ -79,9 +81,9 @@ export default class Dialog extends Component<DialogProps> {
         <DialogContent
           className={className}
           sx={{
-            padding: '16px',
-            backgroundColor: '#2b2b2b',
-            color: '#eee',
+            padding: contentPadding !== undefined ? contentPadding : '16px',
+            backgroundColor: 'var(--bg-panel)',
+            color: 'var(--text-primary)',
             fontSize: 'var(--font-size-base)',
             overflowY: 'auto',
           }}

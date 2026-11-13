@@ -27,9 +27,9 @@
 
 /* Status Badges */
 .status-badge {
-  border: 1px solid #808080;
+  border: 1px solid var(--border-default);
   border-radius: 5px;
-  background-color: #202020;
+  background-color: var(--bg-card);
   text-align: center;
   margin-right: 20px;
   padding: 1px 6px;
@@ -39,35 +39,72 @@
 }
 
 .status-badge.CREATED {
-  color: #fff;
+  color: var(--color-status-created);
 }
 
 .status-badge.READY {
-  color: #00ff20;
+  color: var(--color-status-ready);
+}
+
+.status-badge.IN_QUEUE {
+  color: var(--color-status-in-queue);
 }
 
 .status-badge.RUNNING {
-  color: #00d8ff;
-}
-
-.status-badge.CANCELED {
-  color: #ff00ff;
+  color: var(--color-status-running);
 }
 
 .status-badge.SUCCESS {
-  color: #00ff00;
+  color: var(--color-status-success);
+}
+
+.status-badge.RESTORED {
+  color: var(--color-status-success);
+}
+
+.status-badge.SPECIAL {
+  color: var(--color-status-success);
 }
 
 .status-badge.FAILED {
-  color: #f44336;
+  color: var(--color-status-failed);
+}
+
+.status-badge.FAILED_WAITING {
+  color: var(--color-status-failed);
+}
+
+.status-badge.CANCELED {
+  color: var(--color-status-canceled);
+}
+
+.status-badge.STATIC {
+  color: var(--color-status-static);
 }
 
 .status-badge.DEPRECATED {
-  color: #f44336;
+  color: var(--color-status-deprecated);
 }
 
 .status-badge.MANDATORY_DEPRECATED {
-  color: #b71c1c;
+  color: var(--color-status-mandatory-deprecated);
+}
+
+/* FileDialog & generic status text colors */
+.Status.CREATED {
+  color: var(--color-status-created);
+}
+
+.Status.READY {
+  color: var(--color-status-ready);
+}
+
+.Status.DEPRECATED {
+  color: var(--color-status-deprecated);
+}
+
+.Status.MANDATORY_DEPRECATED {
+  color: var(--color-status-mandatory-deprecated);
 }
 
 .node-list-view > .ControlButtons {

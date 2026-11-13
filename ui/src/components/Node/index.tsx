@@ -146,6 +146,9 @@ export default class Node extends Component<NodeComponentProps, NodeComponentSta
             title={this.state.previewData.title}
             file_type={this.state.previewData.file_type}
             resource_id={this.state.previewData.resource_id}
+            values={this.state.previewData.values}
+            display_raw={this.state.previewData.display_raw}
+            is_array={this.state.previewData.is_array}
             download_name={this.state.previewData.download_name}
             onClose={() => this.handleCloseDialogs()}
           />

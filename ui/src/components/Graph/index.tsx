@@ -349,6 +349,7 @@ class Graph extends Component<GraphProps, GraphState> {
         values: output.values,
         download_name: output.name,
         display_raw: displayRaw,
+        is_array: output.is_array,
       });
     } else {
       console.log("Resource is not ready yet");
@@ -1037,6 +1038,7 @@ class Graph extends Component<GraphProps, GraphState> {
             file_type={this.state.previewData.file_type}
             values={this.state.previewData.values}
             display_raw={this.state.previewData.display_raw}
+            is_array={this.state.previewData.is_array}
             download_name={this.state.previewData.download_name}
             onClose={() => this.handleClosePreview()}
           />
@@ -1097,7 +1099,7 @@ class Graph extends Component<GraphProps, GraphState> {
             nodesConnectable={this.state.editable}
             fitView
             >
-            <Background />
+            <Background color="#383838" gap={16} size={1.5} />
             <ControlsStyled/>
             <MiniMap
                 style={minimapStyle}

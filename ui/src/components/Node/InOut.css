@@ -5,7 +5,7 @@
 }
 
 .InOutListBackgroundDragging {
-  background: lightblue;
+  background: var(--color-primary-subtle);
 }
 
 .InOutDiv {
@@ -24,10 +24,10 @@
 
 .InOutItem {
   box-sizing: border-box;
-  background-color: #404040;
-  color: white;
+  background-color: var(--bg-card);
+  color: var(--text-primary);
   padding: 3px;
-  border: 1px solid #202020;
+  border: 1px solid var(--border-subtle);
   border-radius: 4px;
   margin: 0px;
   width: 100%;
