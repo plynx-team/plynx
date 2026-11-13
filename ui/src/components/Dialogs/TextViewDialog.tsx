@@ -63,8 +63,8 @@ export default class TextViewDialog extends Component<TextViewDialogProps, TextV
             component="pre"
             sx={{
               color: '#eee',
-              fontFamily: 'monospace',
-              fontSize: '0.9rem',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 'var(--font-size-base)',
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',
               backgroundColor: '#262626',

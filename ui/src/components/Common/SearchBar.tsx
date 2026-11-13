@@ -105,7 +105,7 @@ export default class SearchBar extends Component<SearchBarProps, SearchBarState>
             height: '32px',
             backgroundColor: '#2b2b2b',
             color: '#fff',
-            fontSize: '0.9rem',
+            fontSize: 'var(--font-size-base)',
             borderRadius: '3px',
             paddingLeft: '8px',
             '& .MuiOutlinedInput-input': {

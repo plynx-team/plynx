@@ -24,32 +24,33 @@
 
 .login-hello-message {
   text-align: center;
-  font-size: 15pt;
-  font-weight: 600;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
   margin-bottom: 12px;
 }
 
 .login-notes {
   margin: 0 0 15px 0;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: #ccc;
 }
 
 .NameCell {
   margin: 8px 0 4px 0;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: #ccc;
 }
 
 .ValueCell > input {
   width: 100%;
   padding: 6px 10px;
-  font-size: 14px;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
   border-radius: 3px;
 }
 
 .ErrorCell {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: #f44336;
   margin-top: 5px;
 }
@@ -71,9 +72,9 @@
   padding: 8px;
   text-align: center;
   cursor: pointer;
-  font-family: 'Source Sans Pro', sans-serif;
-  font-size: 14pt;
-  font-weight: 600;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
   border: none;
   transition: background-color 0.15s ease-in;
 }
@@ -89,7 +90,7 @@
 .toggleState,
 .forgotPassword {
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: #e0e0e0;
   transition: color 0.1s ease-in;
 }

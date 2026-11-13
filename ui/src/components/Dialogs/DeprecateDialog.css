@@ -6,11 +6,18 @@
 
 .DeprecateDialog {
   margin: 5px;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+}
+
+.DeprecateDialog input {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
 }
 
 .DeprecateDialog > .MainBlock > .Title {
-  font-weight: 700;
-  font-size: 15pt;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-lg);
   margin-bottom: 8px;
 }
 

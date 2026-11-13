@@ -170,7 +170,7 @@ export default function renderValueElement(args: RenderValueElementArgs): React.
             />
           }
           label={
-            <Typography variant="body2" sx={{ color: '#eee', fontSize: '0.85rem' }}>
+            <Typography variant="body2" sx={{ color: '#eee', fontSize: 'var(--font-size-base)' }}>
               {value ? 'True' : 'False'}
             </Typography>
           }
@@ -388,7 +388,7 @@ export class ValueList extends Component<ValueListProps, ValueListState> {
             sx={{
               color: '#2196F3',
               textTransform: 'none',
-              fontSize: '0.8rem',
+              fontSize: 'var(--font-size-base)',
               padding: '2px 8px',
               marginTop: 0.5,
               alignSelf: 'flex-start',
@@ -476,7 +476,7 @@ export class EnumItem extends Component<EnumItemProps, EnumItemState> {
             disabled={this.state.readOnly}
             sx={{
               height: 28,
-              fontSize: '0.85rem',
+              fontSize: 'var(--font-size-base)',
               color: '#fff',
               backgroundColor: '#262626',
               '& .MuiSelect-select': {
@@ -489,7 +489,7 @@ export class EnumItem extends Component<EnumItemProps, EnumItemState> {
             }}
           >
             {this.state.values.map((val, idx) => (
-              <MenuItem value={idx} key={idx} sx={{ fontSize: '0.85rem' }}>
+              <MenuItem value={idx} key={idx} sx={{ fontSize: 'var(--font-size-base)' }}>
                 {val}
               </MenuItem>
             ))}
@@ -497,7 +497,7 @@ export class EnumItem extends Component<EnumItemProps, EnumItemState> {
         </FormControl>
         {this.props.showEnumOptions && (
           <Box sx={{ marginTop: 1 }}>
-            <Typography variant="caption" sx={{ color: '#aaa', fontWeight: 600 }}>
+            <Typography variant="body2" sx={{ color: '#aaa', fontWeight: 'var(--font-weight-semibold)', fontSize: 'var(--font-size-base)' }}>
               Options:
             </Typography>
             <ValueList

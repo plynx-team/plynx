@@ -13,7 +13,8 @@
 }
 
 .ValueList a {
-  font-family: monospace;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
   text-decoration: none;
   padding: 0 10px;
   border-radius: 3px;

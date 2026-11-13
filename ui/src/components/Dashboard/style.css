@@ -5,14 +5,15 @@
   background-color: #202020;
   display: flow-root;
   overflow: auto;
+  font-family: var(--font-sans);
 }
 
 .dashboard-item {
   border-radius: 4px;
   margin: 13px;
   color: #fff;
-  font-weight: 400;
-  font-size: 13pt;
+  font-weight: var(--font-weight-regular);
+  font-size: var(--font-size-base);
   padding: 8px;
   text-decoration: none;
   background-color: #2b2b2b;
@@ -21,12 +22,12 @@
 
 .dashboard-item .header {
   margin: 10px 0 5px 15px;
-  font-weight: 700;
-  font-size: 16pt;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-lg);
 }
 
 .dashboard-item .updated {
-  font-size: 10pt;
+  font-size: var(--font-size-sm);
   text-align: right;
   color: #999;
 }

@@ -161,7 +161,7 @@ export default class InOutItem extends Component<InOutItemProps, InOutItemState>
                       disabled={this.state.readOnly}
                       sx={{
                         height: 24,
-                        fontSize: '11pt',
+                        fontSize: 'var(--font-size-base)',
                         color: '#fff',
                         backgroundColor: '#262626',
                         '& .MuiSelect-select': {
@@ -174,7 +174,7 @@ export default class InOutItem extends Component<InOutItemProps, InOutItemState>
                       }}
                     >
                       {resources.map((description: any) => (
-                        <MenuItem value={description.kind} key={description.kind} sx={{ fontSize: '0.85rem' }}>
+                        <MenuItem value={description.kind} key={description.kind} sx={{ fontSize: 'var(--font-size-base)' }}>
                           {description.title}
                         </MenuItem>
                       ))}
@@ -202,7 +202,7 @@ export default class InOutItem extends Component<InOutItemProps, InOutItemState>
                 />
               }
               label={
-                <Typography variant="body2" sx={{ color: '#fff', fontSize: '11pt', marginLeft: '6px' }}>
+                <Typography variant="body2" sx={{ color: '#fff', fontSize: 'var(--font-size-base)', marginLeft: '6px' }}>
                   {this.state.item.is_array ? 'True' : 'False'}
                 </Typography>
               }

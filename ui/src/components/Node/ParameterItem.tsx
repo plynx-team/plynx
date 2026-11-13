@@ -178,7 +178,7 @@ export default class ParameterItem extends Component<NodeParameterItemProps, Nod
                   disabled={Boolean(this.state.readOnly && this.state.mutable_type)}
                   sx={{
                     height: 24,
-                    fontSize: '11pt',
+                    fontSize: 'var(--font-size-base)',
                     color: '#fff',
                     backgroundColor: '#262626',
                     '& .MuiSelect-select': {
@@ -191,7 +191,7 @@ export default class ParameterItem extends Component<NodeParameterItemProps, Nod
                   }}
                 >
                   {PARAMETER_TYPES.map((description) => (
-                    <MenuItem value={description.type} key={description.type} sx={{ fontSize: '0.85rem' }}>
+                    <MenuItem value={description.type} key={description.type} sx={{ fontSize: 'var(--font-size-base)' }}>
                       {description.alias}
                     </MenuItem>
                   ))}
@@ -216,7 +216,7 @@ export default class ParameterItem extends Component<NodeParameterItemProps, Nod
                     />
                   }
                   label="Public"
-                  sx={{ margin: 0, '& .MuiFormControlLabel-label': { fontSize: '0.85rem', color: '#eee' } }}
+                  sx={{ margin: 0, '& .MuiFormControlLabel-label': { fontSize: 'var(--font-size-base)', color: '#eee' } }}
                 />
                 {this.state.widget !== null && this.state.widget !== undefined && (
                   <input

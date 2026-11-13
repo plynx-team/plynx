@@ -3,8 +3,8 @@
 .Header {
   display: block;
   background-color: #111;
-  font-size: 17pt;
-  font-family: monospace;
+  font-size: var(--font-size-lg);
+  font-family: var(--font-sans);
   text-align: left;
   position: relative;
   height: 40px;
@@ -34,74 +34,92 @@
 
 .Header .Navigation {
   position: absolute;
-  font-weight: 300;
+  font-weight: var(--font-weight-regular);
   color: #ccc;
-  font-family: 'Source Sans Pro', sans-serif;
-  top: 6px;
+  font-family: var(--font-sans);
+  top: 0;
+  height: 40px;
   left: 180px;
   display: flex;
+  align-items: center;
 }
 
 .Header .NavigationItems {
   text-align: left;
   background-color: inherit;
   color: inherit;
-  display: block;
+  display: flex;
+  align-items: center;
+  height: 100%;
   padding: 0;
-  font-size: 17pt;
+  margin: 0;
+  font-size: var(--font-size-lg);
 }
 
 .Header .NavigationItems .Item {
-  display: inline-block;
-  padding: 0 18px;
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 16px;
   box-sizing: border-box;
   text-align: left;
   background-color: inherit;
   color: inherit;
   border: none;
+  border-bottom: 3px solid transparent;
   outline: none;
   text-decoration: none;
   transition: all 0.1s ease-in;
 }
 
 .Header .NavigationItems .Item:hover:not(.active) {
-  border-bottom: 1px solid #fff;
+  border-bottom: 3px solid #fff;
 }
 
 .Header .NavigationItems .active {
   color: #2196F3;
+  font-weight: var(--font-weight-semibold);
   border-bottom: 3px solid #2196F3;
 }
 
 .Header .separator {
-  display: inline-block;
+  display: inline-flex;
+  align-self: center;
   border-left: 1px solid #333;
   width: 0;
-  height: 100%;
+  height: 20px;
+  font-size: 0;
+  line-height: 0;
+  margin: 0 2px;
 }
 
 .Header .logo {
   position: fixed;
-  top: 4px;
+  top: 0;
+  height: 40px;
   left: 14px;
   padding: 0 20px;
+  display: flex;
+  align-items: center;
 }
 
 .Header > .logo > .icon {
-  vertical-align: middle;
-  height: 34px;
+  height: 32px;
+  display: block;
 }
 
 /* User Account button in header */
 .UserButton {
   position: fixed;
-  top: 8px;
+  top: 0;
+  height: 40px;
   right: 10px;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: var(--font-sans);
   color: #fff;
   display: flex;
   align-items: center;
-  font-size: 17pt;
+  font-weight: var(--font-weight-regular);
+  font-size: var(--font-size-base);
 }
 
 .UserButton .button {
@@ -184,12 +202,14 @@
     display: flex;
     flex-direction: column;
     width: 50%;
+    height: auto;
     padding: 5px;
     background-color: #111;
-    font-size: 25pt;
+    font-size: var(--font-size-lg);
   }
 
   .Header .NavigationItems .Item {
+    height: auto;
     padding: 8px;
     margin: 5px;
   }
@@ -201,7 +221,7 @@
 
   .UserButton {
     top: 8px;
-    font-size: 20pt;
+    font-size: var(--font-size-base);
   }
 
   .UserButton .user-icon {

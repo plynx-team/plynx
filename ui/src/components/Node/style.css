@@ -3,8 +3,15 @@
   flex-direction: column;
   height: 100%;
   width: 100%;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
   overflow: hidden;
+}
+
+.EditNodeMain input,
+.EditNodeMain select {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
 }
 
 .EditNodeHeader {
@@ -35,8 +42,8 @@
 }
 
 .EditNodePropTitle {
-  font-weight: 600;
-  font-size: 16pt;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-lg);
   text-align: center;
   background-color: #2b2b2b;
   color: #fff;
@@ -85,9 +92,9 @@
   gap: 6px;
   padding: 4px 14px;
   height: 32px;
-  font-family: 'Source Sans Pro', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
   color: #fff;
   background-color: #383838;
   border: 1px solid #555;

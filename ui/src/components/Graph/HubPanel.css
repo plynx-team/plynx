@@ -4,6 +4,8 @@
   flex-direction: row;
   background-color: #2b2b2b;
   color: #fff;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
   vertical-align: middle;
 }
 
@@ -13,8 +15,9 @@
 
 .hub-box-header {
   color: #fff;
-  font-size: 15px;
-  font-weight: 700;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
   padding: 5px 0px 3px 5px;
 }
 
@@ -31,19 +34,27 @@
 }
 
 .hub-panel-tab {
-    writing-mode: tb-rl;
+  writing-mode: vertical-rl;
+  writing-mode: tb-rl;
 }
 
 .hub-panel-tab .control-button {
-    padding: 10px 4px 10px 2px;
-    border-top: 0px;
-    border-right: 1px #111 solid;
+  padding: 10px 4px 10px 2px;
+  border-top: 0;
+  border-right: 1px #111 solid;
+  border-bottom: 1px #111 solid;
+  height: auto;
+  min-height: fit-content;
+  max-height: none;
+  width: 32px;
+  min-width: 32px;
+  max-width: 32px;
+  box-sizing: border-box;
 }
 
-
 .hub-panel-tab .control-button .hub-tab-title {
-    transform: rotate(180deg);
-    padding-bottom: 5px;
+  transform: rotate(180deg);
+  padding-bottom: 5px;
 }
 
 .hub-list-content {
@@ -129,7 +140,9 @@
 
 .hub-entry-group-title-text {
   display: inline-block;
-  font-weight: 700;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
 }
 
 .hub-entry-group-title-text:hover {
@@ -137,7 +150,9 @@
 }
 
 .hub-item {
-  font-weight: 600;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
@@ -161,6 +176,9 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
 }
 
 .hub-item-help {
@@ -186,6 +204,9 @@
     padding: 4px;
     padding-left: 17px;
     font-style: italic;
+    font-family: var(--font-sans);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-regular);
 }
 
 .hub-item-in-or-out:hover {

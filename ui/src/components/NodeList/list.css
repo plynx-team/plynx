@@ -30,8 +30,9 @@
   border-radius: 4px;
   margin: 3px;
   color: #ddd;
-  font-weight: 400;
-  font-size: 12pt;
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-regular);
+  font-size: var(--font-size-base);
   cursor: pointer;
   padding: 5px;
   text-decoration: none;
@@ -52,8 +53,9 @@
 .list-header {
   margin: 3px;
   color: #ccc;
-  font-weight: 400;
-  font-size: 13pt;
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-base);
   padding: 5px;
   text-decoration: none;
   border-bottom: 1px solid #202020;

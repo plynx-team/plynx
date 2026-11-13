@@ -2,7 +2,8 @@
 
 .PreviewBoxContent {
   color: #fff;
-  font-family: monospace;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
   text-align: left;
   background-color: #000;
   width: 100%;
@@ -15,8 +16,9 @@
 }
 
 .PreviewBoxContent .note {
-  font-family: 'Source Sans Pro', sans-serif;
-  font-weight: 700;
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-base);
   text-align: left;
   width: 100%;
   padding: 6px 10px;

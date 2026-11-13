@@ -9,9 +9,13 @@
   width: 100%;
 }
 
-.ParameterSecondItemValue > .Value,
+.ParameterSecondItemValue > .Value {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+}
+
 .ParameterSecondItemValue textarea {
-  font-family: monospace;
-  font-size: 11pt;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
   resize: vertical;
 }

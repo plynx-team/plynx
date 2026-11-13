@@ -58,7 +58,7 @@ export default class Dialog extends Component<DialogProps> {
             userSelect: 'none',
           }}
         >
-          <Typography variant="subtitle1" component="div" sx={{ fontWeight: 600, color: '#fff' }}>
+          <Typography variant="subtitle1" component="div" sx={{ fontWeight: 'var(--font-weight-semibold)', fontSize: 'var(--font-size-lg)', color: '#fff' }}>
             {title}
           </Typography>
           <IconButton
@@ -82,6 +82,7 @@ export default class Dialog extends Component<DialogProps> {
             padding: '16px',
             backgroundColor: '#2b2b2b',
             color: '#eee',
+            fontSize: 'var(--font-size-base)',
             overflowY: 'auto',
           }}
         >

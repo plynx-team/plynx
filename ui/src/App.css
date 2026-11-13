@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,300,400,600,700,900,200italic,300italic,400italic,600italic,700italic,900italic');
-
 html,
 body,
 #root {
@@ -11,7 +9,8 @@ body,
 
 .App {
   height: 100%;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
   display: flex;
   flex-direction: column;
 }

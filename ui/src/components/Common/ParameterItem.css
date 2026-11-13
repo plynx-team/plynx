@@ -54,7 +54,7 @@
 }
 
 .ParameterValueCell > .reference {
-  font-weight: bold;
+  font-weight: var(--font-weight-semibold);
   font-style: italic;
 }
 

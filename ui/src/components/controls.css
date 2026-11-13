@@ -13,8 +13,9 @@
   text-align: center;
   cursor: pointer;
   color: #eee;
-  font-weight: 400;
-  font-size: 0.85rem;
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-regular);
+  font-size: var(--font-size-base);
   text-decoration: none;
   background-color: #2b2b2b;
   border: 1px solid #444;
@@ -47,7 +48,7 @@
 }
 
 .control-button.demo-button {
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .control-button.demo:hover {
@@ -111,8 +112,9 @@
   padding: 2px 0 2px 10px;
   text-align: center;
   color: #eee;
-  font-weight: 300;
-  font-size: 12pt;
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-regular);
+  font-size: var(--font-size-base);
   text-decoration: none;
   margin: 0 1px;
   transition: all 0.1s ease-in;
@@ -131,8 +133,8 @@
   padding-left: 0;
   margin: 3px;
   user-select: none;
-  font-size: 13pt;
-  font-weight: 400;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
 }
 
 .pagination ul {
@@ -145,8 +147,8 @@
   display: inline-flex;
   border-radius: 2px;
   color: #ddd;
-  font-weight: 400;
-  font-size: 13pt;
+  font-weight: var(--font-weight-regular);
+  font-size: var(--font-size-base);
   white-space: nowrap;
   transition: all 0.1s ease-in;
 }
@@ -179,8 +181,9 @@
   text-align: center;
   cursor: pointer;
   color: #3363b0;
-  font-weight: 600;
-  font-size: 13pt;
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-base);
   text-decoration: none;
   transition: all 0.1s ease-in;
 }

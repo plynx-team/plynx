@@ -20,7 +20,9 @@
 .user-preview {
   display: flex;
   align-items: center;
-  font-size: 25pt;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
   padding: 24px 0;
 }
 

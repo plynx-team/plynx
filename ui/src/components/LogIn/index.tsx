@@ -261,8 +261,8 @@ export default class LogIn extends Component<any, LogInState> {
               sx={{
                 marginTop: '15px',
                 padding: '8px 16px',
-                fontWeight: 600,
-                fontSize: '14pt',
+                fontWeight: 'var(--font-weight-semibold)',
+                fontSize: 'var(--font-size-base)',
                 textTransform: 'none',
               }}
             >

@@ -17,11 +17,19 @@ const theme = createTheme({
       secondary: '#eee',
     },
   },
+  typography: {
+    fontFamily: "'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    fontSize: 14,
+    body1: { fontSize: '14px', fontWeight: 400 },
+    body2: { fontSize: '14px', fontWeight: 400 },
+    subtitle1: { fontSize: '16px', fontWeight: 600 },
+    button: { fontSize: '14px', fontWeight: 400, textTransform: 'none' },
+  },
   components: {
     MuiDialog: {
       styleOverrides: {
         paper: {
-          fontFamily: 'Roboto, Helvetica, Arial, sans-serif',
+          fontFamily: "'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
         },
       },
     },

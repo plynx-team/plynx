@@ -62,8 +62,8 @@
 }
 
 .ParameterSecondItemTitle {
-  font-weight: 600;
-  font-size: 10pt;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-base);
   color: #ddd;
 }
 
@@ -107,8 +107,8 @@
 }
 
 .ParameterMonoText {
-  font-family: monospace;
-  font-size: 11pt;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
   width: 100%;
   resize: vertical;
   box-sizing: border-box;
