@@ -1,6 +1,7 @@
 boto3>=1.35.0
 google-cloud-storage>=2.19.0
 paramiko>=3.5.0
+python-dateutil>=2.9.0.post0
 
 # test and development:
 coverage>=7.6.9
