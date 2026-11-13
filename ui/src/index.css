@@ -1,48 +1,103 @@
+:root {
+  --font-sans: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-weight-regular: 400;
+  --font-weight-semibold: 600;
+
+  /* Photoshop-inspired Gray & Blue Theme */
+  --bg-app: #1e1e1e;
+  --bg-canvas: #232323;
+  --bg-header: #262626;
+  --bg-panel: #2b2b2b;
+  --bg-panel-secondary: #242424;
+  --bg-card: #333333;
+  --bg-card-hover: #3e3e3e;
+  --bg-button: #303030;
+  --bg-button-hover: #3d3d3d;
+
+  --border-subtle: #363636;
+  --border-default: #404040;
+  --border-strong: #525252;
+
+  --color-primary: #2680eb;
+  --color-primary-hover: #3d91f5;
+  --color-primary-active: #1b6cd4;
+  --color-primary-selected: #244b7a;
+  --color-primary-subtle: rgba(38, 128, 235, 0.18);
+
+  --text-primary: #ebebeb;
+  --text-secondary: #b0b0b0;
+  --text-tertiary: #787878;
+
+  /* Status Colors */
+  --color-status-success: #38c172;
+  --color-status-ready: #48bb78;
+  --color-status-running: #00d8ff;
+  --color-status-in-queue: #ffa726;
+  --color-status-failed: #f44336;
+  --color-status-canceled: #d946ef;
+  --color-status-created: #b0b0b0;
+  --color-status-static: #ecc94b;
+  --color-status-deprecated: #f44336;
+  --color-status-mandatory-deprecated: #b71c1c;
+
+  /* Semantic Feedback */
+  --color-success: #38c172;
+  --color-warning: #ffa726;
+  --color-error: #f44336;
+  --color-info: #00d8ff;
+}
+
 body {
   margin: 0;
   padding: 0;
-  font-family: sans-serif;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
+  background-color: var(--bg-app);
+  color: var(--text-primary);
 }
 
-input, select, textarea {
-  -moz-box-sizing: border-box;
-  -webkit-box-sizing: border-box;
+/* Base form elements */
+input,
+select,
+textarea {
   box-sizing: border-box;
-  border: 1px solid #202020;
+  font-family: var(--font-sans);
+  border: 1px solid var(--border-default);
   border-radius: 2px;
-  background-color: #2b2b2b;
-  color: #eee;
+  background-color: var(--bg-panel-secondary);
+  color: var(--text-primary);
 }
 
-input:-moz-read-only, select:-moz-disabled, textarea:-moz-read-only {
-  color: #999;
-}
-
-input:read-only, select:disabled, textarea:read-only {
-  color: #999;
+input:read-only,
+select:disabled,
+textarea:read-only {
+  color: var(--text-tertiary);
 }
 
 .EnumItem select {
   width: 100%;
 }
 
-/* width */
+/* Custom dark scrollbars */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
-/* Track */
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--bg-app);
 }
 
-/* Handle */
 ::-webkit-scrollbar-thumb {
-  background: #888;
+  background: var(--border-default);
+  border-radius: 4px;
 }
 
-/* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: var(--border-strong);
 }

@@ -1,4 +1,5 @@
 """Utils to work with executors"""
+import io
 import json
 import logging
 import threading
@@ -7,7 +8,6 @@ import traceback
 from typing import Any, Dict, Union
 
 import requests
-import six
 
 import plynx.db.node
 import plynx.utils.exceptions
@@ -91,6 +91,7 @@ class TickThread:
 
     def __exit__(self, type_cls, value, traceback_val):
         self._stop_event.set()
+        self._tick_thread.join()
 
     def call_executor_tick(self):
         """Run timed ticks"""
@@ -118,12 +119,14 @@ class DBJobExecutor:
         try:
             try:
                 status = NodeRunningStatus.FAILED
+                self.executor.node.node_running_status = NodeRunningStatus.RUNNING
+                _update_node(self.executor.node)
                 self.executor.init_executor()
                 with TickThread(self.executor):
                     status = self.executor.run()
             except Exception:   # pylint: disable=broad-except
                 try:
-                    f = six.BytesIO()
+                    f = io.BytesIO()
                     f.write(traceback.format_exc().encode())
                     worker_log = self.executor.node.get_log_by_name(name="worker")
                     worker_log.values = [upload_file_stream(f)]

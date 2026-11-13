@@ -1,8 +1,10 @@
+/* Node list item and status badges */
+
 .node-list-view {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .node-list-item {
@@ -18,61 +20,102 @@
 }
 
 .node-list-item .node-type {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
 }
 
+/* Status Badges */
 .status-badge {
-    border: 1px solid #808080;
-    border-radius: 5px;
-    background-color: #202020;
-    text-align: center;
-    margin-right: 20px;
+  border: 1px solid var(--border-default);
+  border-radius: 5px;
+  background-color: var(--bg-card);
+  text-align: center;
+  margin-right: 20px;
+  padding: 1px 6px;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
 }
 
 .status-badge.CREATED {
-  color: #ffffff;
+  color: var(--color-status-created);
 }
 
 .status-badge.READY {
-  color: #00ff20;
+  color: var(--color-status-ready);
+}
+
+.status-badge.IN_QUEUE {
+  color: var(--color-status-in-queue);
 }
 
 .status-badge.RUNNING {
-  color: #00d8ff;
-}
-
-.status-badge.CANCELED {
-  color: #ff00ff;
+  color: var(--color-status-running);
 }
 
 .status-badge.SUCCESS {
-  color: #00ff00;
+  color: var(--color-status-success);
+}
+
+.status-badge.RESTORED {
+  color: var(--color-status-success);
+}
+
+.status-badge.SPECIAL {
+  color: var(--color-status-success);
 }
 
 .status-badge.FAILED {
-  color: red;
+  color: var(--color-status-failed);
+}
+
+.status-badge.FAILED_WAITING {
+  color: var(--color-status-failed);
+}
+
+.status-badge.CANCELED {
+  color: var(--color-status-canceled);
+}
+
+.status-badge.STATIC {
+  color: var(--color-status-static);
 }
 
 .status-badge.DEPRECATED {
-  color: red;
+  color: var(--color-status-deprecated);
 }
 
 .status-badge.MANDATORY_DEPRECATED {
-  color: darkred;
+  color: var(--color-status-mandatory-deprecated);
+}
+
+/* FileDialog & generic status text colors */
+.Status.CREATED {
+  color: var(--color-status-created);
+}
+
+.Status.READY {
+  color: var(--color-status-ready);
+}
+
+.Status.DEPRECATED {
+  color: var(--color-status-deprecated);
+}
+
+.Status.MANDATORY_DEPRECATED {
+  color: var(--color-status-mandatory-deprecated);
 }
 
 .node-list-view > .ControlButtons {
   left: 260px;
   top: 6px;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: var(--font-sans);
 }
-
 
 @media (min-width: 1100px) {
   .node-list-item {
     grid-template-columns: 250px 250px 250px 200px 200px 200px 200px;
-    padding: 10px 10px 10px 10px;
+    padding: 10px;
   }
 }

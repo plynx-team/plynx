@@ -1,2 +1,11 @@
 data
-
+.git
+__pycache__
+*.py[cod]
+.mypy_cache
+.pytest_cache
+dist
+build
+*.egg-info
+ui/node_modules
+ui/build

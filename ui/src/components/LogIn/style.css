@@ -1,121 +1,109 @@
+/* Login & Register views */
+
 .Login {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background-color: #111111;
-    border-top: 1px solid #333;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-app);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .LoginBlock {
-    background-color: #404040;
-    color: #eee;
-    width: 300px;
-    margin: 5px;
-    padding: 15px;
-    left: 50%;
-    top: 50%;
-    margin-right: -50%;
-    position: absolute;
-    transform: translate(-50%, -50%);
-    border: 1px solid #000;
-    -webkit-box-shadow: 0px 0px 5px 1px rgba(0, 0, 0, 0.75);
-    -moz-box-shadow: 0px 0px 5px 1px rgba(0, 0, 0, 0.75);
-    box-shadow: 0px 0px 5px 1px rgba(0, 0, 0, 0.75);
-    border-radius: 5px;
+  background-color: var(--bg-panel);
+  color: var(--text-primary);
+  width: 320px;
+  padding: 20px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--border-default);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+  border-radius: 6px;
 }
 
 .login-hello-message {
-    text-align: center;
-    font-size: 15pt;
+  text-align: center;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: 12px;
 }
 
 .login-notes {
-    margin: 0px 0 15px 0px;
-    font-size: 15px;
-}
-
-.Items .Item .buttons .Item>* {
-    width: 100%;
+  margin: 0 0 15px 0;
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
 }
 
 .NameCell {
-    margin: 7px 2px 7px;
-    font-size: 17px;
-    color: #ccc;
+  margin: 8px 0 4px 0;
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
 }
 
-.ValueCell>input {
-    width: 100%;
-    padding: 5px 10px;
-    font-size: 15px;
+.ValueCell > input {
+  width: 100%;
+  padding: 6px 10px;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  border-radius: 3px;
 }
 
 .ErrorCell {
-    font-size: 13px;
-    color: rgb(225, 0, 0);
-    margin-left: 2px;
-    margin-top: 5px
+  font-size: var(--font-size-sm);
+  color: var(--color-error);
+  margin-top: 5px;
 }
 
 .loginButton,
 .toggleState,
 .forgotPassword {
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
+  user-select: none;
 }
 
 .loginButton {
-    display: block;
-    box-sizing: border-box;
-    width: 100%;
-    margin: 15px 0px;
-    color: white;
-    background-color: #12a772;
-    border-radius: 2px;
-    padding: 5px;
-    text-align: center;
-    cursor: pointer;
-    font-family: 'Source Sans Pro', sans-serif;
-    font-size: 15pt;
-    -moz-transition: all .1s ease-in;
-    -o-transition: all .1s ease-in;
-    -webkit-transition: all .1s ease-in;
-    transition: all .1s ease-in;
-    border: none;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 16px 0;
+  color: #fff;
+  background-color: var(--color-primary);
+  border-radius: 4px;
+  padding: 8px;
+  text-align: center;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  border: none;
+  transition: background-color 0.15s ease-in;
 }
 
 .loginButton:hover {
-  background-color: #12ccc8;
+  background-color: var(--color-primary-hover);
 }
 
 .Login .loginButton:active {
-  background-color: #2196F3;
+  background-color: var(--color-primary-active);
 }
 
 .toggleState,
 .forgotPassword {
-    margin-top: -5px;
-    cursor: pointer;
-    transition: 100ms;
-    font-size: 15px;
-    color: rgb(225, 225, 225);
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+  transition: color 0.1s ease-in;
 }
 
 .toggleState:hover,
 .forgotPassword:hover {
-    color: rgb(100, 150, 256);
+  color: var(--color-primary-hover);
 }
 
 .toggleState {
-    float: left;
-    margin-left: 1px;
+  float: left;
 }
 
 .forgotPassword {
-    float: right;
-    margin-right: 1px;
+  float: right;
 }

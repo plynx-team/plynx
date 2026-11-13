@@ -1,11 +1,11 @@
 .InOutListBackground {
-  padding: grid;
   min-height: 100%;
-  padding: 2px
+  padding: 2px;
+  box-sizing: border-box;
 }
 
 .InOutListBackgroundDragging {
-  background: lightblue;
+  background: var(--color-primary-subtle);
 }
 
 .InOutDiv {
@@ -13,6 +13,9 @@
   padding: 7px;
   margin: 0;
   background: transparent;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
 }
 
 .InOutDivDragging {
@@ -20,23 +23,25 @@
 }
 
 .InOutItem {
-  background-color: #404040;
-  color: white;
+  box-sizing: border-box;
+  background-color: var(--bg-card);
+  color: var(--text-primary);
   padding: 3px;
-  border: 1px solid #202020;
+  border: 1px solid var(--border-subtle);
   border-radius: 4px;
   margin: 0px;
+  width: 100%;
+  min-width: 0;
 }
 
 .InOutItem .Remove {
-  color: pink;
-  float: right;
+  color: #888;
   cursor: pointer;
-  width: 12px;
+  padding: 2px;
 }
 
-.InOutItem .Remove.hover {
-  color: red;
+.InOutItem .Remove:hover {
+  color: #f44336;
 }
 
 .InOutRow {
@@ -44,11 +49,14 @@
   width: 100%;
   grid-template-columns: 30% 70%;
   grid-row-gap: 3px;
+  box-sizing: border-box;
+  align-items: center;
 }
 
 .InOutCellTitle {
   float: left;
-  padding-left: 5px
+  padding-left: 5px;
+  box-sizing: border-box;
 }
 
 .InOutCellValue {
@@ -57,16 +65,20 @@
   display: flex;
   align-items: center;
   margin: 2px;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .InOutCellValue > .file-type-icon {
-    width: 17px;
-    height: 17px;
-    margin-left: 3px;
+  width: 17px;
+  height: 17px;
+  margin-left: 3px;
+  flex-shrink: 0;
 }
 
 .InOutValue {
   width: 100%;
+  box-sizing: border-box;
 }
 
 .InOutValue > .CountsBlock {
@@ -74,7 +86,9 @@
   width: 100%;
   grid-template-columns: 25% 25% 25% 25%;
   padding: 3px;
+  box-sizing: border-box;
 }
+
 .InOutValue > .CountsBlock > .Cell {
   text-align: center;
 }

@@ -3,6 +3,7 @@ import functools
 import os
 import shutil
 import uuid
+from abc import ABC
 
 import plynx.db.run_cancellation_manager
 from plynx.base.executor import BaseExecutor, RunningStatus
@@ -16,7 +17,7 @@ def run_cancellation_manager():
     return plynx.db.run_cancellation_manager.RunCancellationManager()
 
 
-class PLynxAsyncExecutor(BaseExecutor):
+class PLynxAsyncExecutor(BaseExecutor, ABC):
     """Base Executor class that is using PLynx Async Inference backend"""
 
     def launch(self) -> RunningStatus:
@@ -38,7 +39,7 @@ class PLynxAsyncExecutor(BaseExecutor):
         return RunningStatus(self.node.node_running_status)
 
 
-class PLynxSyncExecutor(BaseExecutor):
+class PLynxSyncExecutor(BaseExecutor, ABC):
     """Base Executor class that is using PLynx Sync Inference backend"""
 
     def launch(self) -> RunningStatus:
@@ -48,7 +49,7 @@ class PLynxSyncExecutor(BaseExecutor):
         return RunningStatus(self.node.node_running_status)
 
 
-class PLynxAsyncExecutorWithDirectory(PLynxAsyncExecutor):
+class PLynxAsyncExecutorWithDirectory(PLynxAsyncExecutor, ABC):
     """Base Executor class that is using PLynx Async Inference backend"""
 
     def __init__(self, node):

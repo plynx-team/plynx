@@ -1,68 +1,12 @@
-.dialog {
-  top: 1px;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 23000;
-  position: fixed;
-  color: white;
-}
+/* Base Dialog styles */
 
-.dialog .dialog-rnd {
-  border: 1px solid #444;
-  border-top-left-radius: 5px;
-  border-top-right-radius: 5px;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 1);
-}
-
-.dialog .dialog-window {
-  background-color: #000;
-  border-top-left-radius: 4px;
-  border-top-right-radius: 4px;
-  display: grid;
-  grid-template-rows: 30px 1fr;
-  height: 100%;
-}
-
-.dialog .dialog-window .header {
-  background-color: #202020;
-  border-bottom: 1px solid #555;
-  display: grid;
-  grid-template-columns: 20px 1fr;
-  font-weight: 600;
-  font-size: 13pt;
-  font-family: 'Source Sans Pro', sans-serif;
-  color: white;
-  padding: 4px;
-  border-top-left-radius: 4px;
-  border-top-right-radius: 4px;
-}
-
-.dialog .dialog-window .header .close-button {
-  color: white;
-  padding-left: 4px;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.dialog .dialog-window .header .close-button:hover {
-  color: red;
-}
-
-.dialog .dialog-window .header .title {
-  text-align: center;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-}
-
-.dialog .dialog-window .content {
+.dialog-content-area {
   cursor: default;
   overflow: auto;
 }
 
 .content > .LoadHolder {
-  transform: translate(0, 0px);
+  transform: translate(0, 0);
   width: 100%;
   height: calc(100% - 30px);
   position: absolute;

@@ -1,9 +1,9 @@
 """An executor for the DAGs based on python backend."""
 import logging
-import multiprocessing
 import queue
 import traceback
 import uuid
+from multiprocessing.pool import ThreadPool
 from typing import List
 
 import plynx.plugins.executors.dag
@@ -22,6 +22,8 @@ def worker_main(job_run_queue: queue.Queue, job_complete_queue: queue.Queue):
     logging.info("Created pool worker")
     while True:
         node = job_run_queue.get()
+        if node is None:
+            break
         executor = plynx.utils.executor.materialize_executor(node)
 
         try:
@@ -61,7 +63,7 @@ class DAGParallel(plynx.plugins.executors.dag.DAG):
         self.job_run_queue: queue.Queue = queue.Queue()
         self.job_complete_queue: queue.Queue = queue.Queue()
 
-        self.worker_pool = multiprocessing.pool.ThreadPool(
+        self.worker_pool = ThreadPool(
             POOL_SIZE, worker_main, (
                 self.job_run_queue,
                 self.job_complete_queue,
@@ -155,7 +157,7 @@ class DAG(plynx.plugins.executors.dag.DAG):
     def init_executor(self):
         """Initialize environment for the executor"""
         pool_size = 1
-        self.worker_pool = multiprocessing.pool.ThreadPool(
+        self.worker_pool = ThreadPool(
             pool_size, worker_main, (
                 self.job_run_queue,
                 self.job_complete_queue,
@@ -165,6 +167,7 @@ class DAG(plynx.plugins.executors.dag.DAG):
     def clean_up_executor(self):
         """Clean up the environment created by executor"""
         if self.worker_pool:
+            self.job_run_queue.put(None)
             self.worker_pool.terminate()
         self.worker_pool = None
 
@@ -218,7 +221,7 @@ class ExecutorWithWebWorkerServer(DAG):
     def request_task(url, data):
         """Send a request to the server"""
         import requests  # pylint: disable=import-outside-toplevel
-        requests.post(url, json=data)
+        requests.post(url, json=data, timeout=60)
 
     @staticmethod
     def fire_and_forget(url, json):
@@ -230,9 +233,12 @@ class ExecutorWithWebWorkerServer(DAG):
         """Launch the executor"""
         import os  # pylint: disable=import-outside-toplevel
         assert self.node, "Attribute `node` is unassigned"
+        worker_server_url = os.environ.get("WORKER_SERVER_URL")
+        if worker_server_url:
+            self.node.node_running_status = NodeRunningStatus.RUNNING
         res = super().launch()
 
-        worker_server_url = os.environ.get("WORKER_SERVER_URL")
-        ExecutorWithWebWorkerServer.fire_and_forget(worker_server_url, {"run_id": str(self.node._id)})
+        if worker_server_url:
+            ExecutorWithWebWorkerServer.fire_and_forget(worker_server_url, {"run_id": str(self.node._id)})
 
         return res

@@ -1,6 +1,4 @@
 """PLynx CLI parser"""
-from __future__ import print_function
-
 import argparse
 from dataclasses import dataclass
 from typing import Any, List, Optional, Tuple, Type, Union

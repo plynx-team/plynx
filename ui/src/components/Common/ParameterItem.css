@@ -1,15 +1,9 @@
+/* Common Parameter item styles (properties bar, user view, node properties) */
+
 .PropertiesBoxContent {
   padding: 5px;
   border: 1px solid #202020;
   border-radius: 4px;
-}
-
-
-.ParameterItem {
-  display: grid;
-  width: 100%;
-  grid-template-columns: 40% 1fr;
-  margin: 5px 0px;
 }
 
 .PropertiesBoxContent .ParameterNameCell {
@@ -20,15 +14,24 @@
   width: 100%;
 }
 
+.ParameterItem {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 40% 1fr;
+  margin: 5px 0;
+  align-items: center;
+}
+
 .ParameterValueCell {
   overflow: hidden;
   text-overflow: ellipsis;
   display: grid;
   grid-template-columns: 1fr 20px;
+  align-items: center;
 }
 
 .ParameterValueCell > .link-button {
-  padding: 0px;
+  padding: 0;
   height: 18px;
 }
 
@@ -46,12 +49,12 @@
   text-decoration: underline;
 }
 
-.ParameterValueCell > .BoolLabel{
-  color: white;
+.ParameterValueCell > .BoolLabel {
+  color: #fff;
 }
 
 .ParameterValueCell > .reference {
-  font-weight: bold;
+  font-weight: var(--font-weight-semibold);
   font-style: italic;
 }
 
@@ -64,5 +67,5 @@
 }
 
 .option-block > .radio {
-  margin: 5px 0px;
+  margin: 5px 0;
 }

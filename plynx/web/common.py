@@ -14,7 +14,7 @@ from plynx.constants import RegisterUserExceptionCode, ResponseStatus
 from plynx.db.user import User, UserCollectionManager
 from plynx.utils.common import JSONEncoder
 from plynx.utils.config import get_config
-from plynx.utils.content import create_default_templates
+from plynx.utils.content import create_default_templates, repair_corrupted_templates
 from plynx.utils.db_connector import check_connection
 from plynx.utils.exceptions import RegisterUserException
 from plynx.utils.logs import set_logging_level
@@ -82,6 +82,7 @@ def _init_default_user():
         create_default_templates(user)
     else:
         logging.info(f"Default user `{DEFAULT_USERNAME}` already exists")
+        repair_corrupted_templates()
 
 
 def verify_password(username_or_token: str, password: str):
@@ -113,10 +114,14 @@ def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         auth = request.authorization
-        if not auth:
+        if auth:
+            username = auth.username or ""
+            password = auth.password or ""
+        else:
             # if auth not provided, try default
-            auth = {"username": DEFAULT_USERNAME, "password": DEFAULT_PASSWORD}
-        if not verify_password(auth["username"], auth["password"]):
+            username = DEFAULT_USERNAME
+            password = DEFAULT_PASSWORD
+        if not verify_password(username, password):
             return authenticate()
         return f(*args, **kwargs)
     return decorated
@@ -142,7 +147,7 @@ def make_success_response(extra_response: Optional[Dict[str, Any]] = None):
         {
             "status": ResponseStatus.SUCCESS,
             "message": "Success",
-            "current_time": datetime.datetime.utcnow(),
+            "current_time": datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None),
             "settings": g.user.settings.to_dict() if hasattr(g, "user") else None,
         }, **(extra_response or {})))
 

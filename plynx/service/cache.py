@@ -50,7 +50,7 @@ def run_list_cache(start_datetime: Optional[datetime], end_datetime: datetime):
 def run_clean_cache(start_datetime: Optional[datetime], end_datetime: datetime, yes: bool):
     """Clean cache"""
     query = node_cache_manager.get_list(start_datetime, end_datetime, non_protected_only=True)
-    query_count = query.count()
+    query_count = node_cache_manager.count(start_datetime, end_datetime, non_protected_only=True)
     if query_count == 0:
         logging.critical("No cached results to remove")
         return

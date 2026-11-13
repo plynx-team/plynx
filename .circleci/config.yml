@@ -1,44 +1,60 @@
-version: 2
+version: 2.1
+
+commands:
+  checkout_code:
+    description: "Checkout repository code via HTTPS"
+    steps:
+      - run:
+          name: Checkout code
+          command: |
+            git config --global url."https://github.com/".insteadOf "git@github.com:"
+            git init
+            git remote add origin https://github.com/plynx-team/plynx.git || git remote set-url origin https://github.com/plynx-team/plynx.git
+            git fetch --depth=50 origin "$CIRCLE_SHA1" 2>/dev/null || git fetch --depth=50 origin "$CIRCLE_BRANCH"
+            git checkout -qf "$CIRCLE_SHA1"
+            git submodule update --init --recursive || true
+
 jobs:
   build_package:
     working_directory: ~/plynx
     docker:
-      - image: cimg/python:3.10
+      - image: cimg/python:3.12
     steps:
-      - checkout
+      - checkout_code
       - run:
           name: install requirements
           command: |
             set -x
             pip install --upgrade pip
-            pip install -e .[all]   # including dev
-            pip install google-compute-engine twine
+            pip install -e ".[all]"
 
-      # Run linters
+      # Run linters and unit tests
       - run:
           name: flake8
-          command: flake8
+          command: flake8 plynx tests
       - run:
           name: isort
-          command: isort plynx
+          command: isort --check-only plynx tests
       - run:
           name: mypy
           command: mypy plynx --ignore-missing-imports
       - run:
           name: pylint
-          command: pylint plynx
+          command: pylint --disable=F0401 plynx
+      - run:
+          name: pytest
+          command: python -m pytest
 
       - run:
-          # note we need to install google-compute-engine due to circleci issue
-          name: python package instalation
-          command:
-            # make build_package
-            python setup.py install
+          name: python package build and installation
+          command: |
+            python -m build
+            pip install dist/*.whl
 
   build_docker:
     machine: true
     steps:
-      - checkout
+      - checkout_code
       - run:
           name: copy config file
           command: cp template_config.yaml config.yaml

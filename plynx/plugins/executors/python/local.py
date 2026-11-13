@@ -25,7 +25,7 @@ def operation(int_a, int_b):
 """
 
 stateful_init_mutex = threading.Lock()
-stateful_class_registry = {}
+stateful_class_registry: Dict[str, Any] = {}
 
 _resource_manager = plynx.utils.plugin_manager.get_resource_manager()
 
@@ -110,8 +110,7 @@ class redirect_to_plynx_logs:   # pylint: disable=invalid-name
                         f.write(fi.read())
                 output = self.node.get_log_by_name(name=logs_name)
                 output.values = [filename]
-            else:
-                os.remove(filename)
+            os.remove(filename)
 
 
 def prep_args(node: Node) -> Dict[str, Any]:

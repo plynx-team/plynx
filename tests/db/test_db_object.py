@@ -1,6 +1,7 @@
 """Test DB object"""
 from plynx.constants import ParameterTypes
 from plynx.db.node import Input, Node, Output, Parameter
+from plynx.db.user import User
 
 
 def get_test_node():
@@ -84,3 +85,21 @@ def test_serialization():
     print(node2_dict)
 
     assert compare_dictionaries(node1_dict, node2_dict), "Serialized nodes are not equal"
+
+
+def test_user_password_hashing():
+    """Test User password hashing and verification without passlib"""
+    user = User(username="alice_user")
+    user.hash_password("s3cr3t!")
+    assert user.verify_password("s3cr3t!")
+    assert not user.verify_password("wrong")
+    assert not user.verify_password("")
+
+    oauth_user = User(username="oauth_user")
+    oauth_user.hash_password("")
+    assert not oauth_user.verify_password("")
+
+    default_user = User(username="default")
+    default_user.hash_password("")
+    assert default_user.verify_password("")
+    assert not default_user.verify_password("nonempty")

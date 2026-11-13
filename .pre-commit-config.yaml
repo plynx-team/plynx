@@ -2,39 +2,27 @@ fail_fast: true
 repos:
 -   repo: local
     hooks:
-    - id: system
+    - id: flake8
       name: $ flake8 plynx tests
       entry: flake8 plynx tests
       pass_filenames: false
       language: system
-
--   repo: local
-    hooks:
-    - id: system
+    - id: isort
       name: $ isort plynx tests
       entry: isort plynx tests
       pass_filenames: false
       language: system
-
--   repo: local
-    hooks:
-    - id: system
+    - id: pytest
       name: $ make pytest
       entry: make pytest
       pass_filenames: false
       language: system
-
--   repo: local
-    hooks:
-    - id: system
+    - id: mypy
       name: $ mypy plynx --ignore-missing-imports
       entry: mypy plynx --ignore-missing-imports
       pass_filenames: false
       language: system
-
--   repo: local
-    hooks:
-    - id: system
+    - id: pylint
       name: $ pylint --disable=F0401 plynx
       entry: pylint --disable=F0401 plynx
       pass_filenames: false

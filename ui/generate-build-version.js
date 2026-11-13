@@ -1,19 +1,13 @@
-const fs = require('fs');
-const packageJson = require('./package.json');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const appVersion = packageJson.version;
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const packageJson = JSON.parse(fs.readFileSync(path.join(currentDir, 'package.json'), 'utf8'));
 
 const jsonData = {
-  version: appVersion
+  version: packageJson.version,
 };
 
-const jsonContent = JSON.stringify(jsonData);
-
-fs.writeFile('./public/meta.json', jsonContent, 'utf8', function(err) {
-  if (err) {
-    console.log('An error occured while writing JSON Object to meta.json');
-    return console.log(err);
-  }
-
-  console.log('meta.json file has been saved with latest version number');
-});
+fs.writeFileSync(path.join(currentDir, 'public', 'meta.json'), JSON.stringify(jsonData), 'utf8');
+console.log('meta.json file has been saved with latest version number');

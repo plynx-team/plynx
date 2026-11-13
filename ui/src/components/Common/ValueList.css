@@ -1,52 +1,21 @@
+/* Value list parameter component */
+
 .ValueList {
   text-align: center;
+  width: 100%;
 }
 
 .ValueList > .row {
-  display: grid;
-  grid-template-columns: 1fr 40px;
-  margin: 5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 4px 0;
 }
 
-
-.ValueList > a, .ValueList > .row > a {
-  font-family: monospace;
+.ValueList a {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
   text-decoration: none;
-  padding: 0px 10px 0px 10px;
+  padding: 0 10px;
   border-radius: 3px;
 }
-
-.ValueList > .add {
-  color: white;
-  font-size: 25px;
-}
-
-.ValueList > .add:hover {
-  color: black;
-  cursor: pointer;
-  background-color: #bbb;
-}
-/*
-.ValueList > .row > .remove {
-  color: red;
-  font-size: 15px;
-}
-
-.ValueList > .row > .remove:hover {
-  color: black;
-  cursor: pointer;
-  background-color: #B00;
-}*/
-
-
-.ValueList > .row > .remove {
-  color: pink;
-  cursor: pointer;
-  width: 20px;
-  text-align: center;
-  }
-  
-  .ValueList > .row > .remove:hover {
-    color: red;
-  }
-  

@@ -3,20 +3,33 @@
   flex-direction: column;
   height: 100%;
   width: 100%;
-  font-family: 'Source Sans Pro', sans-serif;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  overflow: hidden;
+}
+
+.EditNodeMain input,
+.EditNodeMain select {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
 }
 
 .EditNodeHeader {
-  background-color: #3b3b3b;
+  background-color: var(--bg-panel);
   width: 100%;
   padding: 3px;
-  border-bottom: 1px solid black;
+  border-bottom: 1px solid var(--border-subtle);
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .EditNodeColumn {
   display: flex;
   flex-direction: column;
-  height: 100%
+  height: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  background-color: var(--bg-panel);
 }
 
 .EditNodeComponents {
@@ -24,51 +37,87 @@
   display: flex;
   flex-direction: row;
   width: 100%;
-  overflow: auto;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .EditNodePropTitle {
-  font-weight: 600;
-  font-size: 16pt;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-lg);
   text-align: center;
-  background-color: #2b2b2b;
-  color: #fff;
+  background-color: var(--bg-header);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 4px 0;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .EditNodeList {
   flex: 1;
-  overflow: auto;
-}
-
-.EditNodeColumn {
-  background-color: #5b5b5b;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .EditNodeParameters {
   flex: 1;
+  min-width: 0;
 }
 
 .EditNodeInputs {
-  width:250px;
+  width: 250px;
+  min-width: 250px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border-subtle);
 }
 
 .EditNodeOutputs {
-  width:250px;
+  width: 250px;
+  min-width: 250px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border-subtle);
 }
 
 .EditNodeList .Add {
-  font-family: monospace;
-  font-size: 35px;
-  text-align: center;
-  margin: 9px;
-  color: #fff;
-  background-color: #777;
-  border-radius: 5px;
-  border: 1px solid #888;
+  margin: 8px;
+  display: flex;
+  justify-content: center;
 }
 
-.EditNodeList .Add.hover {
-  color: #2196F3;
+.EditNodeList .Add .control-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 14px;
+  height: 32px;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
+  color: var(--text-primary);
+  background-color: var(--bg-button);
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
   cursor: pointer;
-  background-color: #aaa;
+}
+
+.EditNodeList .Add .control-button:hover {
+  background-color: var(--bg-button-hover);
+  border-color: var(--color-primary);
+}
+
+.EditNodeList .Add .control-button img {
+  width: 14px;
+  height: 14px;
+  max-width: 14px;
+  max-height: 14px;
+  display: block;
+}
+
+.EditNodeList .Add .control-button .control-button-text {
+  display: inline-flex !important;
+  align-items: center;
+  line-height: 1;
 }

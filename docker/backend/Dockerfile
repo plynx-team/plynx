@@ -1,26 +1,25 @@
 # Use an official Python runtime as a parent image
-FROM python:3.10-slim
+FROM python:3.12-slim
 
 # Set the working directory to /app
 WORKDIR /app
 
 # Install needed packages
-RUN apt-get update
-RUN apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     iputils-ping \
     curl \
-    bc
-RUN apt-get clean
-RUN rm -rf /var/lib/apt/lists/*
+    bc \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy the current directory contents into the container at /app
-ADD ./wsgi.py /app/wsgi.py
+COPY ./wsgi.py /app/wsgi.py
 
 # Copy licence
-ADD ./LICENSE /app
+COPY ./LICENSE /app
 
 # Copy test data
-ADD ./docker/backend/tests /app/integrated_tests
+COPY ./docker/backend/tests /app/integrated_tests
 
 # master / worker port
 EXPOSE 17011
@@ -29,24 +28,27 @@ EXPOSE 17011
 EXPOSE 5005
 
 # Create worker user
-RUN useradd -c "Worker" worker  -s /bin/bash
-RUN chmod 700 /app
-RUN chmod 1777 /tmp
+RUN useradd -c "Worker" worker -s /bin/bash \
+    && chmod 700 /app \
+    && chmod 1777 /tmp
 
 # Add dev watch script
 COPY ./scripts/watch.sh /app/watch.sh
 COPY ./scripts/run_tests.sh /app/run_tests.sh
 
 # Build PLynx package
-ADD ./plynx /tmp/plynx
-ADD ./setup.py /tmp/setup.py
-ADD ./requirements.txt /tmp/requirements.txt
-ADD ./requirements-dev.txt /tmp/requirements-dev.txt
-ADD ./tests /app/tests
-RUN cd /tmp && python setup.py install
+COPY ./plynx /tmp/build/plynx
+COPY ./setup.py /tmp/build/setup.py
+COPY ./pyproject.toml /tmp/build/pyproject.toml
+COPY ./MANIFEST.in /tmp/build/MANIFEST.in
+COPY ./README.md /tmp/build/README.md
+COPY ./LICENSE /tmp/build/LICENSE
+COPY ./requirements.txt /tmp/build/requirements.txt
+COPY ./requirements-dev.txt /tmp/build/requirements-dev.txt
+COPY ./tests /app/tests
+RUN pip install --no-cache-dir /tmp/build && rm -rf /tmp/build
 
-# install extra docker requirements
-ADD ./docker/backend/requirements.txt /app/requirements.txt
-RUN pip install -r /app/requirements.txt
-RUN rm /app/requirements.txt
+# Install extra docker requirements
+COPY ./docker/backend/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt && rm /app/requirements.txt
 RUN echo '[]' > /app/nodes.json

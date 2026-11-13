@@ -1,54 +1,122 @@
-.PreviewBoxContent {
-  color: white;
-  font-family: monospace;
-  text-align: left;
-  background-color: #000;
-  width: 100%;
-  height: 100%;
+/* File and value preview dialog */
+
+.PreviewDialogWindow {
+  display: flex;
+  flex-direction: column;
 }
 
-.PreviewBoxContent pre {
-  margin-top: 0px;
-  background-color: #000;
+/* Informational notice banner separating technical file metadata from body */
+.preview-note-banner {
+  background-color: var(--bg-card);
+  border-bottom: 1px solid var(--border-default);
+  border-left: 3px solid var(--color-primary);
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
 }
 
-.PreviewBoxContent .note {
-  font-family: 'Source Sans Pro', sans-serif, bold;
-  font-weight: 700;
-  text-align: left;
-
-  width: 100%;
-  height: 100%;
-  border-bottom: 1px solid #444;
-  background-color: #333;
+.preview-note-text {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.4;
 }
 
-.PreviewBoxContent .note .preview-download-link {
-  margin-left: 5px;
+.preview-download-button {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  padding: 5px 12px;
+  background-color: var(--bg-button);
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  color: var(--color-primary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
-  color: #337ab7;
-  display: inline;
+  user-select: none;
+  transition: all 0.15s ease-in;
 }
 
-.PreviewBoxContent .note .preview-download-link:hover{
-    text-decoration: underline;
+.preview-download-button:hover {
+  background-color: var(--bg-button-hover);
+  border-color: var(--color-primary);
+  color: var(--color-primary-hover);
 }
 
+.preview-download-button:active {
+  background-color: var(--color-primary);
+  color: #fff;
+}
 
+.preview-download-button img {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+/* Dedicated code and content preview container */
+.preview-content-box {
+  background-color: var(--bg-canvas);
+  padding: 16px;
+  min-height: 80px;
+  max-height: 520px;
+  overflow: auto;
+  box-sizing: border-box;
+}
+
+.preview-code-block {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.preview-content-box pre {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
+  line-height: 1.5;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-all;
+  background: transparent;
+}
+
+.preview-content-box img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+
+.preview-content-box iframe {
+  width: 100%;
+  min-height: 440px;
+  border: none;
+}
+
+/* Tabular preview data */
 .preview-table {
-  border-spacing: 0px;
-  margin: 5px;
+  border-collapse: collapse;
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
 }
 
 .preview-table-col {
-  padding: 0px 10px 0px 10px;
-  border-right: 1px solid #333;
+  padding: 5px 12px;
+  border-right: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .preview-table-row-even {
-  background-color: #222;
-}
-
-.preview-table-row-odd {
-  background-color: #111;
+  background-color: var(--bg-panel-secondary);
 }

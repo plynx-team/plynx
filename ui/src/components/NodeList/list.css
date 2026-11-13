@@ -1,23 +1,25 @@
+/* Paginated entity lists (/operations, /workflows, /runs) */
+
 .ListPage {
-  overflow:auto;
-  background-color: #202020;
+  overflow: auto;
+  background-color: var(--bg-app);
   width: 100%;
   height: 100%;
-  padding: 0px;
+  padding: 0;
   display: flex;
   flex-direction: column;
 }
 
 .ListPage > .List {
   flex: 1;
-  overflow:auto;
-  border: 1px solid darkgrey;
+  overflow: auto;
+  border: 1px solid var(--border-subtle);
 }
 
 .list {
-  background-color: #2b2b2b;
+  background-color: var(--bg-panel);
   overflow: auto;
-  flex: 1 1;
+  flex: 1 1 auto;
 }
 
 .list-item-link {
@@ -27,25 +29,23 @@
 .list-item {
   border-radius: 4px;
   margin: 3px;
-  color: #ddd;
-  font-weight: 400;
-  font-size: 12pt;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-regular);
+  font-size: var(--font-size-base);
   cursor: pointer;
   padding: 5px;
   text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
-
   display: inline-grid;
-
-  -moz-transition: all .1s ease-in;
-  -o-transition: all .1s ease-in;
-  -webkit-transition: all .1s ease-in;
-  transition: all .1s ease-in;
-  background-color: #404040;
+  transition: all 0.1s ease-in;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
 }
 
-.header-item .list-field, .list-item .list-field {
+.header-item .list-field,
+.list-item .list-field {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -53,21 +53,24 @@
 
 .list-header {
   margin: 3px;
-  color: #ccc;
-  font-weight: 400;
-  font-size: 13pt;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-base);
   padding: 5px;
   text-decoration: none;
-  border-bottom: 1px solid #202020;
+  border-bottom: 1px solid var(--border-default);
   display: inline-grid;
 }
 
 .list-item:hover {
-  background-color: #555;
+  background-color: var(--bg-card-hover);
+  border-color: var(--border-strong);
 }
 
 .list-item:active {
-  background-color: #3f6da0;
+  background-color: var(--color-primary-selected);
+  border-color: var(--color-primary);
 }
 
 .list-item .star-hidden {

@@ -1,28 +1,39 @@
+/* Deprecate operation dialog */
+
 .DeprecateDialogWindow {
-  background-color: #404040;
+  background-color: var(--bg-panel);
+  color: var(--text-primary);
 }
 
-.DeprecateDialog{
+.DeprecateDialog {
   margin: 5px;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
 }
 
-.DeprecateDialog > .MainBlock > .Title{
-  font-weight: 700;
-  font-size: 15pt;
+.DeprecateDialog input {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+}
+
+.DeprecateDialog > .MainBlock > .Title {
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-lg);
+  margin-bottom: 8px;
 }
 
 .DeprecateDialog > .MainBlock > .Row {
   display: grid;
   grid-template-columns: 1fr 30px 1fr;
+  align-items: center;
 }
 
-.DeprecateDialog > .MainBlock > .Row > .Divider{
+.DeprecateDialog > .MainBlock > .Row > .Divider {
   text-align: center;
-  vertical-align: bottom;
   display: block;
 }
 
-.DeprecateDialog > .MainBlock > .Row > .Divider > .arrow{
+.DeprecateDialog > .MainBlock > .Row > .Divider > .arrow {
   position: sticky;
   top: 45px;
 }
@@ -30,15 +41,20 @@
 .DeprecateDialog > .MainBlock > .Row > .Col {
   display: grid;
   grid-template-columns: 30px 1fr;
+  align-items: center;
 }
 
 .DeprecateDialog > .MainBlock > .Row > .Col > a {
-    color: #ccc;
+  color: var(--color-primary);
+  text-decoration: none;
 }
 
-.DeprecateDialog > .Controls{
+.DeprecateDialog > .MainBlock > .Row > .Col > a:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+}
+
+.DeprecateDialog > .Controls {
   text-align: right;
-  position: fixed;
-  right: 5px;
-  bottom: 5px;
+  margin-top: 16px;
 }
