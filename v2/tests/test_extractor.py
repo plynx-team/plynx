@@ -1,4 +1,4 @@
-"""Tests for static AST extraction of operations (Tasks 2.1 & 2.2)."""
+"""Tests for static AST extraction of operations (Tasks 2.1, 2.2 & 2.3)."""
 
 from __future__ import annotations
 
@@ -14,6 +14,9 @@ FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures" / "extractor"
 UNINSTALLED_FIXTURE = FIXTURES_DIR / "uninstalled_import_op.py"
 PAIRED_CLASS_FIXTURE = FIXTURES_DIR / "paired_class_op.py"
 PAIRED_FUNC_FIXTURE = FIXTURES_DIR / "paired_func_op.py"
+INVALID_COMPUTED_TITLE_FIXTURE = FIXTURES_DIR / "invalid_computed_title.py"
+INVALID_CUSTOM_BASE_FIXTURE = FIXTURES_DIR / "invalid_custom_base.py"
+INVALID_UNKNOWN_ANNOTATION_FIXTURE = FIXTURES_DIR / "invalid_unknown_annotation.py"
 
 
 def test_uninstalled_fixture_fails_to_import_in_runtime() -> None:
@@ -304,3 +307,147 @@ def my_func(x: str) -> str:
     assert op.description == "A custom function op."
     assert op.kind == "function"
     assert op.outputs == [OutputPortSpec(name="result", type="str")]
+
+
+# ---------------------------------------------------------------------------
+# Task 2.3: Invalid ops (yield valid: False with documented reasons, never crash)
+# ---------------------------------------------------------------------------
+
+
+def test_invalid_computed_title_fixture() -> None:
+    """Fixture for computed TITLE yields valid: False and documented reason (Task 2.3 Accept)."""
+    ops = extract_ops_from_file(INVALID_COMPUTED_TITLE_FIXTURE)
+    assert len(ops) == 1
+    op = ops[0]
+
+    assert op.valid is False
+    assert op.error is not None
+    assert "Computed metadata is not supported" in op.error
+    assert "TITLE must be a string literal" in op.error
+
+
+def test_invalid_custom_base_fixture() -> None:
+    """Fixture for custom base class yields valid: False and documented reason (Task 2.3 Accept)."""
+    ops = extract_ops_from_file(INVALID_CUSTOM_BASE_FIXTURE)
+    assert len(ops) == 1
+    op = ops[0]
+
+    assert op.valid is False
+    assert op.error is not None
+    assert "custom base class is not supported" in op.error.lower()
+    assert "must inherit directly from Op" in op.error
+
+
+def test_invalid_unknown_annotation_fixture() -> None:
+    """Fixture for unknown annotation yields valid: False and documented reason."""
+    ops = extract_ops_from_file(INVALID_UNKNOWN_ANNOTATION_FIXTURE)
+    assert len(ops) == 1
+    op = ops[0]
+
+    assert op.valid is False
+    assert op.error is not None
+    assert "Unknown or unsupported port annotation" in op.error
+    assert "UnknownPortType" in op.error
+
+
+def test_invalid_syntax_error_yields_valid_false_never_crashes() -> None:
+    """Files with Python syntax errors produce valid: False and never crash."""
+    ops = extract_ops_from_source(
+        "class BrokenSyntax(:\n    def broken(\n",
+        pack="bad_pack",
+        module="bad_mod",
+        source_path="bad_pack/bad_mod.py",
+    )
+    assert len(ops) == 1
+    op = ops[0]
+    assert op.valid is False
+    assert op.error is not None
+    assert "syntax error" in op.error.lower()
+
+
+def test_invalid_missing_title_and_missing_run() -> None:
+    """Class ops missing TITLE or run method yield valid: False with clear reasons."""
+    src_no_title = """
+from plynx_sdk import Op
+
+class NoTitle(Op):
+    def run(self, x: str) -> str:
+        return x
+"""
+    ops1 = extract_ops_from_source(src_no_title)
+    assert len(ops1) == 1
+    assert ops1[0].valid is False
+    assert ops1[0].error is not None
+    assert "missing required TITLE" in ops1[0].error
+
+    src_no_run = """
+from plynx_sdk import Op
+
+class NoRun(Op):
+    TITLE = "No Run"
+"""
+    ops2 = extract_ops_from_source(src_no_run)
+    assert len(ops2) == 1
+    assert ops2[0].valid is False
+    assert ops2[0].error is not None
+    assert "must define a 'run' method" in ops2[0].error
+
+
+def test_invalid_port_name_and_varargs() -> None:
+    """Invalid port names (not snake_case) and varargs/kwargs yield valid: False."""
+    src_bad_port = """
+from plynx_sdk import Op
+
+class BadPort(Op):
+    TITLE = "Bad Port"
+    def run(self, NotSnakeCase: str) -> str:
+        return NotSnakeCase
+"""
+    ops1 = extract_ops_from_source(src_bad_port)
+    assert len(ops1) == 1
+    assert ops1[0].valid is False
+    assert ops1[0].error is not None
+    assert "must be snake_case" in ops1[0].error
+
+    src_varargs = """
+from plynx_sdk import Op
+
+class VarArgs(Op):
+    TITLE = "Var Args"
+    def run(self, *args: str, **kwargs: str) -> str:
+        return ""
+"""
+    ops2 = extract_ops_from_source(src_varargs)
+    assert len(ops2) == 1
+    assert ops2[0].valid is False
+    assert ops2[0].error is not None
+    assert "*args and **kwargs are not supported" in ops2[0].error
+
+
+def test_invalid_function_op_computed_title_and_unknown_annotation() -> None:
+    """Function ops with computed @op metadata or unknown annotations yield valid: False."""
+    src_computed = """
+from plynx_sdk import op
+
+@op(title="Prefix " + "Suffix")
+def computed_fn(x: str) -> str:
+    return x
+"""
+    ops1 = extract_ops_from_source(src_computed)
+    assert len(ops1) == 1
+    assert ops1[0].valid is False
+    assert ops1[0].error is not None
+    assert "Computed metadata is not supported" in ops1[0].error
+
+    src_unknown = """
+from plynx_sdk import op
+
+@op(title="Unknown Ann Fn")
+def unknown_fn(x: CompletelyUnknownType) -> str:
+    return "ok"
+"""
+    ops2 = extract_ops_from_source(src_unknown)
+    assert len(ops2) == 1
+    assert ops2[0].valid is False
+    assert ops2[0].error is not None
+    assert "Unknown or unsupported port annotation" in ops2[0].error

@@ -1,11 +1,13 @@
 """Static AST extraction for PLynx operations (PROTOCOL.md section 3).
 
 The registry reads Python source with ``ast``. It never imports pack code.
+Anything outside the supported subset yields ``valid: False`` with a reason, never a crash.
 """
 
 from __future__ import annotations
 
 import ast
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -13,6 +15,8 @@ from typing import Any
 from plynx_sdk.types import SEMANTIC_MEDIA_ALIASES
 
 from plynx.api_models import InputPortSpec, OpEntry, OutputPortSpec, PortType
+
+_SNAKE_CASE_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 
 
 @dataclass(frozen=True)
@@ -128,6 +132,8 @@ def _parse_annotation(
         if unwrapped.id in primitive_map:
             return _ParsedAnnotation(port_type=primitive_map[unwrapped.id])
 
+        raise ValueError(f"Unknown or unsupported port annotation: '{unwrapped.id}'")
+
     if isinstance(unwrapped, ast.Attribute):
         if unwrapped.attr in SEMANTIC_MEDIA_ALIASES:
             return _ParsedAnnotation(
@@ -138,6 +144,8 @@ def _parse_annotation(
             return _ParsedAnnotation(port_type="file")
         if unwrapped.attr == "Directory":
             return _ParsedAnnotation(port_type="directory")
+
+        raise ValueError(f"Unknown or unsupported port annotation: '{unwrapped.attr}'")
 
     if isinstance(unwrapped, ast.Subscript):
         name = _get_name_or_attr(unwrapped.value)
@@ -198,6 +206,15 @@ def _parse_annotation(
                                 max_val = _extract_literal(kw.value)
                             elif kw.arg == "step":
                                 step_val = _extract_literal(kw.value)
+                    else:
+                        raise ValueError(
+                            f"Unknown or unsupported annotation marker in Annotated: '{func_name}'"
+                        )
+                else:
+                    marker_name = _get_name_or_attr(meta)
+                    raise ValueError(
+                        f"Unknown or unsupported annotation marker in Annotated: '{marker_name}'"
+                    )
 
             return _ParsedAnnotation(
                 port_type=port_type,
@@ -208,12 +225,29 @@ def _parse_annotation(
                 step=step_val,
             )
 
-    raise ValueError(f"Unsupported port annotation: {ast.dump(unwrapped)}")
+        raise ValueError(f"Unknown or unsupported port annotation: '{name}'")
+
+    raise ValueError(f"Unknown or unsupported port annotation: {ast.dump(unwrapped)}")
 
 
-def _is_op_class(node: ast.ClassDef) -> bool:
-    """Return whether ``node`` subclasses ``Op``."""
-    return any(_get_name_or_attr(base) == "Op" for base in node.bases)
+def _is_op_candidate_class(node: ast.ClassDef) -> bool:
+    """Return whether ``node`` is an attempted PLynx Op class."""
+    if any(_get_name_or_attr(base) == "Op" for base in node.bases):
+        return True
+    if any(_get_name_or_attr(base).endswith("Op") for base in node.bases):
+        return True
+    for item in node.body:
+        if isinstance(item, ast.Assign):
+            for t in item.targets:
+                if isinstance(t, ast.Name) and t.id == "TITLE":
+                    return True
+        elif (
+            isinstance(item, ast.AnnAssign)
+            and isinstance(item.target, ast.Name)
+            and item.target.id == "TITLE"
+        ):
+            return True
+    return False
 
 
 def _get_op_decorator(node: ast.FunctionDef) -> ast.Call | ast.AST | None:
@@ -264,6 +298,9 @@ def _extract_inputs(
     module_aliases: dict[str, ast.AST],
 ) -> list[InputPortSpec]:
     """Extract input port specifications from function or method arguments."""
+    if args.vararg is not None or args.kwarg is not None:
+        raise ValueError("*args and **kwargs are not supported in Op signatures")
+
     inputs: list[InputPortSpec] = []
     pos_args = args.args
     if is_method and pos_args and pos_args[0].arg == "self":
@@ -275,6 +312,8 @@ def _extract_inputs(
 
     for i, arg in enumerate(pos_args):
         port_name = arg.arg
+        if not _SNAKE_CASE_RE.match(port_name):
+            raise ValueError(f"Port name '{port_name}' in {owner_name} must be snake_case")
         if arg.annotation is None:
             raise ValueError(
                 f"Input port '{port_name}' in {owner_name} is missing a type annotation"
@@ -307,6 +346,8 @@ def _extract_inputs(
         strict=True,
     ):
         port_name = kwarg.arg
+        if not _SNAKE_CASE_RE.match(port_name):
+            raise ValueError(f"Port name '{port_name}' in {owner_name} must be snake_case")
         if kwarg.annotation is None:
             raise ValueError(
                 f"Input port '{port_name}' in {owner_name} is missing a type annotation"
@@ -355,10 +396,13 @@ def _extract_outputs(
     if output_typed_dict is not None:
         for out_item in output_typed_dict.body:
             if isinstance(out_item, ast.AnnAssign) and isinstance(out_item.target, ast.Name):
+                port_name = out_item.target.id
+                if not _SNAKE_CASE_RE.match(port_name):
+                    raise ValueError(f"Output port name '{port_name}' must be snake_case")
                 out_parsed = _parse_annotation(out_item.annotation, module_aliases)
                 outputs.append(
                     OutputPortSpec(
-                        name=out_item.target.id,
+                        name=port_name,
                         type=out_parsed.port_type,
                         media=out_parsed.media,
                     )
@@ -394,6 +438,17 @@ def _extract_class_op(
     op_id = f"{pack}/{module}:{class_node.name}" if pack else f"{module}:{class_node.name}"
 
     try:
+        # Check base inheritance
+        if (
+            not class_node.bases
+            or len(class_node.bases) != 1
+            or _get_name_or_attr(class_node.bases[0]) != "Op"
+        ):
+            raise ValueError(
+                "Inheritance from a custom base class is not supported in v2.0.0 "
+                "(must inherit directly from Op)"
+            )
+
         for item in class_node.body:
             if isinstance(item, ast.ClassDef):
                 if any(_get_name_or_attr(base) == "TypedDict" for base in item.bases):
@@ -402,19 +457,34 @@ def _extract_class_op(
                 for t in item.targets:
                     if isinstance(t, ast.Name):
                         if t.id == "TITLE":
-                            val = _extract_literal(item.value)
+                            if not isinstance(item.value, ast.Constant):
+                                raise ValueError(
+                                    "Computed metadata is not supported: "
+                                    "TITLE must be a string literal"
+                                )
+                            val = item.value.value
                             if not isinstance(val, str):
                                 tname = type(val).__name__
                                 raise ValueError(f"TITLE must be a string literal, got {tname}")
                             title = val
                         elif t.id == "CATEGORY":
-                            val = _extract_literal(item.value)
+                            if not isinstance(item.value, ast.Constant):
+                                raise ValueError(
+                                    "Computed metadata is not supported: "
+                                    "CATEGORY must be a string literal"
+                                )
+                            val = item.value.value
                             if not isinstance(val, str):
                                 tname = type(val).__name__
                                 raise ValueError(f"CATEGORY must be a string literal, got {tname}")
                             category = val
                         elif t.id == "CACHEABLE":
-                            val = _extract_literal(item.value)
+                            if not isinstance(item.value, ast.Constant):
+                                raise ValueError(
+                                    "Computed metadata is not supported: "
+                                    "CACHEABLE must be a boolean literal"
+                                )
+                            val = item.value.value
                             if not isinstance(val, bool):
                                 tname = type(val).__name__
                                 raise ValueError(
@@ -427,19 +497,32 @@ def _extract_class_op(
                 and item.value is not None
             ):
                 if item.target.id == "TITLE":
-                    val = _extract_literal(item.value)
+                    if not isinstance(item.value, ast.Constant):
+                        raise ValueError(
+                            "Computed metadata is not supported: TITLE must be a string literal"
+                        )
+                    val = item.value.value
                     if not isinstance(val, str):
                         tname = type(val).__name__
                         raise ValueError(f"TITLE must be a string literal, got {tname}")
                     title = val
                 elif item.target.id == "CATEGORY":
-                    val = _extract_literal(item.value)
+                    if not isinstance(item.value, ast.Constant):
+                        raise ValueError(
+                            "Computed metadata is not supported: CATEGORY must be a string literal"
+                        )
+                    val = item.value.value
                     if not isinstance(val, str):
                         tname = type(val).__name__
                         raise ValueError(f"CATEGORY must be a string literal, got {tname}")
                     category = val
                 elif item.target.id == "CACHEABLE":
-                    val = _extract_literal(item.value)
+                    if not isinstance(item.value, ast.Constant):
+                        raise ValueError(
+                            "Computed metadata is not supported: "
+                            "CACHEABLE must be a boolean literal"
+                        )
+                    val = item.value.value
                     if not isinstance(val, bool):
                         tname = type(val).__name__
                         raise ValueError(f"CACHEABLE must be a boolean literal, got {tname}")
@@ -528,44 +611,67 @@ def _extract_function_op(
 
         # Positional arguments to @op(...)
         if len(dec.args) >= 1:
-            title_val = _extract_literal(dec.args[0])
-            if not isinstance(title_val, str):
-                tname = type(title_val).__name__
+            arg0 = dec.args[0]
+            if not isinstance(arg0, ast.Constant):
+                raise ValueError(
+                    "Computed metadata is not supported: title in @op must be a string literal"
+                )
+            if not isinstance(arg0.value, str):
+                tname = type(arg0.value).__name__
                 raise ValueError(f"Op title must be a string literal, got {tname}")
-            title = title_val
+            title = arg0.value
         if len(dec.args) >= 2:
-            cat_val = _extract_literal(dec.args[1])
-            if not isinstance(cat_val, str):
-                tname = type(cat_val).__name__
+            arg1 = dec.args[1]
+            if not isinstance(arg1, ast.Constant):
+                raise ValueError(
+                    "Computed metadata is not supported: category in @op must be a string literal"
+                )
+            if not isinstance(arg1.value, str):
+                tname = type(arg1.value).__name__
                 raise ValueError(f"Op category must be a string literal, got {tname}")
-            category = cat_val
+            category = arg1.value
         if len(dec.args) >= 3:
-            cache_val = _extract_literal(dec.args[2])
-            if not isinstance(cache_val, bool):
-                tname = type(cache_val).__name__
+            arg2 = dec.args[2]
+            if not isinstance(arg2, ast.Constant):
+                raise ValueError(
+                    "Computed metadata is not supported: cacheable in @op must be a boolean literal"
+                )
+            if not isinstance(arg2.value, bool):
+                tname = type(arg2.value).__name__
                 raise ValueError(f"Op cacheable must be a boolean literal, got {tname}")
-            cacheable = cache_val
+            cacheable = arg2.value
 
         # Keyword arguments to @op(...)
         for kw in dec.keywords:
             if kw.arg == "title":
-                title_val = _extract_literal(kw.value)
-                if not isinstance(title_val, str):
-                    tname = type(title_val).__name__
+                if not isinstance(kw.value, ast.Constant):
+                    raise ValueError(
+                        "Computed metadata is not supported: title in @op must be a string literal"
+                    )
+                if not isinstance(kw.value.value, str):
+                    tname = type(kw.value.value).__name__
                     raise ValueError(f"Op title must be a string literal, got {tname}")
-                title = title_val
+                title = kw.value.value
             elif kw.arg == "category":
-                cat_val = _extract_literal(kw.value)
-                if not isinstance(cat_val, str):
-                    tname = type(cat_val).__name__
+                if not isinstance(kw.value, ast.Constant):
+                    raise ValueError(
+                        "Computed metadata is not supported: "
+                        "category in @op must be a string literal"
+                    )
+                if not isinstance(kw.value.value, str):
+                    tname = type(kw.value.value).__name__
                     raise ValueError(f"Op category must be a string literal, got {tname}")
-                category = cat_val
+                category = kw.value.value
             elif kw.arg == "cacheable":
-                cache_val = _extract_literal(kw.value)
-                if not isinstance(cache_val, bool):
-                    tname = type(cache_val).__name__
+                if not isinstance(kw.value, ast.Constant):
+                    raise ValueError(
+                        "Computed metadata is not supported: "
+                        "cacheable in @op must be a boolean literal"
+                    )
+                if not isinstance(kw.value.value, bool):
+                    tname = type(kw.value.value).__name__
                     raise ValueError(f"Op cacheable must be a boolean literal, got {tname}")
-                cacheable = cache_val
+                cacheable = kw.value.value
 
         if title is None:
             raise ValueError(
@@ -627,7 +733,29 @@ def extract_ops_from_source(
     source_path: str = "",
 ) -> list[OpEntry]:
     """Extract PLynx ``Op`` definitions from a Python source string via AST without importing."""
-    tree = ast.parse(source, filename=source_path or "<string>")
+    try:
+        tree = ast.parse(source, filename=source_path or "<string>")
+    except SyntaxError as exc:
+        op_id = f"{pack}/{module}:<syntax_error>" if pack else f"{module}:<syntax_error>"
+        return [
+            OpEntry(
+                id=op_id,
+                pack=pack,
+                module=module,
+                name="<syntax_error>",
+                kind="class",
+                title="Syntax Error",
+                category="Error",
+                cacheable=False,
+                description="",
+                inputs=[],
+                outputs=[],
+                source=source_path,
+                valid=False,
+                error=f"Python syntax error: {exc.msg} (line {exc.lineno})",
+            )
+        ]
+
     module_aliases: dict[str, ast.AST] = {}
     module_typed_dicts: dict[str, ast.ClassDef] = {}
 
@@ -650,7 +778,7 @@ def extract_ops_from_source(
     entries: list[OpEntry] = []
 
     for stmt in tree.body:
-        if isinstance(stmt, ast.ClassDef) and _is_op_class(stmt):
+        if isinstance(stmt, ast.ClassDef) and _is_op_candidate_class(stmt):
             entries.append(
                 _extract_class_op(
                     stmt,

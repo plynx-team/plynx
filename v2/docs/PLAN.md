@@ -64,7 +64,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: extracts title, category, cacheable, ports, defaults, docstring from fixtures without importing them (fixture imports a package that is not installed).
 - [x] **2.2 AST extractor, function form and aliases.** `@op`, module-level TypedDict outputs, `Literal`, `Range`, same-file `Annotated` aliases, `plynx_sdk.types` aliases.
   Accept: class and function fixtures for the same op produce equal registry entries.
-- [ ] **2.3 Invalid ops.** Anything outside the subset yields `valid: false` and a reason, never a crash.
+- [x] **2.3 Invalid ops.** Anything outside the subset yields `valid: false` and a reason, never a crash.
   Accept: fixtures for computed `TITLE`, custom base class, unknown annotation each give the documented reason.
 - [ ] **2.4 Pack discovery and cache.** Search wheel-shipped packs, `builtin_packs/` (repo), `custom_packs/`; `registry_cache.json` keyed by file mtime.
   Accept: touching one file re-parses only that file; deleting the cache rebuilds it.
