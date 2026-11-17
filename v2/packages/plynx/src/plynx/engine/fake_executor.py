@@ -101,6 +101,7 @@ class FakeExecutor:
 
         started_at = time.time()
         try:
+            await request.notify_status(NodeStatus.RUNNING)
             script = self.scripts.get(request.node_id)
             delay = script.delay if script is not None else self.default_delay
             if delay > 0:

@@ -241,12 +241,33 @@ class Scheduler:
                         inputs_manifest.to_json(),
                     )
                     started_ts = time.time()
-                    await _emit_node_status(
-                        nid,
-                        NodeStatus.RUNNING,
-                        attempt=attempt,
-                        started_at=started_ts,
-                    )
+                    emitted_running = False
+
+                    async def _on_attempt_status(
+                        st: NodeStatus,
+                        *,
+                        _nid: str = nid,
+                        _attempt: int = attempt,
+                    ) -> None:
+                        nonlocal emitted_running, started_ts
+                        if st == NodeStatus.RUNNING:
+                            if emitted_running:
+                                return
+                            emitted_running = True
+                            started_ts = time.time()
+                            await _emit_node_status(
+                                _nid,
+                                NodeStatus.RUNNING,
+                                attempt=_attempt,
+                                started_at=started_ts,
+                            )
+                        elif st == NodeStatus.BUILDING_ENVIRONMENT:
+                            await _emit_node_status(
+                                _nid,
+                                NodeStatus.BUILDING_ENVIRONMENT,
+                                attempt=_attempt,
+                            )
+
                     req = ExecutionRequest(
                         run_id=active_run_id,
                         node_id=nid,
@@ -254,8 +275,11 @@ class Scheduler:
                         attempt=attempt,
                         node_dir=node_dir,
                         inputs=inputs_manifest,
+                        on_status=_on_attempt_status,
                     )
                     result = await self.executor.run(req)
+                    if not emitted_running:
+                        await _on_attempt_status(NodeStatus.RUNNING)
 
                     if result.status == NodeStatus.SUCCESS:
                         outs = result.outputs.outputs if result.outputs is not None else {}

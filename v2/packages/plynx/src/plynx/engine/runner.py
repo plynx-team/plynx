@@ -1,0 +1,481 @@
+"""``LocalExecutor`` implementation for running node attempts in isolated ``uv`` environments."""
+
+from __future__ import annotations
+
+import asyncio
+import hashlib
+import os
+import time
+from collections.abc import Mapping, Sequence
+from pathlib import Path
+
+from plynx_sdk.protocol import (
+    CheckpointManifest,
+    OutputsManifest,
+    ProtocolError,
+)
+
+from plynx.api_models import NodeStatus
+from plynx.engine.executor import ExecutionRequest, LaunchHandle, NodeResult
+from plynx.engine.procgroup import kill_process_group, spawn_async_process_group
+from plynx.store.run_store import atomic_write_text
+
+
+def _discover_builtin_packs_dirs() -> list[Path]:
+    dirs: list[Path] = []
+    for ancestor in Path(__file__).resolve().parents:
+        candidate = ancestor / "builtin_packs"
+        if candidate.is_dir():
+            dirs.append(candidate)
+    return dirs
+
+
+_BUILTIN_PACKS_DIRS = _discover_builtin_packs_dirs()
+
+
+def _parse_op_spec(op: str) -> tuple[str, str]:
+    """Parse ``<pack>/<module>:<Name>`` into ``(pack, module:Name)``."""
+    if ":" not in op:
+        raise ValueError(f"Invalid op reference {op!r}: missing ':'")
+    raw_mod, _, name = op.partition(":")
+    raw_mod = raw_mod.strip()
+    name = name.strip()
+    if not raw_mod or not name:
+        raise ValueError(f"Invalid op reference {op!r}")
+
+    if "/" in raw_mod:
+        pack_name, _, rest = raw_mod.partition("/")
+        module_import = f"{pack_name}.{rest.replace('/', '.')}" if rest else pack_name
+    elif "." in raw_mod:
+        pack_name, _, _ = raw_mod.partition(".")
+        module_import = raw_mod
+    else:
+        pack_name = raw_mod
+        module_import = raw_mod
+
+    return pack_name, f"{module_import}:{name}"
+
+
+def _find_lock_bytes(pack_dir: Path) -> bytes:
+    """Return bytes of ``pack_dir / 'uv.lock'`` or an enclosing workspace ``uv.lock``."""
+    direct_lock = pack_dir / "uv.lock"
+    if direct_lock.is_file():
+        return direct_lock.read_bytes()
+    for parent in list(pack_dir.parents)[:3]:
+        candidate = parent / "uv.lock"
+        if candidate.is_file():
+            return candidate.read_bytes()
+    return b""
+
+
+def _has_lockfile(pack_dir: Path) -> bool:
+    if (pack_dir / "uv.lock").is_file():
+        return True
+    return any((parent / "uv.lock").is_file() for parent in list(pack_dir.parents)[:3])
+
+
+def _compute_env_hash(pack_dir: Path) -> str:
+    pyproject_bytes = (pack_dir / "pyproject.toml").read_bytes()
+    lock_bytes = _find_lock_bytes(pack_dir)
+    digest = hashlib.sha256(pyproject_bytes + b"\n" + lock_bytes).hexdigest()
+    return digest[:12]
+
+
+def _resolve_logs_dir(node_dir: Path) -> Path:
+    if node_dir.parent.name == "nodes":
+        return node_dir.parent.parent / "logs"
+    return node_dir / "logs"
+
+
+def _prepare_log_files(logs_dir: Path, node_id: str, attempt: int) -> tuple[Path, Path]:
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    stdout_path = logs_dir / f"{node_id}.stdout.log"
+    stderr_path = logs_dir / f"{node_id}.stderr.log"
+    separator = f"--- attempt {attempt} ---\n".encode()
+
+    for path in (stdout_path, stderr_path):
+        if attempt > 1 or (path.is_file() and path.stat().st_size > 0):
+            with path.open("ab") as handle:
+                handle.write(separator)
+        elif not path.exists():
+            path.write_bytes(b"")
+
+    return stdout_path, stderr_path
+
+
+def _extract_stderr_error(stderr_path: Path) -> str | None:
+    if not stderr_path.is_file():
+        return None
+    try:
+        text = stderr_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    for line in reversed(lines):
+        if not line.startswith("--- attempt "):
+            return line
+    return None
+
+
+class LocalExecutor:
+    """Executes node attempts locally in isolated ``uv`` environments (PROTOCOL.md section 5)."""
+
+    def __init__(
+        self,
+        workspace_root: Path | None = None,
+        *,
+        pack_dirs: Sequence[Path] | None = None,
+        extra_env: Mapping[str, str] | None = None,
+    ) -> None:
+        self.workspace_root = (workspace_root or Path.cwd()).resolve()
+        self.pack_dirs: list[Path] = [p.resolve() for p in pack_dirs] if pack_dirs else []
+        self.extra_env: dict[str, str] = dict(extra_env) if extra_env else {}
+        self._env_locks: dict[Path, asyncio.Lock] = {}
+
+    async def launch(self, request: ExecutionRequest) -> LaunchHandle:
+        """Raise ``NotImplementedError`` per ARCHITECTURE.md."""
+        raise NotImplementedError("Executor.launch is not implemented in v2.0.0")
+
+    def resolve_pack_dir(self, pack_name: str) -> Path | None:
+        """Locate the directory containing ``pyproject.toml`` for ``pack_name``."""
+        candidates: list[Path] = []
+        for custom in self.pack_dirs:
+            if custom.name == pack_name and (custom / "pyproject.toml").is_file():
+                candidates.append(custom)
+            candidates.append(custom / pack_name)
+
+        candidates.extend(
+            [
+                self.workspace_root / "custom_packs" / pack_name,
+                self.workspace_root / "builtin_packs" / pack_name,
+                *(d / pack_name for d in _BUILTIN_PACKS_DIRS),
+            ]
+        )
+        for candidate in candidates:
+            if (candidate / "pyproject.toml").is_file():
+                return candidate.resolve()
+        return None
+
+    def _build_child_env(self, env_dir: Path) -> dict[str, str]:
+        env = {k: v for k, v in os.environ.items() if k != "VIRTUAL_ENV"}
+        env.update(self.extra_env)
+        env["PYTHONUNBUFFERED"] = "1"
+        env["PYTHONUTF8"] = "1"
+        env["UV_PROJECT_ENVIRONMENT"] = str(env_dir)
+        return env
+
+    def _get_env_lock(self, env_dir: Path) -> asyncio.Lock:
+        lock = self._env_locks.get(env_dir)
+        if lock is None:
+            lock = asyncio.Lock()
+            self._env_locks[env_dir] = lock
+        return lock
+
+    async def _ensure_environment(
+        self,
+        request: ExecutionRequest,
+        pack_dir: Path,
+        env_dir: Path,
+        child_env: Mapping[str, str],
+    ) -> tuple[bool, str | None]:
+        """Build ``env_dir`` on first use, emitting ``BUILDING_ENVIRONMENT``."""
+        pyvenv_cfg = env_dir / "pyvenv.cfg"
+        if pyvenv_cfg.is_file():
+            return True, None
+
+        lock = self._get_env_lock(env_dir)
+        async with lock:
+            if pyvenv_cfg.is_file():
+                return True, None
+
+            await request.notify_status(NodeStatus.BUILDING_ENVIRONMENT)
+            await asyncio.to_thread(env_dir.parent.mkdir, parents=True, exist_ok=True)
+
+            cmd = ["uv", "sync", "--no-dev", "--project", str(pack_dir)]
+            if _has_lockfile(pack_dir):
+                cmd.insert(2, "--frozen")
+
+            proc = await spawn_async_process_group(
+                cmd,
+                cwd=pack_dir,
+                env=child_env,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            _, stderr_bytes = await proc.communicate()
+            if proc.returncode != 0:
+                err_msg = stderr_bytes.decode("utf-8", errors="replace").strip()
+                return False, f"Failed to build environment for {pack_dir.name}: {err_msg}"
+            return True, None
+
+    async def run(self, request: ExecutionRequest) -> NodeResult:
+        """Execute ``request`` via ``uv run`` and map its exit code per PROTOCOL.md section 5."""
+        started_at = time.time()
+        node_dir = request.node_dir.resolve()
+        workdir = node_dir / "workdir"
+        await asyncio.to_thread(workdir.mkdir, parents=True, exist_ok=True)
+
+        # Remove stale manifest files from any earlier attempt on this node directory.
+        for stale_name in ("outputs.json", "checkpoint.json"):
+            stale_path = node_dir / stale_name
+            if stale_path.is_file():
+                await asyncio.to_thread(stale_path.unlink)
+
+        await asyncio.to_thread(
+            atomic_write_text,
+            node_dir / "inputs.json",
+            request.inputs.to_json(),
+        )
+
+        logs_dir = _resolve_logs_dir(node_dir)
+        stdout_path, stderr_path = await asyncio.to_thread(
+            _prepare_log_files,
+            logs_dir,
+            request.node_id,
+            request.attempt,
+        )
+
+        try:
+            pack_name, harness_op = _parse_op_spec(request.op)
+        except ValueError as exc:
+            await request.notify_status(NodeStatus.RUNNING)
+            return NodeResult(
+                status=NodeStatus.FAILED,
+                exit_code=2,
+                started_at=started_at,
+                finished_at=time.time(),
+                error=str(exc),
+            )
+
+        pack_dir = self.resolve_pack_dir(pack_name)
+        if pack_dir is None:
+            await request.notify_status(NodeStatus.RUNNING)
+            msg = f"Pack {pack_name!r} not found for op {request.op!r}"
+            await asyncio.to_thread(
+                self._append_stderr_line,
+                stderr_path,
+                msg,
+            )
+            return NodeResult(
+                status=NodeStatus.FAILED,
+                exit_code=2,
+                started_at=started_at,
+                finished_at=time.time(),
+                error=msg,
+            )
+
+        env_hash = await asyncio.to_thread(_compute_env_hash, pack_dir)
+        env_dir = (self.workspace_root / ".plynx" / "envs" / f"{pack_name}-{env_hash}").resolve()
+        child_env = self._build_child_env(env_dir)
+
+        ok_env, env_err = await self._ensure_environment(request, pack_dir, env_dir, child_env)
+        if not ok_env:
+            await request.notify_status(NodeStatus.RUNNING)
+            if env_err:
+                await asyncio.to_thread(self._append_stderr_line, stderr_path, env_err)
+            return NodeResult(
+                status=NodeStatus.FAILED,
+                exit_code=2,
+                started_at=started_at,
+                finished_at=time.time(),
+                error=env_err or "Environment build failed",
+            )
+
+        started_at = time.time()
+        await request.notify_status(NodeStatus.RUNNING)
+
+        cmd: list[str] = ["uv", "run"]
+        if _has_lockfile(pack_dir):
+            cmd.append("--frozen")
+        cmd.extend(
+            [
+                "--no-dev",
+                "--project",
+                str(pack_dir),
+                "python",
+                "-m",
+                "plynx_sdk.harness",
+                "--op",
+                harness_op,
+                "--dir",
+                str(node_dir),
+            ]
+        )
+
+        stdout_handle = stdout_path.open("ab")
+        stderr_handle = stderr_path.open("ab")
+        try:
+            proc = await spawn_async_process_group(
+                cmd,
+                cwd=workdir,
+                env=child_env,
+                stdout=stdout_handle,
+                stderr=stderr_handle,
+            )
+            exit_code, killed_by_engine, kill_reason = await self._wait_for_process(
+                proc,
+                timeout=request.timeout,
+                cancel_event=request.cancel_event,
+            )
+        finally:
+            stdout_handle.close()
+            stderr_handle.close()
+
+        finished_at = time.time()
+        if finished_at < started_at:
+            finished_at = started_at
+
+        if killed_by_engine:
+            return NodeResult(
+                status=NodeStatus.CANCELED,
+                exit_code=exit_code,
+                started_at=started_at,
+                finished_at=finished_at,
+                error=kill_reason,
+            )
+
+        return await asyncio.to_thread(
+            self._interpret_exit,
+            exit_code,
+            node_dir=node_dir,
+            stderr_path=stderr_path,
+            started_at=started_at,
+            finished_at=finished_at,
+        )
+
+    @staticmethod
+    def _append_stderr_line(stderr_path: Path, message: str) -> None:
+        with stderr_path.open("ab") as handle:
+            handle.write((message.rstrip("\n") + "\n").encode("utf-8"))
+
+    async def _wait_for_process(
+        self,
+        proc: asyncio.subprocess.Process,
+        *,
+        timeout: float | None,
+        cancel_event: asyncio.Event | None,
+    ) -> tuple[int, bool, str | None]:
+        if cancel_event is not None and cancel_event.is_set():
+            kill_process_group(proc.pid)
+            rc = await proc.wait()
+            return rc, True, "canceled"
+
+        wait_task: asyncio.Task[int] = asyncio.create_task(proc.wait())
+        cancel_task: asyncio.Task[bool] | None = (
+            asyncio.create_task(cancel_event.wait()) if cancel_event is not None else None
+        )
+        tasks: set[asyncio.Task[object]] = {wait_task}
+        if cancel_task is not None:
+            tasks.add(cancel_task)
+
+        try:
+            done, _ = await asyncio.wait(
+                tasks,
+                timeout=timeout,
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            if wait_task in done:
+                return wait_task.result(), False, None
+
+            if cancel_task is not None and cancel_task in done:
+                kill_process_group(proc.pid)
+                rc = await wait_task
+                return rc, True, "canceled"
+
+            # Timed out
+            kill_process_group(proc.pid)
+            rc = await wait_task
+            return rc, True, f"timeout after {timeout}s"
+        except asyncio.CancelledError:
+            kill_process_group(proc.pid)
+            await wait_task
+            raise
+        finally:
+            if cancel_task is not None and not cancel_task.done():
+                cancel_task.cancel()
+            if not wait_task.done():
+                wait_task.cancel()
+
+    @staticmethod
+    def _interpret_exit(
+        exit_code: int,
+        *,
+        node_dir: Path,
+        stderr_path: Path,
+        started_at: float,
+        finished_at: float,
+    ) -> NodeResult:
+        if exit_code == 0:
+            outputs_path = node_dir / "outputs.json"
+            if not outputs_path.is_file():
+                return NodeResult(
+                    status=NodeStatus.FAILED,
+                    exit_code=0,
+                    started_at=started_at,
+                    finished_at=finished_at,
+                    error="protocol error: exit 0 without outputs.json",
+                )
+            try:
+                outputs_manifest = OutputsManifest.from_json(outputs_path.read_bytes())
+            except (ProtocolError, OSError) as exc:
+                return NodeResult(
+                    status=NodeStatus.FAILED,
+                    exit_code=0,
+                    started_at=started_at,
+                    finished_at=finished_at,
+                    error=f"protocol error: invalid outputs.json: {exc}",
+                )
+            return NodeResult(
+                status=NodeStatus.SUCCESS,
+                exit_code=0,
+                started_at=outputs_manifest.started_at,
+                finished_at=outputs_manifest.finished_at,
+                outputs=outputs_manifest,
+            )
+
+        if exit_code == 10:
+            checkpoint_path = node_dir / "checkpoint.json"
+            if not checkpoint_path.is_file():
+                return NodeResult(
+                    status=NodeStatus.FAILED,
+                    exit_code=10,
+                    started_at=started_at,
+                    finished_at=finished_at,
+                    error="protocol error: exit 10 without checkpoint.json",
+                )
+            try:
+                cp_manifest = CheckpointManifest.from_json(checkpoint_path.read_bytes())
+            except (ProtocolError, OSError) as exc:
+                return NodeResult(
+                    status=NodeStatus.FAILED,
+                    exit_code=10,
+                    started_at=started_at,
+                    finished_at=finished_at,
+                    error=f"protocol error: invalid checkpoint.json: {exc}",
+                )
+            return NodeResult(
+                status=NodeStatus.WAITING_FOR_USER,
+                exit_code=10,
+                started_at=started_at,
+                finished_at=finished_at,
+                checkpoint=cp_manifest,
+            )
+
+        stderr_err = _extract_stderr_error(stderr_path)
+        if exit_code == 1:
+            err_msg = stderr_err or "op raised an exception (exit 1)"
+        elif exit_code == 2:
+            err_msg = stderr_err or "protocol error (exit 2)"
+        else:
+            err_msg = stderr_err or f"process failed with exit code {exit_code}"
+
+        return NodeResult(
+            status=NodeStatus.FAILED,
+            exit_code=exit_code,
+            started_at=started_at,
+            finished_at=finished_at,
+            error=err_msg,
+        )
+
+
+__all__ = ["LocalExecutor"]
