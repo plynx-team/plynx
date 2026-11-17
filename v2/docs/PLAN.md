@@ -96,7 +96,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
 
 - [x] **4.1 Checkpoints in the engine.** Exit 10 -> `CHECKPOINTS` row, `WAITING_FOR_USER`, `node_checkpoint` event; answer -> re-run with answers; only dependents wait.
   Accept: in a diamond, the branch not behind the checkpoint finishes while the question is open; `checkpoint_resolved` is emitted once.
-- [ ] **4.2 CLI interaction.** Interactive prompt `[1-N]`/text, `--answers`, `--answer`, `--non-interactive`, exit code 2.
+- [x] **4.2 CLI interaction.** Interactive prompt `[1-N]`/text, `--answers`, `--answer`, `--non-interactive`, exit code 2.
   Accept: the Phase 0 end-to-end test passes unchanged against real execution; piped stdin drives the interactive prompt in a test.
 - [ ] **4.3 Stage gates.** `require_approval: true` pauses after the whole stage succeeds and before the next stage starts.
   Accept: no node of stage N+1 has `started_at` before the approval time; `stage_approval` and `stage_resolved` events appear.

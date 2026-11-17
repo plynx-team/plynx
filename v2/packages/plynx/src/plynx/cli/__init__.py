@@ -14,20 +14,17 @@ import uvicorn
 from pydantic import ValidationError
 
 from plynx.api_models import NodeStatus, RunStatus
+from plynx.cli.interaction import (
+    is_non_interactive,
+    load_cli_answers,
+    make_terminal_checkpoint_callback,
+    parse_key_value_pair,
+)
 from plynx.engine import Scheduler, SchedulerOptions, create_executor
 from plynx.registry import Registry, find_workspace_root
 from plynx.store import RunStore
 from plynx.workflow.models import load_workflow
 from plynx.workflow.validator import validate_workflow, validate_workflow_file
-
-
-def _parse_key_value(pair: str, *, flag: str) -> tuple[str, str]:
-    if "=" not in pair:
-        raise click.BadParameter(f"Expected KEY=VALUE for {flag}, got {pair!r}")
-    key, _, value = pair.partition("=")
-    if not key.strip():
-        raise click.BadParameter(f"Empty key in {pair!r} for {flag}")
-    return key.strip(), value
 
 
 def _parse_scalar_value(raw: str) -> Any:
@@ -120,10 +117,10 @@ def run_cmd(
 
     run_inputs: dict[str, Any] = {}
     for pair in set_pairs:
-        key, raw_val = _parse_key_value(pair, flag="--set")
+        key, raw_val = parse_key_value_pair(pair, flag="--set")
         run_inputs[key] = _parse_scalar_value(raw_val)
     for pair in input_pairs:
-        key, path_val = _parse_key_value(pair, flag="--input")
+        key, path_val = parse_key_value_pair(pair, flag="--input")
         run_inputs[key] = path_val
 
     issues = validate_workflow(wf_model, registry, run_inputs=run_inputs)
@@ -136,21 +133,13 @@ def run_cmd(
             click.echo(f"{issue.severity}: {issue.message}", err=True)
         sys.exit(1)
 
-    answers: dict[str, str] = {}
-    if answers_file is not None:
-        if not answers_file.is_file():
-            click.echo(f"error: answers file not found: {answers_file}", err=True)
-            sys.exit(1)
-        loaded_answers = json.loads(answers_file.read_text(encoding="utf-8"))
-        if not isinstance(loaded_answers, dict):
-            click.echo("error: --answers file must contain a JSON object", err=True)
-            sys.exit(1)
-        for k, v in loaded_answers.items():
-            answers[str(k)] = str(v)
+    try:
+        answers = load_cli_answers(answers_file, answer_pairs)
+    except click.ClickException as exc:
+        click.echo(f"error: {exc.format_message()}", err=True)
+        sys.exit(1)
 
-    for pair in answer_pairs:
-        key, val = _parse_key_value(pair, flag="--answer")
-        answers[key] = val
+    effective_non_interactive = is_non_interactive(non_interactive)
 
     store = RunStore(workspace_root)
     executor = create_executor(workspace_root)
@@ -168,8 +157,11 @@ def run_cmd(
         concurrency=concurrency,
         run_inputs=run_inputs,
         answers=answers,
-        non_interactive=non_interactive,
+        non_interactive=effective_non_interactive,
         no_cache=no_cache,
+        checkpoint_callback=(
+            None if effective_non_interactive else make_terminal_checkpoint_callback()
+        ),
         on_node_status=_print_node_status,
     )
     final_state = asyncio.run(
