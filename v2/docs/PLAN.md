@@ -30,15 +30,16 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: `npm run lint`, `typecheck`, `test` pass; a vitest test feeds recorded events into the state reducer; the server returns the built `index.html` at `/`.
 - [x] **0.11 Skeleton end-to-end test.** `tests/e2e/test_skeleton.py` runs the CLI as a subprocess on `foo_or_woo.yaml`: with `--non-interactive` the fake checkpoint gives exit 2; with `--answer pick.cp_0=foo` it gives exit 0 and the `echo` node receives `foo`.
   Accept: passes on Linux, macOS, and Windows. This test is the contract for all later phases.
-- [ ] **0.12 Measurement spike (no production code).** Measure and record in the table below: `uv run` start time per node (cold environment, warm environment), AST extraction time for 100 ops, `os.link` behavior and fallback on each OS, SQLite polling cost at 200 ms.
+- [x] **0.12 Measurement spike (no production code).** Measure and record in the table below: `uv run` start time per node (cold environment, warm environment), AST extraction time for 100 ops, `os.link` behavior and fallback on each OS, SQLite polling cost at 200 ms.
   Accept: the numbers are in the table. **Stop and tell the owner** if warm start is above 1 s per node or extraction above 50 ms for 100 ops. The chat's "<1 ms", "<10 ms", "0 ms" figures are unverified claims.
 
 | Measurement | Linux | macOS | Windows |
 |---|---|---|---|
-| `uv run` warm start per node | | | |
-| `uv run` cold start (new env) | | | |
-| AST extraction, 100 ops | | | |
-| Hard link / fallback | | | |
+| `uv run` warm start per node | 12.6 ms median (14.6 ms mean) | 24.9 ms median (27.0 ms mean) | pending CI (7.2) |
+| `uv run` cold start (new env) | 21.6 ms | 54.0 ms | pending CI (7.2) |
+| AST extraction, 100 ops | 6.5 ms | 5.9 ms | pending CI (7.2) |
+| Hard link / fallback | `os.link` 0.02 ms / `copy2` 0.44 ms (1 MiB; `EXDEV` across mounts falls back) | `os.link` 0.19 ms / `copy2` 0.24 ms (1 MiB; `EXDEV` across volumes falls back) | NTFS `os.link`; cross-drive `OSError` falls back to `copy2` (pending CI 7.2) |
+| SQLite polling cost at 200 ms | 0.11 ms / poll (0.06% duty cycle) | 0.34 ms / poll (0.17% duty cycle) | pending CI (7.2) |
 
 ## Phase 1: Real node execution
 
