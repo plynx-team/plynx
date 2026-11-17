@@ -18,6 +18,7 @@ from plynx.cli.interaction import (
     is_non_interactive,
     load_cli_answers,
     make_terminal_checkpoint_callback,
+    make_terminal_stage_approval_callback,
     parse_key_value_pair,
 )
 from plynx.engine import Scheduler, SchedulerOptions, create_executor
@@ -153,6 +154,7 @@ def run_cmd(
     def _print_node_status(node_id: str, status: NodeStatus, _attempt: int) -> None:
         click.echo(f"{node_id} {status.value}")
 
+    prompt_lock = asyncio.Lock()
     opts = SchedulerOptions(
         concurrency=concurrency,
         run_inputs=run_inputs,
@@ -160,7 +162,14 @@ def run_cmd(
         non_interactive=effective_non_interactive,
         no_cache=no_cache,
         checkpoint_callback=(
-            None if effective_non_interactive else make_terminal_checkpoint_callback()
+            None
+            if effective_non_interactive
+            else make_terminal_checkpoint_callback(prompt_lock=prompt_lock)
+        ),
+        stage_approval_callback=(
+            None
+            if effective_non_interactive
+            else make_terminal_stage_approval_callback(prompt_lock=prompt_lock)
         ),
         on_node_status=_print_node_status,
     )

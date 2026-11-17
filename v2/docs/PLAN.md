@@ -98,7 +98,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: in a diamond, the branch not behind the checkpoint finishes while the question is open; `checkpoint_resolved` is emitted once.
 - [x] **4.2 CLI interaction.** Interactive prompt `[1-N]`/text, `--answers`, `--answer`, `--non-interactive`, exit code 2.
   Accept: the Phase 0 end-to-end test passes unchanged against real execution; piped stdin drives the interactive prompt in a test.
-- [ ] **4.3 Stage gates.** `require_approval: true` pauses after the whole stage succeeds and before the next stage starts.
+- [x] **4.3 Stage gates.** `require_approval: true` pauses after the whole stage succeeds and before the next stage starts.
   Accept: no node of stage N+1 has `started_at` before the approval time; `stage_approval` and `stage_resolved` events appear.
 - [ ] **4.4 Resume.** `plynx resume <id>` for failed and waiting runs; reuses the run's own outputs (even for `CACHEABLE = False`); takes ownership.
   Accept: fix a failing node's source, resume, only that node and its dependents run.

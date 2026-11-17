@@ -32,6 +32,9 @@ from plynx.api_models import (
     RunState,
     RunStatus,
     RunStatusData,
+    StageApprovalData,
+    StageGateStatus,
+    StageResolvedData,
 )
 from plynx.cas import (
     BlobStore,
@@ -50,6 +53,7 @@ from plynx.store.run_store import RunStore, atomic_write_text
 from plynx.workflow.models import NodeRef, NodeSpec, Workflow
 
 CheckpointCallback = Callable[[str, str, CheckpointManifest], Awaitable[str | None] | str | None]
+StageApprovalCallback = Callable[[str, str], Awaitable[bool] | bool]
 NodeStatusCallback = Callable[[str, NodeStatus, int], None]
 
 
@@ -64,6 +68,7 @@ class SchedulerOptions:
     no_cache: bool = False
     poll_interval: float = 0.2
     checkpoint_callback: CheckpointCallback | None = None
+    stage_approval_callback: StageApprovalCallback | None = None
     on_node_status: NodeStatusCallback | None = None
 
 
@@ -162,11 +167,32 @@ class Scheduler:
         sorter = graphlib.TopologicalSorter(dep_graph)
         sorter.prepare()
 
+        stage_order = list(workflow.stages.keys())
+        stage_index = {sid: idx for idx, sid in enumerate(stage_order)}
+        stage_nodes: dict[str, list[str]] = {sid: [] for sid in stage_order}
+        for nid, spec in workflow.nodes.items():
+            stage_nodes.setdefault(spec.stage, []).append(nid)
+
         semaphore = asyncio.Semaphore(concurrency)
         running_tasks: dict[asyncio.Task[tuple[str, bool]], str] = {}
+        gate_tasks: dict[asyncio.Task[tuple[str, bool]], str] = {}
         runnable_nodes: set[str] = set()
         waiting_nodes: set[str] = set()
+        opened_gates: set[str] = set()
+        waiting_gates: set[str] = set()
+        approved_gates: set[str] = set()
         emitted_cp_resolutions: set[tuple[str, str]] = set()
+        emitted_gate_resolutions: set[str] = set()
+
+        def _is_node_stage_gated(nid: str) -> bool:
+            target_idx = stage_index[workflow.nodes[nid].stage]
+            for earlier_sid in stage_order[:target_idx]:
+                if (
+                    workflow.stages[earlier_sid].require_approval
+                    and earlier_sid not in approved_gates
+                ):
+                    return True
+            return False
 
         async def _sync_run_status() -> None:
             nonlocal current_run_status
@@ -174,7 +200,7 @@ class Scheduler:
                 return
             async with run_status_lock:
                 desired: RunStatus | None = None
-                if not runnable_nodes and waiting_nodes:
+                if not runnable_nodes and (waiting_nodes or waiting_gates):
                     desired = RunStatus.WAITING_FOR_USER
                 elif runnable_nodes and current_run_status == RunStatus.WAITING_FOR_USER:
                     desired = RunStatus.RUNNING
@@ -429,11 +455,72 @@ class Scheduler:
                 )
                 return nid, True
 
+        async def _wait_for_stage_gate(stage_id: str) -> tuple[str, bool]:
+            title = workflow.stages[stage_id].title or stage_id
+            approved = await self._resolve_stage_approval(
+                active_run_id,
+                stage_id,
+                title,
+                opts,
+            )
+            if not approved:
+                return stage_id, False
+
+            if stage_id not in emitted_gate_resolutions:
+                emitted_gate_resolutions.add(stage_id)
+                await asyncio.to_thread(
+                    event_log.append,
+                    "stage_resolved",
+                    StageResolvedData(run_id=active_run_id, stage_id=stage_id),
+                )
+            return stage_id, True
+
+        async def _open_ready_stage_gates() -> bool:
+            progressed = False
+            for sid in stage_order:
+                stage = workflow.stages[sid]
+                if not stage.require_approval:
+                    continue
+                if sid in approved_gates:
+                    continue
+                if sid in opened_gates:
+                    # Wait for this stage gate before opening any later stage gate.
+                    break
+                nodes_in_stage = stage_nodes.get(sid, [])
+                if not all(node_statuses.get(n) == NodeStatus.SUCCESS for n in nodes_in_stage):
+                    break
+
+                await asyncio.to_thread(self.store.create_stage_gate, active_run_id, sid)
+                await asyncio.to_thread(
+                    event_log.append,
+                    "stage_approval",
+                    StageApprovalData(
+                        run_id=active_run_id,
+                        stage_id=sid,
+                        title=stage.title or sid,
+                    ),
+                )
+                opened_gates.add(sid)
+                waiting_gates.add(sid)
+                progressed = True
+                if not opts.non_interactive:
+                    gtask = asyncio.create_task(_wait_for_stage_gate(sid))
+                    gate_tasks[gtask] = sid
+                break
+            return progressed
+
         pending_discard: list[str] = []
-        while sorter.is_active():
-            ready_nodes = list(sorter.get_ready())
+        deferred_ready: list[str] = []
+        while True:
+            if sorter.is_active():
+                deferred_ready.extend(sorter.get_ready())
+
+            await _open_ready_stage_gates()
+
             blocked_progressed = False
-            for nid in ready_nodes:
+            still_deferred: list[str] = []
+            to_launch: list[str] = []
+            for nid in deferred_ready:
                 deps = dep_graph[nid]
                 if any(
                     node_statuses.get(dep)
@@ -443,38 +530,60 @@ class Scheduler:
                     await _emit_node_status(nid, NodeStatus.BLOCKED, attempt=0)
                     sorter.done(nid)
                     blocked_progressed = True
+                elif _is_node_stage_gated(nid):
+                    still_deferred.append(nid)
                 else:
                     runnable_nodes.add(nid)
-                    task = asyncio.create_task(_execute_node(nid))
-                    running_tasks[task] = nid
+                    to_launch.append(nid)
+            deferred_ready = still_deferred
 
             for done_nid in pending_discard:
                 runnable_nodes.discard(done_nid)
             pending_discard.clear()
 
-            if blocked_progressed and not running_tasks:
+            if to_launch:
+                await _sync_run_status()
+                for nid in to_launch:
+                    task = asyncio.create_task(_execute_node(nid))
+                    running_tasks[task] = nid
+
+            if blocked_progressed and not running_tasks and not gate_tasks:
                 continue
-            if not running_tasks:
+
+            all_tasks: set[asyncio.Task[tuple[str, bool]]] = set(running_tasks.keys()) | set(
+                gate_tasks.keys()
+            )
+            if not all_tasks:
                 break
 
             await _sync_run_status()
 
             done, _ = await asyncio.wait(
-                running_tasks.keys(),
+                all_tasks,
                 return_when=asyncio.FIRST_COMPLETED,
             )
             for completed_task in done:
-                running_tasks.pop(completed_task, None)
-                finished_nid, mark_done = await completed_task
-                pending_discard.append(finished_nid)
-                if mark_done:
-                    sorter.done(finished_nid)
+                if completed_task in running_tasks:
+                    running_tasks.pop(completed_task, None)
+                    finished_nid, mark_done = await completed_task
+                    pending_discard.append(finished_nid)
+                    if mark_done:
+                        sorter.done(finished_nid)
+                elif completed_task in gate_tasks:
+                    gate_tasks.pop(completed_task, None)
+                    gate_sid, approved = await completed_task
+                    if approved:
+                        waiting_gates.discard(gate_sid)
+                        approved_gates.add(gate_sid)
 
         for done_nid in pending_discard:
             runnable_nodes.discard(done_nid)
         pending_discard.clear()
 
-        final_status = self._compute_final_run_status(node_statuses)
+        final_status = self._compute_final_run_status(
+            node_statuses,
+            has_waiting_gate=bool(waiting_gates),
+        )
         finished_ts = (
             time.time()
             if final_status in (RunStatus.SUCCESS, RunStatus.FAILED, RunStatus.CANCELED)
@@ -743,13 +852,80 @@ class Scheduler:
                     with contextlib.suppress(asyncio.CancelledError):
                         await task
 
+    async def _resolve_stage_approval(
+        self,
+        run_id: str,
+        stage_id: str,
+        title: str,
+        opts: SchedulerOptions,
+    ) -> bool:
+        existing = await asyncio.to_thread(self.store.get_stage_gate, run_id, stage_id)
+        if existing is not None and existing.status == StageGateStatus.APPROVED:
+            return True
+
+        if opts.non_interactive:
+            return False
+
+        poll_sleep = max(opts.poll_interval, 0.005)
+
+        async def _poll_db_gate() -> bool:
+            while True:
+                await asyncio.sleep(poll_sleep)
+                row = await asyncio.to_thread(self.store.get_stage_gate, run_id, stage_id)
+                if row is not None and row.status == StageGateStatus.APPROVED:
+                    return True
+
+        if opts.stage_approval_callback is None:
+            return await _poll_db_gate()
+
+        callback = opts.stage_approval_callback
+
+        async def _invoke_callback() -> bool:
+            maybe_coro = callback(stage_id, title)
+            if isinstance(maybe_coro, Awaitable):
+                return bool(await maybe_coro)
+            return bool(maybe_coro)
+
+        poll_task: asyncio.Task[bool] = asyncio.create_task(_poll_db_gate())
+        cb_task: asyncio.Task[bool] = asyncio.create_task(_invoke_callback())
+        try:
+            done, pending = await asyncio.wait(
+                {poll_task, cb_task},
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            for p_task in pending:
+                p_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await p_task
+
+            if poll_task in done and not poll_task.cancelled():
+                return poll_task.result()
+
+            approved = cb_task.result()
+            if approved:
+                await asyncio.to_thread(self.store.approve_stage_gate, run_id, stage_id)
+                return True
+
+            latest = await asyncio.to_thread(self.store.get_stage_gate, run_id, stage_id)
+            return latest is not None and latest.status == StageGateStatus.APPROVED
+        finally:
+            for task in (poll_task, cb_task):
+                if not task.done():
+                    task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await task
+
     @staticmethod
-    def _compute_final_run_status(node_statuses: Mapping[str, NodeStatus]) -> RunStatus:
+    def _compute_final_run_status(
+        node_statuses: Mapping[str, NodeStatus],
+        *,
+        has_waiting_gate: bool = False,
+    ) -> RunStatus:
         statuses = set(node_statuses.values())
         if NodeStatus.CANCELED in statuses:
             return RunStatus.CANCELED
         if NodeStatus.FAILED in statuses:
             return RunStatus.FAILED
-        if NodeStatus.WAITING_FOR_USER in statuses:
+        if NodeStatus.WAITING_FOR_USER in statuses or has_waiting_gate:
             return RunStatus.WAITING_FOR_USER
         return RunStatus.SUCCESS

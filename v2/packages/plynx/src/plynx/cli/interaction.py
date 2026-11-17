@@ -15,6 +15,7 @@ import click
 from plynx_sdk.protocol import CheckpointManifest
 
 CheckpointPromptCallback = Callable[[str, str, CheckpointManifest], Awaitable[str | None]]
+StagePromptCallback = Callable[[str, str], Awaitable[bool]]
 
 
 def is_non_interactive(flag: bool) -> bool:
@@ -113,9 +114,10 @@ def parse_checkpoint_input(raw: str, cp: CheckpointManifest) -> tuple[bool, str 
 def make_terminal_checkpoint_callback(
     *,
     input_stream: TextIO | None = None,
+    prompt_lock: asyncio.Lock | None = None,
 ) -> CheckpointPromptCallback:
     """Return an async callback that prompts the user on the terminal for checkpoints."""
-    prompt_lock = asyncio.Lock()
+    lock = prompt_lock if prompt_lock is not None else asyncio.Lock()
 
     async def _prompt(
         node_id: str,
@@ -124,7 +126,7 @@ def make_terminal_checkpoint_callback(
     ) -> str | None:
         stream = input_stream if input_stream is not None else sys.stdin
         options = cp.options or []
-        async with prompt_lock:
+        async with lock:
             click.echo(f"\n[{node_id}.{checkpoint_id}] {cp.question}")
             for idx, opt in enumerate(options, start=1):
                 click.echo(f"  {idx}. {opt}")
@@ -153,11 +155,41 @@ def make_terminal_checkpoint_callback(
     return _prompt
 
 
+def make_terminal_stage_approval_callback(
+    *,
+    input_stream: TextIO | None = None,
+    prompt_lock: asyncio.Lock | None = None,
+) -> StagePromptCallback:
+    """Return an async callback that prompts the user to approve a stage gate."""
+    lock = prompt_lock if prompt_lock is not None else asyncio.Lock()
+
+    async def _prompt(stage_id: str, title: str) -> bool:
+        stream = input_stream if input_stream is not None else sys.stdin
+        async with lock:
+            click.echo(f"\n[stage:{stage_id}] Stage '{title}' completed.")
+            while True:
+                click.echo("Approve & continue? [y/N]: ", nl=False)
+                sys.stdout.flush()
+                raw = await read_line_async(stream)
+                if raw is None:
+                    return False
+                entry = raw.strip().lower()
+                if entry in ("y", "yes"):
+                    return True
+                if entry in ("", "n", "no"):
+                    return False
+                click.echo("Please enter 'y' or 'n'.", err=True)
+
+    return _prompt
+
+
 __all__ = [
     "CheckpointPromptCallback",
+    "StagePromptCallback",
     "is_non_interactive",
     "load_cli_answers",
     "make_terminal_checkpoint_callback",
+    "make_terminal_stage_approval_callback",
     "parse_checkpoint_input",
     "parse_key_value_pair",
     "read_line_async",

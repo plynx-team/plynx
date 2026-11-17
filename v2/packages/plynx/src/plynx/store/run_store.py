@@ -483,6 +483,26 @@ class RunStore:
             )
             return cursor.rowcount == 1
 
+    def get_stage_gate(self, run_id: str, stage_id: str) -> StageGateState | None:
+        """Fetch a single stage gate state."""
+        with self._connect() as conn:
+            row = conn.execute(
+                """
+                SELECT stage_id, status, created_at, decided_at
+                FROM stage_gates
+                WHERE run_id = ? AND stage_id = ?
+                """,
+                (run_id, stage_id),
+            ).fetchone()
+        if row is None:
+            return None
+        return StageGateState(
+            stage_id=str(row["stage_id"]),
+            status=StageGateStatus(str(row["status"])),
+            created_at=float(row["created_at"]),
+            decided_at=row["decided_at"],
+        )
+
     def get_run_state(self, run_id: str) -> RunState | None:
         """Return the complete ``RunState`` for ``run_id``, or ``None`` if not found."""
         with self._connect() as conn:
