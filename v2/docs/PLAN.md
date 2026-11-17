@@ -85,7 +85,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: golden test with a fixed expected hash; each component change alters the key; a change in an unrelated file of the pack does not.
 - [x] **3.5 Cache hits.** Lookup in fresh runs for `CACHEABLE` ops; `--no-cache`; missing blob is a miss.
   Accept: second run of the same workflow reports `cache_hit = true` for all nodes and starts no child process (test counts spawns); deleting a blob turns that node into a miss without an error.
-- [ ] **3.6 Early cutoff.** Downstream key depends on output hashes.
+- [x] **3.6 Early cutoff.** Downstream key depends on output hashes.
   Accept: change an upstream input so its output bytes stay identical; downstream nodes still hit.
 - [ ] **3.7 `plynx clean`.** Mark and sweep, `--days`, `--dry-run`, pinned runs kept.
   Accept: unreferenced blobs and stale `cache_index` rows are removed; referenced blobs survive; dry run changes nothing.
