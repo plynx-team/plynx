@@ -191,6 +191,58 @@ def run_cmd(
     sys.exit(1)
 
 
+@main.command("ops")
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Dump full OpEntry schemas as JSON.",
+)
+def ops_cmd(as_json: bool) -> None:
+    """List registered operations."""
+    workspace_root = find_workspace_root()
+    registry = Registry(workspace_root)
+    ops = registry.list_ops()
+
+    if as_json:
+        data = [op.model_dump(mode="json") for op in ops]
+        click.echo(json.dumps(data, indent=2))
+        return
+
+    if not ops:
+        click.echo("No operations found.")
+        return
+
+    headers = ("NAME", "PACK", "CATEGORY", "INPUTS", "OUTPUTS", "DESCRIPTION")
+    rows: list[tuple[str, str, str, str, str, str]] = []
+    for op in ops:
+        inputs_str = ", ".join(f"{p.name}: {p.type}" for p in op.inputs) or "-"
+        outputs_str = ", ".join(f"{p.name}: {p.type}" for p in op.outputs) or "-"
+        rows.append(
+            (
+                op.name,
+                op.pack,
+                op.category,
+                inputs_str,
+                outputs_str,
+                op.description or "-",
+            )
+        )
+
+    widths = [len(h) for h in headers]
+    for row in rows:
+        for idx, cell in enumerate(row):
+            widths[idx] = max(widths[idx], len(cell))
+
+    header_line = "  ".join(h.ljust(widths[i]) for i, h in enumerate(headers))
+    separator_line = "  ".join("-" * widths[i] for i in range(len(headers)))
+    click.echo(header_line)
+    click.echo(separator_line)
+    for row in rows:
+        click.echo("  ".join(cell.ljust(widths[i]) for i, cell in enumerate(row)))
+
+
 @main.command("ui")
 @click.option("--port", type=int, default=8080, show_default=True, help="Local port to bind.")
 @click.option("--no-browser", is_flag=True, default=False, help="Do not open a browser window.")

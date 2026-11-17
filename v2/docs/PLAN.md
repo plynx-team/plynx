@@ -70,7 +70,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: touching one file re-parses only that file; deleting the cache rebuilds it.
 - [x] **2.5 Real validator.** Replace `FakeRegistry`: port types and media compatibility, required inputs, unbound run inputs, missing `uv.lock` warning.
   Accept: all Phase 0 validator fixtures still pass against the real registry; media mismatch is rejected, `Path` to `PdfFile` is accepted.
-- [ ] **2.6 `plynx ops`.** Human table and `--json`.
+- [x] **2.6 `plynx ops`.** Human table and `--json`.
   Accept: output lists every op in `standard_io`.
 
 ## Phase 3: Artifacts and cache
