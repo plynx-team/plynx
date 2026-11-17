@@ -106,7 +106,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: no child or grandchild survives; a second process can cancel a run owned by the first.
 - [x] **4.6 Dead owner.** Detect a gone `owner_pid`, mark the run `FAILED` (`engine_died`).
   Accept: kill -9 the owner, the next `plynx runs` shows `FAILED`, `resume` continues.
-- [ ] **4.7 `plynx run-node`.** Per PROTOCOL.md section 11.
+- [x] **4.7 `plynx run-node`.** Per PROTOCOL.md section 11.
   Accept: re-runs a failed node from its directory in a scratch copy and prints the traceback; SQLite is unchanged.
 - [ ] **4.8 `plynx runs` and prefix IDs.**
   Accept: a unique prefix resolves; an ambiguous prefix lists candidates and exits 1.

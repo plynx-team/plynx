@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import hashlib
+import shutil
+import tempfile
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
 from plynx_sdk.protocol import (
@@ -15,6 +18,7 @@ from plynx_sdk.protocol import (
 )
 
 from plynx.api_models import NodeStatus
+from plynx.cas.materialize import safe_rmtree
 from plynx.engine.env import build_child_environment
 from plynx.engine.executor import ExecutionRequest, LaunchHandle, NodeResult
 from plynx.engine.procgroup import kill_process_group, spawn_async_process_group
@@ -514,6 +518,164 @@ class LocalExecutor:
             finished_at=finished_at,
             error=err_msg,
         )
+
+    async def run_in_scratch(
+        self,
+        node_dir: Path,
+        op: str,
+        *,
+        cancel_event: asyncio.Event | None = None,
+        on_stdout: Callable[[str], None] | None = None,
+        on_stderr: Callable[[str], None] | None = None,
+    ) -> int:
+        """Re-run a node attempt from ``node_dir`` in a scratch copy without touching SQLite.
+
+        Streams child stdout/stderr via ``on_stdout``/``on_stderr`` and returns a CLI exit code
+        (0 success, 1 failure/protocol error, 2 checkpoint, 130 canceled).
+        """
+        src_dir = node_dir.resolve()
+        inputs_json_src = src_dir / "inputs.json"
+        if not inputs_json_src.is_file():
+            if on_stderr is not None:
+                on_stderr(f"error: inputs.json not found in {src_dir}\n")
+            return 1
+
+        try:
+            pack_name, harness_op = _parse_op_spec(op)
+        except ValueError as exc:
+            if on_stderr is not None:
+                on_stderr(f"error: {exc}\n")
+            return 1
+
+        pack_dir = self.resolve_pack_dir(pack_name)
+        if pack_dir is None:
+            if on_stderr is not None:
+                on_stderr(f"error: Pack {pack_name!r} not found for op {op!r}\n")
+            return 1
+
+        env_hash = await asyncio.to_thread(_compute_env_hash, pack_dir)
+        env_dir = (self.workspace_root / ".plynx" / "envs" / f"{pack_name}-{env_hash}").resolve()
+        child_env = self._build_child_env(env_dir)
+
+        scratch_dir = Path(
+            await asyncio.to_thread(
+                tempfile.mkdtemp,
+                prefix=f"plynx-run-node-{src_dir.name}-",
+            )
+        )
+        try:
+            scratch_workdir = scratch_dir / "workdir"
+            await asyncio.to_thread(scratch_workdir.mkdir, parents=True, exist_ok=True)
+            await asyncio.to_thread(shutil.copy2, inputs_json_src, scratch_dir / "inputs.json")
+            src_inputs_dir = src_dir / "inputs"
+            if src_inputs_dir.is_dir():
+                await asyncio.to_thread(
+                    shutil.copytree,
+                    src_inputs_dir,
+                    scratch_dir / "inputs",
+                )
+
+            # Ensure the pack environment exists before running the harness.
+            pyvenv_cfg = env_dir / "pyvenv.cfg"
+            if not pyvenv_cfg.is_file():
+                from plynx_sdk.protocol import InputsManifest
+
+                dummy_req = ExecutionRequest(
+                    run_id="scratch",
+                    node_id=src_dir.name,
+                    op=op,
+                    attempt=1,
+                    node_dir=scratch_dir,
+                    inputs=InputsManifest(),
+                    cancel_event=cancel_event,
+                )
+                ok_env, env_err = await self._ensure_environment(
+                    dummy_req,
+                    pack_dir,
+                    env_dir,
+                    child_env,
+                )
+                if not ok_env:
+                    if cancel_event is not None and cancel_event.is_set():
+                        return 130
+                    if on_stderr is not None and env_err:
+                        on_stderr(env_err + "\n")
+                    return 1
+
+            cmd: list[str] = ["uv", "run"]
+            if _has_lockfile(pack_dir):
+                cmd.append("--frozen")
+            cmd.extend(
+                [
+                    "--no-dev",
+                    "--project",
+                    str(pack_dir),
+                    "python",
+                    "-m",
+                    "plynx_sdk.harness",
+                    "--op",
+                    harness_op,
+                    "--dir",
+                    str(scratch_dir),
+                ]
+            )
+
+            proc = await spawn_async_process_group(
+                cmd,
+                cwd=scratch_workdir,
+                env=child_env,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+
+            async def _pump(
+                reader: asyncio.StreamReader | None,
+                sink: Callable[[str], None] | None,
+            ) -> None:
+                if reader is None:
+                    return
+                while True:
+                    chunk = await reader.read(4096)
+                    if not chunk:
+                        break
+                    if sink is not None:
+                        sink(chunk.decode("utf-8", errors="replace"))
+
+            stdout_task = asyncio.create_task(_pump(proc.stdout, on_stdout))
+            stderr_task = asyncio.create_task(_pump(proc.stderr, on_stderr))
+            exit_code, killed_by_engine, _ = await self._wait_for_process(
+                proc,
+                timeout=None,
+                cancel_event=cancel_event,
+            )
+            await asyncio.gather(stdout_task, stderr_task, return_exceptions=True)
+
+            if killed_by_engine:
+                return 130
+            if exit_code == 0:
+                outputs_path = scratch_dir / "outputs.json"
+                if not outputs_path.is_file():
+                    if on_stderr is not None:
+                        on_stderr("error: protocol error: exit 0 without outputs.json\n")
+                    return 1
+                try:
+                    OutputsManifest.from_json(outputs_path.read_bytes())
+                except (ProtocolError, OSError) as exc:
+                    if on_stderr is not None:
+                        on_stderr(f"error: protocol error: invalid outputs.json: {exc}\n")
+                    return 1
+                return 0
+            if exit_code == 10:
+                cp_path = scratch_dir / "checkpoint.json"
+                if cp_path.is_file():
+                    with contextlib.suppress(ProtocolError, OSError):
+                        cp = CheckpointManifest.from_json(cp_path.read_bytes())
+                        if on_stdout is not None:
+                            on_stdout(f"\n[checkpoint {cp.checkpoint_id}] {cp.question}\n")
+                return 2
+            return 1
+        finally:
+            await asyncio.to_thread(safe_rmtree, scratch_dir)
 
 
 __all__ = ["LocalExecutor"]

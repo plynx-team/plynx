@@ -23,7 +23,7 @@ from plynx.cli.interaction import (
     parse_key_value_pair,
     run_with_cancel_signals,
 )
-from plynx.engine import Scheduler, SchedulerOptions, create_executor
+from plynx.engine import LocalExecutor, Scheduler, SchedulerOptions, create_executor
 from plynx.registry import Registry, find_workspace_root
 from plynx.store import AmbiguousRunIdError, RunNotFoundError, RunStore, StoreError
 from plynx.workflow.models import load_workflow
@@ -289,6 +289,69 @@ def resume_cmd(
     if final_state.status == RunStatus.CANCELED:
         sys.exit(130)
     sys.exit(1)
+
+
+@main.command("run-node")
+@click.argument("node_dir", type=click.Path(path_type=Path))
+@click.option(
+    "--op",
+    "op_override",
+    type=str,
+    default=None,
+    help="Explicit op (<pack>/<module>:<Name>) if not using a run directory snapshot.",
+)
+def run_node_cmd(node_dir: Path, op_override: str | None) -> None:
+    """Re-run one node attempt from NODE_DIR in a scratch copy without touching SQLite."""
+    resolved_dir = node_dir.resolve()
+    if not resolved_dir.is_dir():
+        click.echo(f"error: node directory not found: {node_dir}", err=True)
+        sys.exit(1)
+    if not (resolved_dir / "inputs.json").is_file():
+        click.echo(f"error: inputs.json not found in {node_dir}", err=True)
+        sys.exit(1)
+
+    op = op_override
+    if op is None:
+        if resolved_dir.parent.name == "nodes":
+            snapshot_path = resolved_dir.parent.parent / "workflow.snapshot.yaml"
+            if snapshot_path.is_file():
+                try:
+                    wf_model = load_workflow(snapshot_path)
+                except (ValidationError, ValueError, OSError) as exc:
+                    click.echo(f"error: failed to read workflow snapshot: {exc}", err=True)
+                    sys.exit(1)
+                node_spec = wf_model.nodes.get(resolved_dir.name)
+                if node_spec is not None:
+                    op = node_spec.op
+        if op is None:
+            click.echo(
+                f"error: could not determine op for {node_dir}; pass --op <pack>/<module>:<Name>",
+                err=True,
+            )
+            sys.exit(1)
+
+    workspace_root = find_workspace_root(resolved_dir)
+    executor = LocalExecutor(workspace_root)
+
+    def _write_stdout(chunk: str) -> None:
+        click.echo(chunk, nl=False)
+        sys.stdout.flush()
+
+    def _write_stderr(chunk: str) -> None:
+        click.echo(chunk, nl=False, err=True)
+        sys.stderr.flush()
+
+    async def _run_scratch(cancel_event: asyncio.Event) -> int:
+        return await executor.run_in_scratch(
+            resolved_dir,
+            op,
+            cancel_event=cancel_event,
+            on_stdout=_write_stdout,
+            on_stderr=_write_stderr,
+        )
+
+    exit_code = asyncio.run(run_with_cancel_signals(_run_scratch))
+    sys.exit(exit_code)
 
 
 @main.command("runs")
