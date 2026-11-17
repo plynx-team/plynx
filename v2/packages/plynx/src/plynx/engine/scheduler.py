@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import graphlib
 import os
 import time
@@ -61,6 +62,7 @@ class SchedulerOptions:
     answers: dict[str, str] = field(default_factory=dict)
     non_interactive: bool = False
     no_cache: bool = False
+    poll_interval: float = 0.2
     checkpoint_callback: CheckpointCallback | None = None
     on_node_status: NodeStatusCallback | None = None
 
@@ -121,12 +123,15 @@ class Scheduler:
                 run_id=run_id,
             )
         event_log = self.store.event_log(active_run_id)
+        resolved_answers: dict[str, str] = dict(opts.answers)
 
         await asyncio.to_thread(
             event_log.append,
             "run_status",
             RunStatusData(run_id=active_run_id, status=RunStatus.RUNNING),
         )
+        current_run_status = RunStatus.RUNNING
+        run_status_lock = asyncio.Lock()
 
         node_statuses: dict[str, NodeStatus] = {}
         node_attempts: dict[str, int] = dict.fromkeys(node_ids, 0)
@@ -159,6 +164,32 @@ class Scheduler:
 
         semaphore = asyncio.Semaphore(concurrency)
         running_tasks: dict[asyncio.Task[tuple[str, bool]], str] = {}
+        runnable_nodes: set[str] = set()
+        waiting_nodes: set[str] = set()
+        emitted_cp_resolutions: set[tuple[str, str]] = set()
+
+        async def _sync_run_status() -> None:
+            nonlocal current_run_status
+            if opts.non_interactive:
+                return
+            async with run_status_lock:
+                desired: RunStatus | None = None
+                if not runnable_nodes and waiting_nodes:
+                    desired = RunStatus.WAITING_FOR_USER
+                elif runnable_nodes and current_run_status == RunStatus.WAITING_FOR_USER:
+                    desired = RunStatus.RUNNING
+                if desired is not None and desired != current_run_status:
+                    current_run_status = desired
+                    await asyncio.to_thread(
+                        self.store.update_run_status,
+                        active_run_id,
+                        desired,
+                    )
+                    await asyncio.to_thread(
+                        event_log.append,
+                        "run_status",
+                        RunStatusData(run_id=active_run_id, status=desired),
+                    )
 
         async def _emit_node_status(
             nid: str,
@@ -206,16 +237,18 @@ class Scheduler:
             spec = workflow.nodes[nid]
             node_dir = self.store.node_dir(active_run_id, nid)
 
-            async with semaphore:
-                while True:
+            while True:
+                async with semaphore:
                     attempt = node_attempts[nid] + 1
                     node_attempts[nid] = attempt
-                    inputs_manifest = self._build_inputs_manifest(
+                    inputs_manifest = await asyncio.to_thread(
+                        self._build_inputs_manifest,
                         active_run_id,
                         nid,
                         spec,
                         completed_outputs,
                         opts,
+                        resolved_answers,
                     )
                     await asyncio.to_thread(
                         atomic_write_text,
@@ -300,8 +333,7 @@ class Scheduler:
 
                     if result.status == NodeStatus.SUCCESS:
                         outs = result.outputs.outputs if result.outputs is not None else {}
-                        completed_outputs[nid] = dict(outs)
-                        await asyncio.to_thread(
+                        result_manifest = await asyncio.to_thread(
                             self._ingest_and_write_result,
                             node_dir,
                             result,
@@ -309,6 +341,7 @@ class Scheduler:
                             cache_key,
                             is_cacheable=is_cacheable,
                         )
+                        completed_outputs[nid] = dict(result_manifest.outputs)
                         await _emit_node_status(
                             nid,
                             NodeStatus.SUCCESS,
@@ -320,81 +353,83 @@ class Scheduler:
                         )
                         return nid, True
 
-                    if (
-                        result.status == NodeStatus.WAITING_FOR_USER
-                        and result.checkpoint is not None
-                    ):
-                        cp = result.checkpoint
-                        await asyncio.to_thread(
-                            self.store.create_checkpoint,
-                            active_run_id,
-                            nid,
-                            cp.checkpoint_id,
-                            cp.question,
-                            options=cp.options,
-                            allow_freeform=cp.allow_freeform,
-                        )
-                        await _emit_node_status(
-                            nid,
-                            NodeStatus.WAITING_FOR_USER,
-                            attempt=attempt,
-                            exit_code=result.exit_code,
-                            started_at=result.started_at,
-                            finished_at=result.finished_at,
-                        )
-                        await asyncio.to_thread(
-                            event_log.append,
-                            "node_checkpoint",
-                            NodeCheckpointData(
-                                run_id=active_run_id,
-                                node_id=nid,
-                                checkpoint_id=cp.checkpoint_id,
-                                question=cp.question,
-                                options=cp.options,
-                                allow_freeform=cp.allow_freeform,
-                            ),
-                        )
-
-                        answer = await self._resolve_checkpoint_answer(
-                            active_run_id,
-                            nid,
-                            cp,
-                            opts,
-                        )
-                        if answer is None:
-                            return nid, False
-
-                        won = await asyncio.to_thread(
-                            self.store.answer_checkpoint,
-                            active_run_id,
-                            nid,
-                            cp.checkpoint_id,
-                            answer,
-                        )
-                        if won:
-                            await asyncio.to_thread(
-                                event_log.append,
-                                "checkpoint_resolved",
-                                CheckpointResolvedData(
-                                    run_id=active_run_id,
-                                    node_id=nid,
-                                    checkpoint_id=cp.checkpoint_id,
-                                ),
-                            )
-                        opts.answers[f"{nid}.{cp.checkpoint_id}"] = answer
-                        continue
-
+                # Semaphore is released while waiting for user input so other branches proceed.
+                if result.status == NodeStatus.WAITING_FOR_USER and result.checkpoint is not None:
+                    cp = result.checkpoint
+                    await asyncio.to_thread(
+                        self.store.create_checkpoint,
+                        active_run_id,
+                        nid,
+                        cp.checkpoint_id,
+                        cp.question,
+                        options=cp.options,
+                        allow_freeform=cp.allow_freeform,
+                    )
                     await _emit_node_status(
                         nid,
-                        result.status,
+                        NodeStatus.WAITING_FOR_USER,
                         attempt=attempt,
                         exit_code=result.exit_code,
-                        error=result.error,
                         started_at=result.started_at,
                         finished_at=result.finished_at,
                     )
-                    return nid, True
+                    await asyncio.to_thread(
+                        event_log.append,
+                        "node_checkpoint",
+                        NodeCheckpointData(
+                            run_id=active_run_id,
+                            node_id=nid,
+                            checkpoint_id=cp.checkpoint_id,
+                            question=cp.question,
+                            options=cp.options,
+                            allow_freeform=cp.allow_freeform,
+                        ),
+                    )
+                    runnable_nodes.discard(nid)
+                    waiting_nodes.add(nid)
+                    await _sync_run_status()
 
+                    answer = await self._resolve_checkpoint_answer(
+                        active_run_id,
+                        nid,
+                        cp,
+                        opts,
+                        resolved_answers,
+                        already_passed=cp.checkpoint_id in inputs_manifest.checkpoint_answers,
+                    )
+                    if answer is None:
+                        return nid, False
+
+                    cp_key = (nid, cp.checkpoint_id)
+                    if cp_key not in emitted_cp_resolutions:
+                        emitted_cp_resolutions.add(cp_key)
+                        await asyncio.to_thread(
+                            event_log.append,
+                            "checkpoint_resolved",
+                            CheckpointResolvedData(
+                                run_id=active_run_id,
+                                node_id=nid,
+                                checkpoint_id=cp.checkpoint_id,
+                            ),
+                        )
+                    resolved_answers[f"{nid}.{cp.checkpoint_id}"] = answer
+                    waiting_nodes.discard(nid)
+                    runnable_nodes.add(nid)
+                    await _sync_run_status()
+                    continue
+
+                await _emit_node_status(
+                    nid,
+                    result.status,
+                    attempt=attempt,
+                    exit_code=result.exit_code,
+                    error=result.error,
+                    started_at=result.started_at,
+                    finished_at=result.finished_at,
+                )
+                return nid, True
+
+        pending_discard: list[str] = []
         while sorter.is_active():
             ready_nodes = list(sorter.get_ready())
             blocked_progressed = False
@@ -409,13 +444,20 @@ class Scheduler:
                     sorter.done(nid)
                     blocked_progressed = True
                 else:
+                    runnable_nodes.add(nid)
                     task = asyncio.create_task(_execute_node(nid))
                     running_tasks[task] = nid
+
+            for done_nid in pending_discard:
+                runnable_nodes.discard(done_nid)
+            pending_discard.clear()
 
             if blocked_progressed and not running_tasks:
                 continue
             if not running_tasks:
                 break
+
+            await _sync_run_status()
 
             done, _ = await asyncio.wait(
                 running_tasks.keys(),
@@ -424,8 +466,13 @@ class Scheduler:
             for completed_task in done:
                 running_tasks.pop(completed_task, None)
                 finished_nid, mark_done = await completed_task
+                pending_discard.append(finished_nid)
                 if mark_done:
                     sorter.done(finished_nid)
+
+        for done_nid in pending_discard:
+            runnable_nodes.discard(done_nid)
+        pending_discard.clear()
 
         final_status = self._compute_final_run_status(node_statuses)
         finished_ts = (
@@ -445,11 +492,16 @@ class Scheduler:
             finished_at=finished_ts,
             error=run_error,
         )
-        await asyncio.to_thread(
-            event_log.append,
-            "run_status",
-            RunStatusData(run_id=active_run_id, status=final_status, error=run_error),
-        )
+        if final_status != current_run_status or final_status in (
+            RunStatus.SUCCESS,
+            RunStatus.FAILED,
+            RunStatus.CANCELED,
+        ):
+            await asyncio.to_thread(
+                event_log.append,
+                "run_status",
+                RunStatusData(run_id=active_run_id, status=final_status, error=run_error),
+            )
 
         final_state = await asyncio.to_thread(self.store.get_run_state, active_run_id)
         assert final_state is not None
@@ -470,6 +522,7 @@ class Scheduler:
         spec: NodeSpec,
         completed_outputs: Mapping[str, Mapping[str, ResultValue | OutputValue]],
         opts: SchedulerOptions,
+        resolved_answers: Mapping[str, str],
     ) -> InputsManifest:
         dst_node_dir = self.store.node_dir(run_id, node_id)
         state = self.store.get_run_state(run_id)
@@ -483,7 +536,7 @@ class Scheduler:
             workspace_root=self.store.workspace_root,
             registry=self.registry,
             run_inputs=opts.run_inputs,
-            answers=opts.answers,
+            answers=resolved_answers,
             db_checkpoints=db_checkpoints,
         )
 
@@ -571,16 +624,50 @@ class Scheduler:
             self.store.put_cache_entry(cache_key, result_manifest.to_json())
         return result_manifest
 
+    async def _record_answer_first_wins(
+        self,
+        run_id: str,
+        node_id: str,
+        checkpoint_id: str,
+        candidate: str,
+    ) -> str:
+        won = await asyncio.to_thread(
+            self.store.answer_checkpoint,
+            run_id,
+            node_id,
+            checkpoint_id,
+            candidate,
+        )
+        if won:
+            return candidate
+        existing = await asyncio.to_thread(
+            self.store.get_checkpoint,
+            run_id,
+            node_id,
+            checkpoint_id,
+        )
+        if existing is not None and existing.answer is not None:
+            return existing.answer
+        return candidate
+
     async def _resolve_checkpoint_answer(
         self,
         run_id: str,
         node_id: str,
         cp: CheckpointManifest,
         opts: SchedulerOptions,
+        resolved_answers: Mapping[str, str],
+        *,
+        already_passed: bool = False,
     ) -> str | None:
         key = f"{node_id}.{cp.checkpoint_id}"
-        if key in opts.answers:
-            return opts.answers[key]
+        if not already_passed and key in resolved_answers:
+            return await self._record_answer_first_wins(
+                run_id,
+                node_id,
+                cp.checkpoint_id,
+                resolved_answers[key],
+            )
 
         existing = await asyncio.to_thread(
             self.store.get_checkpoint,
@@ -594,15 +681,67 @@ class Scheduler:
         if opts.non_interactive:
             return None
 
-        if opts.checkpoint_callback is not None:
-            maybe_coro = opts.checkpoint_callback(node_id, cp.checkpoint_id, cp)
+        poll_sleep = max(opts.poll_interval, 0.005)
+
+        async def _poll_db_answer() -> str:
+            while True:
+                await asyncio.sleep(poll_sleep)
+                row = await asyncio.to_thread(
+                    self.store.get_checkpoint,
+                    run_id,
+                    node_id,
+                    cp.checkpoint_id,
+                )
+                if row is not None and row.answer is not None:
+                    return row.answer
+
+        if opts.checkpoint_callback is None:
+            return await _poll_db_answer()
+
+        callback = opts.checkpoint_callback
+
+        async def _invoke_callback() -> str | None:
+            maybe_coro = callback(node_id, cp.checkpoint_id, cp)
             if isinstance(maybe_coro, Awaitable):
                 return await maybe_coro
             return maybe_coro
 
-        if cp.options:
-            return cp.options[0]
-        return ""
+        poll_task: asyncio.Task[str] = asyncio.create_task(_poll_db_answer())
+        cb_task: asyncio.Task[str | None] = asyncio.create_task(_invoke_callback())
+        try:
+            done, pending = await asyncio.wait(
+                {poll_task, cb_task},
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            for p_task in pending:
+                p_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await p_task
+
+            if poll_task in done and not poll_task.cancelled():
+                return poll_task.result()
+
+            cb_ans = cb_task.result()
+            if cb_ans is None:
+                latest = await asyncio.to_thread(
+                    self.store.get_checkpoint,
+                    run_id,
+                    node_id,
+                    cp.checkpoint_id,
+                )
+                return latest.answer if latest is not None else None
+            return await self._record_answer_first_wins(
+                run_id,
+                node_id,
+                cp.checkpoint_id,
+                cb_ans,
+            )
+        finally:
+            for task in (poll_task, cb_task):
+                if not task.done():
+                    task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await task
 
     @staticmethod
     def _compute_final_run_status(node_statuses: Mapping[str, NodeStatus]) -> RunStatus:

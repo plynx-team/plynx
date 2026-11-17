@@ -94,7 +94,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
 
 ## Phase 4: Interaction and recovery
 
-- [ ] **4.1 Checkpoints in the engine.** Exit 10 -> `CHECKPOINTS` row, `WAITING_FOR_USER`, `node_checkpoint` event; answer -> re-run with answers; only dependents wait.
+- [x] **4.1 Checkpoints in the engine.** Exit 10 -> `CHECKPOINTS` row, `WAITING_FOR_USER`, `node_checkpoint` event; answer -> re-run with answers; only dependents wait.
   Accept: in a diamond, the branch not behind the checkpoint finishes while the question is open; `checkpoint_resolved` is emitted once.
 - [ ] **4.2 CLI interaction.** Interactive prompt `[1-N]`/text, `--answers`, `--answer`, `--non-interactive`, exit code 2.
   Accept: the Phase 0 end-to-end test passes unchanged against real execution; piped stdin drives the interactive prompt in a test.

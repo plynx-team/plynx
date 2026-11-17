@@ -21,7 +21,10 @@ def test_cli_run_foo_or_woo_exits_0_and_persists_state(
     """plynx run foo_or_woo.yaml exits 0, prints node statuses, and writes state."""
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    result = runner.invoke(cli_main, ["run", str(EXAMPLE_WORKFLOW)])
+    result = runner.invoke(
+        cli_main,
+        ["run", "--answer", "pick.cp_0=foo", str(EXAMPLE_WORKFLOW)],
+    )
     assert result.exit_code == 0, result.output
 
     output_lines = [line.strip() for line in result.output.splitlines() if line.strip()]

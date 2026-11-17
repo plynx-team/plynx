@@ -92,6 +92,8 @@ def test_cli_run_in_other_process_stream_and_last_event_id(tmp_path: Path) -> No
             "-c",
             "from plynx.cli import main; main()",
             "run",
+            "--answer",
+            "pick.cp_0=foo",
             str(wf_path),
         ],
         cwd=tmp_path,
@@ -168,7 +170,28 @@ def test_post_runs_and_stream(tmp_path: Path) -> None:
             assert create_resp.status_code == 201, create_resp.text
             run_id = create_resp.json()["run_id"]
 
-            stream_resp = await client.get(f"/runs/{run_id}/stream")
+            store = RunStore(tmp_path)
+
+            async def _answer_when_open() -> None:
+                deadline = time.monotonic() + 10.0
+                while time.monotonic() < deadline:
+                    cp = await asyncio.to_thread(store.get_checkpoint, run_id, "pick", "cp_0")
+                    if cp is not None:
+                        await asyncio.to_thread(
+                            store.answer_checkpoint,
+                            run_id,
+                            "pick",
+                            "cp_0",
+                            "foo",
+                        )
+                        return
+                    await asyncio.sleep(0.02)
+
+            answer_task = asyncio.create_task(_answer_when_open())
+            try:
+                stream_resp = await client.get(f"/runs/{run_id}/stream")
+            finally:
+                await answer_task
             assert stream_resp.status_code == 200
             frames = _parse_sse_stream(stream_resp.text)
             assert frames
