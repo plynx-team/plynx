@@ -38,6 +38,7 @@ from plynx.cas import (
     compute_cache_key_raw,
     compute_inputs_hash,
     compute_params_hash,
+    enforce_cache_budget,
     ingest_outputs,
     materialize_inputs,
     write_result_manifest,
@@ -452,6 +453,14 @@ class Scheduler:
 
         final_state = await asyncio.to_thread(self.store.get_run_state, active_run_id)
         assert final_state is not None
+
+        await asyncio.to_thread(
+            enforce_cache_budget,
+            self.store.workspace_root,
+            store=self.store,
+            blob_store=self.blob_store,
+        )
+
         return final_state
 
     def _build_inputs_manifest(

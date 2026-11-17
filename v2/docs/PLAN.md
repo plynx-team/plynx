@@ -89,7 +89,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: change an upstream input so its output bytes stay identical; downstream nodes still hit.
 - [x] **3.7 `plynx clean`.** Mark and sweep, `--days`, `--dry-run`, pinned runs kept.
   Accept: unreferenced blobs and stale `cache_index` rows are removed; referenced blobs survive; dry run changes nothing.
-- [ ] **3.8 Size budget.** `cache.max_size` LRU by `last_accessed_at`.
+- [x] **3.8 Size budget.** `cache.max_size` LRU by `last_accessed_at`.
   Accept: with a small budget the oldest unreferenced blobs go first.
 
 ## Phase 4: Interaction and recovery
