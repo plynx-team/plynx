@@ -3,7 +3,11 @@ name = "plynx"
 version = "2.0.0"
 description = "PLynx engine, CLI, and server."
 requires-python = ">=3.11"
-dependencies = ["plynx-sdk"]
+dependencies = [
+    "plynx-sdk",
+    "pydantic>=2.7",
+    "ruamel.yaml>=0.18",
+]
 
 [tool.uv.sources]
 plynx-sdk = { workspace = true }

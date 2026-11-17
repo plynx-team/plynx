@@ -1,0 +1,20 @@
+version: 1
+name: foo_or_woo
+description: ""
+concurrency: 4
+stages:
+  ask:
+    title: "1. Ask"
+    require_approval: false
+nodes:
+  pick:
+    op: standard_io/demo:AskFooOrWoo
+    title: "Pick one"
+    stage: ask
+    inputs:
+      prompt: "foo or woo?"
+  echo:
+    op: standard_io/demo:Echo
+    stage: print
+    inputs:
+      text: $pick.choice

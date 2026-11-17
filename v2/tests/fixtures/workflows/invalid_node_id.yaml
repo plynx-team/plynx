@@ -1,0 +1,5 @@
+version: 1
+name: bad_node_id
+nodes:
+  BadNode_1:
+    op: standard_io/demo:Echo

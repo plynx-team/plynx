@@ -1,0 +1,7 @@
+version: 1
+name: bare_dollar
+nodes:
+  echo:
+    op: standard_io/demo:Echo
+    inputs:
+      text: "$bare_string"

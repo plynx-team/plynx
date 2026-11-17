@@ -1,0 +1,6 @@
+version: 1
+name: bad_node_key
+nodes:
+  pick:
+    op: standard_io/demo:AskFooOrWoo
+    x: 100

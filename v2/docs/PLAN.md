@@ -12,7 +12,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: `uv sync` in this folder works and ignores the legacy root `pyproject.toml`; `uv run pytest` passes a placeholder test; the check script returns 0 on a clean branch and 1 when a legacy file is modified (tested in a temp git repo).
 - [x] **0.2 SDK wire types.** `plynx_sdk/protocol.py`: dataclasses for `InputsManifest`, `OutputsManifest`, `ResultManifest`, `CheckpointManifest`, value kinds (`scalar`, `file`, `directory`), with `to_json()` and `from_json()` that validate. Stdlib only.
   Accept: every JSON example in PROTOCOL.md section 5 is a fixture in `tests/fixtures/` and round-trips unchanged; invalid fixtures (missing `schema`, `..` in a path, scalar over 1 MiB) are rejected; `mypy --strict` passes.
-- [ ] **0.3 Engine models.** `plynx/workflow/models.py` (pydantic: `Workflow`, `Stage`, `NodeSpec`, reference parsing with the `$` rules), `plynx/api_models.py` (statuses, `RunState`, the seven event types as a tagged union, REST bodies).
+- [x] **0.3 Engine models.** `plynx/workflow/models.py` (pydantic: `Workflow`, `Stage`, `NodeSpec`, reference parsing with the `$` rules), `plynx/api_models.py` (statuses, `RunState`, the seven event types as a tagged union, REST bodies).
   Accept: the example workflow parses; fixtures for unknown keys, bare `$` strings, `$$` escape, and bad node IDs fail with clear messages; statuses match ARCHITECTURE.md exactly.
 - [ ] **0.4 Generated TypeScript types.** `scripts/gen_ts_types.py` writes `ui/src/api/types.gen.ts` from the pydantic JSON Schema.
   Accept: running it twice produces no diff; a test fails if the committed file is stale.
