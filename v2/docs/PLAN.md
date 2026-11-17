@@ -100,7 +100,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: the Phase 0 end-to-end test passes unchanged against real execution; piped stdin drives the interactive prompt in a test.
 - [x] **4.3 Stage gates.** `require_approval: true` pauses after the whole stage succeeds and before the next stage starts.
   Accept: no node of stage N+1 has `started_at` before the approval time; `stage_approval` and `stage_resolved` events appear.
-- [ ] **4.4 Resume.** `plynx resume <id>` for failed and waiting runs; reuses the run's own outputs (even for `CACHEABLE = False`); takes ownership.
+- [x] **4.4 Resume.** `plynx resume <id>` for failed and waiting runs; reuses the run's own outputs (even for `CACHEABLE = False`); takes ownership.
   Accept: fix a failing node's source, resume, only that node and its dependents run.
 - [ ] **4.5 Cancel.** Local Ctrl-C and cross-process `cancel_requested`; process tree killed; nodes `CANCELED`; exit 130.
   Accept: no child or grandchild survives; a second process can cancel a run owned by the first.

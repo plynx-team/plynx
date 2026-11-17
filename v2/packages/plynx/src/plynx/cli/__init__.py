@@ -23,7 +23,7 @@ from plynx.cli.interaction import (
 )
 from plynx.engine import Scheduler, SchedulerOptions, create_executor
 from plynx.registry import Registry, find_workspace_root
-from plynx.store import RunStore
+from plynx.store import AmbiguousRunIdError, RunNotFoundError, RunStore, StoreError
 from plynx.workflow.models import load_workflow
 from plynx.workflow.validator import validate_workflow, validate_workflow_file
 
@@ -182,6 +182,97 @@ def run_cmd(
             options=opts,
         )
     )
+
+    if final_state.status == RunStatus.SUCCESS:
+        sys.exit(0)
+    if final_state.status == RunStatus.WAITING_FOR_USER:
+        sys.exit(2)
+    if final_state.status == RunStatus.CANCELED:
+        sys.exit(130)
+    sys.exit(1)
+
+
+@main.command("resume")
+@click.argument("run_id")
+@click.option(
+    "answers_file",
+    "--answers",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="JSON file of checkpoint answers ({'node.cp_n': 'value'}).",
+)
+@click.option(
+    "answer_pairs",
+    "--answer",
+    multiple=True,
+    help="Set checkpoint answer (node.cp_n=value).",
+)
+@click.option("--concurrency", type=int, default=None, help="Maximum concurrent nodes.")
+@click.option(
+    "--non-interactive",
+    is_flag=True,
+    default=False,
+    help="Exit 2 instead of prompting on open checkpoints or stage gates.",
+)
+def resume_cmd(
+    run_id: str,
+    answers_file: Path | None,
+    answer_pairs: tuple[str, ...],
+    concurrency: int | None,
+    non_interactive: bool,
+) -> None:
+    """Continue a failed, canceled, or waiting run, reusing completed node outputs."""
+    try:
+        answers = load_cli_answers(answers_file, answer_pairs)
+    except click.ClickException as exc:
+        click.echo(f"error: {exc.format_message()}", err=True)
+        sys.exit(1)
+
+    workspace_root = find_workspace_root()
+    store = RunStore(workspace_root)
+    try:
+        resolved_id = store.resolve_run_id(run_id)
+    except AmbiguousRunIdError as exc:
+        click.echo(f"error: ambiguous run ID prefix {exc.prefix!r}; matches:", err=True)
+        for candidate in exc.candidates:
+            click.echo(f"  {candidate}", err=True)
+        sys.exit(1)
+    except RunNotFoundError as exc:
+        click.echo(f"error: {exc}", err=True)
+        sys.exit(1)
+
+    registry = Registry(workspace_root)
+    executor = create_executor(workspace_root)
+    scheduler = Scheduler(store, executor, registry)
+
+    effective_non_interactive = is_non_interactive(non_interactive)
+
+    def _print_node_status(node_id: str, status: NodeStatus, _attempt: int) -> None:
+        click.echo(f"{node_id} {status.value}")
+
+    prompt_lock = asyncio.Lock()
+    opts = SchedulerOptions(
+        concurrency=concurrency,
+        answers=answers,
+        non_interactive=effective_non_interactive,
+        no_cache=True,
+        checkpoint_callback=(
+            None
+            if effective_non_interactive
+            else make_terminal_checkpoint_callback(prompt_lock=prompt_lock)
+        ),
+        stage_approval_callback=(
+            None
+            if effective_non_interactive
+            else make_terminal_stage_approval_callback(prompt_lock=prompt_lock)
+        ),
+        on_node_status=_print_node_status,
+    )
+    try:
+        final_state = asyncio.run(scheduler.resume(resolved_id, options=opts))
+    except StoreError as exc:
+        click.echo(f"error: {exc}", err=True)
+        sys.exit(1)
 
     if final_state.status == RunStatus.SUCCESS:
         sys.exit(0)

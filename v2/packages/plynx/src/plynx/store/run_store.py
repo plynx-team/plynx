@@ -74,6 +74,10 @@ class RunNotFoundError(StoreError):
     """Raised when a run ID or prefix does not match any run."""
 
 
+class RunOwnershipError(StoreError):
+    """Raised when attempting to resume a run owned by another live process."""
+
+
 class AmbiguousRunIdError(StoreError):
     """Raised when a run ID prefix matches multiple runs."""
 
@@ -331,6 +335,86 @@ class RunStore:
         sql = f"UPDATE node_runs SET {', '.join(sets)} WHERE run_id = ? AND node_id = ?"
         with self._connect() as conn:
             conn.execute(sql, params)
+
+    def reset_node_for_retry(self, run_id: str, node_id: str) -> None:
+        """Reset a non-succeeded node to ``PENDING`` while preserving its ``attempt`` counter."""
+        with self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE node_runs
+                SET status = 'PENDING', exit_code = NULL, error = NULL, finished_at = NULL
+                WHERE run_id = ? AND node_id = ?
+                """,
+                (run_id, node_id),
+            )
+
+    def release_ownership(self, run_id: str, *, expected_pid: int | None = None) -> None:
+        """Clear ``owner_pid`` when a run exits cleanly without an active owner (e.g. paused)."""
+        with self._connect() as conn:
+            if expected_pid is None:
+                conn.execute("UPDATE runs SET owner_pid = NULL WHERE id = ?", (run_id,))
+            else:
+                conn.execute(
+                    "UPDATE runs SET owner_pid = NULL WHERE id = ? AND owner_pid = ?",
+                    (run_id, expected_pid),
+                )
+
+    def claim_run_for_resume(
+        self,
+        run_id: str,
+        *,
+        owner_pid: int | None = None,
+    ) -> RunState:
+        """Take ownership of a failed, waiting, canceled, or orphaned run for resume."""
+        pid = os.getpid() if owner_pid is None else owner_pid
+        now = time.time()
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE;")
+            try:
+                row = conn.execute(
+                    "SELECT status, owner_pid FROM runs WHERE id = ?",
+                    (run_id,),
+                ).fetchone()
+                if row is None:
+                    raise RunNotFoundError(f"No run matching {run_id!r}")
+                current_status = RunStatus(str(row["status"]))
+                existing_pid = row["owner_pid"]
+
+                if current_status == RunStatus.SUCCESS:
+                    raise StoreError(f"Run {run_id!r} already succeeded and cannot be resumed")
+                if (
+                    current_status in (RunStatus.RUNNING, RunStatus.WAITING_FOR_USER)
+                    and existing_pid is not None
+                    and int(existing_pid) != pid
+                ):
+                    from plynx.engine.procgroup import is_pid_alive
+
+                    if is_pid_alive(int(existing_pid)):
+                        raise RunOwnershipError(
+                            f"Run {run_id!r} is currently owned by live process PID {existing_pid}"
+                        )
+
+                conn.execute(
+                    """
+                    UPDATE runs
+                    SET status = 'RUNNING',
+                        owner_pid = ?,
+                        cancel_requested = 0,
+                        finished_at = NULL,
+                        error = NULL,
+                        started_at = COALESCE(started_at, ?)
+                    WHERE id = ?
+                    """,
+                    (pid, now, run_id),
+                )
+                conn.execute("COMMIT;")
+            except BaseException:
+                conn.execute("ROLLBACK;")
+                raise
+
+        state = self.get_run_state(run_id)
+        assert state is not None
+        return state
 
     def request_cancel(self, run_id: str) -> None:
         """Set ``cancel_requested = 1`` on a run."""

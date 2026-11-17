@@ -26,6 +26,8 @@ from plynx_sdk.protocol import (
 
 from plynx.api_models import (
     CheckpointResolvedData,
+    CheckpointResolvedEvent,
+    CheckpointState,
     NodeCheckpointData,
     NodeStatus,
     NodeStatusData,
@@ -35,6 +37,7 @@ from plynx.api_models import (
     StageApprovalData,
     StageGateStatus,
     StageResolvedData,
+    StageResolvedEvent,
 )
 from plynx.cas import (
     BlobStore,
@@ -49,8 +52,8 @@ from plynx.cas import (
 )
 from plynx.engine.executor import ExecutionRequest, Executor, NodeResult
 from plynx.registry import OpRegistry, Registry
-from plynx.store.run_store import RunStore, atomic_write_text
-from plynx.workflow.models import NodeRef, NodeSpec, Workflow
+from plynx.store.run_store import RunNotFoundError, RunStore, atomic_write_text
+from plynx.workflow.models import NodeRef, NodeSpec, Workflow, parse_workflow_yaml
 
 CheckpointCallback = Callable[[str, str, CheckpointManifest], Awaitable[str | None] | str | None]
 StageApprovalCallback = Callable[[str, str], Awaitable[bool] | bool]
@@ -87,6 +90,52 @@ class Scheduler:
         self.registry: OpRegistry = Registry(store.workspace_root) if registry is None else registry
         self.blob_store = blob_store or BlobStore.from_workspace(store.workspace_root)
 
+    async def resume(
+        self,
+        run_id: str,
+        *,
+        options: SchedulerOptions | None = None,
+    ) -> RunState:
+        """Resume an existing failed, canceled, or waiting run, taking ownership."""
+        resolved_id = await asyncio.to_thread(self.store.resolve_run_id, run_id)
+        existing_state = await asyncio.to_thread(self.store.claim_run_for_resume, resolved_id)
+
+        snapshot_path = self.store.run_dir(resolved_id) / "workflow.snapshot.yaml"
+        if not snapshot_path.is_file():
+            raise RunNotFoundError(f"Workflow snapshot missing for run {resolved_id!r}")
+        wf_bytes = await asyncio.to_thread(snapshot_path.read_bytes)
+        workflow = parse_workflow_yaml(
+            wf_bytes,
+            default_name=Path(existing_state.workflow_path).stem,
+        )
+
+        refresh_fn = getattr(self.registry, "refresh", None)
+        if callable(refresh_fn):
+            await asyncio.to_thread(refresh_fn)
+
+        base_opts = options or SchedulerOptions()
+        merged_inputs = dict(existing_state.run_inputs)
+        merged_inputs.update(base_opts.run_inputs)
+        merged_opts = SchedulerOptions(
+            concurrency=base_opts.concurrency,
+            run_inputs=merged_inputs,
+            answers=dict(base_opts.answers),
+            non_interactive=base_opts.non_interactive,
+            no_cache=True,
+            poll_interval=base_opts.poll_interval,
+            checkpoint_callback=base_opts.checkpoint_callback,
+            stage_approval_callback=base_opts.stage_approval_callback,
+            on_node_status=base_opts.on_node_status,
+        )
+        return await self.run(
+            workflow,
+            workflow_path=existing_state.workflow_path,
+            workflow_bytes=wf_bytes,
+            run_id=resolved_id,
+            resume=True,
+            options=merged_opts,
+        )
+
     async def run(
         self,
         workflow: Workflow,
@@ -95,6 +144,7 @@ class Scheduler:
         workflow_bytes: bytes | None = None,
         layout_bytes: bytes | None = None,
         run_id: str | None = None,
+        resume: bool = False,
         options: SchedulerOptions | None = None,
     ) -> RunState:
         """Schedule and run ``workflow``, writing statuses and events to ``self.store``."""
@@ -109,24 +159,39 @@ class Scheduler:
             else f"version: 1\nname: {workflow.name or 'workflow'}\n".encode()
         )
         node_ids = list(workflow.nodes.keys())
-        existing_state = (
-            await asyncio.to_thread(self.store.get_run_state, run_id)
-            if run_id is not None
-            else None
-        )
-        is_fresh_run = existing_state is None or run_id is None
-        if existing_state is not None and run_id is not None:
+        existing_state: RunState | None = None
+        is_fresh_run = not resume
+
+        if resume:
+            if run_id is None:
+                raise ValueError("run_id is required when resume=True")
+            existing_state = await asyncio.to_thread(self.store.get_run_state, run_id)
+            if existing_state is None:
+                raise RunNotFoundError(f"No run matching {run_id!r}")
+            if (
+                existing_state.status != RunStatus.RUNNING
+                or existing_state.owner_pid != os.getpid()
+            ):
+                existing_state = await asyncio.to_thread(self.store.claim_run_for_resume, run_id)
             active_run_id = run_id
         else:
-            active_run_id = await asyncio.to_thread(
-                self.store.create_run,
-                workflow_path=workflow_path,
-                workflow_bytes=raw_wf,
-                layout_bytes=layout_bytes,
-                node_ids=node_ids,
-                run_inputs=opts.run_inputs,
-                run_id=run_id,
+            existing_state = (
+                await asyncio.to_thread(self.store.get_run_state, run_id)
+                if run_id is not None
+                else None
             )
+            if existing_state is not None and run_id is not None:
+                active_run_id = run_id
+            else:
+                active_run_id = await asyncio.to_thread(
+                    self.store.create_run,
+                    workflow_path=workflow_path,
+                    workflow_bytes=raw_wf,
+                    layout_bytes=layout_bytes,
+                    node_ids=node_ids,
+                    run_inputs=opts.run_inputs,
+                    run_id=run_id,
+                )
         event_log = self.store.event_log(active_run_id)
         resolved_answers: dict[str, str] = dict(opts.answers)
 
@@ -141,22 +206,8 @@ class Scheduler:
         node_statuses: dict[str, NodeStatus] = {}
         node_attempts: dict[str, int] = dict.fromkeys(node_ids, 0)
         completed_outputs: dict[str, dict[str, ResultValue | OutputValue]] = {}
-
-        for nid in node_ids:
-            node_statuses[nid] = NodeStatus.PENDING
-            await asyncio.to_thread(
-                event_log.append,
-                "node_status",
-                NodeStatusData(
-                    run_id=active_run_id,
-                    node_id=nid,
-                    status=NodeStatus.PENDING,
-                    cache_hit=False,
-                    attempt=0,
-                ),
-            )
-            if opts.on_node_status is not None:
-                opts.on_node_status(nid, NodeStatus.PENDING, 0)
+        precompleted_nodes: set[str] = set()
+        resuming_waiting_nodes: dict[str, CheckpointState] = {}
 
         dep_graph: dict[str, set[str]] = {nid: set() for nid in node_ids}
         for nid, spec in workflow.nodes.items():
@@ -183,6 +234,87 @@ class Scheduler:
         approved_gates: set[str] = set()
         emitted_cp_resolutions: set[tuple[str, str]] = set()
         emitted_gate_resolutions: set[str] = set()
+
+        if resume and existing_state is not None:
+            prior_events = await asyncio.to_thread(event_log.read_after, 0)
+            for ev in prior_events:
+                if isinstance(ev, CheckpointResolvedEvent):
+                    emitted_cp_resolutions.add((ev.data.node_id, ev.data.checkpoint_id))
+                elif isinstance(ev, StageResolvedEvent):
+                    emitted_gate_resolutions.add(ev.data.stage_id)
+
+            cps_by_node: dict[str, list[CheckpointState]] = {}
+            for cp_state in existing_state.checkpoints:
+                cps_by_node.setdefault(cp_state.node_id, []).append(cp_state)
+
+            for nid in node_ids:
+                prev_node = existing_state.nodes.get(nid)
+                if prev_node is not None and prev_node.status == NodeStatus.SUCCESS:
+                    res_path = self.store.node_dir(active_run_id, nid) / "result.json"
+                    if res_path.is_file():
+                        try:
+                            raw_res = await asyncio.to_thread(res_path.read_bytes)
+                            res_manifest = ResultManifest.from_json(raw_res)
+                            completed_outputs[nid] = dict(res_manifest.outputs)
+                            node_statuses[nid] = NodeStatus.SUCCESS
+                            node_attempts[nid] = prev_node.attempt
+                            precompleted_nodes.add(nid)
+                            continue
+                        except Exception:
+                            pass
+
+                if prev_node is not None and prev_node.status == NodeStatus.WAITING_FOR_USER:
+                    node_statuses[nid] = NodeStatus.WAITING_FOR_USER
+                    node_attempts[nid] = prev_node.attempt
+                    node_cps = cps_by_node.get(nid, [])
+                    open_cp = next((c for c in node_cps if c.answer is None), None)
+                    target_cp = open_cp or (node_cps[-1] if node_cps else None)
+                    if target_cp is not None:
+                        resuming_waiting_nodes[nid] = target_cp
+                    continue
+
+                if prev_node is not None and prev_node.status in (
+                    NodeStatus.FAILED,
+                    NodeStatus.CANCELED,
+                    NodeStatus.BLOCKED,
+                    NodeStatus.RUNNING,
+                    NodeStatus.BUILDING_ENVIRONMENT,
+                ):
+                    node_attempts[nid] = prev_node.attempt
+                    node_statuses[nid] = NodeStatus.PENDING
+                    await asyncio.to_thread(self.store.reset_node_for_retry, active_run_id, nid)
+                    await asyncio.to_thread(
+                        event_log.append,
+                        "node_status",
+                        NodeStatusData(
+                            run_id=active_run_id,
+                            node_id=nid,
+                            status=NodeStatus.PENDING,
+                            cache_hit=False,
+                            attempt=prev_node.attempt,
+                        ),
+                    )
+                    if opts.on_node_status is not None:
+                        opts.on_node_status(nid, NodeStatus.PENDING, prev_node.attempt)
+                else:
+                    node_statuses[nid] = NodeStatus.PENDING
+                    node_attempts[nid] = prev_node.attempt if prev_node is not None else 0
+        else:
+            for nid in node_ids:
+                node_statuses[nid] = NodeStatus.PENDING
+                await asyncio.to_thread(
+                    event_log.append,
+                    "node_status",
+                    NodeStatusData(
+                        run_id=active_run_id,
+                        node_id=nid,
+                        status=NodeStatus.PENDING,
+                        cache_hit=False,
+                        attempt=0,
+                    ),
+                )
+                if opts.on_node_status is not None:
+                    opts.on_node_status(nid, NodeStatus.PENDING, 0)
 
         def _is_node_stage_gated(nid: str) -> bool:
             target_idx = stage_index[workflow.nodes[nid].stage]
@@ -262,6 +394,46 @@ class Scheduler:
         async def _execute_node(nid: str) -> tuple[str, bool]:
             spec = workflow.nodes[nid]
             node_dir = self.store.node_dir(active_run_id, nid)
+
+            pending_cp = resuming_waiting_nodes.pop(nid, None)
+            if pending_cp is not None:
+                cp_manifest = CheckpointManifest(
+                    checkpoint_id=pending_cp.checkpoint_id,
+                    question=pending_cp.question,
+                    options=pending_cp.options,
+                    allow_freeform=pending_cp.allow_freeform,
+                )
+                runnable_nodes.discard(nid)
+                waiting_nodes.add(nid)
+                await _sync_run_status()
+
+                answer = await self._resolve_checkpoint_answer(
+                    active_run_id,
+                    nid,
+                    cp_manifest,
+                    opts,
+                    resolved_answers,
+                    already_passed=False,
+                )
+                if answer is None:
+                    return nid, False
+
+                cp_key = (nid, cp_manifest.checkpoint_id)
+                if cp_key not in emitted_cp_resolutions:
+                    emitted_cp_resolutions.add(cp_key)
+                    await asyncio.to_thread(
+                        event_log.append,
+                        "checkpoint_resolved",
+                        CheckpointResolvedData(
+                            run_id=active_run_id,
+                            node_id=nid,
+                            checkpoint_id=cp_manifest.checkpoint_id,
+                        ),
+                    )
+                resolved_answers[f"{nid}.{cp_manifest.checkpoint_id}"] = answer
+                waiting_nodes.discard(nid)
+                runnable_nodes.add(nid)
+                await _sync_run_status()
 
             while True:
                 async with semaphore:
@@ -509,6 +681,26 @@ class Scheduler:
                 break
             return progressed
 
+        if resume and existing_state is not None:
+            for sid, gate in existing_state.stage_gates.items():
+                if sid not in workflow.stages:
+                    continue
+                opened_gates.add(sid)
+                if gate.status == StageGateStatus.APPROVED:
+                    approved_gates.add(sid)
+                    if sid not in emitted_gate_resolutions:
+                        emitted_gate_resolutions.add(sid)
+                        await asyncio.to_thread(
+                            event_log.append,
+                            "stage_resolved",
+                            StageResolvedData(run_id=active_run_id, stage_id=sid),
+                        )
+                else:
+                    waiting_gates.add(sid)
+                    if not opts.non_interactive:
+                        gtask = asyncio.create_task(_wait_for_stage_gate(sid))
+                        gate_tasks[gtask] = sid
+
         pending_discard: list[str] = []
         deferred_ready: list[str] = []
         while True:
@@ -517,19 +709,22 @@ class Scheduler:
 
             await _open_ready_stage_gates()
 
-            blocked_progressed = False
+            progressed_immediately = False
             still_deferred: list[str] = []
             to_launch: list[str] = []
             for nid in deferred_ready:
                 deps = dep_graph[nid]
-                if any(
+                if nid in precompleted_nodes:
+                    sorter.done(nid)
+                    progressed_immediately = True
+                elif any(
                     node_statuses.get(dep)
                     in (NodeStatus.FAILED, NodeStatus.CANCELED, NodeStatus.BLOCKED)
                     for dep in deps
                 ):
                     await _emit_node_status(nid, NodeStatus.BLOCKED, attempt=0)
                     sorter.done(nid)
-                    blocked_progressed = True
+                    progressed_immediately = True
                 elif _is_node_stage_gated(nid):
                     still_deferred.append(nid)
                 else:
@@ -547,7 +742,7 @@ class Scheduler:
                     task = asyncio.create_task(_execute_node(nid))
                     running_tasks[task] = nid
 
-            if blocked_progressed and not running_tasks and not gate_tasks:
+            if progressed_immediately:
                 continue
 
             all_tasks: set[asyncio.Task[tuple[str, bool]]] = set(running_tasks.keys()) | set(
@@ -601,6 +796,12 @@ class Scheduler:
             finished_at=finished_ts,
             error=run_error,
         )
+        if final_status == RunStatus.WAITING_FOR_USER:
+            await asyncio.to_thread(
+                self.store.release_ownership,
+                active_run_id,
+                expected_pid=os.getpid(),
+            )
         if final_status != current_run_status or final_status in (
             RunStatus.SUCCESS,
             RunStatus.FAILED,
