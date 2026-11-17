@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import os
 import time
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -16,6 +15,7 @@ from plynx_sdk.protocol import (
 )
 
 from plynx.api_models import NodeStatus
+from plynx.engine.env import build_child_environment
 from plynx.engine.executor import ExecutionRequest, LaunchHandle, NodeResult
 from plynx.engine.procgroup import kill_process_group, spawn_async_process_group
 from plynx.store.run_store import atomic_write_text
@@ -125,10 +125,14 @@ class LocalExecutor:
         workspace_root: Path | None = None,
         *,
         pack_dirs: Sequence[Path] | None = None,
+        env_passthrough: Sequence[str] | None = None,
         extra_env: Mapping[str, str] | None = None,
     ) -> None:
         self.workspace_root = (workspace_root or Path.cwd()).resolve()
         self.pack_dirs: list[Path] = [p.resolve() for p in pack_dirs] if pack_dirs else []
+        self.env_passthrough: list[str] | None = (
+            list(env_passthrough) if env_passthrough is not None else None
+        )
         self.extra_env: dict[str, str] = dict(extra_env) if extra_env else {}
         self._env_locks: dict[Path, asyncio.Lock] = {}
 
@@ -157,12 +161,12 @@ class LocalExecutor:
         return None
 
     def _build_child_env(self, env_dir: Path) -> dict[str, str]:
-        env = {k: v for k, v in os.environ.items() if k != "VIRTUAL_ENV"}
-        env.update(self.extra_env)
-        env["PYTHONUNBUFFERED"] = "1"
-        env["PYTHONUTF8"] = "1"
-        env["UV_PROJECT_ENVIRONMENT"] = str(env_dir)
-        return env
+        return build_child_environment(
+            self.workspace_root,
+            env_dir,
+            env_passthrough=self.env_passthrough,
+            extra_env=self.extra_env,
+        )
 
     def _get_env_lock(self, env_dir: Path) -> asyncio.Lock:
         lock = self._env_locks.get(env_dir)

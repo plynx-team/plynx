@@ -2,6 +2,11 @@
 
 from pathlib import Path
 
+from plynx.engine.env import (
+    build_child_environment,
+    load_dotenv_file,
+    parse_dotenv,
+)
 from plynx.engine.executor import (
     ExecutionRequest,
     Executor,
@@ -35,5 +40,8 @@ __all__ = [
     "Scheduler",
     "SchedulerOptions",
     "StatusCallback",
+    "build_child_environment",
     "create_executor",
+    "load_dotenv_file",
+    "parse_dotenv",
 ]
