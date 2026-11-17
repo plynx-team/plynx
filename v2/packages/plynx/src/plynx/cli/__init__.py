@@ -15,19 +15,10 @@ from pydantic import ValidationError
 
 from plynx.api_models import NodeStatus, RunStatus
 from plynx.engine import Scheduler, SchedulerOptions, create_executor
-from plynx.registry import FakeRegistry
+from plynx.registry import Registry, find_workspace_root
 from plynx.store import RunStore
 from plynx.workflow.models import load_workflow
 from plynx.workflow.validator import validate_workflow, validate_workflow_file
-
-
-def find_workspace_root(start: Path | None = None) -> Path:
-    """Return the nearest ancestor containing ``.plynx/``, or ``start`` (default cwd)."""
-    base = (start or Path.cwd()).resolve()
-    for candidate in (base, *base.parents):
-        if (candidate / ".plynx").is_dir():
-            return candidate
-    return base
 
 
 def _parse_key_value(pair: str, *, flag: str) -> tuple[str, str]:
@@ -119,18 +110,12 @@ def run_cmd(
         click.echo(f"error: workflow file not found: {workflow}", err=True)
         sys.exit(1)
 
-    registry = FakeRegistry()
+    workspace_root = find_workspace_root()
+    registry = Registry(workspace_root)
     try:
         wf_model = load_workflow(workflow)
     except (ValidationError, ValueError, OSError) as exc:
         click.echo(f"error: {exc}", err=True)
-        sys.exit(1)
-
-    issues = validate_workflow(wf_model, registry)
-    errors = [issue for issue in issues if issue.severity == "error"]
-    if errors:
-        for issue in errors:
-            click.echo(f"{issue.severity}: {issue.message}", err=True)
         sys.exit(1)
 
     run_inputs: dict[str, Any] = {}
@@ -140,6 +125,16 @@ def run_cmd(
     for pair in input_pairs:
         key, path_val = _parse_key_value(pair, flag="--input")
         run_inputs[key] = path_val
+
+    issues = validate_workflow(wf_model, registry, run_inputs=run_inputs)
+    errors = [issue for issue in issues if issue.severity == "error"]
+    warnings = [issue for issue in issues if issue.severity == "warning"]
+    for issue in warnings:
+        click.echo(f"{issue.severity}: {issue.message}", err=True)
+    if errors:
+        for issue in errors:
+            click.echo(f"{issue.severity}: {issue.message}", err=True)
+        sys.exit(1)
 
     answers: dict[str, str] = {}
     if answers_file is not None:
@@ -157,7 +152,6 @@ def run_cmd(
         key, val = _parse_key_value(pair, flag="--answer")
         answers[key] = val
 
-    workspace_root = find_workspace_root()
     store = RunStore(workspace_root)
     executor = create_executor(workspace_root)
     scheduler = Scheduler(store, executor, registry)

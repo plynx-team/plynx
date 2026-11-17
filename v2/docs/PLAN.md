@@ -68,7 +68,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: fixtures for computed `TITLE`, custom base class, unknown annotation each give the documented reason.
 - [x] **2.4 Pack discovery and cache.** Search wheel-shipped packs, `builtin_packs/` (repo), `custom_packs/`; `registry_cache.json` keyed by file mtime.
   Accept: touching one file re-parses only that file; deleting the cache rebuilds it.
-- [ ] **2.5 Real validator.** Replace `FakeRegistry`: port types and media compatibility, required inputs, unbound run inputs, missing `uv.lock` warning.
+- [x] **2.5 Real validator.** Replace `FakeRegistry`: port types and media compatibility, required inputs, unbound run inputs, missing `uv.lock` warning.
   Accept: all Phase 0 validator fixtures still pass against the real registry; media mismatch is rejected, `Path` to `PdfFile` is accepted.
 - [ ] **2.6 `plynx ops`.** Human table and `--json`.
   Accept: output lists every op in `standard_io`.

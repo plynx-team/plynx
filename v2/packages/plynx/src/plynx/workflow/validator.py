@@ -8,31 +8,67 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from plynx.api_models import InputPortSpec, OpEntry, OutputPortSpec, PortType, ValidationIssue
-from plynx.registry import FakeRegistry, OpRegistry
+from plynx.api_models import (
+    InputPortSpec,
+    OpEntry,
+    OutputPortSpec,
+    ValidationIssue,
+    WorkflowInputSpec,
+)
+from plynx.registry import OpRegistry, Registry, find_workspace_root
 from plynx.workflow.models import NodeRef, Workflow, load_workflow
 
 
-def _literal_matches_port_type(value: Any, port_type: PortType) -> bool:
+def _literal_matches_port_spec(value: Any, port: InputPortSpec) -> tuple[bool, str | None]:
     if value is None:
-        return True
-    if port_type == "str":
-        return isinstance(value, str)
-    if port_type == "int":
-        return isinstance(value, int) and not isinstance(value, bool)
-    if port_type == "float":
-        return isinstance(value, (int, float)) and not isinstance(value, bool)
-    if port_type == "bool":
-        return isinstance(value, bool)
-    if port_type == "json":
-        return isinstance(value, (dict, list))
-    if port_type in ("file", "directory"):
-        return isinstance(value, str)
-    return False
+        if port.required:
+            return False, f"required input '{port.name}' cannot be null"
+        return True, None
+
+    type_ok = False
+    if port.type == "str":
+        type_ok = isinstance(value, str)
+    elif port.type == "int":
+        type_ok = isinstance(value, int) and not isinstance(value, bool)
+    elif port.type == "float":
+        type_ok = isinstance(value, (int, float)) and not isinstance(value, bool)
+    elif port.type == "bool":
+        type_ok = isinstance(value, bool)
+    elif port.type == "json":
+        type_ok = isinstance(value, (dict, list))
+    elif port.type in ("file", "directory"):
+        type_ok = isinstance(value, str)
+
+    if not type_ok:
+        return (
+            False,
+            f"port type mismatch on input '{port.name}': "
+            f"expected '{port.type}', got literal '{type(value).__name__}'",
+        )
+
+    if port.options is not None and value not in port.options:
+        return (
+            False,
+            f"input '{port.name}' value {value!r} is not in allowed options {port.options}",
+        )
+
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if port.min is not None and value < port.min:
+            return (
+                False,
+                f"input '{port.name}' value {value} is less than minimum {port.min}",
+            )
+        if port.max is not None and value > port.max:
+            return (
+                False,
+                f"input '{port.name}' value {value} is greater than maximum {port.max}",
+            )
+
+    return True, None
 
 
 def _ports_compatible(src: OutputPortSpec, dst: InputPortSpec) -> tuple[bool, str | None]:
-    if src.type != dst.type:
+    if src.type != dst.type and not (src.type == "int" and dst.type == "float"):
         return (
             False,
             f"port type mismatch: expected '{dst.type}', got '{src.type}'",
@@ -50,7 +86,38 @@ def _ports_compatible(src: OutputPortSpec, dst: InputPortSpec) -> tuple[bool, st
     return True, None
 
 
-def validate_workflow(workflow: Workflow, registry: OpRegistry) -> list[ValidationIssue]:
+def get_unbound_run_inputs(
+    workflow: Workflow,
+    registry: OpRegistry,
+) -> list[WorkflowInputSpec]:
+    """Return all required input ports that have no default and are not bound in ``workflow``."""
+    unbound: list[WorkflowInputSpec] = []
+    for node_id, node in workflow.nodes.items():
+        op_entry = registry.get(node.op)
+        if op_entry is None or not op_entry.valid:
+            continue
+        for port in op_entry.inputs:
+            if port.name not in node.inputs and port.required and port.default is None:
+                unbound.append(
+                    WorkflowInputSpec(
+                        node_id=node_id,
+                        name=port.name,
+                        type=port.type,
+                        media=port.media,
+                        required=port.required,
+                        default=port.default,
+                        stage_id=node.stage,
+                    )
+                )
+    return unbound
+
+
+def validate_workflow(
+    workflow: Workflow,
+    registry: OpRegistry,
+    *,
+    run_inputs: dict[str, Any] | None = None,
+) -> list[ValidationIssue]:
     """Validate ``workflow`` against ``registry`` and return all validation issues."""
     issues: list[ValidationIssue] = []
     stage_index = {stage_id: idx for idx, stage_id in enumerate(workflow.stages.keys())}
@@ -78,6 +145,48 @@ def validate_workflow(workflow: Workflow, registry: OpRegistry) -> list[Validati
             )
             continue
         node_ops[node_id] = op_entry
+
+    # Check uv.lock presence per used pack (PROTOCOL.md section 4)
+    discovered_packs: dict[str, Path] = getattr(registry, "discovered_packs", {})
+    checked_packs: set[str] = set()
+    for op_entry in node_ops.values():
+        pack_name = op_entry.pack
+        if pack_name in checked_packs:
+            continue
+        checked_packs.add(pack_name)
+        pack_dir = discovered_packs.get(pack_name)
+        if pack_dir is not None and not (pack_dir / "uv.lock").is_file():
+            issues.append(
+                ValidationIssue(
+                    severity="warning",
+                    node_id=None,
+                    message=f"Pack '{pack_name}' is missing 'uv.lock' (reproducibility hazard)",
+                )
+            )
+
+    # Check unbound run inputs
+    for node_id, node in workflow.nodes.items():
+        dst_op = node_ops.get(node_id)
+        if dst_op is None:
+            continue
+        for port in dst_op.inputs:
+            if port.name not in node.inputs:
+                bound_in_run_inputs = False
+                if run_inputs:
+                    bound_in_run_inputs = (
+                        f"{node_id}.{port.name}" in run_inputs or port.name in run_inputs
+                    )
+                if not bound_in_run_inputs and port.required and port.default is None:
+                    issues.append(
+                        ValidationIssue(
+                            severity="warning",
+                            node_id=node_id,
+                            message=(
+                                f"Node '{node_id}': unbound run input '{port.name}' "
+                                f"(type '{port.type}')"
+                            ),
+                        )
+                    )
 
     dep_graph: dict[str, set[str]] = {node_id: set() for node_id in workflow.nodes}
 
@@ -160,17 +269,16 @@ def validate_workflow(workflow: Workflow, registry: OpRegistry) -> list[Validati
                                     ),
                                 )
                             )
-            elif dst_port is not None and not _literal_matches_port_type(val, dst_port.type):
-                issues.append(
-                    ValidationIssue(
-                        severity="error",
-                        node_id=node_id,
-                        message=(
-                            f"Node '{node_id}': port type mismatch on input '{port_name}': "
-                            f"expected '{dst_port.type}', got literal '{type(val).__name__}'"
-                        ),
+            elif dst_port is not None:
+                matches, err_msg = _literal_matches_port_spec(val, dst_port)
+                if not matches:
+                    issues.append(
+                        ValidationIssue(
+                            severity="error",
+                            node_id=node_id,
+                            message=f"Node '{node_id}': {err_msg}",
+                        )
                     )
-                )
 
     sorter = graphlib.TopologicalSorter(dep_graph)
     try:
@@ -193,9 +301,15 @@ def validate_workflow(workflow: Workflow, registry: OpRegistry) -> list[Validati
 def validate_workflow_file(
     path: Path,
     registry: OpRegistry | None = None,
+    *,
+    run_inputs: dict[str, Any] | None = None,
 ) -> list[ValidationIssue]:
     """Load and validate a workflow YAML file, returning any parse or validation issues."""
-    reg = FakeRegistry() if registry is None else registry
+    if registry is None:
+        workspace_root = find_workspace_root(path.parent)
+        reg: OpRegistry = Registry(workspace_root)
+    else:
+        reg = registry
     try:
         workflow = load_workflow(path)
     except ValidationError as exc:
@@ -217,4 +331,4 @@ def validate_workflow_file(
     except (ValueError, OSError) as exc:
         return [ValidationIssue(severity="error", message=str(exc))]
 
-    return validate_workflow(workflow, reg)
+    return validate_workflow(workflow, reg, run_inputs=run_inputs)

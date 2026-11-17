@@ -39,7 +39,7 @@ from plynx.api_models import (
     RunStatusData,
 )
 from plynx.engine.executor import ExecutionRequest, Executor
-from plynx.registry import FakeRegistry, OpRegistry
+from plynx.registry import OpRegistry, Registry
 from plynx.store.run_store import RunStore, atomic_write_text
 from plynx.workflow.models import NodeRef, NodeSpec, Workflow
 
@@ -131,7 +131,7 @@ class Scheduler:
     ) -> None:
         self.store = store
         self.executor = executor
-        self.registry: OpRegistry = FakeRegistry() if registry is None else registry
+        self.registry: OpRegistry = Registry(store.workspace_root) if registry is None else registry
 
     async def run(
         self,

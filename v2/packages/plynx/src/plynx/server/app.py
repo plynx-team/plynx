@@ -23,13 +23,13 @@ from plynx.api_models import (
     RunState,
     RunStatus,
     RunStatusEvent,
+    WorkflowInputSpec,
 )
-from plynx.cli import find_workspace_root
 from plynx.engine import Executor, Scheduler, SchedulerOptions, create_executor
-from plynx.registry import FakeRegistry, OpRegistry
+from plynx.registry import OpRegistry, Registry, find_workspace_root
 from plynx.store import AmbiguousRunIdError, RunNotFoundError, RunStore
 from plynx.workflow.models import load_workflow
-from plynx.workflow.validator import validate_workflow
+from plynx.workflow.validator import get_unbound_run_inputs, validate_workflow
 
 TERMINAL_RUN_STATUSES = frozenset({RunStatus.SUCCESS, RunStatus.FAILED, RunStatus.CANCELED})
 DEFAULT_STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
@@ -76,7 +76,7 @@ def create_app(
     ws_root = (workspace_root or find_workspace_root()).resolve()
     ui_static_dir = (static_dir or DEFAULT_STATIC_DIR).resolve()
     store = RunStore(ws_root)
-    op_registry: OpRegistry = FakeRegistry() if registry is None else registry
+    op_registry: OpRegistry = Registry(ws_root) if registry is None else registry
     background_tasks: set[asyncio.Task[Any]] = set()
 
     app = FastAPI(title="PLynx", version="2.0.0")
@@ -91,6 +91,30 @@ def create_app(
     async def get_health() -> HealthResponse:
         """Return server health and version."""
         return HealthResponse()
+
+    @router.get("/workflows/{path:path}/inputs", response_model=list[WorkflowInputSpec])
+    async def get_workflow_inputs(path: str) -> Any:
+        """Return run inputs still unbound for the given workflow path."""
+        wf_candidate = (ws_root / path).resolve()
+        try:
+            wf_candidate.relative_to(ws_root)
+        except ValueError:
+            return _error_response(
+                400,
+                "invalid_workflow_path",
+                "workflow path must stay inside the workspace root",
+            )
+        if not wf_candidate.is_file():
+            return _error_response(
+                404,
+                "workflow_not_found",
+                f"Workflow file not found: {path}",
+            )
+        try:
+            wf_model = await asyncio.to_thread(load_workflow, wf_candidate)
+        except Exception as exc:
+            return _error_response(400, "invalid_workflow", str(exc))
+        return get_unbound_run_inputs(wf_model, op_registry)
 
     @router.get("/runs", response_model=RunListResponse)
     async def list_runs(limit: int = Query(default=50, ge=1, le=500)) -> RunListResponse:

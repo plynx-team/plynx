@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 from plynx.api_models import InputPortSpec, OpEntry, OutputPortSpec
 from plynx.registry.extractor import extract_ops_from_file, extract_ops_from_source
-from plynx.registry.pack_registry import PackRegistry, Registry, discover_packs
+from plynx.registry.pack_registry import (
+    PackRegistry,
+    Registry,
+    discover_packs,
+    find_workspace_root,
+)
 
 
 @runtime_checkable
@@ -153,9 +159,15 @@ def default_fake_ops() -> list[OpEntry]:
 class FakeRegistry:
     """In-memory ``OpRegistry`` implementation used in Phase 0 and unit tests."""
 
-    def __init__(self, ops: Iterable[OpEntry] | None = None) -> None:
+    def __init__(
+        self,
+        ops: Iterable[OpEntry] | None = None,
+        *,
+        discovered_packs: dict[str, Path] | None = None,
+    ) -> None:
         initial = default_fake_ops() if ops is None else list(ops)
         self._ops: dict[str, OpEntry] = {entry.id: entry for entry in initial}
+        self.discovered_packs: dict[str, Path] = dict(discovered_packs or {})
 
     def register(self, entry: OpEntry) -> None:
         """Add or replace an ``OpEntry`` in this registry."""
@@ -179,4 +191,5 @@ __all__ = [
     "discover_packs",
     "extract_ops_from_file",
     "extract_ops_from_source",
+    "find_workspace_root",
 ]
