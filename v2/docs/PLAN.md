@@ -14,7 +14,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: every JSON example in PROTOCOL.md section 5 is a fixture in `tests/fixtures/` and round-trips unchanged; invalid fixtures (missing `schema`, `..` in a path, scalar over 1 MiB) are rejected; `mypy --strict` passes.
 - [x] **0.3 Engine models.** `plynx/workflow/models.py` (pydantic: `Workflow`, `Stage`, `NodeSpec`, reference parsing with the `$` rules), `plynx/api_models.py` (statuses, `RunState`, the seven event types as a tagged union, REST bodies).
   Accept: the example workflow parses; fixtures for unknown keys, bare `$` strings, `$$` escape, and bad node IDs fail with clear messages; statuses match ARCHITECTURE.md exactly.
-- [ ] **0.4 Generated TypeScript types.** `scripts/gen_ts_types.py` writes `ui/src/api/types.gen.ts` from the pydantic JSON Schema.
+- [x] **0.4 Generated TypeScript types.** `scripts/gen_ts_types.py` writes `ui/src/api/types.gen.ts` from the pydantic JSON Schema.
   Accept: running it twice produces no diff; a test fails if the committed file is stale.
 - [ ] **0.5 Fake registry and validator.** `registry/` interface (`OpRegistry` protocol) with an in-memory `FakeRegistry`. `workflow/validator.py`: unknown op, missing node reference, unknown output, cycle (`graphlib.CycleError`), backward stage edge, port type mismatch.
   Accept: `plynx validate examples/workflows/foo_or_woo.yaml` exits 0; one fixture per error kind exits 1 with the message naming the node.
