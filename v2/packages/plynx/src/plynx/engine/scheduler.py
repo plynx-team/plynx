@@ -16,7 +16,10 @@ from plynx_sdk.protocol import (
     InputFileValue,
     InputsManifest,
     OutputValue,
+    ResultDirectoryValue,
+    ResultFileValue,
     ResultManifest,
+    ResultValue,
     ScalarValue,
 )
 
@@ -103,6 +106,7 @@ class Scheduler:
             if run_id is not None
             else None
         )
+        is_fresh_run = existing_state is None or run_id is None
         if existing_state is not None and run_id is not None:
             active_run_id = run_id
         else:
@@ -125,7 +129,7 @@ class Scheduler:
 
         node_statuses: dict[str, NodeStatus] = {}
         node_attempts: dict[str, int] = dict.fromkeys(node_ids, 0)
-        completed_outputs: dict[str, dict[str, OutputValue]] = {}
+        completed_outputs: dict[str, dict[str, ResultValue | OutputValue]] = {}
 
         for nid in node_ids:
             node_statuses[nid] = NodeStatus.PENDING
@@ -220,6 +224,41 @@ class Scheduler:
                     started_ts = time.time()
                     emitted_running = False
 
+                    op_entry = self.registry.get(spec.op)
+                    is_cacheable = op_entry.cacheable if op_entry is not None else True
+                    cache_key = self._compute_node_cache_key(nid, spec, inputs_manifest)
+
+                    if is_fresh_run and not opts.no_cache and is_cacheable:
+                        cached_result = await asyncio.to_thread(
+                            self._lookup_cache,
+                            cache_key,
+                        )
+                        if cached_result is not None:
+                            hit_manifest = ResultManifest(
+                                status="SUCCESS",
+                                cache_key=cache_key,
+                                cache_hit=True,
+                                started_at=cached_result.started_at,
+                                finished_at=cached_result.finished_at,
+                                outputs=cached_result.outputs,
+                            )
+                            await asyncio.to_thread(
+                                write_result_manifest,
+                                node_dir,
+                                hit_manifest,
+                            )
+                            completed_outputs[nid] = dict(cached_result.outputs)
+                            await _emit_node_status(
+                                nid,
+                                NodeStatus.SUCCESS,
+                                cache_hit=True,
+                                cache_key=cache_key,
+                                attempt=0,
+                                started_at=cached_result.started_at,
+                                finished_at=cached_result.finished_at,
+                            )
+                            return nid, True
+
                     async def _on_attempt_status(
                         st: NodeStatus,
                         *,
@@ -261,13 +300,13 @@ class Scheduler:
                     if result.status == NodeStatus.SUCCESS:
                         outs = result.outputs.outputs if result.outputs is not None else {}
                         completed_outputs[nid] = dict(outs)
-                        cache_key = self._compute_node_cache_key(nid, spec, inputs_manifest)
                         await asyncio.to_thread(
                             self._ingest_and_write_result,
                             node_dir,
                             result,
                             outs,
                             cache_key,
+                            is_cacheable=is_cacheable,
                         )
                         await _emit_node_status(
                             nid,
@@ -420,7 +459,7 @@ class Scheduler:
         run_id: str,
         node_id: str,
         spec: NodeSpec,
-        completed_outputs: Mapping[str, Mapping[str, OutputValue]],
+        completed_outputs: Mapping[str, Mapping[str, ResultValue | OutputValue]],
         opts: SchedulerOptions,
     ) -> InputsManifest:
         dst_node_dir = self.store.node_dir(run_id, node_id)
@@ -476,12 +515,34 @@ class Scheduler:
             params_hash=compute_params_hash(scalars, checkpoint_answers=inputs.checkpoint_answers),
         )
 
+    def _lookup_cache(self, cache_key: str) -> ResultManifest | None:
+        raw_json = self.store.get_cache_entry(cache_key)
+        if raw_json is None:
+            return None
+        try:
+            manifest = ResultManifest.from_json(raw_json)
+        except Exception:
+            return None
+
+        # Verify all output blobs exist in CAS. A missing blob is a miss, never an error.
+        for out in manifest.outputs.values():
+            if isinstance(out, ResultFileValue):
+                if not self.blob_store.exists(out.sha256):
+                    return None
+            elif isinstance(out, ResultDirectoryValue):
+                for entry in out.entries:
+                    if not self.blob_store.exists(entry.sha256):
+                        return None
+        return manifest
+
     def _ingest_and_write_result(
         self,
         node_dir: Path,
         result: NodeResult,
         outs: Mapping[str, OutputValue],
         cache_key: str,
+        *,
+        is_cacheable: bool = True,
     ) -> ResultManifest:
         result_outputs = ingest_outputs(
             outs,
@@ -497,6 +558,8 @@ class Scheduler:
             outputs=result_outputs,
         )
         write_result_manifest(node_dir, result_manifest)
+        if is_cacheable:
+            self.store.put_cache_entry(cache_key, result_manifest.to_json())
         return result_manifest
 
     async def _resolve_checkpoint_answer(

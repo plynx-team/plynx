@@ -584,6 +584,37 @@ class RunStore:
             raise AmbiguousRunIdError(prefix, matches)
         return matches[0]
 
+    def get_cache_entry(self, cache_key: str) -> str | None:
+        """Look up result_json by cache_key. Updates last_accessed_at on hit."""
+        now = time.time()
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT result_json FROM cache_index WHERE cache_key = ?",
+                (cache_key,),
+            ).fetchone()
+            if row is None:
+                return None
+            conn.execute(
+                "UPDATE cache_index SET last_accessed_at = ? WHERE cache_key = ?",
+                (now, cache_key),
+            )
+            return str(row["result_json"])
+
+    def put_cache_entry(self, cache_key: str, result_json: str) -> None:
+        """Store or update a cached result_json for a cache_key."""
+        now = time.time()
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO cache_index (cache_key, result_json, created_at, last_accessed_at)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(cache_key) DO UPDATE SET
+                  result_json = excluded.result_json,
+                  last_accessed_at = excluded.last_accessed_at
+                """,
+                (cache_key, result_json, now, now),
+            )
+
 
 def _row_to_checkpoint(row: sqlite3.Row) -> CheckpointState:
     raw_opts = row["options_json"]

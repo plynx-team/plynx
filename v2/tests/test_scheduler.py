@@ -146,7 +146,7 @@ def test_failing_node_blocks_only_dependents_while_other_branch_finishes(
     )
     scheduler = Scheduler(store, executor)
 
-    state = asyncio.run(scheduler.run(wf))
+    state = asyncio.run(scheduler.run(wf, options=SchedulerOptions(no_cache=True)))
     assert state.status == RunStatus.FAILED
     assert state.nodes["root"].status == NodeStatus.SUCCESS
     assert state.nodes["bad_branch"].status == NodeStatus.FAILED
