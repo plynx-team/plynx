@@ -43,7 +43,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
 
 ## Phase 1: Real node execution
 
-- [ ] **1.1 SDK authoring API.** `Op`, `@op`, `Media`, `Range`, `Directory`, semantic aliases, `CheckpointInterrupt`. Stdlib only.
+- [x] **1.1 SDK authoring API.** `Op`, `@op`, `Media`, `Range`, `Directory`, semantic aliases, `CheckpointInterrupt`. Stdlib only.
   Accept: both forms from PROTOCOL.md section 3 import and run in plain Python; importing `plynx_sdk` imports nothing outside the standard library (test checks `sys.modules`).
 - [ ] **1.2 Harness.** `python -m plynx_sdk.harness` reads `inputs.json`, calls the op, validates the result, writes `outputs.json`, maps failures to exit codes 1 and 2.
   Accept: run directly (no `uv`) on a fixture node directory for success, op exception, bad outputs, missing op.
