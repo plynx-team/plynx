@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -12,6 +12,7 @@ from fastapi import APIRouter, FastAPI, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
+from ruamel.yaml import YAML
 
 from plynx.api_models import (
     ApiErrorDetail,
@@ -19,11 +20,15 @@ from plynx.api_models import (
     CreateRunRequest,
     CreateRunResponse,
     HealthResponse,
+    OpEntry,
     RunListResponse,
     RunState,
     RunStatus,
     RunStatusEvent,
+    WorkflowDocument,
     WorkflowInputSpec,
+    WorkflowLayout,
+    WorkflowListItem,
 )
 from plynx.engine import Executor, Scheduler, SchedulerOptions, create_executor
 from plynx.registry import OpRegistry, Registry, find_workspace_root
@@ -65,6 +70,58 @@ def _format_sse_frame(
     return "\n".join(lines) + "\n\n"
 
 
+def _discover_workflows(workspace_root: Path) -> list[WorkflowListItem]:
+    cfg_path = workspace_root / "plynx.yaml"
+    wf_dir_names: list[str] = ["workflows", "examples/workflows"]
+    if cfg_path.is_file():
+        try:
+            yaml = YAML(typ="safe")
+            parsed = yaml.load(cfg_path.read_text(encoding="utf-8"))
+            if isinstance(parsed, Mapping) and "workflows" in parsed:
+                val = parsed["workflows"]
+                if isinstance(val, str):
+                    wf_dir_names = [val]
+                elif isinstance(val, list):
+                    wf_dir_names = [str(x) for x in val]
+        except Exception:
+            pass
+
+    items: list[WorkflowListItem] = []
+    seen_paths: set[str] = set()
+
+    for dir_name in wf_dir_names:
+        wf_dir = (workspace_root / dir_name).resolve()
+        if not wf_dir.is_dir():
+            continue
+        for ext in ("*.yaml", "*.yml"):
+            for candidate in sorted(wf_dir.rglob(ext)):
+                if candidate.name.startswith((".", "#")):
+                    continue
+                try:
+                    rel_path = candidate.resolve().relative_to(workspace_root.resolve()).as_posix()
+                except ValueError:
+                    rel_path = candidate.as_posix()
+                if rel_path in seen_paths:
+                    continue
+                try:
+                    wf = load_workflow(candidate)
+                    name = wf.name or candidate.stem
+                    stage_count = len(wf.stages)
+                    items.append(
+                        WorkflowListItem(
+                            path=rel_path,
+                            name=name,
+                            stage_count=stage_count,
+                        )
+                    )
+                    seen_paths.add(rel_path)
+                except Exception:
+                    continue
+
+    items.sort(key=lambda it: it.path)
+    return items
+
+
 def create_app(
     workspace_root: Path | None = None,
     *,
@@ -93,6 +150,18 @@ def create_app(
         """Return server health and version."""
         return HealthResponse()
 
+    @router.get("/ops", response_model=list[OpEntry])
+    async def get_ops() -> list[OpEntry]:
+        """Return all registered operations."""
+        if hasattr(op_registry, "refresh"):
+            await asyncio.to_thread(op_registry.refresh)
+        return await asyncio.to_thread(op_registry.list_ops)
+
+    @router.get("/workflows", response_model=list[WorkflowListItem])
+    async def list_workflows_endpoint() -> list[WorkflowListItem]:
+        """Return list of discovered workflow files in the workspace."""
+        return await asyncio.to_thread(_discover_workflows, ws_root)
+
     @router.get("/workflows/{path:path}/inputs", response_model=list[WorkflowInputSpec])
     async def get_workflow_inputs(path: str) -> Any:
         """Return run inputs still unbound for the given workflow path."""
@@ -117,11 +186,54 @@ def create_app(
             return _error_response(400, "invalid_workflow", str(exc))
         return get_unbound_run_inputs(wf_model, op_registry)
 
+    @router.get("/workflows/{path:path}", response_model=WorkflowDocument)
+    async def get_workflow_endpoint(path: str) -> Any:
+        """Return the workflow document and optional layout sidecar."""
+        wf_candidate = (ws_root / path).resolve()
+        try:
+            wf_candidate.relative_to(ws_root)
+        except ValueError:
+            return _error_response(
+                400,
+                "invalid_workflow_path",
+                "workflow path must stay inside the workspace root",
+            )
+        if not wf_candidate.is_file():
+            return _error_response(
+                404,
+                "workflow_not_found",
+                f"Workflow file not found: {path}",
+            )
+        try:
+            wf_model = await asyncio.to_thread(load_workflow, wf_candidate)
+        except Exception as exc:
+            return _error_response(400, "invalid_workflow", str(exc))
+
+        sidecar = wf_candidate.with_name(f".{wf_candidate.stem}.layout.json")
+        layout: WorkflowLayout | None = None
+        if sidecar.is_file():
+            try:
+                sidecar_text = await asyncio.to_thread(sidecar.read_text, encoding="utf-8")
+                layout = WorkflowLayout.model_validate_json(sidecar_text)
+            except Exception:
+                layout = None
+
+        return WorkflowDocument(workflow=wf_model, layout=layout)
+
     @router.get("/runs", response_model=RunListResponse)
-    async def list_runs(limit: int = Query(default=50, ge=1, le=500)) -> RunListResponse:
+    async def list_runs(
+        limit: int = Query(default=50, ge=1, le=500),
+        cursor: str | None = Query(default=None),
+    ) -> RunListResponse:
         """Return recent runs ordered newest first."""
-        runs = await asyncio.to_thread(store.list_runs, limit=limit)
-        return RunListResponse(runs=runs)
+        items = await asyncio.to_thread(store.list_runs, limit=limit + 1, cursor=cursor)
+        if len(items) > limit:
+            next_cursor = items[limit - 1].id
+            runs = items[:limit]
+        else:
+            next_cursor = None
+            runs = items
+        return RunListResponse(runs=runs, next_cursor=next_cursor)
 
     @router.get("/runs/{run_id}", response_model=RunState)
     async def get_run(run_id: str) -> Any:

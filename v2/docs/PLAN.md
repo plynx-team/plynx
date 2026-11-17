@@ -113,7 +113,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
 
 ## Phase 5: Server
 
-- [ ] **5.1 Read endpoints.** `ops`, `workflows`, `workflows/{path}`, `workflows/{path}/inputs`, `runs`, `runs/{id}`.
+- [x] **5.1 Read endpoints.** `ops`, `workflows`, `workflows/{path}`, `workflows/{path}/inputs`, `runs`, `runs/{id}`.
   Accept: responses validate against `api_models.py`; `inputs` lists unwired ports with stage IDs.
 - [ ] **5.2 Run control.** `POST /runs`, `cancel`, `resume`, answer, approve.
   Accept: a run started over REST can be answered and approved over REST; the double-answer test returns a conflict error.

@@ -751,13 +751,37 @@ class RunStore:
             stage_gates=stage_gates,
         )
 
-    def list_runs(self, *, limit: int = 50) -> list[RunSummary]:
+    def list_runs(
+        self,
+        *,
+        limit: int = 50,
+        cursor: str | None = None,
+    ) -> list[RunSummary]:
         """Return runs ordered newest first."""
         with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT * FROM runs ORDER BY created_at DESC, id DESC LIMIT ?",
-                (limit,),
-            ).fetchall()
+            if cursor:
+                cursor_row = conn.execute(
+                    "SELECT created_at, id FROM runs WHERE id = ?",
+                    (cursor,),
+                ).fetchone()
+                if cursor_row is not None:
+                    c_created_at = float(cursor_row["created_at"])
+                    c_id = str(cursor_row["id"])
+                    rows = conn.execute(
+                        """
+                        SELECT * FROM runs
+                        WHERE created_at < ? OR (created_at = ? AND id < ?)
+                        ORDER BY created_at DESC, id DESC LIMIT ?
+                        """,
+                        (c_created_at, c_created_at, c_id, limit),
+                    ).fetchall()
+                else:
+                    rows = []
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM runs ORDER BY created_at DESC, id DESC LIMIT ?",
+                    (limit,),
+                ).fetchall()
         return [
             RunSummary(
                 id=str(r["id"]),

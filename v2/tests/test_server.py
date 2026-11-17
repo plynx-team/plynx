@@ -12,7 +12,16 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import httpx
-from plynx.api_models import RunEvent, RunState, RunStatus
+from plynx.api_models import (
+    OpEntry,
+    RunEvent,
+    RunListResponse,
+    RunState,
+    RunStatus,
+    WorkflowDocument,
+    WorkflowInputSpec,
+    WorkflowListItem,
+)
 from plynx.server import create_app
 from plynx.store import RunStore
 from pydantic import TypeAdapter
@@ -230,5 +239,213 @@ def test_server_returns_built_index_html_at_root(tmp_path: Path) -> None:
             assert "text/html" in resp.headers.get("content-type", "")
             assert '<div id="root"></div>' in resp.text
             assert "PLynx v2" in resp.text
+
+    asyncio.run(_check())
+
+
+def test_read_ops_endpoint(tmp_path: Path) -> None:
+    """GET /ops and GET /api/v1/ops return validated OpEntry list."""
+    app = create_app(tmp_path)
+
+    async def _check() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/ops")
+            assert resp.status_code == 200
+            ops_data = resp.json()
+            assert isinstance(ops_data, list)
+            assert len(ops_data) > 0
+            validated = [OpEntry.model_validate(item) for item in ops_data]
+            assert any(op.id == "standard_io/demo:AskFooOrWoo" for op in validated)
+
+            v1_resp = await client.get("/api/v1/ops")
+            assert v1_resp.status_code == 200
+            assert v1_resp.json() == ops_data
+
+    asyncio.run(_check())
+
+
+def test_read_workflows_and_workflow_by_path(tmp_path: Path) -> None:
+    """GET /workflows and GET /workflows/{path} return validated models."""
+    wf_dir = tmp_path / "workflows"
+    wf_dir.mkdir(parents=True)
+    wf_file = wf_dir / "foo_or_woo.yaml"
+    shutil.copy(EXAMPLE_WORKFLOW, wf_file)
+
+    # Layout sidecar
+    sidecar = wf_dir / ".foo_or_woo.layout.json"
+    sidecar.write_text(
+        json.dumps({
+            "schema": 1,
+            "nodes": {"pick": {"x": 10.0, "y": 20.0}},
+            "viewport": {"x": 0.0, "y": 0.0, "zoom": 1.5},
+        }),
+        encoding="utf-8",
+    )
+
+    app = create_app(tmp_path)
+
+    async def _check() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            # List workflows
+            list_resp = await client.get("/workflows")
+            assert list_resp.status_code == 200
+            items = [WorkflowListItem.model_validate(it) for it in list_resp.json()]
+            assert len(items) == 1
+            assert items[0].path == "workflows/foo_or_woo.yaml"
+            assert items[0].name == "foo_or_woo"
+            assert items[0].stage_count >= 1
+
+            # Get workflow document
+            doc_resp = await client.get("/workflows/workflows/foo_or_woo.yaml")
+            assert doc_resp.status_code == 200
+            doc = WorkflowDocument.model_validate(doc_resp.json())
+            assert "pick" in doc.workflow.nodes
+            assert doc.layout is not None
+            assert doc.layout.nodes["pick"].x == 10.0
+            assert doc.layout.viewport.zoom == 1.5
+
+            # API v1 prefix
+            v1_resp = await client.get("/api/v1/workflows/workflows/foo_or_woo.yaml")
+            assert v1_resp.status_code == 200
+            assert v1_resp.json() == doc_resp.json()
+
+            # 404 for missing workflow
+            missing_resp = await client.get("/workflows/workflows/nonexistent.yaml")
+            assert missing_resp.status_code == 404
+            assert missing_resp.json()["error"]["code"] == "workflow_not_found"
+
+            # 400 for invalid workflow YAML
+            bad_wf = wf_dir / "broken.yaml"
+            bad_wf.write_text("not a yaml mapping: [1, 2, 3]\n", encoding="utf-8")
+            bad_resp = await client.get("/workflows/workflows/broken.yaml")
+            assert bad_resp.status_code == 400
+            assert bad_resp.json()["error"]["code"] == "invalid_workflow"
+
+            # 400 for path traversal outside workspace (via symlink)
+            outside_target = tmp_path.parent / "outside.yaml"
+            outside_target.write_text("version: 1\nnodes: {}\n", encoding="utf-8")
+            outside_symlink = wf_dir / "outside_link.yaml"
+            outside_symlink.symlink_to(outside_target)
+            outside_resp = await client.get("/workflows/workflows/outside_link.yaml")
+            assert outside_resp.status_code == 400
+            assert outside_resp.json()["error"]["code"] == "invalid_workflow_path"
+
+    asyncio.run(_check())
+
+
+def test_workflow_inputs_unwired_with_stage_ids(tmp_path: Path) -> None:
+    """GET /workflows/{path}/inputs lists unwired input ports with stage IDs."""
+    wf_dir = tmp_path / "workflows"
+    wf_dir.mkdir(parents=True)
+    wf_file = wf_dir / "unwired.yaml"
+    # Echo node has 'text' required with no default, not wired here
+    wf_file.write_text(
+        """version: 1
+name: test_unwired
+stages:
+  print_stage:
+    title: "Print Stage"
+nodes:
+  echo_node:
+    op: standard_io/demo:Echo
+    stage: print_stage
+    inputs: {}
+""",
+        encoding="utf-8",
+    )
+
+    app = create_app(tmp_path)
+
+    async def _check() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/workflows/workflows/unwired.yaml/inputs")
+            assert resp.status_code == 200
+            inputs = [WorkflowInputSpec.model_validate(it) for it in resp.json()]
+            assert len(inputs) == 1
+            assert inputs[0].node_id == "echo_node"
+            assert inputs[0].name == "text"
+            assert inputs[0].type == "str"
+            assert inputs[0].required is True
+            assert inputs[0].stage_id == "print_stage"
+
+            # /api/v1 prefix
+            v1_resp = await client.get("/api/v1/workflows/workflows/unwired.yaml/inputs")
+            assert v1_resp.status_code == 200
+            assert v1_resp.json() == resp.json()
+
+    asyncio.run(_check())
+
+
+def test_read_runs_pagination_and_get_run_prefix(tmp_path: Path) -> None:
+    """GET /runs supports limit/cursor; GET /runs/{id} supports prefix and error codes."""
+    store = RunStore(tmp_path)
+    # Create 3 runs in store
+    id1 = store.create_run(
+        workflow_path="workflows/w1.yaml",
+        workflow_bytes=b"version: 1\nnodes: {}\n",
+        node_ids=[],
+    )
+    time.sleep(0.01)
+    id2 = store.create_run(
+        workflow_path="workflows/w2.yaml",
+        workflow_bytes=b"version: 1\nnodes: {}\n",
+        node_ids=[],
+    )
+    time.sleep(0.01)
+    id3 = store.create_run(
+        workflow_path="workflows/w3.yaml",
+        workflow_bytes=b"version: 1\nnodes: {}\n",
+        node_ids=[],
+    )
+
+    app = create_app(tmp_path)
+
+    async def _check() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            # Page 1: limit 2
+            page1_resp = await client.get("/runs?limit=2")
+            assert page1_resp.status_code == 200
+            page1 = RunListResponse.model_validate(page1_resp.json())
+            assert len(page1.runs) == 2
+            assert page1.runs[0].id == id3
+            assert page1.runs[1].id == id2
+            assert page1.next_cursor == id2
+
+            # Page 2: with cursor
+            page2_resp = await client.get(f"/runs?limit=2&cursor={page1.next_cursor}")
+            assert page2_resp.status_code == 200
+            page2 = RunListResponse.model_validate(page2_resp.json())
+            assert len(page2.runs) == 1
+            assert page2.runs[0].id == id1
+            assert page2.next_cursor is None
+
+            # Get run with full ID
+            r3_resp = await client.get(f"/runs/{id3}")
+            assert r3_resp.status_code == 200
+            r3_state = RunState.model_validate(r3_resp.json())
+            assert r3_state.id == id3
+            assert r3_state.workflow_path == "workflows/w3.yaml"
+
+            # Get run with unique prefix (full timestamp plus part of hex suffix)
+            prefix = id3[:-2]
+            prefix_resp = await client.get(f"/runs/{prefix}")
+            assert prefix_resp.status_code == 200
+            prefix_state = RunState.model_validate(prefix_resp.json())
+            assert prefix_state.id == id3
+
+            # Ambiguous prefix (shared timestamp prefix) returns 409
+            ambig_prefix = id3[:15]
+            ambig_resp = await client.get(f"/runs/{ambig_prefix}")
+            assert ambig_resp.status_code == 409
+            assert ambig_resp.json()["error"]["code"] == "ambiguous_run_id"
+
+            # 404 for unknown run
+            missing_resp = await client.get("/runs/unknown_id_12345")
+            assert missing_resp.status_code == 404
+            assert missing_resp.json()["error"]["code"] == "run_not_found"
 
     asyncio.run(_check())
