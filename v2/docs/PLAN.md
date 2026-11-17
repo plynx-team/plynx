@@ -20,7 +20,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: `plynx validate examples/workflows/foo_or_woo.yaml` exits 0; one fixture per error kind exits 1 with the message naming the node.
 - [x] **0.6 Store and event log (real).** `store/`: SQLite schema from PROTOCOL.md section 7, `RunStore`, run directory creation, `EventLog` (append with `seq`, read after `seq`).
   Accept: tests cover first-answer-wins, `seq` ordering under two writers (processes), and WAL access from two processes.
-- [ ] **0.7 Executor protocol, fake executor, real scheduler.** `engine/executor.py` (`Executor.run`, `Executor.launch` raising `NotImplementedError`), `engine/fake_executor.py` (scripted results, delays, failures, one checkpoint), `engine/scheduler.py` (`graphlib` + asyncio + semaphore, statuses, `BLOCKED`, events written to the store).
+- [x] **0.7 Executor protocol, fake executor, real scheduler.** `engine/executor.py` (`Executor.run`, `Executor.launch` raising `NotImplementedError`), `engine/fake_executor.py` (scripted results, delays, failures, one checkpoint), `engine/scheduler.py` (`graphlib` + asyncio + semaphore, statuses, `BLOCKED`, events written to the store).
   Accept: a 4-node diamond runs; a failing node blocks only its dependents while the other branch finishes; `concurrency=1` never overlaps two nodes; events arrive in a valid order (`PENDING` -> `RUNNING` -> terminal).
 - [ ] **0.8 CLI `run` (skeleton).** `plynx run <workflow>` wires loader, validator, scheduler, store, and an executor factory that returns the fake executor.
   Accept: `plynx run examples/workflows/foo_or_woo.yaml` exits 0, prints one line per node status, leaves a run directory, `runs`/`node_runs` rows, and `events.jsonl`.
