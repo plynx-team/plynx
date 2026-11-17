@@ -243,6 +243,33 @@ def ops_cmd(as_json: bool) -> None:
         click.echo("  ".join(cell.ljust(widths[i]) for i, cell in enumerate(row)))
 
 
+@main.command("clean")
+@click.option(
+    "--days",
+    default=14,
+    type=int,
+    show_default=True,
+    help="Delete runs older than N days.",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Report what would be deleted without deleting.",
+)
+def clean_cmd(days: int, dry_run: bool) -> None:
+    """Mark-and-sweep garbage collection of old unpinned runs and unreferenced blobs."""
+    from plynx.cas import clean
+
+    workspace_root = find_workspace_root()
+    res = clean(workspace_root, days=days, dry_run=dry_run)
+    prefix = "[dry-run] " if dry_run else ""
+    click.echo(
+        f"{prefix}Deleted {res.runs_deleted} runs, {res.cache_entries_deleted} cache entries, "
+        f"{res.blobs_deleted} blobs ({res.bytes_reclaimed} bytes reclaimed)."
+    )
+
+
 @main.command("ui")
 @click.option("--port", type=int, default=8080, show_default=True, help="Local port to bind.")
 @click.option("--no-browser", is_flag=True, default=False, help="Do not open a browser window.")

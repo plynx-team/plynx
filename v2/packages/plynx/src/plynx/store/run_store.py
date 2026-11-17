@@ -615,6 +615,16 @@ class RunStore:
                 (cache_key, result_json, now, now),
             )
 
+    def delete_run(self, run_id: str) -> None:
+        """Delete a run from SQLite (cascades to node_runs, checkpoints, stage_gates)."""
+        with self._connect() as conn:
+            conn.execute("DELETE FROM runs WHERE id = ?", (run_id,))
+
+    def delete_cache_entry(self, cache_key: str) -> None:
+        """Delete a cache_index row by cache_key."""
+        with self._connect() as conn:
+            conn.execute("DELETE FROM cache_index WHERE cache_key = ?", (cache_key,))
+
 
 def _row_to_checkpoint(row: sqlite3.Row) -> CheckpointState:
     raw_opts = row["options_json"]

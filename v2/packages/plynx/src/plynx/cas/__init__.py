@@ -15,6 +15,7 @@ from plynx.cas.cache_key import (
     compute_inputs_hash,
     compute_params_hash,
 )
+from plynx.cas.clean import CleanResult, clean
 from plynx.cas.ingest import (
     compute_tree_hash,
     ingest_directory,
@@ -32,7 +33,9 @@ from plynx.cas.materialize import (
 
 __all__ = [
     "BlobStore",
+    "CleanResult",
     "canonical_json",
+    "clean",
     "compute_cache_key",
     "compute_cache_key_raw",
     "compute_inputs_hash",
