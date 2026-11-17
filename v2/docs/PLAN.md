@@ -102,7 +102,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: no node of stage N+1 has `started_at` before the approval time; `stage_approval` and `stage_resolved` events appear.
 - [x] **4.4 Resume.** `plynx resume <id>` for failed and waiting runs; reuses the run's own outputs (even for `CACHEABLE = False`); takes ownership.
   Accept: fix a failing node's source, resume, only that node and its dependents run.
-- [ ] **4.5 Cancel.** Local Ctrl-C and cross-process `cancel_requested`; process tree killed; nodes `CANCELED`; exit 130.
+- [x] **4.5 Cancel.** Local Ctrl-C and cross-process `cancel_requested`; process tree killed; nodes `CANCELED`; exit 130.
   Accept: no child or grandchild survives; a second process can cancel a run owned by the first.
 - [ ] **4.6 Dead owner.** Detect a gone `owner_pid`, mark the run `FAILED` (`engine_died`).
   Accept: kill -9 the owner, the next `plynx runs` shows `FAILED`, `resume` continues.

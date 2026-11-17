@@ -70,6 +70,7 @@ class SchedulerOptions:
     non_interactive: bool = False
     no_cache: bool = False
     poll_interval: float = 0.2
+    cancel_event: asyncio.Event | None = None
     checkpoint_callback: CheckpointCallback | None = None
     stage_approval_callback: StageApprovalCallback | None = None
     on_node_status: NodeStatusCallback | None = None
@@ -123,6 +124,7 @@ class Scheduler:
             non_interactive=base_opts.non_interactive,
             no_cache=True,
             poll_interval=base_opts.poll_interval,
+            cancel_event=base_opts.cancel_event,
             checkpoint_callback=base_opts.checkpoint_callback,
             stage_approval_callback=base_opts.stage_approval_callback,
             on_node_status=base_opts.on_node_status,
@@ -326,9 +328,21 @@ class Scheduler:
                     return True
             return False
 
+        cancel_event = opts.cancel_event if opts.cancel_event is not None else asyncio.Event()
+        poll_sleep = max(opts.poll_interval, 0.005)
+
+        async def _poll_cancel_requested() -> None:
+            while not cancel_event.is_set():
+                if await asyncio.to_thread(self.store.is_cancel_requested, active_run_id):
+                    cancel_event.set()
+                    return
+                await asyncio.sleep(poll_sleep)
+
+        cancel_poller_task: asyncio.Task[None] = asyncio.create_task(_poll_cancel_requested())
+
         async def _sync_run_status() -> None:
             nonlocal current_run_status
-            if opts.non_interactive:
+            if opts.non_interactive or cancel_event.is_set():
                 return
             async with run_status_lock:
                 desired: RunStatus | None = None
@@ -414,8 +428,19 @@ class Scheduler:
                     opts,
                     resolved_answers,
                     already_passed=False,
+                    cancel_event=cancel_event,
                 )
                 if answer is None:
+                    if cancel_event.is_set():
+                        waiting_nodes.discard(nid)
+                        await _emit_node_status(
+                            nid,
+                            NodeStatus.CANCELED,
+                            attempt=node_attempts[nid],
+                            error="canceled",
+                            finished_at=time.time(),
+                        )
+                        return nid, True
                     return nid, False
 
                 cp_key = (nid, cp_manifest.checkpoint_id)
@@ -436,7 +461,25 @@ class Scheduler:
                 await _sync_run_status()
 
             while True:
+                if cancel_event.is_set():
+                    await _emit_node_status(
+                        nid,
+                        NodeStatus.CANCELED,
+                        attempt=node_attempts[nid],
+                        error="canceled",
+                        finished_at=time.time(),
+                    )
+                    return nid, True
                 async with semaphore:
+                    if cancel_event.is_set():
+                        await _emit_node_status(
+                            nid,
+                            NodeStatus.CANCELED,
+                            attempt=node_attempts[nid],
+                            error="canceled",
+                            finished_at=time.time(),
+                        )
+                        return nid, True
                     attempt = node_attempts[nid] + 1
                     node_attempts[nid] = attempt
                     inputs_manifest = await asyncio.to_thread(
@@ -523,10 +566,11 @@ class Scheduler:
                         attempt=attempt,
                         node_dir=node_dir,
                         inputs=inputs_manifest,
+                        cancel_event=cancel_event,
                         on_status=_on_attempt_status,
                     )
                     result = await self.executor.run(req)
-                    if not emitted_running:
+                    if not emitted_running and result.status != NodeStatus.CANCELED:
                         await _on_attempt_status(NodeStatus.RUNNING)
 
                     if result.status == NodeStatus.SUCCESS:
@@ -594,8 +638,19 @@ class Scheduler:
                         opts,
                         resolved_answers,
                         already_passed=cp.checkpoint_id in inputs_manifest.checkpoint_answers,
+                        cancel_event=cancel_event,
                     )
                     if answer is None:
+                        if cancel_event.is_set():
+                            waiting_nodes.discard(nid)
+                            await _emit_node_status(
+                                nid,
+                                NodeStatus.CANCELED,
+                                attempt=attempt,
+                                error="canceled",
+                                finished_at=time.time(),
+                            )
+                            return nid, True
                         return nid, False
 
                     cp_key = (nid, cp.checkpoint_id)
@@ -634,6 +689,7 @@ class Scheduler:
                 stage_id,
                 title,
                 opts,
+                cancel_event=cancel_event,
             )
             if not approved:
                 return stage_id, False
@@ -703,81 +759,129 @@ class Scheduler:
 
         pending_discard: list[str] = []
         deferred_ready: list[str] = []
-        while True:
-            if sorter.is_active():
-                deferred_ready.extend(sorter.get_ready())
+        try:
+            while True:
+                if cancel_event.is_set():
+                    all_tasks_cancel: set[asyncio.Task[tuple[str, bool]]] = set(
+                        running_tasks.keys()
+                    ) | set(gate_tasks.keys())
+                    if not all_tasks_cancel:
+                        break
+                    done_cancel, _ = await asyncio.wait(
+                        all_tasks_cancel,
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                    for completed_task in done_cancel:
+                        if completed_task in running_tasks:
+                            running_tasks.pop(completed_task, None)
+                            finished_nid, _ = await completed_task
+                            pending_discard.append(finished_nid)
+                        elif completed_task in gate_tasks:
+                            gate_tasks.pop(completed_task, None)
+                            await completed_task
+                    continue
 
-            await _open_ready_stage_gates()
+                if sorter.is_active():
+                    deferred_ready.extend(sorter.get_ready())
 
-            progressed_immediately = False
-            still_deferred: list[str] = []
-            to_launch: list[str] = []
-            for nid in deferred_ready:
-                deps = dep_graph[nid]
-                if nid in precompleted_nodes:
-                    sorter.done(nid)
-                    progressed_immediately = True
-                elif any(
-                    node_statuses.get(dep)
-                    in (NodeStatus.FAILED, NodeStatus.CANCELED, NodeStatus.BLOCKED)
-                    for dep in deps
-                ):
-                    await _emit_node_status(nid, NodeStatus.BLOCKED, attempt=0)
-                    sorter.done(nid)
-                    progressed_immediately = True
-                elif _is_node_stage_gated(nid):
-                    still_deferred.append(nid)
-                else:
-                    runnable_nodes.add(nid)
-                    to_launch.append(nid)
-            deferred_ready = still_deferred
+                await _open_ready_stage_gates()
 
-            for done_nid in pending_discard:
-                runnable_nodes.discard(done_nid)
-            pending_discard.clear()
+                progressed_immediately = False
+                still_deferred: list[str] = []
+                to_launch: list[str] = []
+                for nid in deferred_ready:
+                    deps = dep_graph[nid]
+                    if nid in precompleted_nodes:
+                        sorter.done(nid)
+                        progressed_immediately = True
+                    elif any(
+                        node_statuses.get(dep)
+                        in (NodeStatus.FAILED, NodeStatus.CANCELED, NodeStatus.BLOCKED)
+                        for dep in deps
+                    ):
+                        await _emit_node_status(nid, NodeStatus.BLOCKED, attempt=0)
+                        sorter.done(nid)
+                        progressed_immediately = True
+                    elif _is_node_stage_gated(nid):
+                        still_deferred.append(nid)
+                    else:
+                        runnable_nodes.add(nid)
+                        to_launch.append(nid)
+                deferred_ready = still_deferred
 
-            if to_launch:
+                for done_nid in pending_discard:
+                    runnable_nodes.discard(done_nid)
+                pending_discard.clear()
+
+                if to_launch and not cancel_event.is_set():
+                    await _sync_run_status()
+                    for nid in to_launch:
+                        task = asyncio.create_task(_execute_node(nid))
+                        running_tasks[task] = nid
+
+                if progressed_immediately:
+                    continue
+
+                all_tasks: set[asyncio.Task[tuple[str, bool]]] = set(running_tasks.keys()) | set(
+                    gate_tasks.keys()
+                )
+                if not all_tasks:
+                    break
+
                 await _sync_run_status()
-                for nid in to_launch:
-                    task = asyncio.create_task(_execute_node(nid))
-                    running_tasks[task] = nid
 
-            if progressed_immediately:
-                continue
-
-            all_tasks: set[asyncio.Task[tuple[str, bool]]] = set(running_tasks.keys()) | set(
-                gate_tasks.keys()
-            )
-            if not all_tasks:
-                break
-
-            await _sync_run_status()
-
-            done, _ = await asyncio.wait(
-                all_tasks,
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-            for completed_task in done:
-                if completed_task in running_tasks:
-                    running_tasks.pop(completed_task, None)
-                    finished_nid, mark_done = await completed_task
-                    pending_discard.append(finished_nid)
-                    if mark_done:
-                        sorter.done(finished_nid)
-                elif completed_task in gate_tasks:
-                    gate_tasks.pop(completed_task, None)
-                    gate_sid, approved = await completed_task
-                    if approved:
-                        waiting_gates.discard(gate_sid)
-                        approved_gates.add(gate_sid)
+                done, _ = await asyncio.wait(
+                    all_tasks,
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+                for completed_task in done:
+                    if completed_task in running_tasks:
+                        running_tasks.pop(completed_task, None)
+                        finished_nid, mark_done = await completed_task
+                        pending_discard.append(finished_nid)
+                        if mark_done and not cancel_event.is_set():
+                            sorter.done(finished_nid)
+                    elif completed_task in gate_tasks:
+                        gate_tasks.pop(completed_task, None)
+                        gate_sid, approved = await completed_task
+                        if approved:
+                            waiting_gates.discard(gate_sid)
+                            approved_gates.add(gate_sid)
+        finally:
+            if not cancel_poller_task.done():
+                cancel_poller_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await cancel_poller_task
 
         for done_nid in pending_discard:
             runnable_nodes.discard(done_nid)
         pending_discard.clear()
 
-        final_status = self._compute_final_run_status(
-            node_statuses,
-            has_waiting_gate=bool(waiting_gates),
+        if cancel_event.is_set():
+            await asyncio.to_thread(self.store.request_cancel, active_run_id)
+            cancel_ts = time.time()
+            for nid in node_ids:
+                if node_statuses.get(nid) in (
+                    NodeStatus.PENDING,
+                    NodeStatus.WAITING_FOR_USER,
+                    NodeStatus.RUNNING,
+                    NodeStatus.BUILDING_ENVIRONMENT,
+                ):
+                    await _emit_node_status(
+                        nid,
+                        NodeStatus.CANCELED,
+                        attempt=node_attempts[nid],
+                        error="canceled",
+                        finished_at=cancel_ts,
+                    )
+
+        final_status = (
+            RunStatus.CANCELED
+            if cancel_event.is_set()
+            else self._compute_final_run_status(
+                node_statuses,
+                has_waiting_gate=bool(waiting_gates),
+            )
         )
         finished_ts = (
             time.time()
@@ -969,7 +1073,11 @@ class Scheduler:
         resolved_answers: Mapping[str, str],
         *,
         already_passed: bool = False,
+        cancel_event: asyncio.Event | None = None,
     ) -> str | None:
+        if cancel_event is not None and cancel_event.is_set():
+            return None
+
         key = f"{node_id}.{cp.checkpoint_id}"
         if not already_passed and key in resolved_answers:
             return await self._record_answer_first_wins(
@@ -1005,22 +1113,32 @@ class Scheduler:
                 if row is not None and row.answer is not None:
                     return row.answer
 
-        if opts.checkpoint_callback is None:
-            return await _poll_db_answer()
-
-        callback = opts.checkpoint_callback
-
-        async def _invoke_callback() -> str | None:
-            maybe_coro = callback(node_id, cp.checkpoint_id, cp)
-            if isinstance(maybe_coro, Awaitable):
-                return await maybe_coro
-            return maybe_coro
-
         poll_task: asyncio.Task[str] = asyncio.create_task(_poll_db_answer())
-        cb_task: asyncio.Task[str | None] = asyncio.create_task(_invoke_callback())
+        cb_task: asyncio.Task[str | None] | None = None
+        cancel_task: asyncio.Task[bool] | None = (
+            asyncio.create_task(cancel_event.wait()) if cancel_event is not None else None
+        )
+
+        if opts.checkpoint_callback is not None:
+            callback = opts.checkpoint_callback
+
+            async def _invoke_callback() -> str | None:
+                maybe_coro = callback(node_id, cp.checkpoint_id, cp)
+                if isinstance(maybe_coro, Awaitable):
+                    return await maybe_coro
+                return maybe_coro
+
+            cb_task = asyncio.create_task(_invoke_callback())
+
+        wait_set: set[asyncio.Task[Any]] = {poll_task}
+        if cb_task is not None:
+            wait_set.add(cb_task)
+        if cancel_task is not None:
+            wait_set.add(cancel_task)
+
         try:
             done, pending = await asyncio.wait(
-                {poll_task, cb_task},
+                wait_set,
                 return_when=asyncio.FIRST_COMPLETED,
             )
             for p_task in pending:
@@ -1028,26 +1146,31 @@ class Scheduler:
                 with contextlib.suppress(asyncio.CancelledError):
                     await p_task
 
+            if cancel_task is not None and cancel_task in done and not cancel_task.cancelled():
+                return None
+
             if poll_task in done and not poll_task.cancelled():
                 return poll_task.result()
 
-            cb_ans = cb_task.result()
-            if cb_ans is None:
-                latest = await asyncio.to_thread(
-                    self.store.get_checkpoint,
+            if cb_task is not None and cb_task in done and not cb_task.cancelled():
+                cb_ans = cb_task.result()
+                if cb_ans is None:
+                    latest = await asyncio.to_thread(
+                        self.store.get_checkpoint,
+                        run_id,
+                        node_id,
+                        cp.checkpoint_id,
+                    )
+                    return latest.answer if latest is not None else None
+                return await self._record_answer_first_wins(
                     run_id,
                     node_id,
                     cp.checkpoint_id,
+                    cb_ans,
                 )
-                return latest.answer if latest is not None else None
-            return await self._record_answer_first_wins(
-                run_id,
-                node_id,
-                cp.checkpoint_id,
-                cb_ans,
-            )
+            return None
         finally:
-            for task in (poll_task, cb_task):
+            for task in wait_set:
                 if not task.done():
                     task.cancel()
                     with contextlib.suppress(asyncio.CancelledError):
@@ -1059,7 +1182,12 @@ class Scheduler:
         stage_id: str,
         title: str,
         opts: SchedulerOptions,
+        *,
+        cancel_event: asyncio.Event | None = None,
     ) -> bool:
+        if cancel_event is not None and cancel_event.is_set():
+            return False
+
         existing = await asyncio.to_thread(self.store.get_stage_gate, run_id, stage_id)
         if existing is not None and existing.status == StageGateStatus.APPROVED:
             return True
@@ -1076,22 +1204,32 @@ class Scheduler:
                 if row is not None and row.status == StageGateStatus.APPROVED:
                     return True
 
-        if opts.stage_approval_callback is None:
-            return await _poll_db_gate()
-
-        callback = opts.stage_approval_callback
-
-        async def _invoke_callback() -> bool:
-            maybe_coro = callback(stage_id, title)
-            if isinstance(maybe_coro, Awaitable):
-                return bool(await maybe_coro)
-            return bool(maybe_coro)
-
         poll_task: asyncio.Task[bool] = asyncio.create_task(_poll_db_gate())
-        cb_task: asyncio.Task[bool] = asyncio.create_task(_invoke_callback())
+        cb_task: asyncio.Task[bool] | None = None
+        cancel_task: asyncio.Task[bool] | None = (
+            asyncio.create_task(cancel_event.wait()) if cancel_event is not None else None
+        )
+
+        if opts.stage_approval_callback is not None:
+            callback = opts.stage_approval_callback
+
+            async def _invoke_callback() -> bool:
+                maybe_coro = callback(stage_id, title)
+                if isinstance(maybe_coro, Awaitable):
+                    return bool(await maybe_coro)
+                return bool(maybe_coro)
+
+            cb_task = asyncio.create_task(_invoke_callback())
+
+        wait_set: set[asyncio.Task[Any]] = {poll_task}
+        if cb_task is not None:
+            wait_set.add(cb_task)
+        if cancel_task is not None:
+            wait_set.add(cancel_task)
+
         try:
             done, pending = await asyncio.wait(
-                {poll_task, cb_task},
+                wait_set,
                 return_when=asyncio.FIRST_COMPLETED,
             )
             for p_task in pending:
@@ -1099,18 +1237,23 @@ class Scheduler:
                 with contextlib.suppress(asyncio.CancelledError):
                     await p_task
 
+            if cancel_task is not None and cancel_task in done and not cancel_task.cancelled():
+                return False
+
             if poll_task in done and not poll_task.cancelled():
                 return poll_task.result()
 
-            approved = cb_task.result()
-            if approved:
-                await asyncio.to_thread(self.store.approve_stage_gate, run_id, stage_id)
-                return True
+            if cb_task is not None and cb_task in done and not cb_task.cancelled():
+                approved = cb_task.result()
+                if approved:
+                    await asyncio.to_thread(self.store.approve_stage_gate, run_id, stage_id)
+                    return True
 
-            latest = await asyncio.to_thread(self.store.get_stage_gate, run_id, stage_id)
-            return latest is not None and latest.status == StageGateStatus.APPROVED
+                latest = await asyncio.to_thread(self.store.get_stage_gate, run_id, stage_id)
+                return latest is not None and latest.status == StageGateStatus.APPROVED
+            return False
         finally:
-            for task in (poll_task, cb_task):
+            for task in wait_set:
                 if not task.done():
                     task.cancel()
                     with contextlib.suppress(asyncio.CancelledError):

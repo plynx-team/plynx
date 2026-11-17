@@ -3,19 +3,22 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
+import signal
 import sys
 import threading
 from collections.abc import Awaitable, Callable, Sequence
 from pathlib import Path
-from typing import TextIO
+from typing import Any, TextIO, TypeVar
 
 import click
 from plynx_sdk.protocol import CheckpointManifest
 
 CheckpointPromptCallback = Callable[[str, str, CheckpointManifest], Awaitable[str | None]]
 StagePromptCallback = Callable[[str, str], Awaitable[bool]]
+_T = TypeVar("_T")
 
 
 def is_non_interactive(flag: bool) -> bool:
@@ -183,6 +186,48 @@ def make_terminal_stage_approval_callback(
     return _prompt
 
 
+async def run_with_cancel_signals(
+    coro_factory: Callable[[asyncio.Event], Awaitable[_T]],
+) -> _T:
+    """Run ``coro_factory(cancel_event)``, setting ``cancel_event`` on SIGINT/SIGTERM."""
+    loop = asyncio.get_running_loop()
+    cancel_event = asyncio.Event()
+    registered_loop_sigs: list[int] = []
+    saved_sync_sigs: list[tuple[int, Any]] = []
+
+    signals_to_hook: list[int] = [signal.SIGINT]
+    if hasattr(signal, "SIGTERM"):
+        signals_to_hook.append(signal.SIGTERM)
+
+    def _sync_handler(_signum: int, _frame: Any) -> None:
+        if not loop.is_closed():
+            loop.call_soon_threadsafe(cancel_event.set)
+
+    for sig in signals_to_hook:
+        try:
+            loop.add_signal_handler(sig, cancel_event.set)
+            registered_loop_sigs.append(sig)
+        except NotImplementedError:
+            try:
+                prev = signal.getsignal(sig)
+                signal.signal(sig, _sync_handler)
+                saved_sync_sigs.append((sig, prev))
+            except (ValueError, OSError):
+                pass
+        except (ValueError, RuntimeError, OSError):
+            pass
+
+    try:
+        return await coro_factory(cancel_event)
+    finally:
+        for sig in registered_loop_sigs:
+            with contextlib.suppress(ValueError, RuntimeError, NotImplementedError):
+                loop.remove_signal_handler(sig)
+        for sig, prev in saved_sync_sigs:
+            with contextlib.suppress(ValueError, OSError):
+                signal.signal(sig, prev)
+
+
 __all__ = [
     "CheckpointPromptCallback",
     "StagePromptCallback",
@@ -193,4 +238,5 @@ __all__ = [
     "parse_checkpoint_input",
     "parse_key_value_pair",
     "read_line_async",
+    "run_with_cancel_signals",
 ]

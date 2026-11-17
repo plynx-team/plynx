@@ -104,8 +104,36 @@ class FakeExecutor:
             await request.notify_status(NodeStatus.RUNNING)
             script = self.scripts.get(request.node_id)
             delay = script.delay if script is not None else self.default_delay
+            if request.cancel_event is not None and request.cancel_event.is_set():
+                return self._record_and_return(
+                    request,
+                    NodeResult(
+                        status=NodeStatus.CANCELED,
+                        exit_code=-9,
+                        started_at=started_at,
+                        finished_at=time.time(),
+                        error="canceled",
+                    ),
+                )
             if delay > 0:
-                await asyncio.sleep(delay)
+                if request.cancel_event is not None:
+                    try:
+                        await asyncio.wait_for(request.cancel_event.wait(), timeout=delay)
+                    except TimeoutError:
+                        pass
+                    else:
+                        return self._record_and_return(
+                            request,
+                            NodeResult(
+                                status=NodeStatus.CANCELED,
+                                exit_code=-9,
+                                started_at=started_at,
+                                finished_at=time.time(),
+                                error="canceled",
+                            ),
+                        )
+                else:
+                    await asyncio.sleep(delay)
 
             checkpoint = self._resolve_checkpoint(request, script)
             if (

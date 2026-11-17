@@ -191,6 +191,8 @@ class LocalExecutor:
         async with lock:
             if pyvenv_cfg.is_file():
                 return True, None
+            if request.cancel_event is not None and request.cancel_event.is_set():
+                return False, "canceled"
 
             await request.notify_status(NodeStatus.BUILDING_ENVIRONMENT)
             await asyncio.to_thread(env_dir.parent.mkdir, parents=True, exist_ok=True)
@@ -206,7 +208,22 @@ class LocalExecutor:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            _, stderr_bytes = await proc.communicate()
+            comm_task: asyncio.Task[tuple[bytes, bytes]] = asyncio.create_task(proc.communicate())
+            if request.cancel_event is None:
+                _, stderr_bytes = await comm_task
+            else:
+                cancel_task: asyncio.Task[bool] = asyncio.create_task(request.cancel_event.wait())
+                done, _ = await asyncio.wait(
+                    {comm_task, cancel_task},
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+                if cancel_task in done and comm_task not in done:
+                    kill_process_group(proc.pid)
+                    await comm_task
+                    return False, "canceled"
+                if not cancel_task.done():
+                    cancel_task.cancel()
+                _, stderr_bytes = await comm_task
             if proc.returncode != 0:
                 err_msg = stderr_bytes.decode("utf-8", errors="replace").strip()
                 return False, f"Failed to build environment for {pack_dir.name}: {err_msg}"
@@ -274,6 +291,14 @@ class LocalExecutor:
 
         ok_env, env_err = await self._ensure_environment(request, pack_dir, env_dir, child_env)
         if not ok_env:
+            if request.cancel_event is not None and request.cancel_event.is_set():
+                return NodeResult(
+                    status=NodeStatus.CANCELED,
+                    exit_code=-9,
+                    started_at=started_at,
+                    finished_at=time.time(),
+                    error="canceled",
+                )
             await request.notify_status(NodeStatus.RUNNING)
             if env_err:
                 await asyncio.to_thread(self._append_stderr_line, stderr_path, env_err)
@@ -283,6 +308,15 @@ class LocalExecutor:
                 started_at=started_at,
                 finished_at=time.time(),
                 error=env_err or "Environment build failed",
+            )
+
+        if request.cancel_event is not None and request.cancel_event.is_set():
+            return NodeResult(
+                status=NodeStatus.CANCELED,
+                exit_code=-9,
+                started_at=started_at,
+                finished_at=time.time(),
+                error="canceled",
             )
 
         started_at = time.time()

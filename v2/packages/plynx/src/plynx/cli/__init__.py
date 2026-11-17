@@ -20,6 +20,7 @@ from plynx.cli.interaction import (
     make_terminal_checkpoint_callback,
     make_terminal_stage_approval_callback,
     parse_key_value_pair,
+    run_with_cancel_signals,
 )
 from plynx.engine import Scheduler, SchedulerOptions, create_executor
 from plynx.registry import Registry, find_workspace_root
@@ -154,34 +155,36 @@ def run_cmd(
     def _print_node_status(node_id: str, status: NodeStatus, _attempt: int) -> None:
         click.echo(f"{node_id} {status.value}")
 
-    prompt_lock = asyncio.Lock()
-    opts = SchedulerOptions(
-        concurrency=concurrency,
-        run_inputs=run_inputs,
-        answers=answers,
-        non_interactive=effective_non_interactive,
-        no_cache=no_cache,
-        checkpoint_callback=(
-            None
-            if effective_non_interactive
-            else make_terminal_checkpoint_callback(prompt_lock=prompt_lock)
-        ),
-        stage_approval_callback=(
-            None
-            if effective_non_interactive
-            else make_terminal_stage_approval_callback(prompt_lock=prompt_lock)
-        ),
-        on_node_status=_print_node_status,
-    )
-    final_state = asyncio.run(
-        scheduler.run(
+    async def _run_workflow(cancel_event: asyncio.Event) -> Any:
+        prompt_lock = asyncio.Lock()
+        opts = SchedulerOptions(
+            concurrency=concurrency,
+            run_inputs=run_inputs,
+            answers=answers,
+            non_interactive=effective_non_interactive,
+            no_cache=no_cache,
+            cancel_event=cancel_event,
+            checkpoint_callback=(
+                None
+                if effective_non_interactive
+                else make_terminal_checkpoint_callback(prompt_lock=prompt_lock)
+            ),
+            stage_approval_callback=(
+                None
+                if effective_non_interactive
+                else make_terminal_stage_approval_callback(prompt_lock=prompt_lock)
+            ),
+            on_node_status=_print_node_status,
+        )
+        return await scheduler.run(
             wf_model,
             workflow_path=wf_rel_path,
             workflow_bytes=workflow_bytes,
             layout_bytes=layout_bytes,
             options=opts,
         )
-    )
+
+    final_state = asyncio.run(run_with_cancel_signals(_run_workflow))
 
     if final_state.status == RunStatus.SUCCESS:
         sys.exit(0)
@@ -250,26 +253,30 @@ def resume_cmd(
     def _print_node_status(node_id: str, status: NodeStatus, _attempt: int) -> None:
         click.echo(f"{node_id} {status.value}")
 
-    prompt_lock = asyncio.Lock()
-    opts = SchedulerOptions(
-        concurrency=concurrency,
-        answers=answers,
-        non_interactive=effective_non_interactive,
-        no_cache=True,
-        checkpoint_callback=(
-            None
-            if effective_non_interactive
-            else make_terminal_checkpoint_callback(prompt_lock=prompt_lock)
-        ),
-        stage_approval_callback=(
-            None
-            if effective_non_interactive
-            else make_terminal_stage_approval_callback(prompt_lock=prompt_lock)
-        ),
-        on_node_status=_print_node_status,
-    )
+    async def _resume_workflow(cancel_event: asyncio.Event) -> Any:
+        prompt_lock = asyncio.Lock()
+        opts = SchedulerOptions(
+            concurrency=concurrency,
+            answers=answers,
+            non_interactive=effective_non_interactive,
+            no_cache=True,
+            cancel_event=cancel_event,
+            checkpoint_callback=(
+                None
+                if effective_non_interactive
+                else make_terminal_checkpoint_callback(prompt_lock=prompt_lock)
+            ),
+            stage_approval_callback=(
+                None
+                if effective_non_interactive
+                else make_terminal_stage_approval_callback(prompt_lock=prompt_lock)
+            ),
+            on_node_status=_print_node_status,
+        )
+        return await scheduler.resume(resolved_id, options=opts)
+
     try:
-        final_state = asyncio.run(scheduler.resume(resolved_id, options=opts))
+        final_state = asyncio.run(run_with_cancel_signals(_resume_workflow))
     except StoreError as exc:
         click.echo(f"error: {exc}", err=True)
         sys.exit(1)
