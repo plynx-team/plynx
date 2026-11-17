@@ -449,3 +449,185 @@ def test_read_runs_pagination_and_get_run_prefix(tmp_path: Path) -> None:
             assert missing_resp.json()["error"]["code"] == "run_not_found"
 
     asyncio.run(_check())
+
+
+def test_run_control_answer_double_answer_and_approve(tmp_path: Path) -> None:
+    """Run started over REST can be answered and approved; double-answer returns 409 conflict."""
+    wf_dir = tmp_path / "workflows"
+    wf_dir.mkdir(parents=True)
+    shutil.copy(EXAMPLE_WORKFLOW, wf_dir / "foo_or_woo.yaml")
+
+    staged_wf = wf_dir / "staged.yaml"
+    staged_wf.write_text(
+        """version: 1
+name: staged_demo
+stages:
+  s1:
+    title: "Stage 1"
+    require_approval: true
+  s2:
+    title: "Stage 2"
+    require_approval: false
+nodes:
+  n1:
+    op: standard_io/demo:Echo
+    stage: s1
+    inputs:
+      text: "hello"
+  n2:
+    op: standard_io/demo:Echo
+    stage: s2
+    inputs:
+      text: $n1.text
+""",
+        encoding="utf-8",
+    )
+
+    app = create_app(tmp_path)
+
+    async def _test_checkpoint_and_approval() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            # 1. Start checkpoint run
+            create_resp = await client.post(
+                "/runs",
+                json={"workflow_path": "workflows/foo_or_woo.yaml", "inputs": {}},
+            )
+            assert create_resp.status_code == 201
+            cp_run_id = create_resp.json()["run_id"]
+
+            # Poll until checkpoint is available
+            deadline = time.monotonic() + 10.0
+            found_cp = False
+            while time.monotonic() < deadline:
+                state_resp = await client.get(f"/runs/{cp_run_id}")
+                assert state_resp.status_code == 200
+                cps = state_resp.json().get("checkpoints", [])
+                if cps and cps[0]["checkpoint_id"] == "cp_0":
+                    found_cp = True
+                    break
+                await asyncio.sleep(0.02)
+            assert found_cp, "Checkpoint was not created in time"
+
+            # First answer succeeds
+            ans_resp = await client.post(
+                f"/runs/{cp_run_id}/checkpoints/pick/cp_0/answer",
+                json={"answer": "foo"},
+            )
+            assert ans_resp.status_code == 200
+            assert ans_resp.json()["status"] == "ok"
+
+            # Double-answer returns 409 conflict
+            double_resp = await client.post(
+                f"/runs/{cp_run_id}/checkpoints/pick/cp_0/answer",
+                json={"answer": "woo"},
+            )
+            assert double_resp.status_code == 409
+            assert double_resp.json()["error"]["code"] == "checkpoint_already_answered"
+
+            # Wait for run to finish successfully
+            deadline = time.monotonic() + 10.0
+            while time.monotonic() < deadline:
+                state_resp = await client.get(f"/runs/{cp_run_id}")
+                if state_resp.json()["status"] == "SUCCESS":
+                    break
+                await asyncio.sleep(0.02)
+            assert state_resp.json()["status"] == "SUCCESS"
+
+            # 2. Start staged run with approval gate
+            staged_create_resp = await client.post(
+                "/runs",
+                json={"workflow_path": "workflows/staged.yaml", "inputs": {}},
+            )
+            assert staged_create_resp.status_code == 201
+            staged_run_id = staged_create_resp.json()["run_id"]
+
+            # Poll until stage gate s1 is WAITING
+            deadline = time.monotonic() + 10.0
+            found_gate = False
+            while time.monotonic() < deadline:
+                state_resp = await client.get(f"/runs/{staged_run_id}")
+                assert state_resp.status_code == 200
+                gates = state_resp.json().get("stage_gates", {})
+                if gates.get("s1", {}).get("status") == "WAITING":
+                    found_gate = True
+                    break
+                await asyncio.sleep(0.02)
+            assert found_gate, "Stage gate s1 was not WAITING in time"
+
+            # Approve stage gate
+            app_resp = await client.post(f"/runs/{staged_run_id}/stages/s1/approve")
+            assert app_resp.status_code == 200
+            assert app_resp.json()["status"] == "ok"
+
+            # Double-approve returns 409 conflict
+            double_app_resp = await client.post(f"/runs/{staged_run_id}/stages/s1/approve")
+            assert double_app_resp.status_code == 409
+            assert double_app_resp.json()["error"]["code"] == "stage_gate_already_approved"
+
+            # Wait for staged run to finish successfully
+            deadline = time.monotonic() + 10.0
+            while time.monotonic() < deadline:
+                state_resp = await client.get(f"/runs/{staged_run_id}")
+                if state_resp.json()["status"] == "SUCCESS":
+                    break
+                await asyncio.sleep(0.02)
+            assert state_resp.json()["status"] == "SUCCESS"
+
+    asyncio.run(_test_checkpoint_and_approval())
+
+
+def test_run_control_cancel_and_resume(tmp_path: Path) -> None:
+    """POST /runs/{id}/cancel sets cancel_requested; POST /runs/{id}/resume resumes waiting run."""
+    wf_dir = tmp_path / "workflows"
+    wf_dir.mkdir(parents=True)
+    shutil.copy(EXAMPLE_WORKFLOW, wf_dir / "foo_or_woo.yaml")
+
+    store = RunStore(tmp_path)
+    app = create_app(tmp_path)
+
+    async def _test() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            # 1. Cancel
+            create_resp = await client.post(
+                "/runs",
+                json={"workflow_path": "workflows/foo_or_woo.yaml", "inputs": {}},
+            )
+            run_id = create_resp.json()["run_id"]
+
+            cancel_resp = await client.post(f"/runs/{run_id}/cancel")
+            assert cancel_resp.status_code == 200
+            assert cancel_resp.json()["status"] == "ok"
+            assert store.is_cancel_requested(run_id) is True
+
+            # 2. Resume waiting/failed run
+            # Create a run in WAITING_FOR_USER state with an answered checkpoint
+            w_id = store.create_run(
+                workflow_path="workflows/foo_or_woo.yaml",
+                workflow_bytes=(wf_dir / "foo_or_woo.yaml").read_bytes(),
+                node_ids=["pick", "echo"],
+            )
+            store.update_run_status(w_id, RunStatus.WAITING_FOR_USER)
+            store.create_checkpoint(w_id, "pick", "cp_0", "foo or woo?")
+            store.answer_checkpoint(w_id, "pick", "cp_0", "foo")
+
+            resume_resp = await client.post(f"/runs/{w_id}/resume")
+            assert resume_resp.status_code == 200
+            assert resume_resp.json()["run_id"] == w_id
+
+            # Wait for resumed run to complete
+            deadline = time.monotonic() + 10.0
+            while time.monotonic() < deadline:
+                state_resp = await client.get(f"/runs/{w_id}")
+                if state_resp.json()["status"] == "SUCCESS":
+                    break
+                await asyncio.sleep(0.02)
+            assert state_resp.json()["status"] == "SUCCESS"
+
+            # Resuming an already SUCCESS run returns 409 conflict
+            again_resp = await client.post(f"/runs/{w_id}/resume")
+            assert again_resp.status_code == 409
+            assert again_resp.json()["error"]["code"] == "run_not_resumable"
+
+    asyncio.run(_test())

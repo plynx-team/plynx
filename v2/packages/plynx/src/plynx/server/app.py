@@ -15,6 +15,7 @@ from pydantic import ValidationError
 from ruamel.yaml import YAML
 
 from plynx.api_models import (
+    AnswerCheckpointRequest,
     ApiErrorDetail,
     ApiErrorResponse,
     CreateRunRequest,
@@ -25,6 +26,7 @@ from plynx.api_models import (
     RunState,
     RunStatus,
     RunStatusEvent,
+    StageGateStatus,
     WorkflowDocument,
     WorkflowInputSpec,
     WorkflowLayout,
@@ -32,7 +34,7 @@ from plynx.api_models import (
 )
 from plynx.engine import Executor, Scheduler, SchedulerOptions, create_executor
 from plynx.registry import OpRegistry, Registry, find_workspace_root
-from plynx.store import AmbiguousRunIdError, RunNotFoundError, RunStore
+from plynx.store import AmbiguousRunIdError, RunNotFoundError, RunStore, StoreError
 from plynx.workflow.models import load_workflow
 from plynx.workflow.validator import get_unbound_run_inputs, validate_workflow
 
@@ -312,6 +314,133 @@ def create_app(
         background_tasks.add(task)
         task.add_done_callback(background_tasks.discard)
         return CreateRunResponse(run_id=run_id)
+
+    @router.post("/runs/{run_id}/cancel")
+    async def cancel_run_endpoint(run_id: str) -> Any:
+        """Request cancellation for a run."""
+        try:
+            resolved_id = await asyncio.to_thread(store.resolve_run_id, run_id)
+        except RunNotFoundError as exc:
+            return _error_response(404, "run_not_found", str(exc))
+        except AmbiguousRunIdError as exc:
+            return _error_response(409, "ambiguous_run_id", str(exc))
+
+        await asyncio.to_thread(store.request_cancel, resolved_id)
+        return {"status": "ok", "run_id": resolved_id}
+
+    @router.post("/runs/{run_id}/resume", response_model=CreateRunResponse)
+    async def resume_run_endpoint(run_id: str) -> Any:
+        """Resume an existing failed, canceled, or waiting run."""
+        try:
+            resolved_id = await asyncio.to_thread(store.resolve_run_id, run_id)
+        except RunNotFoundError as exc:
+            return _error_response(404, "run_not_found", str(exc))
+        except AmbiguousRunIdError as exc:
+            return _error_response(409, "ambiguous_run_id", str(exc))
+
+        state = await asyncio.to_thread(store.get_run_state, resolved_id)
+        if state is None:
+            return _error_response(404, "run_not_found", f"Run {run_id!r} not found")
+        if state.status == RunStatus.SUCCESS:
+            return _error_response(
+                409,
+                "run_not_resumable",
+                f"Run {resolved_id!r} already succeeded and cannot be resumed",
+            )
+        if state.status == RunStatus.RUNNING:
+            return _error_response(
+                409, "run_not_resumable", f"Run {resolved_id!r} is currently running"
+            )
+
+        try:
+            await asyncio.to_thread(store.claim_run_for_resume, resolved_id)
+        except StoreError as exc:
+            return _error_response(409, "run_not_resumable", str(exc))
+
+        executor = executor_factory(ws_root)
+        scheduler = Scheduler(store, executor, op_registry)
+        opts = SchedulerOptions(no_cache=True)
+        task = asyncio.create_task(scheduler.resume(resolved_id, options=opts))
+        background_tasks.add(task)
+        task.add_done_callback(background_tasks.discard)
+        return CreateRunResponse(run_id=resolved_id)
+
+    @router.post("/runs/{run_id}/checkpoints/{node_id}/{checkpoint_id}/answer")
+    async def answer_checkpoint_endpoint(
+        run_id: str,
+        node_id: str,
+        checkpoint_id: str,
+        body: AnswerCheckpointRequest,
+    ) -> Any:
+        """Submit an answer to an open checkpoint prompt."""
+        try:
+            resolved_id = await asyncio.to_thread(store.resolve_run_id, run_id)
+        except RunNotFoundError as exc:
+            return _error_response(404, "run_not_found", str(exc))
+        except AmbiguousRunIdError as exc:
+            return _error_response(409, "ambiguous_run_id", str(exc))
+
+        cp = await asyncio.to_thread(store.get_checkpoint, resolved_id, node_id, checkpoint_id)
+        if cp is None:
+            return _error_response(
+                404,
+                "checkpoint_not_found",
+                f"Checkpoint '{node_id}.{checkpoint_id}' not found in run {resolved_id!r}",
+            )
+        if cp.answer is not None:
+            return _error_response(
+                409,
+                "checkpoint_already_answered",
+                f"Checkpoint '{node_id}.{checkpoint_id}' has already been answered",
+            )
+
+        applied = await asyncio.to_thread(
+            store.answer_checkpoint,
+            resolved_id,
+            node_id,
+            checkpoint_id,
+            body.answer,
+        )
+        if not applied:
+            return _error_response(
+                409,
+                "checkpoint_already_answered",
+                f"Checkpoint '{node_id}.{checkpoint_id}' has already been answered",
+            )
+        return {"status": "ok", "checkpoint_id": checkpoint_id, "answer": body.answer}
+
+    @router.post("/runs/{run_id}/stages/{stage_id}/approve")
+    async def approve_stage_endpoint(run_id: str, stage_id: str) -> Any:
+        """Approve a stage approval gate awaiting approval."""
+        try:
+            resolved_id = await asyncio.to_thread(store.resolve_run_id, run_id)
+        except RunNotFoundError as exc:
+            return _error_response(404, "run_not_found", str(exc))
+        except AmbiguousRunIdError as exc:
+            return _error_response(409, "ambiguous_run_id", str(exc))
+
+        gate = await asyncio.to_thread(store.get_stage_gate, resolved_id, stage_id)
+        if gate is None:
+            return _error_response(
+                404,
+                "stage_gate_not_found",
+                f"Stage gate '{stage_id}' not found in run {resolved_id!r}",
+            )
+        if gate.status == StageGateStatus.APPROVED:
+            return _error_response(
+                409,
+                "stage_gate_already_approved",
+                f"Stage gate '{stage_id}' has already been approved",
+            )
+
+        applied = await asyncio.to_thread(store.approve_stage_gate, resolved_id, stage_id)
+        if not applied:
+            return _error_response(
+                409,
+                "stage_gate_already_approved",
+                f"Stage gate '{stage_id}' has already been approved",
+            )
+        return {"status": "ok", "stage_id": stage_id}
 
     @router.get("/runs/{run_id}/stream")
     async def stream_run_events(run_id: str, request: Request) -> Any:
