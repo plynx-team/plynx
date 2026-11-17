@@ -93,11 +93,19 @@ def concat(a: str, b: str = " ") -> ConcatOut:
 ```
 
 - `@op(...)` arguments are literals. A single return annotation that is not a `TypedDict` (e.g. `-> str`) means one output named `result`.
-- Port annotations allowed: `str`, `int`, `float`, `bool`, `dict`, `list`, `Path`, `Directory`, `Annotated[Path, Media("<mime>")]`, aliases from `plynx_sdk.types` (`PdfFile`, `AudioWav`, `MarkdownFile`, `JsonFile`, `ImageFile`, `CsvFile`, `TextFile`), module-level aliases defined in the same file as `Name = Annotated[Path, Media("<mime>")]`, and `X | None` / `Optional[X]` of those.
+- Port annotations allowed:
+  - Primitives: `str`, `int`, `float`, `bool`, `dict`, `list`, `Path`, `Directory`.
+  - Choices: `Literal["val1", "val2", ...]` (from `typing`; values must be str or int literals; yields `options` in registry).
+  - Bounded numbers: `Annotated[int, Range(min, max, step=1)]` and `Annotated[float, Range(min, max, step=...)]` (from `plynx_sdk`; arguments are numeric literals, `step` optional; yields `min`, `max`, `step` in registry).
+  - Media files: `Annotated[Path, Media("<mime>")]`, aliases from `plynx_sdk.types` (`PdfFile`, `AudioWav`, `MarkdownFile`, `JsonFile`, `ImageFile`, `CsvFile`, `TextFile`), module-level aliases defined in the same file as `Name = Annotated[Path, Media("<mime>")]`, `Name = Literal[...]`, or `Name = Annotated[int | float, Range(...)]`.
+  - Optionals: `X | None` / `Optional[X]` of any of the above.
 - Defaults are literals. Port names are `snake_case`.
 - Inheritance from a custom base class or computed metadata is not supported in v2.0.0.
 
-Port type vocabulary (`type`): `str`, `int`, `float`, `bool`, `json` (`dict` or `list`), `file` (`Path`), `directory` (`Directory`). `media` is a MIME string or `null`. A `file` port with `media` accepts a wire from a `file` output with the same `media` or `null`.
+Port type vocabulary (`type`): `str`, `int`, `float`, `bool`, `json` (`dict` or `list`), `file` (`Path`), `directory` (`Directory`).
+- `options`: list of allowed scalar literals for `Literal[...]`, or `null`.
+- `min`, `max`, `step`: numeric bounds for `Range(...)`, or `null`.
+- `media`: MIME string or `null`. A `file` port with `media` accepts a wire from a `file` output with the same `media` or `null`.
 
 Registry entry (served by `GET /api/v1/ops`, cached in `.plynx/registry_cache.json` keyed by `source` and its mtime):
 
@@ -106,7 +114,13 @@ Registry entry (served by `GET /api/v1/ops`, cached in `.plynx/registry_cache.js
   "id": "standard_io/text:Concat", "pack": "standard_io", "module": "text", "name": "Concat",
   "kind": "class", "title": "Concat text", "category": "Text / Basic", "cacheable": true,
   "description": "Join two strings.",
-  "inputs": [{ "name": "a", "type": "str", "media": null, "required": true, "default": null }],
+  "inputs": [
+    {
+      "name": "a", "type": "str", "media": null,
+      "options": null, "min": null, "max": null, "step": null,
+      "required": true, "default": null
+    }
+  ],
   "outputs": [{ "name": "text", "type": "str", "media": null }],
   "source": "builtin_packs/standard_io/src/standard_io/text.py",
   "valid": true, "error": null

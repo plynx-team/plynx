@@ -42,7 +42,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
 
 ## Phase 1: Real node execution
 
-- [ ] **1.1 SDK authoring API.** `Op`, `@op`, `Media`, `Directory`, semantic aliases, `CheckpointInterrupt`. Stdlib only.
+- [ ] **1.1 SDK authoring API.** `Op`, `@op`, `Media`, `Range`, `Directory`, semantic aliases, `CheckpointInterrupt`. Stdlib only.
   Accept: both forms from PROTOCOL.md section 3 import and run in plain Python; importing `plynx_sdk` imports nothing outside the standard library (test checks `sys.modules`).
 - [ ] **1.2 Harness.** `python -m plynx_sdk.harness` reads `inputs.json`, calls the op, validates the result, writes `outputs.json`, maps failures to exit codes 1 and 2.
   Accept: run directly (no `uv`) on a fixture node directory for success, op exception, bad outputs, missing op.
@@ -61,7 +61,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
 
 - [ ] **2.1 AST extractor, class form.** Per PROTOCOL.md section 3.
   Accept: extracts title, category, cacheable, ports, defaults, docstring from fixtures without importing them (fixture imports a package that is not installed).
-- [ ] **2.2 AST extractor, function form and aliases.** `@op`, module-level TypedDict outputs, same-file `Annotated` aliases, `plynx_sdk.types` aliases.
+- [ ] **2.2 AST extractor, function form and aliases.** `@op`, module-level TypedDict outputs, `Literal`, `Range`, same-file `Annotated` aliases, `plynx_sdk.types` aliases.
   Accept: class and function fixtures for the same op produce equal registry entries.
 - [ ] **2.3 Invalid ops.** Anything outside the subset yields `valid: false` and a reason, never a crash.
   Accept: fixtures for computed `TITLE`, custom base class, unknown annotation each give the documented reason.

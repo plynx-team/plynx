@@ -20,7 +20,7 @@ packages/
   plynx-sdk/              stdlib-only. Imported inside node environments.
     pyproject.toml
     src/plynx_sdk/
-      __init__.py         exports Op, op, Media, Directory, checkpoint types
+      __init__.py         exports Op, op, Media, Range, Directory, checkpoint types
       op.py               Op base class and @op decorator
       types.py            semantic media aliases (PdfFile, AudioWav, ...)
       protocol.py         IPC manifest dataclasses (inputs/outputs/checkpoint)
@@ -72,7 +72,7 @@ custom_packs/                   user packs (searched after the packs shipped ins
 | Python | >= 3.11. Windows, macOS, Linux. |
 | Packaging | `uv` workspace. Dist names `plynx` and `plynx-sdk`, version `2.0.0`. |
 | SDK dependencies | stdlib only. Wire models are `dataclasses`. |
-| Engine dependencies | `pydantic>=2` (workflow, REST, SSE models), `fastapi`, `uvicorn`, `click`, `ruamel.yaml` (round-trip YAML writes). **(proposed)** |
+| Engine dependencies | `pydantic>=2` (workflow, REST, SSE models), `fastapi`, `uvicorn`, `click`, `ruamel.yaml` (round-trip YAML writes). |
 | Scheduling | `graphlib.TopologicalSorter` + `asyncio` + `asyncio.Semaphore(concurrency)`. |
 | Child processes | `uv run`, one per node attempt, in its own process group. |
 | State | SQLite (WAL) via stdlib `sqlite3`, called through `asyncio.to_thread`. |
