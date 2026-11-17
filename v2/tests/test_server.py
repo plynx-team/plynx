@@ -13,11 +13,13 @@ from pathlib import Path
 
 import httpx
 from plynx.api_models import (
+    NodeLogEvent,
     OpEntry,
     RunEvent,
     RunListResponse,
     RunState,
     RunStatus,
+    RunStatusData,
     WorkflowDocument,
     WorkflowInputSpec,
     WorkflowListItem,
@@ -204,8 +206,10 @@ def test_post_runs_and_stream(tmp_path: Path) -> None:
             assert stream_resp.status_code == 200
             frames = _parse_sse_stream(stream_resp.text)
             assert frames
-            assert frames[0].event_id == 1
-            assert [f.event_id for f in frames] == list(range(1, len(frames) + 1))
+            event_frames = [f for f in frames if f.event_type != "node_log"]
+            assert event_frames
+            assert event_frames[0].event_id == 1
+            assert [f.event_id for f in event_frames] == list(range(1, len(event_frames) + 1))
 
             state_resp = await client.get(f"/runs/{run_id}")
             assert state_resp.status_code == 200
@@ -629,5 +633,108 @@ def test_run_control_cancel_and_resume(tmp_path: Path) -> None:
             again_resp = await client.post(f"/runs/{w_id}/resume")
             assert again_resp.status_code == 409
             assert again_resp.json()["error"]["code"] == "run_not_resumable"
+
+    asyncio.run(_test())
+
+
+def test_node_logs_endpoint_and_sse_batching(tmp_path: Path) -> None:
+    """REST logs endpoint supports offset; node_log batches under 50ms and history+stream=file."""
+    store = RunStore(tmp_path)
+    run_id = store.create_run(
+        workflow_path="workflows/test.yaml",
+        workflow_bytes=b"version: 1\nnodes: {}\n",
+        node_ids=["worker"],
+    )
+    logs_dir = store.run_dir(run_id) / "logs"
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    stdout_file = logs_dir / "worker.stdout.log"
+
+    initial_lines = [f"line {i}\n" for i in range(3000)]
+    stdout_file.write_text("".join(initial_lines), encoding="utf-8")
+
+    app = create_app(tmp_path)
+
+    async def _test() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            # 1. Test REST endpoint with offset=0
+            resp = await client.get(f"/runs/{run_id}/nodes/worker/logs/stdout?offset=0")
+            assert resp.status_code == 200
+            history_text = resp.text
+            next_offset = int(resp.headers["X-Next-Offset"])
+            assert next_offset == stdout_file.stat().st_size
+            assert history_text.splitlines() == [f"line {i}" for i in range(3000)]
+
+            # Test slice from byte 100
+            resp_slice = await client.get(f"/runs/{run_id}/nodes/worker/logs/stdout?offset=100")
+            assert resp_slice.status_code == 200
+            expected_slice = "".join(initial_lines).encode("utf-8")[100:].decode("utf-8")
+            assert resp_slice.text == expected_slice
+            assert int(resp_slice.headers["X-Next-Offset"]) == next_offset
+
+            # Test empty log
+            resp_stderr = await client.get(f"/runs/{run_id}/nodes/worker/logs/stderr?offset=0")
+            assert resp_stderr.status_code == 200
+            assert resp_stderr.text == ""
+            assert resp_stderr.headers["X-Next-Offset"] == "0"
+
+            # Test invalid stream
+            bad_stream = await client.get(f"/runs/{run_id}/nodes/worker/logs/invalid")
+            assert bad_stream.status_code == 400
+            assert bad_stream.json()["error"]["code"] == "invalid_stream"
+
+            # 2. Test SSE streaming with log tailing
+            store.update_run_status(run_id, RunStatus.RUNNING)
+
+            async def _stream_consumer() -> list[SseFrame]:
+                stream_resp = await client.get(
+                    f"/runs/{run_id}/stream?log_offset={next_offset}",
+                    timeout=20.0,
+                )
+                return _parse_sse_stream(stream_resp.text)
+
+            stream_task = asyncio.create_task(_stream_consumer())
+            # Allow consumer to connect
+            await asyncio.sleep(0.05)
+
+            # Write remaining 7,000 lines (3000..9999) in bursts
+            with open(stdout_file, "a", encoding="utf-8") as f:
+                for i in range(3000, 10000):
+                    f.write(f"line {i}\n")
+                    if i % 1000 == 0:
+                        f.flush()
+                        await asyncio.sleep(0.01)
+                f.flush()
+
+            await asyncio.sleep(0.1)
+            # Finish run
+            store.update_run_status(run_id, RunStatus.SUCCESS)
+            store.event_log(run_id).append(
+                "run_status",
+                RunStatusData(run_id=run_id, status=RunStatus.SUCCESS),
+            )
+
+            frames = await stream_task
+            log_frames = [f for f in frames if f.event_type == "node_log"]
+            assert len(log_frames) > 0
+            # 7000 lines produced bounded SSE frames (< 50 frames!)
+            assert len(log_frames) <= 50
+
+            # All node_log frames have no id
+            for frame in log_frames:
+                assert frame.event_id is None
+                assert isinstance(frame.data, NodeLogEvent)
+
+            # Extract lines from stream
+            stream_lines: list[str] = []
+            for frame in log_frames:
+                assert isinstance(frame.data, NodeLogEvent)
+                stream_lines.extend(frame.data.data.lines)
+
+            # History plus stream equals the full file!
+            history_lines = history_text.splitlines()
+            combined_lines = history_lines + stream_lines
+            assert len(combined_lines) == 10000
+            assert combined_lines == [f"line {i}" for i in range(10000)]
 
     asyncio.run(_test())

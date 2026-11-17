@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 from collections.abc import AsyncIterator, Callable, Mapping
 from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, FastAPI, Query, Request
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 from ruamel.yaml import YAML
@@ -21,6 +22,8 @@ from plynx.api_models import (
     CreateRunRequest,
     CreateRunResponse,
     HealthResponse,
+    NodeLogData,
+    NodeLogEvent,
     OpEntry,
     RunListResponse,
     RunState,
@@ -442,9 +445,57 @@ def create_app(
             )
         return {"status": "ok", "stage_id": stage_id}
 
+    @router.get("/runs/{run_id}/nodes/{node_id}/logs/{stream}")
+    async def get_node_logs(
+        run_id: str,
+        node_id: str,
+        stream: str,
+        offset: int = Query(default=0, ge=0),
+    ) -> Any:
+        """Return plain-text logs for a node stream from offset with X-Next-Offset header."""
+        try:
+            resolved_id = await asyncio.to_thread(store.resolve_run_id, run_id)
+        except RunNotFoundError as exc:
+            return _error_response(404, "run_not_found", str(exc))
+        except AmbiguousRunIdError as exc:
+            return _error_response(409, "ambiguous_run_id", str(exc))
+
+        if stream not in ("stdout", "stderr"):
+            return _error_response(
+                400,
+                "invalid_stream",
+                f"Stream must be 'stdout' or 'stderr', got {stream!r}",
+            )
+
+        log_path = store.run_dir(resolved_id) / "logs" / f"{node_id}.{stream}.log"
+        if not log_path.is_file():
+            return Response(
+                content="",
+                media_type="text/plain; charset=utf-8",
+                headers={"X-Next-Offset": str(offset)},
+            )
+
+        def _read_log() -> tuple[str, int]:
+            with open(log_path, "rb") as f:
+                f.seek(0, 2)
+                file_size = f.tell()
+                if offset >= file_size:
+                    return "", file_size
+                f.seek(offset)
+                data = f.read()
+                next_offset = f.tell()
+                return data.decode("utf-8", errors="replace"), next_offset
+
+        text, next_offset = await asyncio.to_thread(_read_log)
+        return Response(
+            content=text,
+            media_type="text/plain; charset=utf-8",
+            headers={"X-Next-Offset": str(next_offset)},
+        )
+
     @router.get("/runs/{run_id}/stream")
     async def stream_run_events(run_id: str, request: Request) -> Any:
-        """Tail ``events.jsonl`` for ``run_id`` as Server-Sent Events (SSE)."""
+        """Tail ``events.jsonl`` and log files for ``run_id`` as Server-Sent Events (SSE)."""
         try:
             resolved_id = await asyncio.to_thread(store.resolve_run_id, run_id)
         except RunNotFoundError as exc:
@@ -454,6 +505,108 @@ def create_app(
 
         after_seq = _parse_last_event_id(request)
         event_log = store.event_log(resolved_id)
+        logs_dir = store.run_dir(resolved_id) / "logs"
+
+        parsed_log_offset: int | None = None
+        raw_log_offset = request.query_params.get("log_offset")
+        if raw_log_offset is not None:
+            try:
+                parsed_log_offset = max(int(raw_log_offset), 0)
+            except ValueError:
+                parsed_log_offset = None
+
+        log_offsets: dict[tuple[str, str], int] = {}
+        last_emit_times: dict[tuple[str, str], float] = {}
+
+        def _get_new_log_frames(force_flush: bool = False) -> list[str]:
+            frames: list[str] = []
+            if not logs_dir.is_dir():
+                return frames
+            now = time.monotonic()
+            for log_file in sorted(logs_dir.glob("*.log")):
+                name = log_file.name
+                if not name.endswith(".log"):
+                    continue
+                parts = name[:-4].split(".", 1)
+                if len(parts) != 2 or parts[1] not in ("stdout", "stderr"):
+                    continue
+                nid, stream_name = parts[0], parts[1]
+                key = (nid, stream_name)
+
+                if key not in log_offsets:
+                    if parsed_log_offset is not None:
+                        log_offsets[key] = parsed_log_offset
+                    elif after_seq == 0:
+                        log_offsets[key] = 0
+                    else:
+                        try:
+                            log_offsets[key] = log_file.stat().st_size
+                        except OSError:
+                            log_offsets[key] = 0
+
+                cur_offset = log_offsets[key]
+                last_emit = last_emit_times.get(key, 0.0)
+
+                # Batch at most one event per 50 ms per node/stream, unless forcing final flush
+                if not force_flush and (now - last_emit < 0.050):
+                    continue
+
+                try:
+                    with open(log_file, "rb") as f:
+                        f.seek(0, 2)
+                        size = f.tell()
+                        if size <= cur_offset:
+                            continue
+                        f.seek(cur_offset)
+                        raw_bytes = f.read()
+                except OSError:
+                    continue
+
+                if not raw_bytes:
+                    continue
+
+                if not force_flush and b"\n" in raw_bytes:
+                    last_nl = raw_bytes.rfind(b"\n")
+                    if last_nl == -1:
+                        continue
+                    to_process = raw_bytes[: last_nl + 1]
+                    new_offset = cur_offset + last_nl + 1
+                else:
+                    to_process = raw_bytes
+                    new_offset = cur_offset + len(raw_bytes)
+
+                if not to_process:
+                    continue
+
+                text = to_process.decode("utf-8", errors="replace")
+                lines = text.splitlines()
+                log_data = NodeLogData(
+                    run_id=resolved_id,
+                    node_id=nid,
+                    stream=stream_name,  # type: ignore[arg-type]
+                    offset=cur_offset,
+                    lines=lines,
+                )
+                log_event = NodeLogEvent(
+                    ts=time.time(),
+                    data=log_data,
+                )
+                payload = json.dumps(
+                    log_event.model_dump(mode="json", exclude_none=True),
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                )
+                frames.append(
+                    _format_sse_frame(
+                        event_type="node_log",
+                        data_json=payload,
+                        seq=None,
+                    )
+                )
+                log_offsets[key] = new_offset
+                last_emit_times[key] = now
+
+            return frames
 
         async def _event_generator() -> AsyncIterator[str]:
             nonlocal after_seq
@@ -476,7 +629,16 @@ def create_app(
                     if isinstance(ev, RunStatusEvent) and ev.data.status in TERMINAL_RUN_STATUSES:
                         saw_terminal = True
 
+                log_frames = await asyncio.to_thread(_get_new_log_frames, force_flush=saw_terminal)
+                for frame in log_frames:
+                    yield frame
+
                 if saw_terminal:
+                    final_log_frames = await asyncio.to_thread(
+                        _get_new_log_frames, force_flush=True
+                    )
+                    for frame in final_log_frames:
+                        yield frame
                     break
 
                 state = await asyncio.to_thread(store.get_run_state, resolved_id)
@@ -495,6 +657,11 @@ def create_app(
                             data_json=payload,
                             seq=ev.seq,
                         )
+                    final_log_frames = await asyncio.to_thread(
+                        _get_new_log_frames, force_flush=True
+                    )
+                    for frame in final_log_frames:
+                        yield frame
                     break
 
                 if await request.is_disconnected():
