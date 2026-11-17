@@ -1,4 +1,4 @@
-"""Tests for static AST extraction of PLynx class-form operations (Task 2.1)."""
+"""Tests for static AST extraction of operations (Tasks 2.1 & 2.2)."""
 
 from __future__ import annotations
 
@@ -12,6 +12,8 @@ from plynx.registry import default_fake_ops, extract_ops_from_file, extract_ops_
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures" / "extractor"
 UNINSTALLED_FIXTURE = FIXTURES_DIR / "uninstalled_import_op.py"
+PAIRED_CLASS_FIXTURE = FIXTURES_DIR / "paired_class_op.py"
+PAIRED_FUNC_FIXTURE = FIXTURES_DIR / "paired_func_op.py"
 
 
 def test_uninstalled_fixture_fails_to_import_in_runtime() -> None:
@@ -234,3 +236,71 @@ class ComplexSig(Op):
     assert op.inputs[0] == InputPortSpec(name="a", type="int", required=False, default=-10)
     assert op.inputs[1] == InputPortSpec(name="flag", type="bool", required=False, default=False)
     assert op.inputs[2] == InputPortSpec(name="scale", type="float", required=False, default=-0.5)
+
+
+def test_class_and_function_fixtures_produce_equal_registry_entries() -> None:
+    """Class and function fixtures for the same op produce equal registry entries."""
+    class_ops = extract_ops_from_file(
+        PAIRED_CLASS_FIXTURE,
+        pack="demo_pack",
+        module="paired_op",
+    )
+    func_ops = extract_ops_from_file(
+        PAIRED_FUNC_FIXTURE,
+        pack="demo_pack",
+        module="paired_op",
+    )
+
+    assert len(class_ops) == 1
+    assert len(func_ops) == 1
+
+    class_op = class_ops[0]
+    func_op = func_ops[0]
+
+    # Verify kinds match their respective forms
+    assert class_op.kind == "class"
+    assert func_op.kind == "function"
+
+    # Verify all functional fields are identical
+    assert class_op.id == func_op.id
+    assert class_op.name == func_op.name
+    assert class_op.pack == func_op.pack
+    assert class_op.module == func_op.module
+    assert class_op.title == func_op.title == "Comprehensive Paired Op"
+    assert class_op.category == func_op.category == "Testing / Paired"
+    assert class_op.cacheable == func_op.cacheable is True
+    assert (
+        class_op.description
+        == func_op.description
+        == "Process diverse data with rich annotations and aliases."
+    )
+    assert class_op.valid == func_op.valid is True
+    assert class_op.error == func_op.error is None
+    assert class_op.inputs == func_op.inputs
+    assert class_op.outputs == func_op.outputs
+
+    # Excluding 'kind' and 'source' file path, full serialized schemas match exactly
+    assert class_op.model_dump(exclude={"kind", "source"}) == func_op.model_dump(
+        exclude={"kind", "source"}
+    )
+
+
+def test_function_op_positional_decorator_arguments() -> None:
+    """The @op decorator supports positional arguments (title, category, cacheable)."""
+    src = '''
+from plynx_sdk import op
+
+@op("Custom Title", "Custom Cat", False)
+def my_func(x: str) -> str:
+    """A custom function op."""
+    return x
+'''
+    ops = extract_ops_from_source(src, pack="p", module="m")
+    assert len(ops) == 1
+    op = ops[0]
+    assert op.title == "Custom Title"
+    assert op.category == "Custom Cat"
+    assert op.cacheable is False
+    assert op.description == "A custom function op."
+    assert op.kind == "function"
+    assert op.outputs == [OutputPortSpec(name="result", type="str")]

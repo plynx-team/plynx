@@ -92,14 +92,22 @@ def _unwrap_optional(node: ast.AST) -> tuple[ast.AST, bool]:
     return node, False
 
 
-def _parse_annotation(node: ast.AST, module_aliases: dict[str, ast.AST]) -> _ParsedAnnotation:
+def _parse_annotation(
+    node: ast.AST,
+    module_aliases: dict[str, ast.AST],
+    visited_aliases: set[str] | None = None,
+) -> _ParsedAnnotation:
     """Parse a type annotation AST node into a ``_ParsedAnnotation``."""
     unwrapped, _ = _unwrap_optional(node)
+    visited = set() if visited_aliases is None else set(visited_aliases)
 
     if isinstance(unwrapped, ast.Name):
+        if unwrapped.id in visited:
+            raise ValueError(f"Circular type alias detected: {unwrapped.id}")
         alias_target = module_aliases.get(unwrapped.id)
         if alias_target is not None:
-            return _parse_annotation(alias_target, module_aliases)
+            visited.add(unwrapped.id)
+            return _parse_annotation(alias_target, module_aliases, visited)
 
         if unwrapped.id in SEMANTIC_MEDIA_ALIASES:
             return _ParsedAnnotation(
@@ -160,7 +168,7 @@ def _parse_annotation(node: ast.AST, module_aliases: dict[str, ast.AST]) -> _Par
             )
             if not elts:
                 raise ValueError("Annotated requires a target type argument")
-            base = _parse_annotation(elts[0], module_aliases)
+            base = _parse_annotation(elts[0], module_aliases, visited)
             media = base.media
             min_val = base.min
             max_val = base.max
@@ -208,6 +216,16 @@ def _is_op_class(node: ast.ClassDef) -> bool:
     return any(_get_name_or_attr(base) == "Op" for base in node.bases)
 
 
+def _get_op_decorator(node: ast.FunctionDef) -> ast.Call | ast.AST | None:
+    """Return the ``@op(...)`` decorator node if present on ``node``, else ``None``."""
+    for dec in node.decorator_list:
+        if isinstance(dec, ast.Call) and _get_name_or_attr(dec.func) == "op":
+            return dec
+        if isinstance(dec, (ast.Name, ast.Attribute)) and _get_name_or_attr(dec) == "op":
+            return dec
+    return None
+
+
 def _deduce_pack_and_module(
     file_path: Path,
     workspace_root: Path | None = None,
@@ -236,6 +254,369 @@ def _deduce_pack_and_module(
             pack = parts[idx + 1]
 
     return pack, module, source_path
+
+
+def _extract_inputs(
+    args: ast.arguments,
+    *,
+    is_method: bool,
+    owner_name: str,
+    module_aliases: dict[str, ast.AST],
+) -> list[InputPortSpec]:
+    """Extract input port specifications from function or method arguments."""
+    inputs: list[InputPortSpec] = []
+    pos_args = args.args
+    if is_method and pos_args and pos_args[0].arg == "self":
+        pos_args = pos_args[1:]
+
+    num_pos = len(pos_args)
+    num_defaults = len(args.defaults)
+    offset = num_pos - num_defaults
+
+    for i, arg in enumerate(pos_args):
+        port_name = arg.arg
+        if arg.annotation is None:
+            raise ValueError(
+                f"Input port '{port_name}' in {owner_name} is missing a type annotation"
+            )
+        parsed = _parse_annotation(arg.annotation, module_aliases)
+        if i >= offset:
+            default_node = args.defaults[i - offset]
+            default_val = _extract_literal(default_node)
+            required = False
+        else:
+            default_val = None
+            required = True
+        inputs.append(
+            InputPortSpec(
+                name=port_name,
+                type=parsed.port_type,
+                media=parsed.media,
+                options=parsed.options,
+                min=parsed.min,
+                max=parsed.max,
+                step=parsed.step,
+                required=required,
+                default=default_val,
+            )
+        )
+
+    for kwarg, kw_default_node in zip(
+        args.kwonlyargs,
+        args.kw_defaults,
+        strict=True,
+    ):
+        port_name = kwarg.arg
+        if kwarg.annotation is None:
+            raise ValueError(
+                f"Input port '{port_name}' in {owner_name} is missing a type annotation"
+            )
+        parsed = _parse_annotation(kwarg.annotation, module_aliases)
+        if kw_default_node is not None:
+            default_val = _extract_literal(kw_default_node)
+            required = False
+        else:
+            default_val = None
+            required = True
+        inputs.append(
+            InputPortSpec(
+                name=port_name,
+                type=parsed.port_type,
+                media=parsed.media,
+                options=parsed.options,
+                min=parsed.min,
+                max=parsed.max,
+                step=parsed.step,
+                required=required,
+                default=default_val,
+            )
+        )
+
+    return inputs
+
+
+def _extract_outputs(
+    returns: ast.AST | None,
+    typed_dicts: dict[str, ast.ClassDef],
+    module_aliases: dict[str, ast.AST],
+) -> list[OutputPortSpec]:
+    """Extract output port specifications from return annotations or a TypedDict."""
+    outputs: list[OutputPortSpec] = []
+    output_typed_dict: ast.ClassDef | None = None
+
+    if returns is not None:
+        ret_name = _get_name_or_attr(returns)
+        if ret_name in typed_dicts:
+            output_typed_dict = typed_dicts[ret_name]
+
+    if output_typed_dict is None and "Outputs" in typed_dicts:
+        output_typed_dict = typed_dicts["Outputs"]
+
+    if output_typed_dict is not None:
+        for out_item in output_typed_dict.body:
+            if isinstance(out_item, ast.AnnAssign) and isinstance(out_item.target, ast.Name):
+                out_parsed = _parse_annotation(out_item.annotation, module_aliases)
+                outputs.append(
+                    OutputPortSpec(
+                        name=out_item.target.id,
+                        type=out_parsed.port_type,
+                        media=out_parsed.media,
+                    )
+                )
+    elif returns is not None:
+        out_parsed = _parse_annotation(returns, module_aliases)
+        outputs.append(
+            OutputPortSpec(
+                name="result",
+                type=out_parsed.port_type,
+                media=out_parsed.media,
+            )
+        )
+
+    return outputs
+
+
+def _extract_class_op(
+    class_node: ast.ClassDef,
+    *,
+    pack: str,
+    module: str,
+    source_path: str,
+    module_aliases: dict[str, ast.AST],
+    module_typed_dicts: dict[str, ast.ClassDef],
+) -> OpEntry:
+    """Extract an ``OpEntry`` from an ``Op`` subclass AST node."""
+    title: str | None = None
+    category = "Uncategorized"
+    cacheable = True
+    inner_typed_dicts: dict[str, ast.ClassDef] = {}
+    run_func: ast.FunctionDef | None = None
+    op_id = f"{pack}/{module}:{class_node.name}" if pack else f"{module}:{class_node.name}"
+
+    try:
+        for item in class_node.body:
+            if isinstance(item, ast.ClassDef):
+                if any(_get_name_or_attr(base) == "TypedDict" for base in item.bases):
+                    inner_typed_dicts[item.name] = item
+            elif isinstance(item, ast.Assign):
+                for t in item.targets:
+                    if isinstance(t, ast.Name):
+                        if t.id == "TITLE":
+                            val = _extract_literal(item.value)
+                            if not isinstance(val, str):
+                                tname = type(val).__name__
+                                raise ValueError(f"TITLE must be a string literal, got {tname}")
+                            title = val
+                        elif t.id == "CATEGORY":
+                            val = _extract_literal(item.value)
+                            if not isinstance(val, str):
+                                tname = type(val).__name__
+                                raise ValueError(f"CATEGORY must be a string literal, got {tname}")
+                            category = val
+                        elif t.id == "CACHEABLE":
+                            val = _extract_literal(item.value)
+                            if not isinstance(val, bool):
+                                tname = type(val).__name__
+                                raise ValueError(
+                                    f"CACHEABLE must be a boolean literal, got {tname}"
+                                )
+                            cacheable = val
+            elif (
+                isinstance(item, ast.AnnAssign)
+                and isinstance(item.target, ast.Name)
+                and item.value is not None
+            ):
+                if item.target.id == "TITLE":
+                    val = _extract_literal(item.value)
+                    if not isinstance(val, str):
+                        tname = type(val).__name__
+                        raise ValueError(f"TITLE must be a string literal, got {tname}")
+                    title = val
+                elif item.target.id == "CATEGORY":
+                    val = _extract_literal(item.value)
+                    if not isinstance(val, str):
+                        tname = type(val).__name__
+                        raise ValueError(f"CATEGORY must be a string literal, got {tname}")
+                    category = val
+                elif item.target.id == "CACHEABLE":
+                    val = _extract_literal(item.value)
+                    if not isinstance(val, bool):
+                        tname = type(val).__name__
+                        raise ValueError(f"CACHEABLE must be a boolean literal, got {tname}")
+                    cacheable = val
+            elif isinstance(item, ast.FunctionDef) and item.name == "run":
+                run_func = item
+
+        if title is None:
+            raise ValueError(f"Op class '{class_node.name}' is missing required TITLE attribute")
+
+        if run_func is None:
+            raise ValueError(f"Op class '{class_node.name}' must define a 'run' method")
+
+        doc = ast.get_docstring(class_node) or ""
+        doc_lines = [line.strip() for line in doc.splitlines() if line.strip()]
+        description = doc_lines[0] if doc_lines else ""
+
+        all_typed_dicts = dict(module_typed_dicts)
+        all_typed_dicts.update(inner_typed_dicts)
+
+        outputs = _extract_outputs(run_func.returns, all_typed_dicts, module_aliases)
+        inputs = _extract_inputs(
+            run_func.args,
+            is_method=True,
+            owner_name=f"{class_node.name}.run",
+            module_aliases=module_aliases,
+        )
+
+        return OpEntry(
+            id=op_id,
+            pack=pack,
+            module=module,
+            name=class_node.name,
+            kind="class",
+            title=title,
+            category=category,
+            cacheable=cacheable,
+            description=description,
+            inputs=inputs,
+            outputs=outputs,
+            source=source_path,
+            valid=True,
+            error=None,
+        )
+    except Exception as exc:
+        return OpEntry(
+            id=op_id,
+            pack=pack,
+            module=module,
+            name=class_node.name,
+            kind="class",
+            title=title or class_node.name,
+            category=category,
+            cacheable=cacheable,
+            description="",
+            inputs=[],
+            outputs=[],
+            source=source_path,
+            valid=False,
+            error=str(exc),
+        )
+
+
+def _extract_function_op(
+    func_node: ast.FunctionDef,
+    *,
+    pack: str,
+    module: str,
+    source_path: str,
+    module_aliases: dict[str, ast.AST],
+    module_typed_dicts: dict[str, ast.ClassDef],
+) -> OpEntry:
+    """Extract an ``OpEntry`` from an ``@op(...)`` decorated function AST node."""
+    title: str | None = None
+    category = "Uncategorized"
+    cacheable = True
+    op_id = f"{pack}/{module}:{func_node.name}" if pack else f"{module}:{func_node.name}"
+
+    try:
+        dec = _get_op_decorator(func_node)
+        if not isinstance(dec, ast.Call):
+            raise ValueError(
+                f"Op decorator on '{func_node.name}' must be called with arguments "
+                "(e.g. @op(title=...))"
+            )
+
+        # Positional arguments to @op(...)
+        if len(dec.args) >= 1:
+            title_val = _extract_literal(dec.args[0])
+            if not isinstance(title_val, str):
+                tname = type(title_val).__name__
+                raise ValueError(f"Op title must be a string literal, got {tname}")
+            title = title_val
+        if len(dec.args) >= 2:
+            cat_val = _extract_literal(dec.args[1])
+            if not isinstance(cat_val, str):
+                tname = type(cat_val).__name__
+                raise ValueError(f"Op category must be a string literal, got {tname}")
+            category = cat_val
+        if len(dec.args) >= 3:
+            cache_val = _extract_literal(dec.args[2])
+            if not isinstance(cache_val, bool):
+                tname = type(cache_val).__name__
+                raise ValueError(f"Op cacheable must be a boolean literal, got {tname}")
+            cacheable = cache_val
+
+        # Keyword arguments to @op(...)
+        for kw in dec.keywords:
+            if kw.arg == "title":
+                title_val = _extract_literal(kw.value)
+                if not isinstance(title_val, str):
+                    tname = type(title_val).__name__
+                    raise ValueError(f"Op title must be a string literal, got {tname}")
+                title = title_val
+            elif kw.arg == "category":
+                cat_val = _extract_literal(kw.value)
+                if not isinstance(cat_val, str):
+                    tname = type(cat_val).__name__
+                    raise ValueError(f"Op category must be a string literal, got {tname}")
+                category = cat_val
+            elif kw.arg == "cacheable":
+                cache_val = _extract_literal(kw.value)
+                if not isinstance(cache_val, bool):
+                    tname = type(cache_val).__name__
+                    raise ValueError(f"Op cacheable must be a boolean literal, got {tname}")
+                cacheable = cache_val
+
+        if title is None:
+            raise ValueError(
+                f"Op function '{func_node.name}' is missing required 'title' in @op decorator"
+            )
+
+        doc = ast.get_docstring(func_node) or ""
+        doc_lines = [line.strip() for line in doc.splitlines() if line.strip()]
+        description = doc_lines[0] if doc_lines else ""
+
+        outputs = _extract_outputs(func_node.returns, module_typed_dicts, module_aliases)
+        inputs = _extract_inputs(
+            func_node.args,
+            is_method=False,
+            owner_name=func_node.name,
+            module_aliases=module_aliases,
+        )
+
+        return OpEntry(
+            id=op_id,
+            pack=pack,
+            module=module,
+            name=func_node.name,
+            kind="function",
+            title=title,
+            category=category,
+            cacheable=cacheable,
+            description=description,
+            inputs=inputs,
+            outputs=outputs,
+            source=source_path,
+            valid=True,
+            error=None,
+        )
+    except Exception as exc:
+        return OpEntry(
+            id=op_id,
+            pack=pack,
+            module=module,
+            name=func_node.name,
+            kind="function",
+            title=title or func_node.name,
+            category=category,
+            cacheable=cacheable,
+            description="",
+            inputs=[],
+            outputs=[],
+            source=source_path,
+            valid=False,
+            error=str(exc),
+        )
 
 
 def extract_ops_from_source(
@@ -269,230 +650,26 @@ def extract_ops_from_source(
     entries: list[OpEntry] = []
 
     for stmt in tree.body:
-        if not (isinstance(stmt, ast.ClassDef) and _is_op_class(stmt)):
-            continue
-
-        class_node = stmt
-        title: str | None = None
-        category = "Uncategorized"
-        cacheable = True
-        inner_typed_dicts: dict[str, ast.ClassDef] = {}
-        run_func: ast.FunctionDef | None = None
-
-        try:
-            for item in class_node.body:
-                if isinstance(item, ast.ClassDef):
-                    if any(_get_name_or_attr(base) == "TypedDict" for base in item.bases):
-                        inner_typed_dicts[item.name] = item
-                elif isinstance(item, ast.Assign):
-                    for t in item.targets:
-                        if isinstance(t, ast.Name):
-                            if t.id == "TITLE":
-                                val = _extract_literal(item.value)
-                                if not isinstance(val, str):
-                                    tname = type(val).__name__
-                                    raise ValueError(f"TITLE must be a string literal, got {tname}")
-                                title = val
-                            elif t.id == "CATEGORY":
-                                val = _extract_literal(item.value)
-                                if not isinstance(val, str):
-                                    tname = type(val).__name__
-                                    raise ValueError(
-                                        f"CATEGORY must be a string literal, got {tname}"
-                                    )
-                                category = val
-                            elif t.id == "CACHEABLE":
-                                val = _extract_literal(item.value)
-                                if not isinstance(val, bool):
-                                    tname = type(val).__name__
-                                    raise ValueError(
-                                        f"CACHEABLE must be a boolean literal, got {tname}"
-                                    )
-                                cacheable = val
-                elif (
-                    isinstance(item, ast.AnnAssign)
-                    and isinstance(item.target, ast.Name)
-                    and item.value is not None
-                ):
-                    if item.target.id == "TITLE":
-                        val = _extract_literal(item.value)
-                        if not isinstance(val, str):
-                            tname = type(val).__name__
-                            raise ValueError(f"TITLE must be a string literal, got {tname}")
-                        title = val
-                    elif item.target.id == "CATEGORY":
-                        val = _extract_literal(item.value)
-                        if not isinstance(val, str):
-                            tname = type(val).__name__
-                            raise ValueError(f"CATEGORY must be a string literal, got {tname}")
-                        category = val
-                    elif item.target.id == "CACHEABLE":
-                        val = _extract_literal(item.value)
-                        if not isinstance(val, bool):
-                            tname = type(val).__name__
-                            raise ValueError(f"CACHEABLE must be a boolean literal, got {tname}")
-                        cacheable = val
-                elif isinstance(item, ast.FunctionDef) and item.name == "run":
-                    run_func = item
-
-            if title is None:
-                raise ValueError(
-                    f"Op class '{class_node.name}' is missing required TITLE attribute"
-                )
-
-            if run_func is None:
-                raise ValueError(f"Op class '{class_node.name}' must define a 'run' method")
-
-            doc = ast.get_docstring(class_node) or ""
-            doc_lines = [line.strip() for line in doc.splitlines() if line.strip()]
-            description = doc_lines[0] if doc_lines else ""
-
-            # Outputs
-            outputs: list[OutputPortSpec] = []
-            returns = run_func.returns
-            output_typed_dict: ast.ClassDef | None = None
-
-            if returns is not None:
-                ret_name = _get_name_or_attr(returns)
-                if ret_name in inner_typed_dicts:
-                    output_typed_dict = inner_typed_dicts[ret_name]
-                elif ret_name in module_typed_dicts:
-                    output_typed_dict = module_typed_dicts[ret_name]
-
-            if output_typed_dict is None and "Outputs" in inner_typed_dicts:
-                output_typed_dict = inner_typed_dicts["Outputs"]
-
-            if output_typed_dict is not None:
-                for out_item in output_typed_dict.body:
-                    if isinstance(out_item, ast.AnnAssign) and isinstance(
-                        out_item.target, ast.Name
-                    ):
-                        out_parsed = _parse_annotation(out_item.annotation, module_aliases)
-                        outputs.append(
-                            OutputPortSpec(
-                                name=out_item.target.id,
-                                type=out_parsed.port_type,
-                                media=out_parsed.media,
-                            )
-                        )
-            elif returns is not None:
-                out_parsed = _parse_annotation(returns, module_aliases)
-                outputs.append(
-                    OutputPortSpec(
-                        name="result",
-                        type=out_parsed.port_type,
-                        media=out_parsed.media,
-                    )
-                )
-
-            # Inputs
-            inputs: list[InputPortSpec] = []
-            pos_args = run_func.args.args
-            if pos_args and pos_args[0].arg == "self":
-                pos_args = pos_args[1:]
-
-            num_pos = len(pos_args)
-            num_defaults = len(run_func.args.defaults)
-            offset = num_pos - num_defaults
-
-            for i, arg in enumerate(pos_args):
-                port_name = arg.arg
-                if arg.annotation is None:
-                    raise ValueError(
-                        f"Input port '{port_name}' in {class_node.name}.run "
-                        "is missing a type annotation"
-                    )
-                parsed = _parse_annotation(arg.annotation, module_aliases)
-                if i >= offset:
-                    default_node = run_func.args.defaults[i - offset]
-                    default_val = _extract_literal(default_node)
-                    required = False
-                else:
-                    default_val = None
-                    required = True
-                inputs.append(
-                    InputPortSpec(
-                        name=port_name,
-                        type=parsed.port_type,
-                        media=parsed.media,
-                        options=parsed.options,
-                        min=parsed.min,
-                        max=parsed.max,
-                        step=parsed.step,
-                        required=required,
-                        default=default_val,
-                    )
-                )
-
-            for kwarg, kw_default_node in zip(
-                run_func.args.kwonlyargs,
-                run_func.args.kw_defaults,
-                strict=True,
-            ):
-                port_name = kwarg.arg
-                if kwarg.annotation is None:
-                    raise ValueError(
-                        f"Input port '{port_name}' in {class_node.name}.run "
-                        "is missing a type annotation"
-                    )
-                parsed = _parse_annotation(kwarg.annotation, module_aliases)
-                if kw_default_node is not None:
-                    default_val = _extract_literal(kw_default_node)
-                    required = False
-                else:
-                    default_val = None
-                    required = True
-                inputs.append(
-                    InputPortSpec(
-                        name=port_name,
-                        type=parsed.port_type,
-                        media=parsed.media,
-                        options=parsed.options,
-                        min=parsed.min,
-                        max=parsed.max,
-                        step=parsed.step,
-                        required=required,
-                        default=default_val,
-                    )
-                )
-
-            op_id = f"{pack}/{module}:{class_node.name}" if pack else f"{module}:{class_node.name}"
+        if isinstance(stmt, ast.ClassDef) and _is_op_class(stmt):
             entries.append(
-                OpEntry(
-                    id=op_id,
+                _extract_class_op(
+                    stmt,
                     pack=pack,
                     module=module,
-                    name=class_node.name,
-                    kind="class",
-                    title=title,
-                    category=category,
-                    cacheable=cacheable,
-                    description=description,
-                    inputs=inputs,
-                    outputs=outputs,
-                    source=source_path,
-                    valid=True,
-                    error=None,
+                    source_path=source_path,
+                    module_aliases=module_aliases,
+                    module_typed_dicts=module_typed_dicts,
                 )
             )
-        except Exception as exc:
-            op_id = f"{pack}/{module}:{class_node.name}" if pack else f"{module}:{class_node.name}"
+        elif isinstance(stmt, ast.FunctionDef) and _get_op_decorator(stmt) is not None:
             entries.append(
-                OpEntry(
-                    id=op_id,
+                _extract_function_op(
+                    stmt,
                     pack=pack,
                     module=module,
-                    name=class_node.name,
-                    kind="class",
-                    title=title or class_node.name,
-                    category=category,
-                    cacheable=cacheable,
-                    description="",
-                    inputs=[],
-                    outputs=[],
-                    source=source_path,
-                    valid=False,
-                    error=str(exc),
+                    source_path=source_path,
+                    module_aliases=module_aliases,
+                    module_typed_dicts=module_typed_dicts,
                 )
             )
 
