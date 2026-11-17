@@ -47,7 +47,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: both forms from PROTOCOL.md section 3 import and run in plain Python; importing `plynx_sdk` imports nothing outside the standard library (test checks `sys.modules`).
 - [x] **1.2 Harness.** `python -m plynx_sdk.harness` reads `inputs.json`, calls the op, validates the result, writes `outputs.json`, maps failures to exit codes 1 and 2.
   Accept: run directly (no `uv`) on a fixture node directory for success, op exception, bad outputs, missing op.
-- [ ] **1.3 Checkpoint replay.** `checkpoint()` per PROTOCOL.md: id by call index, write `checkpoint.json`, exit 10; replay with answers.
+- [x] **1.3 Checkpoint replay.** `checkpoint()` per PROTOCOL.md: id by call index, write `checkpoint.json`, exit 10; replay with answers.
   Accept: a fixture op asking "foo or woo?" exits 10 first and returns the answer on the second run; `except Exception` in the op does not swallow the interrupt.
 - [ ] **1.4 Process groups.** `engine/procgroup.py`: start a process in its own group (POSIX `start_new_session`, Windows `CREATE_NEW_PROCESS_GROUP`), kill the tree (`os.killpg`, `taskkill /T /F`).
   Accept: a test spawns a child that spawns a grandchild; after kill neither is alive. Passes on all three OSes.
