@@ -14,7 +14,6 @@ from typing import Any
 
 from plynx_sdk.protocol import (
     CheckpointManifest,
-    DirectoryEntry,
     InputDirectoryValue,
     InputFileValue,
     InputsManifest,
@@ -22,10 +21,7 @@ from plynx_sdk.protocol import (
     OutputDirectoryValue,
     OutputFileValue,
     OutputValue,
-    ResultDirectoryValue,
-    ResultFileValue,
     ResultManifest,
-    ResultValue,
     ScalarValue,
 )
 
@@ -38,7 +34,8 @@ from plynx.api_models import (
     RunStatus,
     RunStatusData,
 )
-from plynx.engine.executor import ExecutionRequest, Executor
+from plynx.cas import BlobStore, ingest_outputs, write_result_manifest
+from plynx.engine.executor import ExecutionRequest, Executor, NodeResult
 from plynx.registry import OpRegistry, Registry
 from plynx.store.run_store import RunStore, atomic_write_text
 from plynx.workflow.models import NodeRef, NodeSpec, Workflow
@@ -101,25 +98,6 @@ def _output_to_input_value(
     raise TypeError(f"Unsupported OutputValue: {type(val).__name__}")
 
 
-def _output_to_result_value(val: OutputValue) -> ResultValue:
-    if isinstance(val, ScalarValue):
-        return ScalarValue(value=val.value)
-    if isinstance(val, OutputFileValue):
-        filename = Path(val.path).name or "output"
-        return ResultFileValue(
-            sha256="fake",
-            size_bytes=0,
-            media=val.media,
-            filename=filename,
-        )
-    if isinstance(val, OutputDirectoryValue):
-        return ResultDirectoryValue(
-            tree_sha256="fake",
-            entries=[DirectoryEntry(path="placeholder", sha256="fake", size_bytes=0)],
-        )
-    raise TypeError(f"Unsupported OutputValue: {type(val).__name__}")
-
-
 class Scheduler:
     """Executes a validated ``Workflow`` DAG against a ``RunStore`` and an ``Executor``."""
 
@@ -128,10 +106,12 @@ class Scheduler:
         store: RunStore,
         executor: Executor,
         registry: OpRegistry | None = None,
+        blob_store: BlobStore | None = None,
     ) -> None:
         self.store = store
         self.executor = executor
         self.registry: OpRegistry = Registry(store.workspace_root) if registry is None else registry
+        self.blob_store = blob_store or BlobStore.from_workspace(store.workspace_root)
 
     async def run(
         self,
@@ -316,18 +296,11 @@ class Scheduler:
                     if result.status == NodeStatus.SUCCESS:
                         outs = result.outputs.outputs if result.outputs is not None else {}
                         completed_outputs[nid] = dict(outs)
-                        result_manifest = ResultManifest(
-                            status="SUCCESS",
-                            cache_key="fake",
-                            cache_hit=False,
-                            started_at=result.started_at,
-                            finished_at=result.finished_at,
-                            outputs={k: _output_to_result_value(v) for k, v in outs.items()},
-                        )
                         await asyncio.to_thread(
-                            atomic_write_text,
-                            node_dir / "result.json",
-                            result_manifest.to_json(),
+                            self._ingest_and_write_result,
+                            node_dir,
+                            result,
+                            outs,
                         )
                         await _emit_node_status(
                             nid,
@@ -527,6 +500,28 @@ class Scheduler:
                     cp_answers[cp.checkpoint_id] = cp.answer
 
         return InputsManifest(inputs=resolved_inputs, checkpoint_answers=cp_answers)
+
+    def _ingest_and_write_result(
+        self,
+        node_dir: Path,
+        result: NodeResult,
+        outs: Mapping[str, OutputValue],
+    ) -> ResultManifest:
+        result_outputs = ingest_outputs(
+            outs,
+            node_dir=node_dir,
+            blob_store=self.blob_store,
+        )
+        result_manifest = ResultManifest(
+            status="SUCCESS",
+            cache_key="fake",
+            cache_hit=False,
+            started_at=result.started_at,
+            finished_at=result.finished_at,
+            outputs=result_outputs,
+        )
+        write_result_manifest(node_dir, result_manifest)
+        return result_manifest
 
     async def _resolve_checkpoint_answer(
         self,

@@ -77,7 +77,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
 
 - [x] **3.1 Blob store.** Hash a file, store as `blobs/ab/<sha256>`, read-only, `os.link` then `shutil.copy2` fallback.
   Accept: duplicate content is stored once; the fallback is exercised by a test that forces `OSError`; stored blobs reject writes.
-- [ ] **3.2 Ingest outputs.** Files and directories (tree hash) into the blob store; write `result.json`.
+- [x] **3.2 Ingest outputs.** Files and directories (tree hash) into the blob store; write `result.json`.
   Accept: directory with nested files round-trips; `tree_sha256` matches the PROTOCOL.md definition.
 - [ ] **3.3 Materialize inputs.** Build `inputs/<port>/<filename>` as read-only hard links or copies; write `inputs.json`.
   Accept: a node that tries to write to an input fails; the file extension is preserved.
