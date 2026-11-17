@@ -1,0 +1,7 @@
+version: 1
+name: missing_node_ref
+nodes:
+  echo_missing:
+    op: standard_io/demo:Echo
+    inputs:
+      text: $ghost_node.choice

@@ -16,7 +16,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: the example workflow parses; fixtures for unknown keys, bare `$` strings, `$$` escape, and bad node IDs fail with clear messages; statuses match ARCHITECTURE.md exactly.
 - [x] **0.4 Generated TypeScript types.** `scripts/gen_ts_types.py` writes `ui/src/api/types.gen.ts` from the pydantic JSON Schema.
   Accept: running it twice produces no diff; a test fails if the committed file is stale.
-- [ ] **0.5 Fake registry and validator.** `registry/` interface (`OpRegistry` protocol) with an in-memory `FakeRegistry`. `workflow/validator.py`: unknown op, missing node reference, unknown output, cycle (`graphlib.CycleError`), backward stage edge, port type mismatch.
+- [x] **0.5 Fake registry and validator.** `registry/` interface (`OpRegistry` protocol) with an in-memory `FakeRegistry`. `workflow/validator.py`: unknown op, missing node reference, unknown output, cycle (`graphlib.CycleError`), backward stage edge, port type mismatch.
   Accept: `plynx validate examples/workflows/foo_or_woo.yaml` exits 0; one fixture per error kind exits 1 with the message naming the node.
 - [ ] **0.6 Store and event log (real).** `store/`: SQLite schema from PROTOCOL.md section 7, `RunStore`, run directory creation, `EventLog` (append with `seq`, read after `seq`).
   Accept: tests cover first-answer-wins, `seq` ordering under two writers (processes), and WAL access from two processes.

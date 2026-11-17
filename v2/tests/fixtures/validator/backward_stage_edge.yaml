@@ -1,0 +1,16 @@
+version: 1
+name: backward_stage_edge
+stages:
+  first:
+    title: "1. First"
+  second:
+    title: "2. Second"
+nodes:
+  late_node:
+    op: standard_io/demo:AskFooOrWoo
+    stage: second
+  early_node:
+    op: standard_io/demo:Echo
+    stage: first
+    inputs:
+      text: $late_node.choice
