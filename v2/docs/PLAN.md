@@ -66,7 +66,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: class and function fixtures for the same op produce equal registry entries.
 - [x] **2.3 Invalid ops.** Anything outside the subset yields `valid: false` and a reason, never a crash.
   Accept: fixtures for computed `TITLE`, custom base class, unknown annotation each give the documented reason.
-- [ ] **2.4 Pack discovery and cache.** Search wheel-shipped packs, `builtin_packs/` (repo), `custom_packs/`; `registry_cache.json` keyed by file mtime.
+- [x] **2.4 Pack discovery and cache.** Search wheel-shipped packs, `builtin_packs/` (repo), `custom_packs/`; `registry_cache.json` keyed by file mtime.
   Accept: touching one file re-parses only that file; deleting the cache rebuilds it.
 - [ ] **2.5 Real validator.** Replace `FakeRegistry`: port types and media compatibility, required inputs, unbound run inputs, missing `uv.lock` warning.
   Accept: all Phase 0 validator fixtures still pass against the real registry; media mismatch is rejected, `Path` to `PdfFile` is accepted.

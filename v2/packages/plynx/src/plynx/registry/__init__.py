@@ -7,6 +7,7 @@ from typing import Protocol, runtime_checkable
 
 from plynx.api_models import InputPortSpec, OpEntry, OutputPortSpec
 from plynx.registry.extractor import extract_ops_from_file, extract_ops_from_source
+from plynx.registry.pack_registry import PackRegistry, Registry, discover_packs
 
 
 @runtime_checkable
@@ -172,7 +173,10 @@ class FakeRegistry:
 __all__ = [
     "FakeRegistry",
     "OpRegistry",
+    "PackRegistry",
+    "Registry",
     "default_fake_ops",
+    "discover_packs",
     "extract_ops_from_file",
     "extract_ops_from_source",
 ]
