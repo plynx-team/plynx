@@ -20,6 +20,7 @@ from plynx.api_models import (
     RunState,
     RunStatus,
     RunStatusData,
+    UploadResponse,
     WorkflowDocument,
     WorkflowInputSpec,
     WorkflowListItem,
@@ -736,5 +737,89 @@ def test_node_logs_endpoint_and_sse_batching(tmp_path: Path) -> None:
             combined_lines = history_lines + stream_lines
             assert len(combined_lines) == 10000
             assert combined_lines == [f"line {i}" for i in range(10000)]
+
+    asyncio.run(_test())
+
+
+def test_uploads_and_outputs_blob_download(tmp_path: Path) -> None:
+    """POST /uploads saves file; uploaded path works as run input; blob download works."""
+    wf_dir = tmp_path / "workflows"
+    wf_dir.mkdir(parents=True)
+    wf_file = wf_dir / "read_and_write.yaml"
+    wf_file.write_text(
+        """version: 1
+name: test_upload_pipeline
+nodes:
+  reader:
+    op: standard_io/demo:ReadText
+    inputs: {}
+  writer:
+    op: standard_io/demo:WriteText
+    inputs:
+      text: $reader.text
+      filename: result.txt
+""",
+        encoding="utf-8",
+    )
+
+    app = create_app(tmp_path)
+
+    async def _test() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            # 1. Reject path traversal uploads
+            for bad_name in ("../../evil.sh", "/etc/passwd", "sub/../evil.txt"):
+                bad_resp = await client.post(
+                    "/uploads",
+                    files={"file": (bad_name, b"evil", "text/plain")},
+                )
+                assert bad_resp.status_code == 400
+                assert bad_resp.json()["error"]["code"] == "invalid_filename"
+
+            # 2. Upload valid file
+            file_bytes = b"Hello from uploaded file!\nLine 2.\n"
+            upload_resp = await client.post(
+                "/uploads",
+                files={"file": ("sample.txt", file_bytes, "text/plain")},
+            )
+            assert upload_resp.status_code == 201
+            up_data = UploadResponse.model_validate(upload_resp.json())
+            assert up_data.path == ".plynx/uploads/sample.txt"
+            saved_file = tmp_path / ".plynx" / "uploads" / "sample.txt"
+            assert saved_file.is_file()
+            assert saved_file.read_bytes() == file_bytes
+
+            # 3. Use uploaded file path as run input
+            create_resp = await client.post(
+                "/runs",
+                json={
+                    "workflow_path": "workflows/read_and_write.yaml",
+                    "inputs": {"reader.path": up_data.path},
+                },
+            )
+            assert create_resp.status_code == 201
+            run_id = create_resp.json()["run_id"]
+
+            # Wait for run to succeed
+            deadline = time.monotonic() + 15.0
+            while time.monotonic() < deadline:
+                state_resp = await client.get(f"/runs/{run_id}")
+                assert state_resp.status_code == 200
+                state = state_resp.json()
+                if state["status"] in ("SUCCESS", "FAILED"):
+                    break
+                await asyncio.sleep(0.05)
+            assert state["status"] == "SUCCESS", f"Run failed: {state.get('error')}"
+
+            # 4. Blob download with media type
+            download_resp = await client.get(f"/runs/{run_id}/nodes/writer/outputs/file")
+            assert download_resp.status_code == 200
+            assert "text/plain" in download_resp.headers.get("content-type", "")
+            assert download_resp.content == file_bytes
+
+            # Test 404 for unknown output
+            missing_out = await client.get(f"/runs/{run_id}/nodes/writer/outputs/nonexistent")
+            assert missing_out.status_code == 404
+            assert missing_out.json()["error"]["code"] == "output_not_found"
 
     asyncio.run(_test())

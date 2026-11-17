@@ -442,6 +442,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "plynx-sdk" },
     { name = "pydantic" },
+    { name = "python-multipart" },
     { name = "ruamel-yaml" },
     { name = "uvicorn" },
 ]
@@ -452,6 +453,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.110" },
     { name = "plynx-sdk", editable = "packages/plynx-sdk" },
     { name = "pydantic", specifier = ">=2.7" },
+    { name = "python-multipart", specifier = ">=0.0.9" },
     { name = "ruamel-yaml", specifier = ">=0.18" },
     { name = "uvicorn", specifier = ">=0.30" },
 ]
@@ -664,6 +666,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/79/42/bb4641652e58dedeac2ec51abc1f8cae4fee4ec63899a0999016229a0f2a/pytest-9.2.0.tar.gz", hash = "sha256:97c4f3b1f3c7414aa36465e09b8220f1d03627993bd51b1282e193753c80557b", size = 1797555, upload-time = "2026-10-27T21:30:20.728Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/51/39/1f5d8c8877a0fa327db959c19341d4be61660de1ab6b7391f9eb805bcd67/pytest-9.2.0-py3-none-any.whl", hash = "sha256:07acdcf88ec174f907dc01af70bf52d49b014bbab03faeeade31c96b18c2e588", size = 411776, upload-time = "2026-10-27T21:30:19.131Z" },
+]
+
+[[package]]
+name = "python-multipart"
+version = "0.0.34"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7e/c0/c753d487a83d873f6946cee6cbc26cea3fe59a476ad0de99a14938a2fbd8/python_multipart-0.0.34.tar.gz", hash = "sha256:b998ae90ca6e1e363261ce2e0e230281b8af53867b757970abd69ee9edcd843a", size = 52456, upload-time = "2026-11-16T10:40:38.261Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f5/0e/090c52b122d8ec5fa37942c1410fea9cf04ce98bca0c84dde7f0aa11594d/python_multipart-0.0.34-py3-none-any.whl", hash = "sha256:ebacd224bd686eee2f9aa1066a657affe07435a185834e05e5235e2e59173e91", size = 32585, upload-time = "2026-11-16T10:40:37.119Z" },
 ]
 
 [[package]]

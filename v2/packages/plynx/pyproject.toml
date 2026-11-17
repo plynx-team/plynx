@@ -8,6 +8,7 @@ dependencies = [
     "fastapi>=0.110",
     "plynx-sdk",
     "pydantic>=2.7",
+    "python-multipart>=0.0.9",
     "ruamel.yaml>=0.18",
     "uvicorn>=0.30",
 ]

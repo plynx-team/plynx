@@ -119,7 +119,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: a run started over REST can be answered and approved over REST; the double-answer test returns a conflict error.
 - [x] **5.3 Logs.** `logs` endpoint with offset; `node_log` SSE batching at most every 50 ms.
   Accept: a node printing 10 000 lines produces bounded SSE frames; history plus stream equals the file.
-- [ ] **5.4 Outputs and uploads.** Blob download with media type; multipart upload into `.plynx/uploads/`.
+- [x] **5.4 Outputs and uploads.** Blob download with media type; multipart upload into `.plynx/uploads/`.
   Accept: uploaded file path works as a run input; path traversal attempts are rejected.
 - [ ] **5.5 Workflow save.** `PUT /workflows/{path}`: validate, write YAML round-trip (comments kept), write the layout sidecar.
   Accept: saving an unchanged workflow produces a byte-identical file; an invalid workflow is rejected and the file is untouched.

@@ -9,9 +9,10 @@ from collections.abc import AsyncIterator, Callable, Mapping
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, FastAPI, Query, Request
+from fastapi import APIRouter, FastAPI, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from plynx_sdk.protocol import ResultFileValue, ResultManifest
 from pydantic import ValidationError
 from ruamel.yaml import YAML
 
@@ -30,14 +31,22 @@ from plynx.api_models import (
     RunStatus,
     RunStatusEvent,
     StageGateStatus,
+    UploadResponse,
     WorkflowDocument,
     WorkflowInputSpec,
     WorkflowLayout,
     WorkflowListItem,
 )
+from plynx.cas import BlobStore
 from plynx.engine import Executor, Scheduler, SchedulerOptions, create_executor
 from plynx.registry import OpRegistry, Registry, find_workspace_root
-from plynx.store import AmbiguousRunIdError, RunNotFoundError, RunStore, StoreError
+from plynx.store import (
+    AmbiguousRunIdError,
+    RunNotFoundError,
+    RunStore,
+    StoreError,
+    atomic_write_bytes,
+)
 from plynx.workflow.models import load_workflow
 from plynx.workflow.validator import get_unbound_run_inputs, validate_workflow
 
@@ -492,6 +501,93 @@ def create_app(
             media_type="text/plain; charset=utf-8",
             headers={"X-Next-Offset": str(next_offset)},
         )
+
+    @router.post("/uploads", response_model=UploadResponse, status_code=201)
+    async def upload_file_endpoint(file: UploadFile) -> Any:
+        """Upload a multipart file into ``.plynx/uploads/``."""
+        raw_filename = file.filename or ""
+        if (
+            not raw_filename
+            or "/" in raw_filename
+            or "\\" in raw_filename
+            or ".." in raw_filename
+            or Path(raw_filename).name != raw_filename
+        ):
+            return _error_response(
+                400,
+                "invalid_filename",
+                "Uploaded filename cannot contain path separators or traversal characters",
+            )
+
+        uploads_dir = ws_root / ".plynx" / "uploads"
+        uploads_dir.mkdir(parents=True, exist_ok=True)
+
+        dest = (uploads_dir / raw_filename).resolve()
+        try:
+            dest.relative_to(uploads_dir.resolve())
+        except ValueError:
+            return _error_response(
+                400,
+                "invalid_filename",
+                "Uploaded file path must stay inside the uploads directory",
+            )
+
+        content = await file.read()
+        await asyncio.to_thread(atomic_write_bytes, dest, content)
+
+        rel_path = dest.relative_to(ws_root.resolve()).as_posix()
+        return UploadResponse(path=rel_path)
+
+    @router.get("/runs/{run_id}/nodes/{node_id}/outputs/{name}")
+    async def get_node_output(run_id: str, node_id: str, name: str) -> Any:
+        """Download or fetch an output artifact from a node."""
+        try:
+            resolved_id = await asyncio.to_thread(store.resolve_run_id, run_id)
+        except RunNotFoundError as exc:
+            return _error_response(404, "run_not_found", str(exc))
+        except AmbiguousRunIdError as exc:
+            return _error_response(409, "ambiguous_run_id", str(exc))
+
+        result_path = store.node_dir(resolved_id, node_id) / "result.json"
+        if not result_path.is_file():
+            return _error_response(
+                404,
+                "output_not_found",
+                f"No outputs found for node '{node_id}' in run {resolved_id!r}",
+            )
+
+        try:
+            raw_bytes = await asyncio.to_thread(result_path.read_bytes)
+            manifest = ResultManifest.from_json(raw_bytes)
+        except Exception as exc:
+            return _error_response(500, "result_parse_error", str(exc))
+
+        if name not in manifest.outputs:
+            return _error_response(
+                404,
+                "output_not_found",
+                f"Output '{name}' not found for node '{node_id}'",
+            )
+
+        output_val = manifest.outputs[name]
+        if isinstance(output_val, ResultFileValue):
+            blob_store = BlobStore.from_workspace(ws_root)
+            blob_path = blob_store.blob_path(output_val.sha256)
+            if not blob_path.is_file():
+                return _error_response(
+                    404,
+                    "blob_not_found",
+                    f"Blob {output_val.sha256} not found in store",
+                )
+            media_type = output_val.media or "application/octet-stream"
+            filename = output_val.filename or f"{name}.bin"
+            return FileResponse(
+                blob_path,
+                media_type=media_type,
+                filename=filename,
+            )
+
+        return JSONResponse(content=output_val.to_dict())
 
     @router.get("/runs/{run_id}/stream")
     async def stream_run_events(run_id: str, request: Request) -> Any:
