@@ -18,7 +18,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: running it twice produces no diff; a test fails if the committed file is stale.
 - [x] **0.5 Fake registry and validator.** `registry/` interface (`OpRegistry` protocol) with an in-memory `FakeRegistry`. `workflow/validator.py`: unknown op, missing node reference, unknown output, cycle (`graphlib.CycleError`), backward stage edge, port type mismatch.
   Accept: `plynx validate examples/workflows/foo_or_woo.yaml` exits 0; one fixture per error kind exits 1 with the message naming the node.
-- [ ] **0.6 Store and event log (real).** `store/`: SQLite schema from PROTOCOL.md section 7, `RunStore`, run directory creation, `EventLog` (append with `seq`, read after `seq`).
+- [x] **0.6 Store and event log (real).** `store/`: SQLite schema from PROTOCOL.md section 7, `RunStore`, run directory creation, `EventLog` (append with `seq`, read after `seq`).
   Accept: tests cover first-answer-wins, `seq` ordering under two writers (processes), and WAL access from two processes.
 - [ ] **0.7 Executor protocol, fake executor, real scheduler.** `engine/executor.py` (`Executor.run`, `Executor.launch` raising `NotImplementedError`), `engine/fake_executor.py` (scripted results, delays, failures, one checkpoint), `engine/scheduler.py` (`graphlib` + asyncio + semaphore, statuses, `BLOCKED`, events written to the store).
   Accept: a 4-node diamond runs; a failing node blocks only its dependents while the other branch finishes; `concurrency=1` never overlaps two nodes; events arrive in a valid order (`PENDING` -> `RUNNING` -> terminal).
