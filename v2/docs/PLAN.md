@@ -8,7 +8,7 @@ Phases 1 to 7 replace mocks from Phase 0 one seam at a time. The end-to-end test
 
 Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with a fake executor. It proves the formats in [PROTOCOL.md](PROTOCOL.md) and the module boundaries before real code exists.
 
-- [ ] **0.1 Scaffold.** Create `pyproject.toml` (uv workspace), `packages/plynx-sdk`, `packages/plynx`, `builtin_packs/standard_io` (empty), `tests/`, `examples/`, ruff/mypy/pytest config, and `scripts/check_legacy_untouched.py` (fails when `git diff --name-only master...HEAD` lists a file outside `v2/`, except new files matching `.github/workflows/v2-*.yml`).
+- [x] **0.1 Scaffold.** Create `pyproject.toml` (uv workspace), `packages/plynx-sdk`, `packages/plynx`, `builtin_packs/standard_io` (empty), `tests/`, `examples/`, ruff/mypy/pytest config, and `scripts/check_legacy_untouched.py` (fails when `git diff --name-only master...HEAD` lists a file outside `v2/`, except new files matching `.github/workflows/v2-*.yml`).
   Accept: `uv sync` in this folder works and ignores the legacy root `pyproject.toml`; `uv run pytest` passes a placeholder test; the check script returns 0 on a clean branch and 1 when a legacy file is modified (tested in a temp git repo).
 - [ ] **0.2 SDK wire types.** `plynx_sdk/protocol.py`: dataclasses for `InputsManifest`, `OutputsManifest`, `ResultManifest`, `CheckpointManifest`, value kinds (`scalar`, `file`, `directory`), with `to_json()` and `from_json()` that validate. Stdlib only.
   Accept: every JSON example in PROTOCOL.md section 5 is a fixture in `tests/fixtures/` and round-trips unchanged; invalid fixtures (missing `schema`, `..` in a path, scalar over 1 MiB) are rejected; `mypy --strict` passes.

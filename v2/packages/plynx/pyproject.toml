@@ -1,0 +1,13 @@
+[project]
+name = "plynx"
+version = "2.0.0"
+description = "PLynx engine, CLI, and server."
+requires-python = ">=3.11"
+dependencies = ["plynx-sdk"]
+
+[tool.uv.sources]
+plynx-sdk = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.9.0,<0.10"]
+build-backend = "uv_build"

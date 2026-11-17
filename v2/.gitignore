@@ -1,0 +1,22 @@
+# Tracked in v2 even though the legacy root .gitignore ignores it.
+!uv.lock
+
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store
+
+# Generated build output
+dist/
+build/
+node_modules/
+packages/plynx/src/plynx/static/
+
+# Runtime state and secrets
+.plynx/
+.env
+custom_packs/*
+!custom_packs/.gitkeep
