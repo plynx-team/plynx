@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import graphlib
 import os
+import shutil
 import time
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
@@ -59,12 +60,43 @@ class SchedulerOptions:
     on_node_status: NodeStatusCallback | None = None
 
 
-def _output_to_input_value(val: OutputValue) -> InputValue:
+def _output_to_input_value(
+    val: OutputValue,
+    *,
+    src_node_dir: Path | None = None,
+    dst_node_dir: Path | None = None,
+    port_name: str | None = None,
+) -> InputValue:
     if isinstance(val, ScalarValue):
         return ScalarValue(value=val.value)
     if isinstance(val, OutputFileValue):
+        if src_node_dir is not None and dst_node_dir is not None and port_name is not None:
+            src_file = src_node_dir / val.path
+            if src_file.is_file():
+                filename = src_file.name
+                dst_file = dst_node_dir / "inputs" / port_name / filename
+                dst_file.parent.mkdir(parents=True, exist_ok=True)
+                if dst_file.exists():
+                    dst_file.unlink()
+                try:
+                    os.link(src_file, dst_file)
+                except OSError:
+                    shutil.copy2(src_file, dst_file)
+                return InputFileValue(
+                    path=f"inputs/{port_name}/{filename}",
+                    sha256="fake",
+                    size_bytes=dst_file.stat().st_size,
+                )
         return InputFileValue(path=val.path, sha256="fake", size_bytes=0)
     if isinstance(val, OutputDirectoryValue):
+        if src_node_dir is not None and dst_node_dir is not None and port_name is not None:
+            src_dir = src_node_dir / val.path
+            if src_dir.is_dir():
+                dst_dir = dst_node_dir / "inputs" / port_name
+                if dst_dir.exists():
+                    shutil.rmtree(dst_dir)
+                shutil.copytree(src_dir, dst_dir)
+                return InputDirectoryValue(path=f"inputs/{port_name}", tree_sha256="fake")
         return InputDirectoryValue(path=val.path, tree_sha256="fake")
     raise TypeError(f"Unsupported OutputValue: {type(val).__name__}")
 
@@ -461,11 +493,18 @@ class Scheduler:
         for port_name, default_val in port_defaults.items():
             resolved_inputs[port_name] = ScalarValue(value=default_val)
 
+        dst_node_dir = self.store.node_dir(run_id, node_id)
         for port_name, binding in spec.inputs.items():
             if isinstance(binding, NodeRef):
                 src_outs = completed_outputs.get(binding.from_node, {})
                 if binding.output in src_outs:
-                    resolved_inputs[port_name] = _output_to_input_value(src_outs[binding.output])
+                    src_node_dir = self.store.node_dir(run_id, binding.from_node)
+                    resolved_inputs[port_name] = _output_to_input_value(
+                        src_outs[binding.output],
+                        src_node_dir=src_node_dir,
+                        dst_node_dir=dst_node_dir,
+                        port_name=port_name,
+                    )
             else:
                 resolved_inputs[port_name] = ScalarValue(value=binding)
 

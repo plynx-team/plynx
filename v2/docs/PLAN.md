@@ -55,7 +55,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: runs the `standard_io` fixture op through a real `uv` process; exit-code table in PROTOCOL.md is covered by tests; the executor factory now returns `LocalExecutor`; task 0.11 still passes using real ops.
 - [x] **1.6 Environment and secrets.** `.env` reader (minimal, no dependency), `env_passthrough`.
   Accept: a value in `.env` reaches the child; the value never appears in `run_manifest.json`, snapshots, the database, or `events.jsonl` (test greps them).
-- [ ] **1.7 `standard_io` pack.** Demo ops: `AskFooOrWoo`, `Echo`, `Concat`, `ReadText`, `WriteText`.
+- [x] **1.7 `standard_io` pack.** Demo ops: `AskFooOrWoo`, `Echo`, `Concat`, `ReadText`, `WriteText`.
   Accept: `examples/workflows/foo_or_woo.yaml` runs end to end with real child processes and a real `uv.lock`.
 
 ## Phase 2: Registry and validation
