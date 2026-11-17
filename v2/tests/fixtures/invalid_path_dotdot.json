@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "inputs": {
+    "doc": {
+      "kind": "file",
+      "path": "inputs/../secret.txt",
+      "sha256": "abc123",
+      "size_bytes": 12
+    }
+  },
+  "checkpoint_answers": {}
+}

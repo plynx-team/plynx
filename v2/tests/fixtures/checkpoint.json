@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "checkpoint_id": "cp_0",
+  "question": "foo or woo?",
+  "options": [
+    "foo",
+    "woo"
+  ],
+  "allow_freeform": false
+}
