@@ -147,6 +147,7 @@ def test_plynx_sdk_imports_only_stdlib() -> None:
 import sys
 import plynx_sdk
 import plynx_sdk.checkpoint
+import plynx_sdk.harness
 import plynx_sdk.op
 import plynx_sdk.protocol
 import plynx_sdk.types
