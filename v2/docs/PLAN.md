@@ -22,7 +22,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: tests cover first-answer-wins, `seq` ordering under two writers (processes), and WAL access from two processes.
 - [x] **0.7 Executor protocol, fake executor, real scheduler.** `engine/executor.py` (`Executor.run`, `Executor.launch` raising `NotImplementedError`), `engine/fake_executor.py` (scripted results, delays, failures, one checkpoint), `engine/scheduler.py` (`graphlib` + asyncio + semaphore, statuses, `BLOCKED`, events written to the store).
   Accept: a 4-node diamond runs; a failing node blocks only its dependents while the other branch finishes; `concurrency=1` never overlaps two nodes; events arrive in a valid order (`PENDING` -> `RUNNING` -> terminal).
-- [ ] **0.8 CLI `run` (skeleton).** `plynx run <workflow>` wires loader, validator, scheduler, store, and an executor factory that returns the fake executor.
+- [x] **0.8 CLI `run` (skeleton).** `plynx run <workflow>` wires loader, validator, scheduler, store, and an executor factory that returns the fake executor.
   Accept: `plynx run examples/workflows/foo_or_woo.yaml` exits 0, prints one line per node status, leaves a run directory, `runs`/`node_runs` rows, and `events.jsonl`.
 - [ ] **0.9 Server skeleton.** FastAPI app: `GET /health`, `GET /runs/{id}`, `POST /runs`, `GET /runs/{id}/stream` (tails `events.jsonl`, supports `Last-Event-ID`).
   Accept: a test starts a run with the CLI in another process and the stream delivers the same ordered events; reconnect with `Last-Event-ID` returns only later events.

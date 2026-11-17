@@ -107,6 +107,7 @@ class Scheduler:
         *,
         workflow_path: str = "workflow.yaml",
         workflow_bytes: bytes | None = None,
+        layout_bytes: bytes | None = None,
         run_id: str | None = None,
         options: SchedulerOptions | None = None,
     ) -> RunState:
@@ -126,6 +127,7 @@ class Scheduler:
             self.store.create_run,
             workflow_path=workflow_path,
             workflow_bytes=raw_wf,
+            layout_bytes=layout_bytes,
             node_ids=node_ids,
             run_inputs=opts.run_inputs,
             run_id=run_id,

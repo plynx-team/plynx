@@ -2,12 +2,58 @@
 
 from __future__ import annotations
 
+import asyncio
+import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import click
+from pydantic import ValidationError
 
-from plynx.workflow.validator import validate_workflow_file
+from plynx.api_models import NodeStatus, RunStatus
+from plynx.engine import Scheduler, SchedulerOptions, create_executor
+from plynx.registry import FakeRegistry
+from plynx.store import RunStore
+from plynx.workflow.models import load_workflow
+from plynx.workflow.validator import validate_workflow, validate_workflow_file
+
+
+def find_workspace_root(start: Path | None = None) -> Path:
+    """Return the nearest ancestor containing ``.plynx/``, or ``start`` (default cwd)."""
+    base = (start or Path.cwd()).resolve()
+    for candidate in (base, *base.parents):
+        if (candidate / ".plynx").is_dir():
+            return candidate
+    return base
+
+
+def _parse_key_value(pair: str, *, flag: str) -> tuple[str, str]:
+    if "=" not in pair:
+        raise click.BadParameter(f"Expected KEY=VALUE for {flag}, got {pair!r}")
+    key, _, value = pair.partition("=")
+    if not key.strip():
+        raise click.BadParameter(f"Empty key in {pair!r} for {flag}")
+    return key.strip(), value
+
+
+def _parse_scalar_value(raw: str) -> Any:
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return raw
+    if isinstance(parsed, (int, float, bool, list, dict)):
+        return parsed
+    return raw
+
+
+def _relative_workflow_path(workflow: Path, workspace_root: Path) -> str:
+    resolved_wf = workflow.resolve()
+    try:
+        rel = resolved_wf.relative_to(workspace_root.resolve())
+        return rel.as_posix()
+    except ValueError:
+        return workflow.as_posix()
 
 
 @click.group()
@@ -29,3 +75,121 @@ def validate_cmd(workflow: Path) -> None:
     if errors:
         sys.exit(1)
     click.echo(f"OK: {workflow}")
+
+
+@main.command("run")
+@click.argument("workflow", type=click.Path(path_type=Path))
+@click.option("set_pairs", "--set", multiple=True, help="Set scalar input (node.port=value).")
+@click.option("input_pairs", "--input", multiple=True, help="Set file/dir input (node.port=path).")
+@click.option(
+    "answers_file",
+    "--answers",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="JSON file of checkpoint answers ({'node.cp_n': 'value'}).",
+)
+@click.option(
+    "answer_pairs",
+    "--answer",
+    multiple=True,
+    help="Set checkpoint answer (node.cp_n=value).",
+)
+@click.option("--concurrency", type=int, default=None, help="Maximum concurrent nodes.")
+@click.option(
+    "--non-interactive",
+    is_flag=True,
+    default=False,
+    help="Exit 2 instead of prompting on open checkpoints or stage gates.",
+)
+@click.option("--no-cache", is_flag=True, default=False, help="Bypass the content cache.")
+def run_cmd(
+    workflow: Path,
+    set_pairs: tuple[str, ...],
+    input_pairs: tuple[str, ...],
+    answers_file: Path | None,
+    answer_pairs: tuple[str, ...],
+    concurrency: int | None,
+    non_interactive: bool,
+    no_cache: bool,
+) -> None:
+    """Execute a workflow in-process."""
+    if not workflow.is_file():
+        click.echo(f"error: workflow file not found: {workflow}", err=True)
+        sys.exit(1)
+
+    registry = FakeRegistry()
+    try:
+        wf_model = load_workflow(workflow)
+    except (ValidationError, ValueError, OSError) as exc:
+        click.echo(f"error: {exc}", err=True)
+        sys.exit(1)
+
+    issues = validate_workflow(wf_model, registry)
+    errors = [issue for issue in issues if issue.severity == "error"]
+    if errors:
+        for issue in errors:
+            click.echo(f"{issue.severity}: {issue.message}", err=True)
+        sys.exit(1)
+
+    run_inputs: dict[str, Any] = {}
+    for pair in set_pairs:
+        key, raw_val = _parse_key_value(pair, flag="--set")
+        run_inputs[key] = _parse_scalar_value(raw_val)
+    for pair in input_pairs:
+        key, path_val = _parse_key_value(pair, flag="--input")
+        run_inputs[key] = path_val
+
+    answers: dict[str, str] = {}
+    if answers_file is not None:
+        if not answers_file.is_file():
+            click.echo(f"error: answers file not found: {answers_file}", err=True)
+            sys.exit(1)
+        loaded_answers = json.loads(answers_file.read_text(encoding="utf-8"))
+        if not isinstance(loaded_answers, dict):
+            click.echo("error: --answers file must contain a JSON object", err=True)
+            sys.exit(1)
+        for k, v in loaded_answers.items():
+            answers[str(k)] = str(v)
+
+    for pair in answer_pairs:
+        key, val = _parse_key_value(pair, flag="--answer")
+        answers[key] = val
+
+    workspace_root = find_workspace_root()
+    store = RunStore(workspace_root)
+    executor = create_executor(workspace_root)
+    scheduler = Scheduler(store, executor, registry)
+
+    workflow_bytes = workflow.read_bytes()
+    sidecar = workflow.with_name(f".{workflow.stem}.layout.json")
+    layout_bytes = sidecar.read_bytes() if sidecar.is_file() else None
+    wf_rel_path = _relative_workflow_path(workflow, workspace_root)
+
+    def _print_node_status(node_id: str, status: NodeStatus, _attempt: int) -> None:
+        click.echo(f"{node_id} {status.value}")
+
+    opts = SchedulerOptions(
+        concurrency=concurrency,
+        run_inputs=run_inputs,
+        answers=answers,
+        non_interactive=non_interactive,
+        no_cache=no_cache,
+        on_node_status=_print_node_status,
+    )
+    final_state = asyncio.run(
+        scheduler.run(
+            wf_model,
+            workflow_path=wf_rel_path,
+            workflow_bytes=workflow_bytes,
+            layout_bytes=layout_bytes,
+            options=opts,
+        )
+    )
+
+    if final_state.status == RunStatus.SUCCESS:
+        sys.exit(0)
+    if final_state.status == RunStatus.WAITING_FOR_USER:
+        sys.exit(2)
+    if final_state.status == RunStatus.CANCELED:
+        sys.exit(130)
+    sys.exit(1)

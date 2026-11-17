@@ -1,5 +1,7 @@
 """Workflow execution engine: executor protocol, fake executor, and DAG scheduler."""
 
+from pathlib import Path
+
 from plynx.engine.executor import (
     ExecutionRequest,
     Executor,
@@ -13,6 +15,13 @@ from plynx.engine.fake_executor import (
 )
 from plynx.engine.scheduler import Scheduler, SchedulerOptions
 
+
+def create_executor(workspace_root: Path | None = None) -> Executor:
+    """Return the default ``Executor`` instance (``FakeExecutor`` in Phase 0)."""
+    _ = workspace_root
+    return FakeExecutor()
+
+
 __all__ = [
     "ExecutionRequest",
     "Executor",
@@ -23,4 +32,5 @@ __all__ = [
     "NodeResult",
     "Scheduler",
     "SchedulerOptions",
+    "create_executor",
 ]
