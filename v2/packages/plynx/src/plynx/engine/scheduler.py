@@ -13,9 +13,11 @@ from typing import Any
 
 from plynx_sdk.protocol import (
     CheckpointManifest,
+    InputFileValue,
     InputsManifest,
     OutputValue,
     ResultManifest,
+    ScalarValue,
 )
 
 from plynx.api_models import (
@@ -29,6 +31,10 @@ from plynx.api_models import (
 )
 from plynx.cas import (
     BlobStore,
+    compute_cache_key,
+    compute_cache_key_raw,
+    compute_inputs_hash,
+    compute_params_hash,
     ingest_outputs,
     materialize_inputs,
     write_result_manifest,
@@ -155,6 +161,7 @@ class Scheduler:
             *,
             attempt: int = 0,
             cache_hit: bool = False,
+            cache_key: str | None = None,
             exit_code: int | None = None,
             error: str | None = None,
             started_at: float | None = None,
@@ -167,6 +174,7 @@ class Scheduler:
                 nid,
                 status,
                 cache_hit=cache_hit,
+                cache_key=cache_key,
                 attempt=attempt,
                 exit_code=exit_code,
                 error=error,
@@ -253,15 +261,18 @@ class Scheduler:
                     if result.status == NodeStatus.SUCCESS:
                         outs = result.outputs.outputs if result.outputs is not None else {}
                         completed_outputs[nid] = dict(outs)
+                        cache_key = self._compute_node_cache_key(nid, spec, inputs_manifest)
                         await asyncio.to_thread(
                             self._ingest_and_write_result,
                             node_dir,
                             result,
                             outs,
+                            cache_key,
                         )
                         await _emit_node_status(
                             nid,
                             NodeStatus.SUCCESS,
+                            cache_key=cache_key,
                             attempt=attempt,
                             exit_code=result.exit_code,
                             started_at=result.started_at,
@@ -428,11 +439,49 @@ class Scheduler:
             db_checkpoints=db_checkpoints,
         )
 
+    def _compute_node_cache_key(
+        self,
+        node_id: str,
+        spec: NodeSpec,
+        inputs: InputsManifest,
+    ) -> str:
+        op_entry = self.registry.get(spec.op)
+        if op_entry is not None:
+            source_file = (self.store.workspace_root / op_entry.source).resolve()
+            if source_file.is_file():
+                pack_dir = None
+                if hasattr(self.registry, "discovered_packs"):
+                    discovered = self.registry.discovered_packs
+                    packs_dict = discovered() if callable(discovered) else discovered
+                    if isinstance(packs_dict, dict):
+                        pack_dir = packs_dict.get(op_entry.pack)
+                return compute_cache_key(
+                    op_entrypoint=spec.op,
+                    op_source_file=source_file,
+                    inputs=inputs,
+                    pack_dir=pack_dir,
+                )
+
+        file_and_dir = {
+            k: v.sha256 if isinstance(v, InputFileValue) else v.tree_sha256
+            for k, v in inputs.inputs.items()
+            if not isinstance(v, ScalarValue)
+        }
+        scalars = {k: v.value for k, v in inputs.inputs.items() if isinstance(v, ScalarValue)}
+        return compute_cache_key_raw(
+            op_entrypoint=spec.op,
+            file_sha256="00" * 32,
+            uv_lock_sha256="",
+            inputs_hash=compute_inputs_hash(file_and_dir),
+            params_hash=compute_params_hash(scalars, checkpoint_answers=inputs.checkpoint_answers),
+        )
+
     def _ingest_and_write_result(
         self,
         node_dir: Path,
         result: NodeResult,
         outs: Mapping[str, OutputValue],
+        cache_key: str,
     ) -> ResultManifest:
         result_outputs = ingest_outputs(
             outs,
@@ -441,7 +490,7 @@ class Scheduler:
         )
         result_manifest = ResultManifest(
             status="SUCCESS",
-            cache_key="fake",
+            cache_key=cache_key,
             cache_hit=False,
             started_at=result.started_at,
             finished_at=result.finished_at,

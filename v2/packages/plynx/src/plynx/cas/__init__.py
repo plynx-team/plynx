@@ -8,6 +8,13 @@ from plynx.cas.blob_store import (
     make_readonly,
     make_writable,
 )
+from plynx.cas.cache_key import (
+    canonical_json,
+    compute_cache_key,
+    compute_cache_key_raw,
+    compute_inputs_hash,
+    compute_params_hash,
+)
 from plynx.cas.ingest import (
     compute_tree_hash,
     ingest_directory,
@@ -25,6 +32,11 @@ from plynx.cas.materialize import (
 
 __all__ = [
     "BlobStore",
+    "canonical_json",
+    "compute_cache_key",
+    "compute_cache_key_raw",
+    "compute_inputs_hash",
+    "compute_params_hash",
     "compute_tree_hash",
     "hash_bytes",
     "hash_file",

@@ -81,7 +81,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: directory with nested files round-trips; `tree_sha256` matches the PROTOCOL.md definition.
 - [x] **3.3 Materialize inputs.** Build `inputs/<port>/<filename>` as read-only hard links or copies; write `inputs.json`.
   Accept: a node that tries to write to an input fails; the file extension is preserved.
-- [ ] **3.4 Cache key.** Exact formula from PROTOCOL.md section 6.
+- [x] **3.4 Cache key.** Exact formula from PROTOCOL.md section 6.
   Accept: golden test with a fixed expected hash; each component change alters the key; a change in an unrelated file of the pack does not.
 - [ ] **3.5 Cache hits.** Lookup in fresh runs for `CACHEABLE` ops; `--no-cache`; missing blob is a miss.
   Accept: second run of the same workflow reports `cache_hit = true` for all nodes and starts no child process (test counts spawns); deleting a blob turns that node into a miss without an error.
