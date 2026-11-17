@@ -18,6 +18,7 @@ import sys
 from pathlib import Path
 
 ALLOWED_NEW_FILE_PATTERN = ".github/workflows/v2-*.yml"
+ALLOWED_AGENT_PATTERNS = (".agents/*", ".agents/**", "AGENTS.md")
 DEFAULT_BASE = "master"
 
 
@@ -47,6 +48,8 @@ def find_violations(project_root: Path, base: str = DEFAULT_BASE) -> list[str]:
         if path.startswith(prefix):
             continue
         if status == "A" and fnmatch.fnmatchcase(path, ALLOWED_NEW_FILE_PATTERN):
+            continue
+        if any(fnmatch.fnmatchcase(path, pat) for pat in ALLOWED_AGENT_PATTERNS):
             continue
         violations.append(f"{status} {path}")
     return violations

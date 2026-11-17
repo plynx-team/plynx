@@ -16,6 +16,12 @@ from plynx.cas.ingest import (
     materialize_directory,
     write_result_manifest,
 )
+from plynx.cas.materialize import (
+    materialize_input_directory,
+    materialize_input_file,
+    materialize_inputs,
+    safe_rmtree,
+)
 
 __all__ = [
     "BlobStore",
@@ -29,5 +35,9 @@ __all__ = [
     "make_readonly",
     "make_writable",
     "materialize_directory",
+    "materialize_input_directory",
+    "materialize_input_file",
+    "materialize_inputs",
+    "safe_rmtree",
     "write_result_manifest",
 ]
