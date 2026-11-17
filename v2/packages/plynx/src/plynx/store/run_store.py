@@ -777,18 +777,21 @@ class RunStore:
 
     def resolve_run_id(self, prefix: str) -> str:
         """Resolve a unique run ID prefix, or raise RunNotFoundError / AmbiguousRunIdError."""
+        cleaned = prefix.strip()
+        if not cleaned:
+            raise RunNotFoundError("Run ID prefix must not be empty")
         with self._connect() as conn:
             rows = conn.execute(
-                "SELECT id FROM runs WHERE id LIKE ? ORDER BY id",
-                (f"{prefix}%",),
+                "SELECT id FROM runs WHERE substr(id, 1, length(?)) = ? ORDER BY id",
+                (cleaned, cleaned),
             ).fetchall()
         matches = [str(r["id"]) for r in rows]
         if not matches:
             raise RunNotFoundError(f"No run matching {prefix!r}")
-        if prefix in matches:
-            return prefix
+        if cleaned in matches:
+            return cleaned
         if len(matches) > 1:
-            raise AmbiguousRunIdError(prefix, matches)
+            raise AmbiguousRunIdError(cleaned, matches)
         return matches[0]
 
     def get_cache_entry(self, cache_key: str) -> str | None:

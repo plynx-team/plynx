@@ -49,6 +49,19 @@ def _relative_workflow_path(workflow: Path, workspace_root: Path) -> str:
         return workflow.as_posix()
 
 
+def _resolve_run_id_or_exit(store: RunStore, prefix: str) -> str:
+    try:
+        return store.resolve_run_id(prefix)
+    except AmbiguousRunIdError as exc:
+        click.echo(f"error: ambiguous run ID prefix {exc.prefix!r}; candidates:", err=True)
+        for candidate in exc.candidates:
+            click.echo(f"  {candidate}", err=True)
+        sys.exit(1)
+    except RunNotFoundError as exc:
+        click.echo(f"error: {exc}", err=True)
+        sys.exit(1)
+
+
 @click.group()
 def main() -> None:
     """PLynx v2 local-first workflow engine."""
@@ -234,16 +247,7 @@ def resume_cmd(
 
     workspace_root = find_workspace_root()
     store = RunStore(workspace_root)
-    try:
-        resolved_id = store.resolve_run_id(run_id)
-    except AmbiguousRunIdError as exc:
-        click.echo(f"error: ambiguous run ID prefix {exc.prefix!r}; matches:", err=True)
-        for candidate in exc.candidates:
-            click.echo(f"  {candidate}", err=True)
-        sys.exit(1)
-    except RunNotFoundError as exc:
-        click.echo(f"error: {exc}", err=True)
-        sys.exit(1)
+    resolved_id = _resolve_run_id_or_exit(store, run_id)
 
     registry = Registry(workspace_root)
     executor = create_executor(workspace_root)
@@ -355,12 +359,47 @@ def run_node_cmd(node_dir: Path, op_override: str | None) -> None:
 
 
 @main.command("runs")
-@click.option("--limit", type=int, default=20, show_default=True, help="Maximum runs to list.")
-def runs_cmd(limit: int) -> None:
-    """List recent runs, reconciling any runs whose owner process has died."""
+@click.argument("run_id", required=False, default=None)
+@click.option(
+    "--limit",
+    type=click.IntRange(min=1),
+    default=20,
+    show_default=True,
+    help="Maximum runs to list.",
+)
+def runs_cmd(run_id: str | None, limit: int) -> None:
+    """List recent runs or inspect one run by full ID or unique prefix."""
     workspace_root = find_workspace_root()
     store = RunStore(workspace_root)
     store.reconcile_dead_owners()
+
+    if run_id is not None:
+        resolved_id = _resolve_run_id_or_exit(store, run_id)
+        state = store.get_run_state(resolved_id)
+        if state is None:
+            click.echo(f"error: run {resolved_id!r} not found", err=True)
+            sys.exit(1)
+        created_str = datetime.fromtimestamp(state.created_at, tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
+        click.echo(f"Run:      {state.id}")
+        click.echo(f"Status:   {state.status.value}")
+        click.echo(f"Workflow: {state.workflow_path}")
+        click.echo(f"Created:  {created_str} UTC")
+        if state.error:
+            click.echo(f"Error:    {state.error}")
+        if state.nodes:
+            click.echo("Nodes:")
+            for nid, nstate in state.nodes.items():
+                extras: list[str] = []
+                if nstate.cache_hit:
+                    extras.append("cache_hit")
+                if nstate.attempt:
+                    extras.append(f"attempt={nstate.attempt}")
+                if nstate.error:
+                    extras.append(f"error={nstate.error}")
+                suffix = f" ({', '.join(extras)})" if extras else ""
+                click.echo(f"  {nid}: {nstate.status.value}{suffix}")
+        return
+
     runs = store.list_runs(limit=limit)
 
     if not runs:

@@ -108,7 +108,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: kill -9 the owner, the next `plynx runs` shows `FAILED`, `resume` continues.
 - [x] **4.7 `plynx run-node`.** Per PROTOCOL.md section 11.
   Accept: re-runs a failed node from its directory in a scratch copy and prints the traceback; SQLite is unchanged.
-- [ ] **4.8 `plynx runs` and prefix IDs.**
+- [x] **4.8 `plynx runs` and prefix IDs.**
   Accept: a unique prefix resolves; an ambiguous prefix lists candidates and exits 1.
 
 ## Phase 5: Server
