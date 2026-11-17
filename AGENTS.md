@@ -27,5 +27,6 @@ Plynx is a domain-agnostic platform for building and running reproducible workfl
 
 ## Rules
 
+- @[Python Rules](.agents/rules/minimaxir_python.md)
 - @[Python Rules](.agents/rules/python.md)
 - @[Knowledge Base Rules](.agents/rules/knowledge_base.md)
