@@ -24,7 +24,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: a 4-node diamond runs; a failing node blocks only its dependents while the other branch finishes; `concurrency=1` never overlaps two nodes; events arrive in a valid order (`PENDING` -> `RUNNING` -> terminal).
 - [x] **0.8 CLI `run` (skeleton).** `plynx run <workflow>` wires loader, validator, scheduler, store, and an executor factory that returns the fake executor.
   Accept: `plynx run examples/workflows/foo_or_woo.yaml` exits 0, prints one line per node status, leaves a run directory, `runs`/`node_runs` rows, and `events.jsonl`.
-- [ ] **0.9 Server skeleton.** FastAPI app: `GET /health`, `GET /runs/{id}`, `POST /runs`, `GET /runs/{id}/stream` (tails `events.jsonl`, supports `Last-Event-ID`).
+- [x] **0.9 Server skeleton.** FastAPI app: `GET /health`, `GET /runs/{id}`, `POST /runs`, `GET /runs/{id}/stream` (tails `events.jsonl`, supports `Last-Event-ID`).
   Accept: a test starts a run with the CLI in another process and the stream delivers the same ordered events; reconnect with `Last-Event-ID` returns only later events.
 - [ ] **0.10 UI skeleton.** `ui/`: Vite + React + TypeScript strict + Tailwind. One page: pick a run id, show node statuses live from the stream, using only generated types. `npm run build` writes into `packages/plynx/src/plynx/static/`. `plynx ui` serves it.
   Accept: `npm run lint`, `typecheck`, `test` pass; a vitest test feeds recorded events into the state reducer; the server returns the built `index.html` at `/`.

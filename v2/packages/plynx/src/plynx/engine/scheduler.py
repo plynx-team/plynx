@@ -123,15 +123,23 @@ class Scheduler:
             else f"version: 1\nname: {workflow.name or 'workflow'}\n".encode()
         )
         node_ids = list(workflow.nodes.keys())
-        active_run_id = await asyncio.to_thread(
-            self.store.create_run,
-            workflow_path=workflow_path,
-            workflow_bytes=raw_wf,
-            layout_bytes=layout_bytes,
-            node_ids=node_ids,
-            run_inputs=opts.run_inputs,
-            run_id=run_id,
+        existing_state = (
+            await asyncio.to_thread(self.store.get_run_state, run_id)
+            if run_id is not None
+            else None
         )
+        if existing_state is not None and run_id is not None:
+            active_run_id = run_id
+        else:
+            active_run_id = await asyncio.to_thread(
+                self.store.create_run,
+                workflow_path=workflow_path,
+                workflow_bytes=raw_wf,
+                layout_bytes=layout_bytes,
+                node_ids=node_ids,
+                run_inputs=opts.run_inputs,
+                run_id=run_id,
+            )
         event_log = self.store.event_log(active_run_id)
 
         await asyncio.to_thread(

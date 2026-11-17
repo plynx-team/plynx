@@ -5,9 +5,11 @@ description = "PLynx engine, CLI, and server."
 requires-python = ">=3.11"
 dependencies = [
     "click>=8.1",
+    "fastapi>=0.110",
     "plynx-sdk",
     "pydantic>=2.7",
     "ruamel.yaml>=0.18",
+    "uvicorn>=0.30",
 ]
 
 [project.scripts]
