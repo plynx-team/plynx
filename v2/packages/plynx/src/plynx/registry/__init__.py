@@ -6,6 +6,7 @@ from collections.abc import Iterable
 from typing import Protocol, runtime_checkable
 
 from plynx.api_models import InputPortSpec, OpEntry, OutputPortSpec
+from plynx.registry.extractor import extract_ops_from_file, extract_ops_from_source
 
 
 @runtime_checkable
@@ -168,4 +169,10 @@ class FakeRegistry:
         return [self._ops[key] for key in sorted(self._ops.keys())]
 
 
-__all__ = ["FakeRegistry", "OpRegistry", "default_fake_ops"]
+__all__ = [
+    "FakeRegistry",
+    "OpRegistry",
+    "default_fake_ops",
+    "extract_ops_from_file",
+    "extract_ops_from_source",
+]

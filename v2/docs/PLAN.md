@@ -60,7 +60,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
 
 ## Phase 2: Registry and validation
 
-- [ ] **2.1 AST extractor, class form.** Per PROTOCOL.md section 3.
+- [x] **2.1 AST extractor, class form.** Per PROTOCOL.md section 3.
   Accept: extracts title, category, cacheable, ports, defaults, docstring from fixtures without importing them (fixture imports a package that is not installed).
 - [ ] **2.2 AST extractor, function form and aliases.** `@op`, module-level TypedDict outputs, `Literal`, `Range`, same-file `Annotated` aliases, `plynx_sdk.types` aliases.
   Accept: class and function fixtures for the same op produce equal registry entries.
