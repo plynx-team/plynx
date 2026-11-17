@@ -5,10 +5,12 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
+import webbrowser
 from pathlib import Path
 from typing import Any
 
 import click
+import uvicorn
 from pydantic import ValidationError
 
 from plynx.api_models import NodeStatus, RunStatus
@@ -193,3 +195,18 @@ def run_cmd(
     if final_state.status == RunStatus.CANCELED:
         sys.exit(130)
     sys.exit(1)
+
+
+@main.command("ui")
+@click.option("--port", type=int, default=8080, show_default=True, help="Local port to bind.")
+@click.option("--no-browser", is_flag=True, default=False, help="Do not open a browser window.")
+def ui_cmd(port: int, no_browser: bool) -> None:
+    """Start the local server on 127.0.0.1 and serve the UI."""
+    from plynx.server.app import create_app
+
+    workspace_root = find_workspace_root()
+    app = create_app(workspace_root)
+    url = f"http://127.0.0.1:{port}"
+    if not no_browser:
+        webbrowser.open(url)
+    uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")

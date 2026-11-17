@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, FastAPI, Query, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 
 from plynx.api_models import (
@@ -31,6 +32,7 @@ from plynx.workflow.models import load_workflow
 from plynx.workflow.validator import validate_workflow
 
 TERMINAL_RUN_STATUSES = frozenset({RunStatus.SUCCESS, RunStatus.FAILED, RunStatus.CANCELED})
+DEFAULT_STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
 
 
 def _error_response(status_code: int, code: str, message: str) -> JSONResponse:
@@ -68,9 +70,11 @@ def create_app(
     *,
     executor_factory: Callable[[Path | None], Executor] = create_executor,
     registry: OpRegistry | None = None,
+    static_dir: Path | None = None,
 ) -> FastAPI:
     """Create and configure the PLynx FastAPI application."""
     ws_root = (workspace_root or find_workspace_root()).resolve()
+    ui_static_dir = (static_dir or DEFAULT_STATIC_DIR).resolve()
     store = RunStore(ws_root)
     op_registry: OpRegistry = FakeRegistry() if registry is None else registry
     background_tasks: set[asyncio.Task[Any]] = set()
@@ -243,4 +247,20 @@ def create_app(
 
     app.include_router(router)
     app.include_router(router, prefix="/api/v1")
+
+    @app.get("/", response_model=None)
+    async def serve_index() -> Any:
+        """Serve the built UI index.html at ``/``."""
+        index_file = ui_static_dir / "index.html"
+        if index_file.is_file():
+            return FileResponse(index_file, media_type="text/html")
+        return HTMLResponse(
+            content="<!doctype html><html><body><h1>PLynx UI not built</h1></body></html>",
+            status_code=404,
+        )
+
+    assets_dir = ui_static_dir / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
     return app

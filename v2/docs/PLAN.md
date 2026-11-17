@@ -26,7 +26,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
   Accept: `plynx run examples/workflows/foo_or_woo.yaml` exits 0, prints one line per node status, leaves a run directory, `runs`/`node_runs` rows, and `events.jsonl`.
 - [x] **0.9 Server skeleton.** FastAPI app: `GET /health`, `GET /runs/{id}`, `POST /runs`, `GET /runs/{id}/stream` (tails `events.jsonl`, supports `Last-Event-ID`).
   Accept: a test starts a run with the CLI in another process and the stream delivers the same ordered events; reconnect with `Last-Event-ID` returns only later events.
-- [ ] **0.10 UI skeleton.** `ui/`: Vite + React + TypeScript strict + Tailwind. One page: pick a run id, show node statuses live from the stream, using only generated types. `npm run build` writes into `packages/plynx/src/plynx/static/`. `plynx ui` serves it.
+- [x] **0.10 UI skeleton.** `ui/`: Vite + React + TypeScript strict + Tailwind. One page: pick a run id, show node statuses live from the stream, using only generated types. `npm run build` writes into `packages/plynx/src/plynx/static/`. `plynx ui` serves it.
   Accept: `npm run lint`, `typecheck`, `test` pass; a vitest test feeds recorded events into the state reducer; the server returns the built `index.html` at `/`.
 - [ ] **0.11 Skeleton end-to-end test.** `tests/e2e/test_skeleton.py` runs the CLI as a subprocess on `foo_or_woo.yaml`: with `--non-interactive` the fake checkpoint gives exit 2; with `--answer pick.cp_0=foo` it gives exit 0 and the `echo` node receives `foo`.
   Accept: passes on Linux, macOS, and Windows. This test is the contract for all later phases.

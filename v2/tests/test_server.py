@@ -181,3 +181,31 @@ def test_post_runs_and_stream(tmp_path: Path) -> None:
             assert state.status == RunStatus.SUCCESS
 
     asyncio.run(_run())
+
+
+def test_server_returns_built_index_html_at_root(tmp_path: Path) -> None:
+    """GET / returns the built UI index.html from packages/plynx/src/plynx/static/."""
+    from plynx.server.app import DEFAULT_STATIC_DIR
+
+    static_dir = DEFAULT_STATIC_DIR
+    if not (static_dir / "index.html").is_file():
+        static_dir = tmp_path / "static"
+        static_dir.mkdir(parents=True)
+        (static_dir / "index.html").write_text(
+            "<!doctype html><html><head><title>PLynx v2</title></head>"
+            '<body><div id="root"></div></body></html>\n',
+            encoding="utf-8",
+        )
+
+    app = create_app(tmp_path, static_dir=static_dir)
+
+    async def _check() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.get("/")
+            assert resp.status_code == 200
+            assert "text/html" in resp.headers.get("content-type", "")
+            assert '<div id="root"></div>' in resp.text
+            assert "PLynx v2" in resp.text
+
+    asyncio.run(_check())
