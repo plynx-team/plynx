@@ -98,6 +98,7 @@ class Scheduler:
         options: SchedulerOptions | None = None,
     ) -> RunState:
         """Resume an existing failed, canceled, or waiting run, taking ownership."""
+        await asyncio.to_thread(self.store.reconcile_dead_owners)
         resolved_id = await asyncio.to_thread(self.store.resolve_run_id, run_id)
         existing_state = await asyncio.to_thread(self.store.claim_run_for_resume, resolved_id)
 

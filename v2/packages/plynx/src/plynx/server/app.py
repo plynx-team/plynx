@@ -76,6 +76,7 @@ def create_app(
     ws_root = (workspace_root or find_workspace_root()).resolve()
     ui_static_dir = (static_dir or DEFAULT_STATIC_DIR).resolve()
     store = RunStore(ws_root)
+    store.reconcile_dead_owners()
     op_registry: OpRegistry = Registry(ws_root) if registry is None else registry
     background_tasks: set[asyncio.Task[Any]] = set()
 

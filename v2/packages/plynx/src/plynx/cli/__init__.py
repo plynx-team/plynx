@@ -6,6 +6,7 @@ import asyncio
 import json
 import sys
 import webbrowser
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -288,6 +289,44 @@ def resume_cmd(
     if final_state.status == RunStatus.CANCELED:
         sys.exit(130)
     sys.exit(1)
+
+
+@main.command("runs")
+@click.option("--limit", type=int, default=20, show_default=True, help="Maximum runs to list.")
+def runs_cmd(limit: int) -> None:
+    """List recent runs, reconciling any runs whose owner process has died."""
+    workspace_root = find_workspace_root()
+    store = RunStore(workspace_root)
+    store.reconcile_dead_owners()
+    runs = store.list_runs(limit=limit)
+
+    if not runs:
+        click.echo("No runs found.")
+        return
+
+    headers = ("ID", "STATUS", "WORKFLOW", "CREATED", "ERROR")
+    rows: list[tuple[str, str, str, str, str]] = []
+    for run in runs:
+        created_str = datetime.fromtimestamp(run.created_at, tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
+        rows.append(
+            (
+                run.id,
+                run.status.value,
+                run.workflow_path,
+                created_str,
+                run.error or "-",
+            )
+        )
+
+    widths = [len(h) for h in headers]
+    for row in rows:
+        for idx, cell in enumerate(row):
+            widths[idx] = max(widths[idx], len(cell))
+
+    click.echo("  ".join(h.ljust(widths[i]) for i, h in enumerate(headers)))
+    click.echo("  ".join("-" * widths[i] for i in range(len(headers))))
+    for row in rows:
+        click.echo("  ".join(cell.ljust(widths[i]) for i, cell in enumerate(row)))
 
 
 @main.command("ops")

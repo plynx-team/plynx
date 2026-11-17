@@ -9,7 +9,7 @@ import secrets
 import sqlite3
 import tempfile
 import time
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
@@ -19,8 +19,10 @@ from plynx.api_models import (
     CheckpointState,
     NodeRunState,
     NodeStatus,
+    NodeStatusData,
     RunState,
     RunStatus,
+    RunStatusData,
     RunSummary,
     StageGateState,
     StageGateStatus,
@@ -415,6 +417,107 @@ class RunStore:
         state = self.get_run_state(run_id)
         assert state is not None
         return state
+
+    def reconcile_dead_owners(
+        self,
+        *,
+        is_alive: Callable[[int], bool] | None = None,
+    ) -> list[str]:
+        """Mark active runs whose ``owner_pid`` is gone as ``FAILED`` (``engine_died``)."""
+        if is_alive is None:
+            from plynx.engine.procgroup import is_pid_alive
+
+            check_alive: Callable[[int], bool] = is_pid_alive
+        else:
+            check_alive = is_alive
+
+        with self._connect() as conn:
+            candidates = conn.execute(
+                """
+                SELECT id, owner_pid
+                FROM runs
+                WHERE status IN ('RUNNING', 'WAITING_FOR_USER') AND owner_pid IS NOT NULL
+                """
+            ).fetchall()
+
+        reaped: list[str] = []
+        now = time.time()
+        for cand in candidates:
+            run_id = str(cand["id"])
+            owner_pid = int(cand["owner_pid"])
+            if check_alive(owner_pid):
+                continue
+
+            orphaned_nodes: list[tuple[str, int]] = []
+            transitioned = False
+            with self._connect() as conn:
+                conn.execute("BEGIN IMMEDIATE;")
+                try:
+                    cursor = conn.execute(
+                        """
+                        UPDATE runs
+                        SET status = 'FAILED',
+                            error = 'engine_died',
+                            finished_at = ?,
+                            owner_pid = NULL
+                        WHERE id = ? AND owner_pid = ? AND status IN ('RUNNING', 'WAITING_FOR_USER')
+                        """,
+                        (now, run_id, owner_pid),
+                    )
+                    if cursor.rowcount == 1:
+                        transitioned = True
+                        node_rows = conn.execute(
+                            """
+                            SELECT node_id, attempt
+                            FROM node_runs
+                            WHERE run_id = ? AND status IN ('RUNNING', 'BUILDING_ENVIRONMENT')
+                            """,
+                            (run_id,),
+                        ).fetchall()
+                        for nrow in node_rows:
+                            orphaned_nodes.append((str(nrow["node_id"]), int(nrow["attempt"])))
+                        if orphaned_nodes:
+                            conn.execute(
+                                """
+                                UPDATE node_runs
+                                SET status = 'FAILED',
+                                    error = 'engine_died',
+                                    finished_at = ?
+                                WHERE run_id = ? AND status IN ('RUNNING', 'BUILDING_ENVIRONMENT')
+                                """,
+                                (now, run_id),
+                            )
+                    conn.execute("COMMIT;")
+                except BaseException:
+                    conn.execute("ROLLBACK;")
+                    raise
+
+            if transitioned:
+                reaped.append(run_id)
+                if self.run_dir(run_id).is_dir():
+                    event_log = self.event_log(run_id)
+                    for nid, attempt in orphaned_nodes:
+                        event_log.append(
+                            "node_status",
+                            NodeStatusData(
+                                run_id=run_id,
+                                node_id=nid,
+                                status=NodeStatus.FAILED,
+                                cache_hit=False,
+                                attempt=attempt,
+                                error="engine_died",
+                            ),
+                        )
+                    event_log.append(
+                        "run_status",
+                        RunStatusData(
+                            run_id=run_id,
+                            status=RunStatus.FAILED,
+                            error="engine_died",
+                        ),
+                    )
+
+        return reaped
 
     def request_cancel(self, run_id: str) -> None:
         """Set ``cancel_requested = 1`` on a run."""
