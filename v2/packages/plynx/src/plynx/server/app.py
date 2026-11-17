@@ -5,7 +5,8 @@ from __future__ import annotations
 import asyncio
 import json
 import time
-from collections.abc import AsyncIterator, Callable, Mapping
+from collections.abc import AsyncIterator, Callable, Mapping, MutableMapping
+from io import StringIO
 from pathlib import Path
 from typing import Any
 
@@ -32,6 +33,8 @@ from plynx.api_models import (
     RunStatusEvent,
     StageGateStatus,
     UploadResponse,
+    ValidateWorkflowRequest,
+    ValidateWorkflowResponse,
     WorkflowDocument,
     WorkflowInputSpec,
     WorkflowLayout,
@@ -46,8 +49,9 @@ from plynx.store import (
     RunStore,
     StoreError,
     atomic_write_bytes,
+    atomic_write_text,
 )
-from plynx.workflow.models import load_workflow
+from plynx.workflow.models import NodeRef, load_workflow
 from plynx.workflow.validator import get_unbound_run_inputs, validate_workflow
 
 TERMINAL_RUN_STATUSES = frozenset({RunStatus.SUCCESS, RunStatus.FAILED, RunStatus.CANCELED})
@@ -134,6 +138,50 @@ def _discover_workflows(workspace_root: Path) -> list[WorkflowListItem]:
 
     items.sort(key=lambda it: it.path)
     return items
+
+
+def _workflow_to_dict(wf: Any) -> dict[str, Any]:
+    out: dict[str, Any] = {"version": wf.version}
+    if wf.name:
+        out["name"] = wf.name
+    if wf.description:
+        out["description"] = wf.description
+    if wf.concurrency is not None:
+        out["concurrency"] = wf.concurrency
+
+    custom_stages: dict[str, Any] = {}
+    for sid, stage in wf.stages.items():
+        if sid == "main" and not stage.require_approval and (stage.title in (None, "Workflow")):
+            continue
+        s_data: dict[str, Any] = {}
+        if stage.title and stage.title != sid:
+            s_data["title"] = stage.title
+        if stage.require_approval:
+            s_data["require_approval"] = True
+        custom_stages[sid] = s_data
+    if custom_stages:
+        out["stages"] = custom_stages
+
+    nodes_out: dict[str, Any] = {}
+    for nid, node in wf.nodes.items():
+        n_data: dict[str, Any] = {"op": node.op}
+        if node.title:
+            n_data["title"] = node.title
+        if node.stage and node.stage != "main":
+            n_data["stage"] = node.stage
+        inputs_out: dict[str, Any] = {}
+        for port, val in node.inputs.items():
+            if isinstance(val, NodeRef):
+                inputs_out[port] = f"${val.from_node}.{val.output}"
+            elif isinstance(val, str) and val.startswith("$"):
+                inputs_out[port] = f"${val}"
+            else:
+                inputs_out[port] = val
+        if inputs_out:
+            n_data["inputs"] = inputs_out
+        nodes_out[nid] = n_data
+    out["nodes"] = nodes_out
+    return out
 
 
 def create_app(
@@ -233,6 +281,95 @@ def create_app(
                 layout = None
 
         return WorkflowDocument(workflow=wf_model, layout=layout)
+
+    @router.post("/workflows/validate", response_model=ValidateWorkflowResponse)
+    async def validate_workflow_endpoint(
+        body: ValidateWorkflowRequest,
+    ) -> ValidateWorkflowResponse:
+        """Statically validate a workflow against the registered ops."""
+        issues = await asyncio.to_thread(validate_workflow, body.workflow, op_registry)
+        return ValidateWorkflowResponse(issues=issues)
+
+    @router.put("/workflows/{path:path}", response_model=WorkflowDocument)
+    async def save_workflow_endpoint(path: str, body: WorkflowDocument) -> Any:
+        """Validate and save a workflow document and optional layout sidecar."""
+        wf_candidate = (ws_root / path).resolve()
+        try:
+            wf_candidate.relative_to(ws_root)
+        except ValueError:
+            return _error_response(
+                400,
+                "invalid_workflow_path",
+                "workflow path must stay inside the workspace root",
+            )
+
+        if not path.endswith((".yaml", ".yml")):
+            return _error_response(
+                400,
+                "invalid_workflow_path",
+                "Workflow path must end with .yaml or .yml",
+            )
+
+        # 1. Validate before writing anything to disk
+        issues = validate_workflow(body.workflow, op_registry)
+        errors = [i for i in issues if i.severity == "error"]
+        if errors:
+            msg = "; ".join(i.message for i in errors)
+            return _error_response(422, "validation_failed", msg)
+
+        # 2. Serialize YAML preserving comments and formatting
+        def _render_yaml() -> str:
+            yaml = YAML()
+            yaml.preserve_quotes = True
+            if wf_candidate.is_file():
+                try:
+                    existing_wf = load_workflow(wf_candidate)
+                    if existing_wf == body.workflow:
+                        data = yaml.load(wf_candidate.read_text(encoding="utf-8"))
+                        buf = StringIO()
+                        yaml.dump(data, buf)
+                        return buf.getvalue()
+                except Exception:
+                    pass
+
+                try:
+                    data = yaml.load(wf_candidate.read_text(encoding="utf-8"))
+                    new_dict = _workflow_to_dict(body.workflow)
+                    if isinstance(data, MutableMapping):
+                        for k, v in new_dict.items():
+                            data[k] = v
+                        for k in list(data.keys()):
+                            if k not in new_dict:
+                                del data[k]
+                    else:
+                        data = new_dict
+                    buf = StringIO()
+                    yaml.dump(data, buf)
+                    return buf.getvalue()
+                except Exception:
+                    pass
+
+            new_dict = _workflow_to_dict(body.workflow)
+            buf = StringIO()
+            yaml.dump(new_dict, buf)
+            return buf.getvalue()
+
+        yaml_text = await asyncio.to_thread(_render_yaml)
+        await asyncio.to_thread(atomic_write_text, wf_candidate, yaml_text)
+
+        # 3. Write layout sidecar if provided
+        sidecar = wf_candidate.with_name(f".{wf_candidate.stem}.layout.json")
+        if body.layout is not None:
+            sidecar_json = (
+                json.dumps(
+                    body.layout.model_dump(mode="json", by_alias=True),
+                    indent=2,
+                )
+                + "\n"
+            )
+            await asyncio.to_thread(atomic_write_text, sidecar, sidecar_json)
+
+        return WorkflowDocument(workflow=body.workflow, layout=body.layout)
 
     @router.get("/runs", response_model=RunListResponse)
     async def list_runs(

@@ -14,6 +14,7 @@ from pathlib import Path
 import httpx
 from plynx.api_models import (
     NodeLogEvent,
+    NodePosition,
     OpEntry,
     RunEvent,
     RunListResponse,
@@ -21,8 +22,11 @@ from plynx.api_models import (
     RunStatus,
     RunStatusData,
     UploadResponse,
+    ValidateWorkflowResponse,
+    Viewport,
     WorkflowDocument,
     WorkflowInputSpec,
+    WorkflowLayout,
     WorkflowListItem,
 )
 from plynx.server import create_app
@@ -821,5 +825,96 @@ nodes:
             missing_out = await client.get(f"/runs/{run_id}/nodes/writer/outputs/nonexistent")
             assert missing_out.status_code == 404
             assert missing_out.json()["error"]["code"] == "output_not_found"
+
+    asyncio.run(_test())
+
+
+def test_workflow_save_round_trip_and_validation(tmp_path: Path) -> None:
+    """PUT /workflows/{path} keeps comments on unchanged save; rejects invalid workflows."""
+    wf_dir = tmp_path / "workflows"
+    wf_dir.mkdir(parents=True)
+    wf_file = wf_dir / "foo_or_woo.yaml"
+    wf_file.write_text(
+        """# Workflow comment
+version: 1
+name: foo_or_woo # inline name comment
+nodes:
+  pick:
+    # node comment
+    op: standard_io/demo:AskFooOrWoo
+    inputs:
+      prompt: "foo or woo?"
+""",
+        encoding="utf-8",
+    )
+
+    orig_bytes = wf_file.read_bytes()
+    assert b"# Workflow comment" in orig_bytes
+
+    app = create_app(tmp_path)
+
+    async def _test() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            # 1. Fetch document via GET
+            get_resp = await client.get("/workflows/workflows/foo_or_woo.yaml")
+            assert get_resp.status_code == 200
+            doc = WorkflowDocument.model_validate(get_resp.json())
+
+            # 2. Save unchanged workflow with new layout sidecar
+            doc.layout = WorkflowLayout(
+                nodes={"pick": NodePosition(x=100.5, y=200.5)},
+                viewport=Viewport(x=10.0, y=20.0, zoom=1.5),
+            )
+            put_resp = await client.put(
+                "/workflows/workflows/foo_or_woo.yaml",
+                json=doc.model_dump(mode="json", by_alias=True),
+            )
+            assert put_resp.status_code == 200
+
+            # Verify byte-identical YAML file (comments kept!)
+            saved_bytes = wf_file.read_bytes()
+            assert saved_bytes == orig_bytes
+
+            # Verify layout sidecar written
+            sidecar = wf_dir / ".foo_or_woo.layout.json"
+            assert sidecar.is_file()
+            sidecar_data = json.loads(sidecar.read_text(encoding="utf-8"))
+            assert sidecar_data["schema"] == 1
+            assert sidecar_data["nodes"]["pick"]["x"] == 100.5
+            assert sidecar_data["viewport"]["zoom"] == 1.5
+
+            # 3. Reject invalid workflow without touching the file
+            current_bytes = wf_file.read_bytes()
+            invalid_doc = doc.model_copy(deep=True)
+            # Unknown op
+            invalid_doc.workflow.nodes["pick"].op = "standard_io/demo:UnknownOp"
+
+            invalid_resp = await client.put(
+                "/workflows/workflows/foo_or_woo.yaml",
+                json=invalid_doc.model_dump(mode="json", by_alias=True),
+            )
+            assert invalid_resp.status_code == 422
+            assert invalid_resp.json()["error"]["code"] == "validation_failed"
+
+            # File must be untouched!
+            assert wf_file.read_bytes() == current_bytes
+
+            # 4. Test POST /workflows/validate
+            val_valid = await client.post(
+                "/workflows/validate",
+                json={"workflow": doc.workflow.model_dump(mode="json")},
+            )
+            assert val_valid.status_code == 200
+            val_valid_res = ValidateWorkflowResponse.model_validate(val_valid.json())
+            assert not any(i.severity == "error" for i in val_valid_res.issues)
+
+            val_invalid = await client.post(
+                "/workflows/validate",
+                json={"workflow": invalid_doc.workflow.model_dump(mode="json")},
+            )
+            assert val_invalid.status_code == 200
+            val_invalid_res = ValidateWorkflowResponse.model_validate(val_invalid.json())
+            assert any(i.severity == "error" for i in val_invalid_res.issues)
 
     asyncio.run(_test())
