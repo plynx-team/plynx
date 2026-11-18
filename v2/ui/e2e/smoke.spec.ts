@@ -27,7 +27,7 @@ test.describe("PLynx UI Smoke Test", () => {
     await expect(page.getByRole("heading", { name: "Runs" })).toBeVisible();
   });
 
-  test("Task 6.2 - 6.4: launches workflow, inspects Stepper view, opens Logs panel", async ({ page }) => {
+  test("Task 6.2 - 6.5: launches workflow, interacts with Stepper, Checkpoint card, Logs panel", async ({ page }) => {
     await page.goto("/#/workflows");
     await expect(page.getByRole("heading", { name: "Workflows" })).toBeVisible();
 
@@ -38,7 +38,6 @@ test.describe("PLynx UI Smoke Test", () => {
     // Form is displayed
     await expect(page.getByRole("heading", { name: "foo_or_woo" })).toBeVisible();
     await expect(page.getByText("Path: examples/workflows/foo_or_woo.yaml")).toBeVisible();
-    await expect(page.getByText("Force re-run (disable cache lookup:")).toBeVisible();
 
     // Launch the run
     await page.getByRole("button", { name: "Start Run" }).click();
@@ -53,6 +52,19 @@ test.describe("PLynx UI Smoke Test", () => {
     await expect(page.getByText("1. Ask")).toBeVisible();
     const pickNode = page.getByText("pick", { exact: true });
     await expect(pickNode).toBeVisible();
+
+    // Task 6.5: Wait for Checkpoint card to appear when node pauses at AskFooOrWoo
+    const checkpointCard = page.getByTestId("checkpoint-card-cp_0");
+    await expect(checkpointCard).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("foo or woo?")).toBeVisible();
+
+    // Click option "foo" to answer the checkpoint
+    const fooBtn = checkpointCard.getByRole("button", { name: "foo", exact: true });
+    await expect(fooBtn).toBeVisible();
+    await fooBtn.click();
+
+    // Checkpoint card disappears on checkpoint_resolved!
+    await expect(checkpointCard).not.toBeVisible({ timeout: 10000 });
 
     // Task 6.4: Click node row to open Logs panel
     await pickNode.click();

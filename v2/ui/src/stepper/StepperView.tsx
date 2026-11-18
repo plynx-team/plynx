@@ -5,6 +5,7 @@ import type {
   Stage,
   WorkflowDocument,
 } from "../api/types.gen";
+import { CheckpointCard } from "./CheckpointCard";
 import { StageCard } from "./StageCard";
 
 export interface StepperViewProps {
@@ -97,6 +98,17 @@ export function StepperView({
           />
         </div>
       </div>
+
+      {/* Active Checkpoints */}
+      {runState.checkpoints
+        .filter((cp) => !cp.answered_at)
+        .map((cp) => (
+          <CheckpointCard
+            key={`${cp.node_id}-${cp.checkpoint_id}`}
+            runId={runState.id}
+            checkpoint={cp}
+          />
+        ))}
 
       {/* Stage Cards */}
       <div className="space-y-4">
