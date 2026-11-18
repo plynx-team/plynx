@@ -1,3 +1,5 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { test, expect } from "@playwright/test";
 
 test.describe("PLynx UI Smoke Test", () => {
@@ -273,5 +275,67 @@ test.describe("PLynx UI Smoke Test", () => {
     await expect(dialog).toContainText("foo");
     await dialog.getByRole("button", { name: "Close dialog" }).click();
     await expect(dialog).not.toBeVisible();
+  });
+
+  test("Task 6.12: saves workflow via PUT /workflows with layout sidecar and dirty indicator, surviving reload", async ({ page }) => {
+    const workspaceRoot = path.dirname(process.cwd());
+    const wfFile = path.join(workspaceRoot, "examples", "workflows", "foo_or_woo.yaml");
+    const sidecarFile = path.join(workspaceRoot, "examples", "workflows", ".foo_or_woo.layout.json");
+    const originalYaml = fs.readFileSync(wfFile, "utf-8");
+    const hadSidecar = fs.existsSync(sidecarFile);
+    const originalSidecar = hadSidecar ? fs.readFileSync(sidecarFile, "utf-8") : null;
+
+    try {
+      await page.goto("/#/editor/examples/workflows/foo_or_woo.yaml");
+      await expect(page.getByTestId("graph-node-pick")).toBeVisible();
+
+      // Initially clean (not dirty)
+      await expect(page.getByTestId("dirty-indicator")).not.toBeVisible();
+
+      // Edit a literal -> dirty indicator appears
+      await page.getByTestId("graph-node-pick").click();
+      const promptInput = page.getByTestId("inspector-input-prompt");
+      await promptInput.fill("foo or woo saved?");
+      await expect(page.getByTestId("dirty-indicator")).toBeVisible();
+      await expect(page.getByTestId("dirty-indicator")).toContainText("Unsaved changes");
+
+      // Drag echo node slightly so coordinates are saved to sidecar
+      const echoNode = page.getByTestId("graph-node-echo");
+      const echoBox = await echoNode.boundingBox();
+      if (!echoBox) throw new Error("Missing echo bounding box");
+      await page.mouse.move(echoBox.x + echoBox.width / 2, echoBox.y + 16);
+      await page.mouse.down();
+      await page.mouse.move(echoBox.x + echoBox.width / 2 + 40, echoBox.y + 56, { steps: 6 });
+      await page.mouse.up();
+
+      // Save through PUT /workflows
+      await page.getByTestId("btn-save-workflow").click();
+      await expect(page.getByTestId("dirty-indicator")).not.toBeVisible({ timeout: 5000 });
+      await expect(page.getByTestId("save-status")).toHaveText("Saved");
+
+      // Layout sidecar exists on disk with schema: 1 and coordinates
+      expect(fs.existsSync(sidecarFile)).toBe(true);
+      const parsedSidecar = JSON.parse(fs.readFileSync(sidecarFile, "utf-8")) as {
+        schema: number;
+        nodes: Record<string, { x: number; y: number }>;
+      };
+      expect(parsedSidecar.schema).toBe(1);
+      expect(parsedSidecar.nodes.pick).toBeDefined();
+      expect(parsedSidecar.nodes.echo).toBeDefined();
+
+      // Reload page -> edited prompt and clean state survive from YAML + sidecar
+      await page.reload();
+      await expect(page.getByTestId("graph-node-pick")).toBeVisible();
+      await expect(page.getByTestId("dirty-indicator")).not.toBeVisible();
+      await page.getByTestId("graph-node-pick").click();
+      await expect(page.getByTestId("inspector-input-prompt")).toHaveValue("foo or woo saved?");
+    } finally {
+      fs.writeFileSync(wfFile, originalYaml, "utf-8");
+      if (hadSidecar && originalSidecar !== null) {
+        fs.writeFileSync(sidecarFile, originalSidecar, "utf-8");
+      } else if (fs.existsSync(sidecarFile)) {
+        fs.unlinkSync(sidecarFile);
+      }
+    }
   });
 });

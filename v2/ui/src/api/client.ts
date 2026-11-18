@@ -8,6 +8,9 @@ import type {
   RunListResponse,
   RunState,
   UploadResponse,
+  ValidateWorkflowRequest,
+  ValidateWorkflowResponse,
+  Workflow,
   WorkflowDocument,
   WorkflowInputSpec,
   WorkflowListItem,
@@ -61,6 +64,44 @@ export async function fetchWorkflow(path: string): Promise<WorkflowDocument> {
     throw new Error(`Failed to fetch workflow ${path} (${response.status})`);
   }
   return (await response.json()) as WorkflowDocument;
+}
+
+export async function saveWorkflow(
+  path: string,
+  doc: WorkflowDocument,
+): Promise<WorkflowDocument> {
+  const encodedPath = path
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+  const response = await fetch(`/api/v1/workflows/${encodedPath}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(doc),
+  });
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => null);
+    const msg =
+      errorBody?.error?.message ||
+      `Failed to save workflow ${path} (${response.status})`;
+    throw new Error(msg);
+  }
+  return (await response.json()) as WorkflowDocument;
+}
+
+export async function validateWorkflowApi(
+  workflow: Workflow,
+): Promise<ValidateWorkflowResponse> {
+  const payload: ValidateWorkflowRequest = { workflow };
+  const response = await fetch("/api/v1/workflows/validate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to validate workflow (${response.status})`);
+  }
+  return (await response.json()) as ValidateWorkflowResponse;
 }
 
 export async function fetchWorkflowInputs(

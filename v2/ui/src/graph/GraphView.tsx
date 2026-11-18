@@ -172,7 +172,9 @@ function GraphCanvasInner({
   );
 
   const handleMoveEnd: OnMoveEnd | undefined = onViewportChange
-    ? (_event, viewport) => {
+    ? (event, viewport) => {
+        // Ignore programmatic fitView updates so initial load does not mark the editor dirty
+        if (!event) return;
         onViewportChange({
           x: Math.round(viewport.x * 100) / 100,
           y: Math.round(viewport.y * 100) / 100,

@@ -139,7 +139,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
 - [x] **6.9 Graph editing: palette and nodes.** Palette grouped by `CATEGORY` with search (`/`, `Cmd+K`); add, duplicate, delete nodes.
 - [x] **6.10 Graph editing: wiring.** Drag edges between ports; reject type or media mismatches and backward stage edges with a visible reason.
 - [x] **6.11 Node inspector.** Edit literals from registry types, bind or unbind references, preview artifacts of the selected node.
-- [ ] **6.12 Save and layout.** Save through `PUT /workflows`, sidecar for coordinates, dirty indicator.
+- [x] **6.12 Save and layout.** Save through `PUT /workflows`, sidecar for coordinates, dirty indicator.
 - [ ] **6.13 Reload behavior.** Refresh during a run, during a checkpoint, and after a server restart restore the correct view from SQLite.
 
 Accept for every 6.x: the component has a vitest test; `lint`, `typecheck`, `test` pass; the feature works against a real `plynx ui` server in a Playwright smoke test (added in 6.1 and extended per task).

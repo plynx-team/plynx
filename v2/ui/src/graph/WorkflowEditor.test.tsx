@@ -10,6 +10,7 @@ vi.mock("../api/client", () => ({
   fetchOps: vi.fn(),
   fetchRuns: vi.fn().mockResolvedValue({ runs: [] }),
   fetchRunState: vi.fn(),
+  saveWorkflow: vi.fn(),
 }));
 
 import * as client from "../api/client";

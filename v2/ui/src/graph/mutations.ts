@@ -317,3 +317,30 @@ export function disconnectEdgeInWorkflow(
     },
   };
 }
+
+/**
+ * Prepare a workflow for ``PUT /api/v1/workflows/{path}``:
+ * escape literal string inputs that begin with ``$`` as ``$$`` per PROTOCOL.md section 2,
+ * while preserving ``NodeRef`` objects untouched.
+ */
+export function prepareWorkflowForSave(workflow: Workflow): Workflow {
+  const nextNodes: Record<string, NodeSpec> = {};
+  for (const [nodeId, spec] of Object.entries(workflow.nodes ?? {})) {
+    const nextInputs: Record<string, unknown> = {};
+    for (const [port, val] of Object.entries(spec.inputs ?? {})) {
+      if (typeof val === "string" && val.startsWith("$")) {
+        nextInputs[port] = `$${val}`;
+      } else {
+        nextInputs[port] = val;
+      }
+    }
+    nextNodes[nodeId] = {
+      ...spec,
+      inputs: nextInputs,
+    };
+  }
+  return {
+    ...workflow,
+    nodes: nextNodes,
+  };
+}

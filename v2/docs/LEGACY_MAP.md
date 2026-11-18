@@ -43,7 +43,7 @@ Run the legacy stack with its own tools from the repo root (`docker-compose`, `m
 - [ ] A failed node blocks only dependents (task 0.7).
 - [x] Output previews for pdf, image, csv, json, text (task 6.7).
 - [x] Parameter widgets: text, number, enum, list, code, color (task 6.11).
-- [ ] Graph editor: add node from palette, wire ports, delete, reload keeps the graph (tasks 6.9 to 6.12).
+- [x] Graph editor: add node from palette, wire ports, delete, reload keeps the graph (tasks 6.9 to 6.12).
 
 ## Copy log
 

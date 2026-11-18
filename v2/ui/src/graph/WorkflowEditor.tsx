@@ -5,6 +5,7 @@ import {
   fetchRuns,
   fetchRunState,
   fetchWorkflow,
+  saveWorkflow,
 } from "../api/client";
 import type {
   NodePosition,
@@ -25,10 +26,18 @@ import {
   disconnectEdgeInWorkflow,
   duplicateNodeInWorkflow,
   ensureLayout,
+  prepareWorkflowForSave,
 } from "./mutations";
 import { NodeInspector, type ArtifactPreviewTarget } from "./NodeInspector";
 import { OpPalette } from "./OpPalette";
 import { validateConnection } from "./validation";
+
+function serializeSnapshot(
+  workflow: Workflow | null,
+  layout: WorkflowLayout | null,
+): string {
+  return JSON.stringify({ workflow, layout });
+}
 
 function isEditableElement(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -41,6 +50,10 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   const { navigate } = useRouter();
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
   const [layout, setLayout] = useState<WorkflowLayout | null>(null);
+  const [savedSnapshot, setSavedSnapshot] = useState<string | null>(null);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [hasSavedViewport, setHasSavedViewport] = useState<boolean>(false);
   const [fitViewTrigger, setFitViewTrigger] = useState<number>(0);
   const [ops, setOps] = useState<Array<OpEntry>>([]);
@@ -70,6 +83,9 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     let active = true;
     setLoading(true);
     setError(null);
+    setSaveError(null);
+    setLastSavedAt(null);
+    setSavedSnapshot(null);
     setSelectedNodeId(undefined);
     setSelectedEdgeId(undefined);
     setWireError(null);
@@ -85,6 +101,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         const stageIds = getOrderedStageIds(doc.workflow);
         setWorkflow(doc.workflow);
         setLayout(initialLayout);
+        setSavedSnapshot(serializeSnapshot(doc.workflow, initialLayout));
         setHasSavedViewport(Boolean(doc.layout?.viewport));
         setOps(opEntries);
         setTargetStage(stageIds[stageIds.length - 1] ?? DEFAULT_STAGE_ID);
@@ -290,6 +307,38 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     setFitViewTrigger((c) => c + 1);
   }, [workflow, opsMap]);
 
+  const isDirty = useMemo(() => {
+    if (savedSnapshot === null || !workflow) return false;
+    return serializeSnapshot(workflow, layout) !== savedSnapshot;
+  }, [savedSnapshot, workflow, layout]);
+
+  const handleSave = useCallback(async () => {
+    if (!workflow || saving) return;
+    const finalLayout = ensureLayout(workflow, layout, opsMap);
+    try {
+      setSaving(true);
+      setSaveError(null);
+      const savedDoc = await saveWorkflow(workflowPath, {
+        workflow: prepareWorkflowForSave(workflow),
+        layout: finalLayout,
+      });
+      const normalizedLayout = ensureLayout(
+        savedDoc.workflow,
+        savedDoc.layout ?? finalLayout,
+        opsMap,
+      );
+      setWorkflow(savedDoc.workflow);
+      setLayout(normalizedLayout);
+      setSavedSnapshot(serializeSnapshot(savedDoc.workflow, normalizedLayout));
+      setHasSavedViewport(true);
+      setLastSavedAt(Date.now());
+    } catch (err: unknown) {
+      setSaveError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
+  }, [workflow, layout, opsMap, saving, workflowPath]);
+
   const handleNodeDragStop = useCallback(
     (nodeId: string, absX: number, absY: number) => {
       setLayout((prev) => {
@@ -298,6 +347,10 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
           nodes: {},
           viewport: { x: 0, y: 0, zoom: 1 },
         };
+        const existing = base.nodes[nodeId];
+        if (existing && existing.x === absX && existing.y === absY) {
+          return prev;
+        }
         return {
           ...base,
           nodes: {
@@ -327,9 +380,28 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     [],
   );
 
-  // Keyboard shortcuts: Delete/Backspace to delete selected node or edge, Cmd/Ctrl+D to duplicate
+  // Warn before unloading when there are unsaved edits
+  useEffect(() => {
+    if (!isDirty) return;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isDirty]);
+
+  // Keyboard shortcuts: Cmd/Ctrl+S to save, Delete/Backspace to delete selected node or edge, Cmd/Ctrl+D to duplicate
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        void handleSave();
+        return;
+      }
+
       if (isEditableElement(event.target)) return;
 
       if (event.key === "Delete" || event.key === "Backspace") {
@@ -361,6 +433,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   }, [
     selectedNodeId,
     selectedEdgeId,
+    handleSave,
     handleDeleteSelected,
     handleDeleteSelectedEdge,
     handleDuplicateSelected,
@@ -380,12 +453,43 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
               {workflowPath}
             </span>
           </div>
-          <h1 className="text-base font-bold text-white">
-            {workflow?.name || workflowPath}
-          </h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-base font-bold text-white">
+              {workflow?.name || workflowPath}
+            </h1>
+            {isDirty ? (
+              <span
+                data-testid="dirty-indicator"
+                className="inline-flex items-center gap-1.5 rounded-full border border-amber-700/80 bg-amber-950/70 px-2.5 py-0.5 text-[11px] font-semibold text-amber-300"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                Unsaved changes
+              </span>
+            ) : lastSavedAt ? (
+              <span
+                data-testid="save-status"
+                className="inline-flex items-center rounded-full border border-emerald-800/80 bg-emerald-950/60 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-300"
+              >
+                Saved
+              </span>
+            ) : null}
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            data-testid="btn-save-workflow"
+            disabled={!workflow || saving}
+            onClick={() => void handleSave()}
+            className={`rounded-md px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors disabled:opacity-40 ${
+              isDirty
+                ? "bg-amber-600 text-white hover:bg-amber-500"
+                : "border border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+            }`}
+          >
+            {saving ? "Saving..." : "Save"}
+          </button>
           <button
             type="button"
             data-testid="btn-duplicate-node"
@@ -439,6 +543,27 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
           className="rounded-md border border-rose-900 bg-rose-950/60 p-3 text-sm text-rose-300"
         >
           {error}
+        </div>
+      )}
+
+      {saveError && (
+        <div
+          role="alert"
+          data-testid="save-error-banner"
+          className="flex items-center justify-between gap-3 rounded-md border border-rose-900 bg-rose-950/70 px-4 py-2.5 text-xs text-rose-200"
+        >
+          <div>
+            <span className="font-semibold text-rose-300">Save failed: </span>
+            <span>{saveError}</span>
+          </div>
+          <button
+            type="button"
+            aria-label="Dismiss save error"
+            onClick={() => setSaveError(null)}
+            className="rounded px-1.5 py-0.5 text-rose-400 hover:bg-rose-900/50 hover:text-rose-200"
+          >
+            &times;
+          </button>
         </div>
       )}
 
