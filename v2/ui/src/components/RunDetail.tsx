@@ -13,6 +13,7 @@ import type {
 } from "../api/types.gen";
 import { Link, useRouter } from "../router/Router";
 import { StepperView } from "../stepper/StepperView";
+import { ArtifactPreviewDialog } from "../previewers/ArtifactPreviewDialog";
 import { LogsPanel } from "./LogsPanel";
 import { formatDuration, formatTimestamp, runStatusBadgeClasses } from "./RunList";
 
@@ -21,6 +22,13 @@ export function RunDetail({ runId }: { runId: string }) {
   const [runState, setRunState] = useState<RunState | null>(null);
   const [workflowDoc, setWorkflowDoc] = useState<WorkflowDocument | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
+  const [previewTarget, setPreviewTarget] = useState<{
+    title: string;
+    url: string;
+    filename?: string;
+    mediaType?: string;
+    content?: string;
+  } | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -229,15 +237,48 @@ export function RunDetail({ runId }: { runId: string }) {
             />
           </div>
 
-          {/* Logs Panel for Selected Node */}
+          {/* Logs Panel & Output Actions for Selected Node */}
           {selectedNodeId && (
-            <div className="space-y-2">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between rounded-md border border-slate-800 bg-slate-900/60 px-4 py-2 text-xs">
+                <span className="font-mono text-slate-300">
+                  Selected Node: <strong className="text-white">{selectedNodeId}</strong> (
+                  {runState.nodes[selectedNodeId]?.status ?? "PENDING"})
+                </span>
+                {runState.nodes[selectedNodeId]?.status === "SUCCESS" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPreviewTarget({
+                        title: `${selectedNodeId} output`,
+                        url: `/api/v1/runs/${runState.id}/nodes/${selectedNodeId}/outputs/text`,
+                        filename: `${selectedNodeId}-output.txt`,
+                      });
+                    }}
+                    className="rounded bg-slate-800 px-2.5 py-1 text-xs font-semibold text-emerald-400 hover:bg-slate-700"
+                  >
+                    Preview Output
+                  </button>
+                )}
+              </div>
               <LogsPanel
                 runId={runState.id}
                 nodeId={selectedNodeId}
                 onClose={() => setSelectedNodeId(undefined)}
               />
             </div>
+          )}
+
+          {/* Artifact Preview Dialog */}
+          {previewTarget && (
+            <ArtifactPreviewDialog
+              title={previewTarget.title}
+              url={previewTarget.url}
+              filename={previewTarget.filename}
+              mediaType={previewTarget.mediaType}
+              initialContent={previewTarget.content}
+              onClose={() => setPreviewTarget(null)}
+            />
           )}
         </div>
       ) : null}

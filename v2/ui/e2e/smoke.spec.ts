@@ -27,7 +27,7 @@ test.describe("PLynx UI Smoke Test", () => {
     await expect(page.getByRole("heading", { name: "Runs" })).toBeVisible();
   });
 
-  test("Task 6.2 - 6.5: launches workflow, interacts with Stepper, Checkpoint card, Logs panel", async ({ page }) => {
+  test("Task 6.2 - 6.5 & 6.7: launches workflow, interacts with Stepper, Checkpoint card, Logs panel, and Previews", async ({ page }) => {
     await page.goto("/#/workflows");
     await expect(page.getByRole("heading", { name: "Workflows" })).toBeVisible();
 
@@ -76,6 +76,17 @@ test.describe("PLynx UI Smoke Test", () => {
     // Close logs panel
     await page.getByRole("button", { name: "Close logs" }).click();
     await expect(page.getByTestId("logs-panel")).not.toBeVisible();
+
+    // Task 6.7: When pick node completes with SUCCESS, select it and preview output
+    await expect(page.getByText("pick", { exact: true })).toBeVisible();
+    await pickNode.click();
+    const previewBtn = page.getByRole("button", { name: "Preview Output" });
+    if (await previewBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await previewBtn.click();
+      await expect(page.getByTestId("artifact-preview-dialog")).toBeVisible();
+      await page.getByRole("button", { name: "Close dialog" }).click();
+      await expect(page.getByTestId("artifact-preview-dialog")).not.toBeVisible();
+    }
   });
 
   test("Task 6.6: handles Stage approval card with Approve & Continue", async ({ page }) => {

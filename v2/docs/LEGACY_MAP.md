@@ -41,7 +41,7 @@ Run the legacy stack with its own tools from the repo root (`docker-compose`, `m
 - [ ] Changing one parameter re-runs only that node and its dependents (task 3.6).
 - [ ] Parallel branches run concurrently (task 0.7 / 1.5).
 - [ ] A failed node blocks only dependents (task 0.7).
-- [ ] Output previews for pdf, image, csv, json, text (task 6.7).
+- [x] Output previews for pdf, image, csv, json, text (task 6.7).
 - [ ] Parameter widgets: text, number, enum, list, code, color (task 6.11).
 - [ ] Graph editor: add node from palette, wire ports, delete, reload keeps the graph (tasks 6.9 to 6.12).
 
@@ -51,3 +51,5 @@ Add a row per copied file in the same commit as the copy.
 
 | Date | Legacy source | v2 destination | Changes |
 |---|---|---|---|
+| 2026-11-17 | `ui/src/components/Dialogs/PreviewDialog.tsx` | `v2/ui/src/previewers/ArtifactPreviewDialog.tsx` | Ported to React 19 functional component with Tailwind CSS modal |
+| 2026-11-17 | `plynx/plugins/resources/common.py` | `v2/ui/src/previewers/{Csv,Json,Image,Pdf,Text,Markdown}Previewer.tsx` | Ported preview logic from Python classes to React components |

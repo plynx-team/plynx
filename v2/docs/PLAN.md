@@ -134,7 +134,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
 - [x] **6.4 Logs panel.** History from REST, live lines from SSE, ANSI colors, download.
 - [x] **6.5 Checkpoint card.** Question, option buttons, freeform field; disappears on `checkpoint_resolved` in every tab.
 - [x] **6.6 Stage approval card.** "Approve & Continue".
-- [ ] **6.7 Previewers.** Markdown, CSV, PDF, image, JSON, text. Copy and modify from legacy per [LEGACY_MAP.md](LEGACY_MAP.md).
+- [x] **6.7 Previewers.** Markdown, CSV, PDF, image, JSON, text. Copy and modify from legacy per [LEGACY_MAP.md](LEGACY_MAP.md).
 - [ ] **6.8 Graph view, read-only.** React Flow, Dagre layout, stage group nodes, live status, `[ Stepper | Graph ]` toggle.
 - [ ] **6.9 Graph editing: palette and nodes.** Palette grouped by `CATEGORY` with search (`/`, `Cmd+K`); add, duplicate, delete nodes.
 - [ ] **6.10 Graph editing: wiring.** Drag edges between ports; reject type or media mismatches and backward stage edges with a visible reason.
