@@ -128,7 +128,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
 
 ## Phase 6: UI
 
-- [ ] **6.1 App shell.** Router, run list/history, workflow picker.
+- [x] **6.1 App shell.** Router, run list/history, workflow picker.
 - [ ] **6.2 Run inputs form.** From `workflows/{path}/inputs`: file drop zones for `file`/`directory`, fields for scalars, defaults shown.
 - [ ] **6.3 Stepper view.** Stage cards, parallel nodes as status rows, progress, `cache_hit` badge.
 - [ ] **6.4 Logs panel.** History from REST, live lines from SSE, ANSI colors, download.
