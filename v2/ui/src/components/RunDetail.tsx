@@ -13,6 +13,7 @@ import type {
 } from "../api/types.gen";
 import { Link, useRouter } from "../router/Router";
 import { StepperView } from "../stepper/StepperView";
+import { LogsPanel } from "./LogsPanel";
 import { formatDuration, formatTimestamp, runStatusBadgeClasses } from "./RunList";
 
 export function RunDetail({ runId }: { runId: string }) {
@@ -227,6 +228,17 @@ export function RunDetail({ runId }: { runId: string }) {
               onSelectNode={setSelectedNodeId}
             />
           </div>
+
+          {/* Logs Panel for Selected Node */}
+          {selectedNodeId && (
+            <div className="space-y-2">
+              <LogsPanel
+                runId={runState.id}
+                nodeId={selectedNodeId}
+                onClose={() => setSelectedNodeId(undefined)}
+              />
+            </div>
+          )}
         </div>
       ) : null}
     </div>

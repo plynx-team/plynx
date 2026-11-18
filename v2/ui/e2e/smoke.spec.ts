@@ -27,7 +27,7 @@ test.describe("PLynx UI Smoke Test", () => {
     await expect(page.getByRole("heading", { name: "Runs" })).toBeVisible();
   });
 
-  test("Task 6.2 & 6.3: opens Run inputs form, launches workflow, displays Stepper view", async ({ page }) => {
+  test("Task 6.2 - 6.4: launches workflow, inspects Stepper view, opens Logs panel", async ({ page }) => {
     await page.goto("/#/workflows");
     await expect(page.getByRole("heading", { name: "Workflows" })).toBeVisible();
 
@@ -51,6 +51,17 @@ test.describe("PLynx UI Smoke Test", () => {
     await expect(page.getByText("Workflow Stages (Stepper)")).toBeVisible();
     await expect(page.getByText("Overall Progress")).toBeVisible();
     await expect(page.getByText("1. Ask")).toBeVisible();
-    await expect(page.getByText("pick", { exact: true })).toBeVisible();
+    const pickNode = page.getByText("pick", { exact: true });
+    await expect(pickNode).toBeVisible();
+
+    // Task 6.4: Click node row to open Logs panel
+    await pickNode.click();
+    await expect(page.getByTestId("logs-panel")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Download" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Copy" })).toBeVisible();
+
+    // Close logs panel
+    await page.getByRole("button", { name: "Close logs" }).click();
+    await expect(page.getByTestId("logs-panel")).not.toBeVisible();
   });
 });

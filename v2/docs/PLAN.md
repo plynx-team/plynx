@@ -131,7 +131,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
 - [x] **6.1 App shell.** Router, run list/history, workflow picker.
 - [x] **6.2 Run inputs form.** From `workflows/{path}/inputs`: file drop zones for `file`/`directory`, fields for scalars, defaults shown.
 - [x] **6.3 Stepper view.** Stage cards, parallel nodes as status rows, progress, `cache_hit` badge.
-- [ ] **6.4 Logs panel.** History from REST, live lines from SSE, ANSI colors, download.
+- [x] **6.4 Logs panel.** History from REST, live lines from SSE, ANSI colors, download.
 - [ ] **6.5 Checkpoint card.** Question, option buttons, freeform field; disappears on `checkpoint_resolved` in every tab.
 - [ ] **6.6 Stage approval card.** "Approve & Continue".
 - [ ] **6.7 Previewers.** Markdown, CSV, PDF, image, JSON, text. Copy and modify from legacy per [LEGACY_MAP.md](LEGACY_MAP.md).
