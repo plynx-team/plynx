@@ -40,8 +40,18 @@ def find_violations(project_root: Path, base: str = DEFAULT_BASE) -> list[str]:
     if not prefix:
         # The project folder is the repository root: nothing can be outside it.
         return []
+    target_base = base
+    try:
+        _git(project_root, "rev-parse", "--verify", target_base)
+    except subprocess.CalledProcessError:
+        if not target_base.startswith("origin/"):
+            try:
+                _git(project_root, "rev-parse", "--verify", f"origin/{target_base}")
+                target_base = f"origin/{target_base}"
+            except subprocess.CalledProcessError:
+                pass
     # Paths from `git diff` are relative to the repository root, not the working directory.
-    diff = _git(project_root, "diff", "--name-status", "--no-renames", f"{base}...HEAD")
+    diff = _git(project_root, "diff", "--name-status", "--no-renames", f"{target_base}...HEAD")
     violations: list[str] = []
     for line in diff.splitlines():
         status, _, path = line.partition("\t")

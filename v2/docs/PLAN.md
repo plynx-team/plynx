@@ -148,7 +148,7 @@ Accept for every 6.x: the component has a vitest test; `lint`, `typecheck`, `tes
 
 - [x] **7.1 Wheel.** `uv build` for `plynx-sdk` and `plynx`; the `plynx` wheel contains built `static/` and the shipped `builtin_packs`.
   Accept: `uvx --from <wheel> plynx ui` serves the UI in a clean machine environment.
-- [ ] **7.2 CI.** GitHub Actions `v2-ci.yml`: ruff, mypy, pytest, UI checks, wheel smoke test on Linux, macOS, Windows.
+- [x] **7.2 CI.** GitHub Actions `v2-ci.yml`: ruff, mypy, pytest, UI checks, wheel smoke test on Linux, macOS, Windows.
   Accept: green on all three. The workflow file is the only file added outside `v2/`.
 - [ ] **7.3 Pack author and agent docs.** Finalize `PACK_RULES.md`; add short guides: create a workflow, author a pack, debug a failed node with `plynx run-node`.
   Accept: a fresh agent session given only these docs and the CLI creates and debugs a two-node workflow (record the transcript path in the commit message).
