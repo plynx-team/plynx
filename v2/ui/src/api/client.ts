@@ -3,6 +3,7 @@ import type {
   CreateRunRequest,
   CreateRunResponse,
   EventType,
+  LogStream,
   OpEntry,
   RunEvent,
   RunListResponse,
@@ -200,18 +201,28 @@ export async function fetchNodeLogs(
   runId: string,
   nodeId: string,
   offset = 0,
+  stream: LogStream = "stdout",
 ): Promise<{ lines: Array<string>; offset: number }> {
   const response = await fetch(
-    `/api/v1/runs/${encodeURIComponent(runId)}/logs/${encodeURIComponent(
+    `/api/v1/runs/${encodeURIComponent(runId)}/nodes/${encodeURIComponent(
       nodeId,
-    )}?offset=${offset}`,
+    )}/logs/${encodeURIComponent(stream)}?offset=${offset}`,
   );
   if (!response.ok) {
     throw new Error(
       `Failed to fetch logs for node ${nodeId} (${response.status})`,
     );
   }
-  return (await response.json()) as { lines: Array<string>; offset: number };
+  const text = await response.text();
+  const nextOffsetHeader = response.headers.get("X-Next-Offset");
+  const nextOffset =
+    nextOffsetHeader !== null && !Number.isNaN(Number(nextOffsetHeader))
+      ? Number(nextOffsetHeader)
+      : offset + text.length;
+  const lines = text
+    ? text.split(/\r?\n/).filter((line, idx, arr) => !(idx === arr.length - 1 && line === ""))
+    : [];
+  return { lines, offset: nextOffset };
 }
 
 export async function uploadFile(file: File): Promise<UploadResponse> {
@@ -227,14 +238,25 @@ export async function uploadFile(file: File): Promise<UploadResponse> {
   return (await response.json()) as UploadResponse;
 }
 
+export interface SubscribeRunEventsOptions {
+  logOffset?: number;
+}
+
 export function subscribeRunEvents(
   runId: string,
   onEvent: (event: RunEvent) => void,
   onError?: (err: Event) => void,
+  options?: SubscribeRunEventsOptions,
 ): () => void {
-  const source = new EventSource(
-    `/api/v1/runs/${encodeURIComponent(runId)}/stream`,
-  );
+  const params = new URLSearchParams();
+  if (options?.logOffset !== undefined) {
+    params.set("log_offset", String(options.logOffset));
+  }
+  const query = params.toString();
+  const url = `/api/v1/runs/${encodeURIComponent(runId)}/stream${
+    query ? `?${query}` : ""
+  }`;
+  const source = new EventSource(url);
   const handleMessage = (ev: MessageEvent<string>) => {
     const parsed = JSON.parse(ev.data) as RunEvent;
     onEvent(parsed);

@@ -35,7 +35,10 @@ export function applyRunEvent(state: RunState, event: RunEvent): RunState {
       return {
         ...state,
         status: event.data.status,
-        error: event.data.error ?? state.error ?? null,
+        error:
+          event.data.status === "RUNNING"
+            ? (event.data.error ?? null)
+            : (event.data.error ?? state.error ?? null),
       };
     }
     case "node_status": {
@@ -61,6 +64,15 @@ export function applyRunEvent(state: RunState, event: RunEvent): RunState {
       };
     }
     case "node_checkpoint": {
+      const existingCp = state.checkpoints.find(
+        (cp) =>
+          cp.node_id === event.data.node_id &&
+          cp.checkpoint_id === event.data.checkpoint_id,
+      );
+      // Do not revert an already-resolved checkpoint when historical SSE events replay
+      if (existingCp && existingCp.answered_at !== null && existingCp.answered_at !== undefined) {
+        return state;
+      }
       const newCp: CheckpointState = {
         node_id: event.data.node_id,
         checkpoint_id: event.data.checkpoint_id,
@@ -68,7 +80,7 @@ export function applyRunEvent(state: RunState, event: RunEvent): RunState {
         options: event.data.options ?? null,
         allow_freeform: event.data.allow_freeform,
         answer: null,
-        created_at: event.ts,
+        created_at: existingCp?.created_at ?? event.ts,
         answered_at: null,
       };
       const filtered = state.checkpoints.filter(
@@ -96,10 +108,15 @@ export function applyRunEvent(state: RunState, event: RunEvent): RunState {
       };
     }
     case "stage_approval": {
+      const prevGate = state.stage_gates[event.data.stage_id];
+      // Do not revert an already-approved gate when historical SSE events replay
+      if (prevGate?.status === "APPROVED") {
+        return state;
+      }
       const gate: StageGateState = {
         stage_id: event.data.stage_id,
         status: "WAITING",
-        created_at: event.ts,
+        created_at: prevGate?.created_at ?? event.ts,
         decided_at: null,
       };
       return {

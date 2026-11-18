@@ -12,6 +12,7 @@ export interface StageCardProps {
   stageId: string;
   stageDef?: Stage;
   gateState?: StageGateState;
+  runActive?: boolean;
   nodes: Array<{
     id: string;
     spec?: NodeSpec;
@@ -26,6 +27,7 @@ export function StageCard({
   stageId,
   stageDef,
   gateState,
+  runActive = true,
   nodes,
   selectedNodeId,
   onSelectNode,
@@ -120,8 +122,8 @@ export function StageCard({
         ))}
       </div>
 
-      {/* Approval Card if gate is waiting */}
-      {gateState?.status === "WAITING" && (
+      {/* Approval Card if gate is waiting and run is active */}
+      {runActive && gateState?.status === "WAITING" && (
         <div className="pt-2">
           <StageApprovalCard
             runId={runId}

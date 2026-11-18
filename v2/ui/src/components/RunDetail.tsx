@@ -25,12 +25,35 @@ import { formatDuration, formatTimestamp, runStatusBadgeClasses } from "./RunLis
 
 export type RunViewMode = "stepper" | "graph";
 
+const TERMINAL_RUN_STATUSES = new Set(["SUCCESS", "FAILED", "CANCELED"]);
+
+function readSavedViewMode(runId: string): RunViewMode {
+  try {
+    const saved = window.sessionStorage.getItem(`plynx:runView:${runId}`);
+    if (saved === "graph" || saved === "stepper") return saved;
+  } catch {
+    // Ignore storage access restrictions
+  }
+  return "stepper";
+}
+
+function writeSavedViewMode(runId: string, mode: RunViewMode): void {
+  try {
+    window.sessionStorage.setItem(`plynx:runView:${runId}`, mode);
+  } catch {
+    // Ignore storage access restrictions
+  }
+}
+
 export function RunDetail({ runId }: { runId: string }) {
   const { navigate } = useRouter();
   const [runState, setRunState] = useState<RunState | null>(null);
   const [workflowDoc, setWorkflowDoc] = useState<WorkflowDocument | null>(null);
   const [ops, setOps] = useState<Array<OpEntry>>([]);
-  const [viewMode, setViewMode] = useState<RunViewMode>("stepper");
+  const [viewMode, setViewModeState] = useState<RunViewMode>(() =>
+    readSavedViewMode(runId),
+  );
+  const [reloadSeq, setReloadSeq] = useState<number>(0);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
   const [previewTarget, setPreviewTarget] = useState<{
     title: string;
@@ -44,6 +67,15 @@ export function RunDetail({ runId }: { runId: string }) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionInProgress, setActionInProgress] = useState<boolean>(false);
 
+  const setViewMode = (mode: RunViewMode) => {
+    setViewModeState(mode);
+    writeSavedViewMode(runId, mode);
+  };
+
+  useEffect(() => {
+    setViewModeState(readSavedViewMode(runId));
+  }, [runId]);
+
   const opsMap = useMemo<Record<string, OpEntry>>(() => {
     const map: Record<string, OpEntry> = {};
     for (const op of ops) {
@@ -54,25 +86,29 @@ export function RunDetail({ runId }: { runId: string }) {
 
   useEffect(() => {
     let active = true;
+    let unsubscribe: (() => void) | undefined;
+    let resyncPending = false;
     setLoading(true);
     setError(null);
-    setRunState(createInitialRunState(runId));
 
-    fetchOps()
-      .then((entries) => {
-        if (active) setOps(entries);
-      })
-      .catch(() => {
-        // Non-critical: GraphView can fall back to inferred ports
-      });
+    if (typeof fetchOps === "function") {
+      fetchOps()
+        .then((entries) => {
+          if (active) setOps(entries);
+        })
+        .catch(() => {
+          // Non-critical: GraphView can fall back to inferred ports
+        });
+    }
 
+    // PROTOCOL.md section 9: load full ground truth from SQLite first, then connect SSE if non-terminal
     fetchRunState(runId)
       .then((initial) => {
         if (!active) return;
         setRunState(initial);
         setLoading(false);
 
-        // Fetch workflow document for stage definitions
+        // Fetch workflow document for stage definitions and graph topology
         if (initial.workflow_path) {
           fetchWorkflow(initial.workflow_path)
             .then((doc) => {
@@ -82,6 +118,38 @@ export function RunDetail({ runId }: { runId: string }) {
               // Silently ignore workflow doc fetch error if not critical
             });
         }
+
+        if (!TERMINAL_RUN_STATUSES.has(initial.status)) {
+          unsubscribe = subscribeRunEvents(
+            runId,
+            (event) => {
+              if (!active) return;
+              setRunState((prev) =>
+                applyRunEvent(prev ?? createInitialRunState(runId), event),
+              );
+            },
+            () => {
+              // On SSE error (e.g. server restart), resync ground truth from SQLite
+              if (!active || resyncPending) return;
+              resyncPending = true;
+              fetchRunState(runId)
+                .then((latest) => {
+                  if (!active) return;
+                  setRunState(latest);
+                  if (TERMINAL_RUN_STATUSES.has(latest.status)) {
+                    unsubscribe?.();
+                    unsubscribe = undefined;
+                  }
+                })
+                .catch(() => {
+                  // Server may still be restarting; EventSource will retry
+                })
+                .finally(() => {
+                  resyncPending = false;
+                });
+            },
+          );
+        }
       })
       .catch((err: unknown) => {
         if (active) {
@@ -90,18 +158,11 @@ export function RunDetail({ runId }: { runId: string }) {
         }
       });
 
-    const unsubscribe = subscribeRunEvents(runId, (event) => {
-      if (!active) return;
-      setRunState((prev) =>
-        applyRunEvent(prev ?? createInitialRunState(runId), event),
-      );
-    });
-
     return () => {
       active = false;
-      unsubscribe();
+      unsubscribe?.();
     };
-  }, [runId]);
+  }, [runId, reloadSeq]);
 
   const handleCancel = async () => {
     if (!runState) return;
@@ -124,6 +185,8 @@ export function RunDetail({ runId }: { runId: string }) {
       const res = await resumeRun(runState.id);
       if (res.run_id !== runState.id) {
         navigate(`/runs/${res.run_id}`);
+      } else {
+        setReloadSeq((seq) => seq + 1);
       }
     } catch (err: unknown) {
       setActionError(err instanceof Error ? err.message : String(err));
@@ -180,6 +243,7 @@ export function RunDetail({ runId }: { runId: string }) {
                     {runState.id}
                   </h1>
                   <span
+                    data-testid="run-status-badge"
                     className={`rounded border px-2.5 py-0.5 text-xs font-semibold ${runStatusBadgeClasses(
                       runState.status,
                     )}`}
@@ -244,7 +308,10 @@ export function RunDetail({ runId }: { runId: string }) {
             </div>
 
             {runState.error && (
-              <div className="mt-4 rounded border border-rose-900 bg-rose-950/50 p-3 text-xs text-rose-300">
+              <div
+                data-testid="run-error-banner"
+                className="mt-4 rounded border border-rose-900 bg-rose-950/50 p-3 text-xs text-rose-300"
+              >
                 <span className="font-semibold">Error:</span> {runState.error}
               </div>
             )}
@@ -304,28 +371,30 @@ export function RunDetail({ runId }: { runId: string }) {
               />
             ) : (
               <div className="space-y-4">
-                {runState.checkpoints
-                  .filter((cp) => !cp.answered_at)
-                  .map((cp) => (
-                    <CheckpointCard
-                      key={`${cp.node_id}-${cp.checkpoint_id}`}
-                      runId={runState.id}
-                      checkpoint={cp}
-                    />
-                  ))}
-                {Object.entries(runState.stage_gates)
-                  .filter(([, gate]) => gate.status === "WAITING")
-                  .map(([stageId, gate]) => (
-                    <StageApprovalCard
-                      key={stageId}
-                      runId={runState.id}
-                      stageId={stageId}
-                      stageTitle={
-                        workflowDoc?.workflow.stages?.[stageId]?.title || stageId
-                      }
-                      gateState={gate}
-                    />
-                  ))}
+                {!isTerminal &&
+                  runState.checkpoints
+                    .filter((cp) => !cp.answered_at)
+                    .map((cp) => (
+                      <CheckpointCard
+                        key={`${cp.node_id}-${cp.checkpoint_id}`}
+                        runId={runState.id}
+                        checkpoint={cp}
+                      />
+                    ))}
+                {!isTerminal &&
+                  Object.entries(runState.stage_gates)
+                    .filter(([, gate]) => gate.status === "WAITING")
+                    .map(([stageId, gate]) => (
+                      <StageApprovalCard
+                        key={stageId}
+                        runId={runState.id}
+                        stageId={stageId}
+                        stageTitle={
+                          workflowDoc?.workflow.stages?.[stageId]?.title || stageId
+                        }
+                        gateState={gate}
+                      />
+                    ))}
                 <div className="flex gap-4">
                   <div className="flex-1 min-w-0">
                     <GraphView

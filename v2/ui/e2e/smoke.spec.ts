@@ -1,6 +1,41 @@
+import { spawn, type ChildProcess } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { test, expect } from "@playwright/test";
+
+async function waitForHealth(baseUrl: string, timeoutMs = 15000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      const res = await fetch(`${baseUrl}/health`);
+      if (res.ok) return;
+    } catch {
+      // Server not ready yet
+    }
+    await new Promise((r) => setTimeout(r, 150));
+  }
+  throw new Error(`Timed out waiting for ${baseUrl}/health`);
+}
+
+function startPlynxServer(workspaceRoot: string, port: number): ChildProcess {
+  const binPath =
+    process.platform === "win32"
+      ? path.join(workspaceRoot, ".venv", "Scripts", "plynx.exe")
+      : path.join(workspaceRoot, ".venv", "bin", "plynx");
+  return spawn(binPath, ["ui", "--no-browser", "--port", String(port)], {
+    cwd: workspaceRoot,
+    stdio: "ignore",
+  });
+}
+
+async function stopProcess(proc: ChildProcess | null, signal: NodeJS.Signals = "SIGTERM"): Promise<void> {
+  if (!proc || proc.exitCode !== null) return;
+  await new Promise<void>((resolve) => {
+    proc.once("exit", () => resolve());
+    proc.kill(signal);
+    setTimeout(resolve, 3000);
+  });
+}
 
 test.describe("PLynx UI Smoke Test", () => {
   test("Task 6.1: renders navbar and navigates between Runs and Workflows", async ({ page }) => {
@@ -336,6 +371,76 @@ test.describe("PLynx UI Smoke Test", () => {
       } else if (fs.existsSync(sidecarFile)) {
         fs.unlinkSync(sidecarFile);
       }
+    }
+  });
+
+  test("Task 6.13: refresh during a run, during a checkpoint, and after a real server restart restores view from SQLite", async ({ page }) => {
+    // Part A: Refresh during an active run & checkpoint (also verifying Graph view persists)
+    await page.goto("/#/workflows");
+    const fooCard = page.getByTestId("workflow-card-examples/workflows/foo_or_woo.yaml");
+    await fooCard.getByRole("button", { name: "Run" }).click();
+    await page.getByRole("button", { name: "Start Run" }).click();
+    await expect(page).toHaveURL(/.*#\/runs\/[0-9a-zA-Z_-]+/);
+
+    // Switch to Graph view and wait for checkpoint pause
+    await page.getByTestId("view-toggle-graph").click();
+    const checkpointCard = page.getByTestId("checkpoint-card-cp_0");
+    await expect(checkpointCard).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId("run-status-badge")).toHaveText("WAITING_FOR_USER");
+
+    // Browser refresh during open checkpoint restores Graph view, WAITING_FOR_USER, and checkpoint card from SQLite
+    await page.reload();
+    await expect(page.getByTestId("graph-view")).toBeVisible();
+    await expect(page.getByTestId("run-status-badge")).toHaveText("WAITING_FOR_USER");
+    await expect(page.getByTestId("checkpoint-card-cp_0")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("foo or woo?")).toBeVisible();
+
+    // Answer after reload -> run completes to SUCCESS, and reloading again restores SUCCESS from SQLite
+    await page.getByTestId("checkpoint-card-cp_0").getByRole("button", { name: "foo", exact: true }).click();
+    await expect(page.getByTestId("run-status-badge")).toHaveText("SUCCESS", { timeout: 10000 });
+    await page.reload();
+    await expect(page.getByTestId("run-status-badge")).toHaveText("SUCCESS");
+    await expect(page.getByTestId("graph-node-status-echo")).toHaveText("SUCCESS");
+
+    // Part B: Refresh after a real server crash & restart restores FAILED (engine_died) from SQLite and allows Resume
+    const workspaceRoot = path.dirname(process.cwd());
+    const restartPort = 8089;
+    const restartBase = `http://127.0.0.1:${restartPort}`;
+    let server1: ChildProcess | null = null;
+    let server2: ChildProcess | null = null;
+
+    try {
+      server1 = startPlynxServer(workspaceRoot, restartPort);
+      await waitForHealth(restartBase);
+
+      await page.goto(`${restartBase}/#/workflows`);
+      await page.getByTestId("workflow-card-examples/workflows/foo_or_woo.yaml").getByRole("button", { name: "Run" }).click();
+      await page.getByRole("button", { name: "Start Run" }).click();
+      await expect(page).toHaveURL(/.*#\/runs\/[0-9a-zA-Z_-]+/);
+      await expect(page.getByTestId("checkpoint-card-cp_0")).toBeVisible({ timeout: 10000 });
+
+      // Kill server 1 abruptly while run is paused at checkpoint, then start server 2
+      await stopProcess(server1, "SIGKILL");
+      server1 = null;
+
+      server2 = startPlynxServer(workspaceRoot, restartPort);
+      await waitForHealth(restartBase);
+
+      // Reload browser -> server 2 reconciled dead owner in SQLite -> UI shows FAILED (engine_died) + Resume Run
+      await page.reload();
+      await expect(page.getByTestId("run-status-badge")).toHaveText("FAILED", { timeout: 10000 });
+      await expect(page.getByTestId("run-error-banner")).toContainText("engine_died");
+      await expect(page.getByTestId("checkpoint-card-cp_0")).not.toBeVisible();
+
+      // Resume Run on server 2 -> checkpoint re-opens -> answer -> SUCCESS
+      await page.getByRole("button", { name: "Resume Run" }).click();
+      const resumedCp = page.getByTestId("checkpoint-card-cp_0");
+      await expect(resumedCp).toBeVisible({ timeout: 10000 });
+      await resumedCp.getByRole("button", { name: "woo", exact: true }).click();
+      await expect(page.getByTestId("run-status-badge")).toHaveText("SUCCESS", { timeout: 10000 });
+    } finally {
+      await stopProcess(server1, "SIGKILL");
+      await stopProcess(server2, "SIGTERM");
     }
   });
 });

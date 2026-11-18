@@ -18,9 +18,10 @@ export function LogsPanel({ runId, nodeId, onClose }: LogsPanelProps) {
   const [copied, setCopied] = useState<boolean>(false);
   const logContainerRef = useRef<HTMLDivElement>(null);
 
-  // Load history from REST on mount or nodeId change
+  // Load history from REST first, then attach live SSE from the returned offset
   useEffect(() => {
     let active = true;
+    let unsubscribe: (() => void) | undefined;
     setLoading(true);
     setError(null);
     setLines([]);
@@ -30,6 +31,21 @@ export function LogsPanel({ runId, nodeId, onClose }: LogsPanelProps) {
         if (!active) return;
         setLines(res.lines);
         setLoading(false);
+
+        unsubscribe = subscribeRunEvents(
+          runId,
+          (event) => {
+            if (!active) return;
+            if (event.type === "node_log") {
+              const logEvent = event as NodeLogEvent;
+              if (logEvent.data.node_id === nodeId) {
+                setLines((prev) => [...prev, ...logEvent.data.lines]);
+              }
+            }
+          },
+          undefined,
+          { logOffset: res.offset },
+        );
       })
       .catch((err: unknown) => {
         if (!active) return;
@@ -37,20 +53,9 @@ export function LogsPanel({ runId, nodeId, onClose }: LogsPanelProps) {
         setLoading(false);
       });
 
-    // Listen to live SSE node_log events
-    const unsubscribe = subscribeRunEvents(runId, (event) => {
-      if (!active) return;
-      if (event.type === "node_log") {
-        const logEvent = event as NodeLogEvent;
-        if (logEvent.data.node_id === nodeId) {
-          setLines((prev) => [...prev, ...logEvent.data.lines]);
-        }
-      }
-    });
-
     return () => {
       active = false;
-      unsubscribe();
+      unsubscribe?.();
     };
   }, [runId, nodeId]);
 

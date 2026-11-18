@@ -66,6 +66,8 @@ export function StepperView({
   ).length;
   const overallPercent =
     totalNodes > 0 ? Math.round((completedNodes / totalNodes) * 100) : 0;
+  const isRunActive =
+    runState.status === "RUNNING" || runState.status === "WAITING_FOR_USER";
 
   return (
     <div className="space-y-6">
@@ -99,16 +101,17 @@ export function StepperView({
         </div>
       </div>
 
-      {/* Active Checkpoints */}
-      {runState.checkpoints
-        .filter((cp) => !cp.answered_at)
-        .map((cp) => (
-          <CheckpointCard
-            key={`${cp.node_id}-${cp.checkpoint_id}`}
-            runId={runState.id}
-            checkpoint={cp}
-          />
-        ))}
+      {/* Active Checkpoints (only when run is active) */}
+      {isRunActive &&
+        runState.checkpoints
+          .filter((cp) => !cp.answered_at)
+          .map((cp) => (
+            <CheckpointCard
+              key={`${cp.node_id}-${cp.checkpoint_id}`}
+              runId={runState.id}
+              checkpoint={cp}
+            />
+          ))}
 
       {/* Stage Cards */}
       <div className="space-y-4">
@@ -124,6 +127,7 @@ export function StepperView({
               stageId={stageId}
               stageDef={stageDef}
               gateState={gateState}
+              runActive={isRunActive}
               nodes={nodes}
               selectedNodeId={selectedNodeId}
               onSelectNode={onSelectNode}
