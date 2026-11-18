@@ -113,20 +113,30 @@ export function WorkflowPicker() {
                 </p>
               </div>
 
-              <div className="mt-5 flex items-center justify-between border-t border-slate-800/80 pt-4">
+              <div className="mt-5 flex items-center justify-between gap-2 border-t border-slate-800/80 pt-4">
                 <Link
                   to={`/workflows/${wf.path}`}
                   className="text-xs text-slate-400 hover:text-slate-200"
                 >
                   Configure &amp; Run &rarr;
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => navigate(`/workflows/${wf.path}`)}
-                  className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-500"
-                >
-                  Run
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    data-testid={`edit-workflow-${wf.path}`}
+                    onClick={() => navigate(`/editor/${wf.path}`)}
+                    className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-800"
+                  >
+                    Edit Graph
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/workflows/${wf.path}`)}
+                    className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-500"
+                  >
+                    Run
+                  </button>
+                </div>
               </div>
             </div>
           ))}

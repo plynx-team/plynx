@@ -1,10 +1,11 @@
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Background,
   Controls,
   MiniMap,
   ReactFlow,
   ReactFlowProvider,
+  useReactFlow,
   type Connection,
   type Edge,
   type NodeTypes,
@@ -20,6 +21,7 @@ import type {
   WorkflowLayout,
 } from "../api/types.gen";
 import { buildGraphElements } from "./layout";
+import { OP_DRAG_MIME } from "./OpPalette";
 import { StageGroupNode } from "./StageGroupNode";
 import { isStageGroupId, type GraphNode } from "./types";
 import { WorkflowNode } from "./WorkflowNode";
@@ -42,6 +44,7 @@ export interface GraphViewProps {
   onEdgesChange?: OnEdgesChange<Edge>;
   onConnect?: (connection: Connection) => void;
   onNodeDragStop?: (nodeId: string, absX: number, absY: number) => void;
+  onDropOp?: (opId: string, position: { x: number; y: number }) => void;
   onViewportChange?: (viewport: { x: number; y: number; zoom: number }) => void;
   heightClassName?: string;
 }
@@ -72,13 +75,16 @@ function GraphCanvasInner({
   selectedNodeId,
   onSelectNode,
   readOnly = true,
-  onNodesChange,
+  onNodesChange: externalOnNodesChange,
   onEdgesChange,
   onConnect,
   onNodeDragStop,
+  onDropOp,
   onViewportChange,
   heightClassName = "h-[540px]",
 }: GraphViewProps) {
+  const reactFlow = useReactFlow<GraphNode, Edge>();
+
   const effectiveWorkflow = useMemo<Workflow | null>(() => {
     if (workflowProp) return workflowProp;
     if (workflowDoc?.workflow) return workflowDoc.workflow;
@@ -96,7 +102,7 @@ function GraphCanvasInner({
     return map;
   }, [ops]);
 
-  const { nodes, edges, stageGroupPositions } = useMemo(() => {
+  const built = useMemo(() => {
     if (!effectiveWorkflow) {
       return {
         nodes: [] as Array<GraphNode>,
@@ -113,6 +119,22 @@ function GraphCanvasInner({
     });
   }, [effectiveWorkflow, effectiveLayout, opsMap, runState, selectedNodeId, readOnly]);
 
+  const [rfNodes, setRfNodes] = useState<Array<GraphNode>>(built.nodes);
+
+  useEffect(() => {
+    setRfNodes(built.nodes);
+  }, [built.nodes]);
+
+  const handleNodesChange: OnNodesChange<GraphNode> = useCallback(
+    (changes) => {
+      if (!readOnly) {
+        setRfNodes((prev) => changes.applyTo(prev));
+      }
+      externalOnNodesChange?.(changes);
+    },
+    [readOnly, externalOnNodesChange],
+  );
+
   const handleMoveEnd: OnMoveEnd | undefined = onViewportChange
     ? (_event, viewport) => {
         onViewportChange({
@@ -123,13 +145,13 @@ function GraphCanvasInner({
       }
     : undefined;
 
-  if (!effectiveWorkflow || Object.keys(effectiveWorkflow.nodes ?? {}).length === 0) {
+  if (!effectiveWorkflow) {
     return (
       <div
         data-testid="graph-view-empty"
         className={`flex ${heightClassName} items-center justify-center rounded-lg border border-slate-800 bg-slate-950/80 text-sm text-slate-400`}
       >
-        No nodes in workflow.
+        No workflow loaded.
       </div>
     );
   }
@@ -138,10 +160,28 @@ function GraphCanvasInner({
     <div
       data-testid="graph-view"
       className={`${heightClassName} w-full overflow-hidden rounded-lg border border-slate-800 bg-slate-950`}
+      onDragOver={(e) => {
+        if (readOnly || !onDropOp) return;
+        if (e.dataTransfer.types.includes(OP_DRAG_MIME)) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "copy";
+        }
+      }}
+      onDrop={(e) => {
+        if (readOnly || !onDropOp) return;
+        const opId = e.dataTransfer.getData(OP_DRAG_MIME);
+        if (!opId) return;
+        e.preventDefault();
+        const flowPos = reactFlow.screenToFlowPosition({
+          x: e.clientX,
+          y: e.clientY,
+        });
+        onDropOp(opId, flowPos);
+      }}
     >
       <ReactFlow<GraphNode, Edge>
-        nodes={nodes}
-        edges={edges}
+        nodes={rfNodes}
+        edges={built.edges}
         nodeTypes={NODE_TYPES}
         defaultViewport={effectiveLayout?.viewport ?? undefined}
         fitView={!effectiveLayout?.viewport}
@@ -150,7 +190,8 @@ function GraphCanvasInner({
         nodesConnectable={!readOnly}
         edgesReconnectable={false}
         elementsSelectable={true}
-        onNodesChange={onNodesChange}
+        deleteKeyCode={null}
+        onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={(_event, node) => {
@@ -165,9 +206,8 @@ function GraphCanvasInner({
         }}
         onNodeDragStop={(_event, node) => {
           if (!onNodeDragStop || isStageGroupId(node.id)) return;
-          const stageId =
-            effectiveWorkflow.nodes?.[node.id]?.stage || "main";
-          const groupPos = stageGroupPositions[stageId] ?? { x: 0, y: 0 };
+          const stageId = effectiveWorkflow.nodes?.[node.id]?.stage || "main";
+          const groupPos = built.stageGroupPositions[stageId] ?? { x: 0, y: 0 };
           onNodeDragStop(
             node.id,
             Math.round(groupPos.x + node.position.x),

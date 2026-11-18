@@ -156,4 +156,43 @@ test.describe("PLynx UI Smoke Test", () => {
     await page.getByTestId("view-toggle-stepper").click();
     await expect(page.getByText("Workflow Stages (Stepper)")).toBeVisible();
   });
+
+  test("Task 6.9: opens Graph Editor, searches palette with '/' shortcut, adds, duplicates, and deletes nodes", async ({ page }) => {
+    await page.goto("/#/workflows");
+    const editBtn = page.getByTestId("edit-workflow-examples/workflows/foo_or_woo.yaml");
+    await expect(editBtn).toBeVisible();
+    await editBtn.click();
+
+    await expect(page).toHaveURL(/.*#\/editor\/examples\/workflows\/foo_or_woo\.yaml/);
+    await expect(page.getByTestId("workflow-editor")).toBeVisible();
+    await expect(page.getByTestId("op-palette")).toBeVisible();
+
+    // Ops grouped by CATEGORY (Demo, Files, Text / Basic)
+    await expect(page.getByTestId("palette-category-Demo")).toBeVisible();
+    await expect(page.getByTestId("palette-category-Files")).toBeVisible();
+    await expect(page.getByTestId("palette-category-Text / Basic")).toBeVisible();
+
+    // Focus palette search with '/' shortcut
+    await page.keyboard.press("/");
+    const searchInput = page.getByTestId("palette-search");
+    await expect(searchInput).toBeFocused();
+
+    // Search for Concat and add it
+    await searchInput.fill("Concat");
+    const concatBtn = page.getByTestId("palette-op-standard_io/text:Concat");
+    await expect(concatBtn).toBeVisible();
+    await concatBtn.click();
+
+    // New node appears on the canvas
+    await expect(page.getByTestId("graph-node-concat")).toBeVisible();
+
+    // Duplicate the newly added node
+    await page.getByTestId("btn-duplicate-node").click();
+    await expect(page.getByTestId("graph-node-concat_copy")).toBeVisible();
+
+    // Delete the duplicated node
+    await page.getByTestId("btn-delete-node").click();
+    await expect(page.getByTestId("graph-node-concat_copy")).not.toBeVisible();
+    await expect(page.getByTestId("graph-node-concat")).toBeVisible();
+  });
 });

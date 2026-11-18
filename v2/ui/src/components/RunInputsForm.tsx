@@ -225,18 +225,27 @@ export function RunInputsForm({ workflowPath }: { workflowPath: string }) {
         <span className="font-mono text-slate-300">{workflowPath}</span>
       </div>
 
-      <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-6">
-        <h1 className="text-xl font-bold tracking-tight text-white">
-          {workflowDoc?.workflow.name || workflowPath}
-        </h1>
-        {workflowDoc?.workflow.description && (
-          <p className="mt-1 text-sm text-slate-400">
-            {workflowDoc.workflow.description}
+      <div className="flex items-start justify-between gap-4 rounded-lg border border-slate-800 bg-slate-900/60 p-6">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-white">
+            {workflowDoc?.workflow.name || workflowPath}
+          </h1>
+          {workflowDoc?.workflow.description && (
+            <p className="mt-1 text-sm text-slate-400">
+              {workflowDoc.workflow.description}
+            </p>
+          )}
+          <p className="mt-2 font-mono text-xs text-slate-500">
+            Path: {workflowPath}
           </p>
-        )}
-        <p className="mt-2 font-mono text-xs text-slate-500">
-          Path: {workflowPath}
-        </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate(`/editor/${workflowPath}`)}
+          className="shrink-0 rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-800"
+        >
+          Edit Graph
+        </button>
       </div>
 
       {error && (

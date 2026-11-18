@@ -136,7 +136,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
 - [x] **6.6 Stage approval card.** "Approve & Continue".
 - [x] **6.7 Previewers.** Markdown, CSV, PDF, image, JSON, text. Copy and modify from legacy per [LEGACY_MAP.md](LEGACY_MAP.md).
 - [x] **6.8 Graph view, read-only.** React Flow, Dagre layout, stage group nodes, live status, `[ Stepper | Graph ]` toggle.
-- [ ] **6.9 Graph editing: palette and nodes.** Palette grouped by `CATEGORY` with search (`/`, `Cmd+K`); add, duplicate, delete nodes.
+- [x] **6.9 Graph editing: palette and nodes.** Palette grouped by `CATEGORY` with search (`/`, `Cmd+K`); add, duplicate, delete nodes.
 - [ ] **6.10 Graph editing: wiring.** Drag edges between ports; reject type or media mismatches and backward stage edges with a visible reason.
 - [ ] **6.11 Node inspector.** Edit literals from registry types, bind or unbind references, preview artifacts of the selected node.
 - [ ] **6.12 Save and layout.** Save through `PUT /workflows`, sidecar for coordinates, dirty indicator.
