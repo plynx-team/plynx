@@ -218,3 +218,60 @@ export function getCompatibleUpstreamOutputs(
   }
   return candidates;
 }
+
+export function validateStageChange(
+  workflow: Workflow,
+  nodeId: string,
+  newStage: string,
+): { valid: true } | { valid: false; reason: string } {
+  const nodesDef = workflow.nodes ?? {};
+  const spec = nodesDef[nodeId];
+  if (!spec) {
+    return { valid: false, reason: `Node "${nodeId}" does not exist` };
+  }
+
+  const orderedStages = getOrderedStageIds(workflow);
+  if (!orderedStages.includes(newStage)) {
+    orderedStages.push(newStage);
+  }
+  const stageIndex: Record<string, number> = {};
+  orderedStages.forEach((sid, idx) => {
+    stageIndex[sid] = idx;
+  });
+
+  const newIdx = stageIndex[newStage] ?? 0;
+
+  // Check incoming edges to nodeId
+  for (const val of Object.values(spec.inputs ?? {})) {
+    const ref = extractNodeRef(val);
+    if (!ref || !nodesDef[ref.from_node]) continue;
+    const srcStage = nodesDef[ref.from_node].stage || DEFAULT_STAGE_ID;
+    const srcIdx = stageIndex[srcStage] ?? 0;
+    if (newIdx < srcIdx) {
+      return {
+        valid: false,
+        reason: `Cannot move "${nodeId}" to stage "${newStage}": upstream "${ref.from_node}" is in later stage "${srcStage}"`,
+      };
+    }
+  }
+
+  // Check outgoing edges from nodeId
+  for (const [otherId, otherSpec] of Object.entries(nodesDef)) {
+    if (otherId === nodeId) continue;
+    for (const val of Object.values(otherSpec.inputs ?? {})) {
+      const ref = extractNodeRef(val);
+      if (ref && ref.from_node === nodeId) {
+        const dstStage = otherSpec.stage || DEFAULT_STAGE_ID;
+        const dstIdx = stageIndex[dstStage] ?? 0;
+        if (dstIdx < newIdx) {
+          return {
+            valid: false,
+            reason: `Cannot move "${nodeId}" to stage "${newStage}": downstream "${otherId}" is in earlier stage "${dstStage}"`,
+          };
+        }
+      }
+    }
+  }
+
+  return { valid: true };
+}

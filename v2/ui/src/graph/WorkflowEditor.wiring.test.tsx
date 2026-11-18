@@ -9,6 +9,8 @@ import { inputHandleId, outputHandleId } from "./types";
 vi.mock("../api/client", () => ({
   fetchWorkflow: vi.fn(),
   fetchOps: vi.fn(),
+  fetchRuns: vi.fn().mockResolvedValue({ runs: [] }),
+  fetchRunState: vi.fn(),
 }));
 
 vi.mock("./GraphView", () => ({

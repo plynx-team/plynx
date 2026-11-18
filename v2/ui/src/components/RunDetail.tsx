@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   cancelRun,
   fetchOps,
@@ -14,6 +14,7 @@ import type {
   WorkflowDocument,
 } from "../api/types.gen";
 import { GraphView } from "../graph/GraphView";
+import { NodeInspector } from "../graph/NodeInspector";
 import { Link, useRouter } from "../router/Router";
 import { CheckpointCard } from "../stepper/CheckpointCard";
 import { StageApprovalCard } from "../stepper/StageApprovalCard";
@@ -42,6 +43,14 @@ export function RunDetail({ runId }: { runId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionInProgress, setActionInProgress] = useState<boolean>(false);
+
+  const opsMap = useMemo<Record<string, OpEntry>>(() => {
+    const map: Record<string, OpEntry> = {};
+    for (const op of ops) {
+      map[op.id] = op;
+    }
+    return map;
+  }, [ops]);
 
   useEffect(() => {
     let active = true;
@@ -317,14 +326,30 @@ export function RunDetail({ runId }: { runId: string }) {
                       gateState={gate}
                     />
                   ))}
-                <GraphView
-                  workflowDoc={workflowDoc}
-                  runState={runState}
-                  ops={ops}
-                  selectedNodeId={selectedNodeId}
-                  onSelectNode={setSelectedNodeId}
-                  readOnly={true}
-                />
+                <div className="flex gap-4">
+                  <div className="flex-1 min-w-0">
+                    <GraphView
+                      workflowDoc={workflowDoc}
+                      runState={runState}
+                      ops={ops}
+                      selectedNodeId={selectedNodeId}
+                      onSelectNode={setSelectedNodeId}
+                      readOnly={true}
+                    />
+                  </div>
+                  {selectedNodeId && workflowDoc?.workflow && (
+                    <div className="h-[540px]">
+                      <NodeInspector
+                        nodeId={selectedNodeId}
+                        workflow={workflowDoc.workflow}
+                        opsMap={opsMap}
+                        runState={runState}
+                        readOnly={true}
+                        onPreviewArtifact={setPreviewTarget}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

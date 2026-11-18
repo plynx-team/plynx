@@ -240,4 +240,38 @@ test.describe("PLynx UI Smoke Test", () => {
     await expect(page.getByTestId("wire-error-banner")).not.toBeVisible();
     await expect(page.locator('[data-id="echo.text->concat.a"]')).toBeVisible();
   });
+
+  test("Task 6.11: edits literals, binds/unbinds references, and previews node artifacts in Node Inspector", async ({ page }) => {
+    await page.goto("/#/editor/examples/workflows/foo_or_woo.yaml");
+    await expect(page.getByTestId("graph-node-pick")).toBeVisible();
+    await expect(page.getByTestId("graph-node-echo")).toBeVisible();
+
+    // 1. Select 'pick' and edit its literal 'prompt' input
+    await page.getByTestId("graph-node-pick").click();
+    const promptInput = page.getByTestId("inspector-input-prompt");
+    await expect(promptInput).toHaveValue("foo or woo?");
+    await promptInput.fill("choose wisely?");
+    await expect(promptInput).toHaveValue("choose wisely?");
+
+    // 2. Select 'echo', unbind '$pick.choice', verify literal widget appears, then re-bind '$pick.choice'
+    await page.getByTestId("graph-node-echo").click();
+    await expect(page.getByTestId("inspector-ref-text")).toHaveText("$pick.choice");
+    await page.getByTestId("inspector-unbind-text").click();
+    await expect(page.getByTestId("inspector-input-text")).toBeVisible();
+    await expect(page.locator('[data-id="pick.choice->echo.text"]')).toHaveCount(0);
+
+    await page.getByTestId("inspector-bind-text").selectOption("pick.choice");
+    await expect(page.getByTestId("inspector-ref-text")).toHaveText("$pick.choice");
+    await expect(page.locator('[data-id="pick.choice->echo.text"]')).toHaveCount(1);
+
+    // 3. Preview output artifact of completed 'echo' node from latest run in Node Inspector
+    const previewBtn = page.getByTestId("inspector-preview-output-text");
+    await expect(previewBtn).toBeVisible({ timeout: 5000 });
+    await previewBtn.click();
+    const dialog = page.getByTestId("artifact-preview-dialog");
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText("foo");
+    await dialog.getByRole("button", { name: "Close dialog" }).click();
+    await expect(dialog).not.toBeVisible();
+  });
 });

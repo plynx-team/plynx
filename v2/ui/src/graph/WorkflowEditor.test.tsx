@@ -8,6 +8,8 @@ import { WorkflowEditor } from "./WorkflowEditor";
 vi.mock("../api/client", () => ({
   fetchWorkflow: vi.fn(),
   fetchOps: vi.fn(),
+  fetchRuns: vi.fn().mockResolvedValue({ runs: [] }),
+  fetchRunState: vi.fn(),
 }));
 
 import * as client from "../api/client";

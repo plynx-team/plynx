@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Connection } from "@xyflow/react";
-import { fetchOps, fetchWorkflow } from "../api/client";
+import {
+  fetchOps,
+  fetchRuns,
+  fetchRunState,
+  fetchWorkflow,
+} from "../api/client";
 import type {
   NodePosition,
+  NodeSpec,
   OpEntry,
+  RunState,
   Workflow,
   WorkflowLayout,
 } from "../api/types.gen";
+import { ArtifactPreviewDialog } from "../previewers/ArtifactPreviewDialog";
 import { Link, useRouter } from "../router/Router";
 import { GraphView } from "./GraphView";
 import { computeDagrePositions, DEFAULT_STAGE_ID, getOrderedStageIds } from "./layout";
@@ -18,6 +26,7 @@ import {
   duplicateNodeInWorkflow,
   ensureLayout,
 } from "./mutations";
+import { NodeInspector, type ArtifactPreviewTarget } from "./NodeInspector";
 import { OpPalette } from "./OpPalette";
 import { validateConnection } from "./validation";
 
@@ -35,6 +44,9 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   const [hasSavedViewport, setHasSavedViewport] = useState<boolean>(false);
   const [fitViewTrigger, setFitViewTrigger] = useState<number>(0);
   const [ops, setOps] = useState<Array<OpEntry>>([]);
+  const [latestRun, setLatestRun] = useState<RunState | null>(null);
+  const [previewTarget, setPreviewTarget] =
+    useState<ArtifactPreviewTarget | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(
     undefined,
   );
@@ -77,6 +89,26 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         setOps(opEntries);
         setTargetStage(stageIds[stageIds.length - 1] ?? DEFAULT_STAGE_ID);
         setLoading(false);
+
+        // Best-effort load latest run for this workflow to enable artifact previews
+        if (typeof fetchRuns === "function") {
+          fetchRuns()
+            .then((list) => {
+              if (!active) return;
+              const match = list.runs.find(
+                (r) => r.workflow_path === workflowPath,
+              );
+              if (match && typeof fetchRunState === "function") {
+                return fetchRunState(match.id).then((state) => {
+                  if (active) setLatestRun(state);
+                });
+              }
+              return undefined;
+            })
+            .catch(() => {
+              // Non-critical if no run exists yet
+            });
+        }
       })
       .catch((err: unknown) => {
         if (!active) return;
@@ -198,6 +230,55 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     setWireError(null);
   }, [workflow, selectedEdgeId]);
 
+  const handleUpdateNodeSpec = useCallback(
+    (nodeId: string, updater: (spec: NodeSpec) => NodeSpec) => {
+      setWorkflow((prev) => {
+        if (!prev?.nodes?.[nodeId]) return prev;
+        return {
+          ...prev,
+          nodes: {
+            ...prev.nodes,
+            [nodeId]: updater(prev.nodes[nodeId]),
+          },
+        };
+      });
+    },
+    [],
+  );
+
+  const handleBindReference = useCallback(
+    (
+      targetNodeId: string,
+      targetPort: string,
+      sourceNodeId: string,
+      sourcePort: string,
+    ) => {
+      setWireError(null);
+      setWorkflow((prev) =>
+        prev
+          ? connectEdgeInWorkflow(
+              prev,
+              sourceNodeId,
+              sourcePort,
+              targetNodeId,
+              targetPort,
+            )
+          : prev,
+      );
+    },
+    [],
+  );
+
+  const handleUnbindInput = useCallback(
+    (targetNodeId: string, targetPort: string) => {
+      setWireError(null);
+      setWorkflow((prev) =>
+        prev ? disconnectEdgeInWorkflow(prev, targetNodeId, targetPort) : prev,
+      );
+    },
+    [],
+  );
+
   const handleAutoLayout = useCallback(() => {
     if (!workflow) return;
     const positions = computeDagrePositions(workflow, opsMap);
@@ -284,10 +365,6 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     handleDeleteSelectedEdge,
     handleDuplicateSelected,
   ]);
-
-  const selectedSpec =
-    selectedNodeId && workflow?.nodes ? workflow.nodes[selectedNodeId] : undefined;
-  const selectedOp = selectedSpec ? opsMap[selectedSpec.op] : undefined;
 
   return (
     <div data-testid="workflow-editor" className="space-y-4">
@@ -424,56 +501,30 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
             />
           </div>
 
-          {/* Right: Selected Node Summary (expanded to full inspector in Task 6.11) */}
-          <aside
-            data-testid="editor-selection-panel"
-            className="w-72 shrink-0 rounded-lg border border-slate-800 bg-slate-900/60 p-4 overflow-y-auto"
-          >
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300 border-b border-slate-800 pb-2">
-              Inspector
-            </h2>
-            {selectedNodeId && selectedSpec ? (
-              <div className="mt-3 space-y-3 text-xs">
-                <div>
-                  <span className="text-slate-500">Node ID</span>
-                  <p className="mt-0.5 font-mono text-white">{selectedNodeId}</p>
-                </div>
-                <div>
-                  <span className="text-slate-500">Title</span>
-                  <p className="mt-0.5 text-slate-200">
-                    {selectedSpec.title || selectedOp?.title || selectedNodeId}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-slate-500">Operation</span>
-                  <p className="mt-0.5 font-mono text-slate-300 break-all">
-                    {selectedSpec.op}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-slate-500">Stage</span>
-                  <p className="mt-0.5 font-mono text-slate-300">
-                    {selectedSpec.stage || DEFAULT_STAGE_ID}
-                  </p>
-                </div>
-                {selectedOp?.description && (
-                  <div>
-                    <span className="text-slate-500">Description</span>
-                    <p className="mt-0.5 text-slate-400">
-                      {selectedOp.description}
-                    </p>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="mt-4 text-xs text-slate-500">
-                Select a node on the canvas to inspect, duplicate, or delete it.
-                Click or drag an operation from the palette to add a node.
-              </p>
-            )}
-          </aside>
+          {/* Right: Node Inspector */}
+          <NodeInspector
+            nodeId={selectedNodeId}
+            workflow={workflow}
+            opsMap={opsMap}
+            runState={latestRun}
+            readOnly={false}
+            onUpdateNodeSpec={handleUpdateNodeSpec}
+            onBindReference={handleBindReference}
+            onUnbindInput={handleUnbindInput}
+            onPreviewArtifact={setPreviewTarget}
+          />
         </div>
       ) : null}
+
+      {previewTarget && (
+        <ArtifactPreviewDialog
+          title={previewTarget.title}
+          url={previewTarget.url}
+          filename={previewTarget.filename}
+          mediaType={previewTarget.mediaType}
+          onClose={() => setPreviewTarget(null)}
+        />
+      )}
     </div>
   );
 }

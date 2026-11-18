@@ -138,7 +138,7 @@ Goal: the thinnest path `CLI -> scheduler -> store -> events -> SSE -> UI`, with
 - [x] **6.8 Graph view, read-only.** React Flow, Dagre layout, stage group nodes, live status, `[ Stepper | Graph ]` toggle.
 - [x] **6.9 Graph editing: palette and nodes.** Palette grouped by `CATEGORY` with search (`/`, `Cmd+K`); add, duplicate, delete nodes.
 - [x] **6.10 Graph editing: wiring.** Drag edges between ports; reject type or media mismatches and backward stage edges with a visible reason.
-- [ ] **6.11 Node inspector.** Edit literals from registry types, bind or unbind references, preview artifacts of the selected node.
+- [x] **6.11 Node inspector.** Edit literals from registry types, bind or unbind references, preview artifacts of the selected node.
 - [ ] **6.12 Save and layout.** Save through `PUT /workflows`, sidecar for coordinates, dirty indicator.
 - [ ] **6.13 Reload behavior.** Refresh during a run, during a checkpoint, and after a server restart restore the correct view from SQLite.
 
