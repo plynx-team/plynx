@@ -512,14 +512,26 @@ def clean_cmd(days: int, dry_run: bool) -> None:
 
 @main.command("ui")
 @click.option("--port", type=int, default=8080, show_default=True, help="Local port to bind.")
+@click.option(
+    "--host",
+    type=str,
+    default="127.0.0.1",
+    show_default=True,
+    help="Host to bind (loopback only).",
+)
 @click.option("--no-browser", is_flag=True, default=False, help="Do not open a browser window.")
-def ui_cmd(port: int, no_browser: bool) -> None:
+def ui_cmd(port: int, no_browser: bool, host: str = "127.0.0.1") -> None:
     """Start the local server on 127.0.0.1 and serve the UI."""
-    from plynx.server.app import create_app
+    from plynx.server import create_app, validate_host
+
+    try:
+        validate_host(host)
+    except ValueError as exc:
+        raise click.BadParameter(str(exc), param_hint="--host") from exc
 
     workspace_root = find_workspace_root()
-    app = create_app(workspace_root)
-    url = f"http://127.0.0.1:{port}"
+    app = create_app(workspace_root, host=host)
+    url = f"http://{host}:{port}"
     if not no_browser:
         webbrowser.open(url)
-    uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")
+    uvicorn.run(app, host=host, port=port, log_level="info")

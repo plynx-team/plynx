@@ -12,7 +12,10 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import httpx
+import pytest
+from click.testing import CliRunner
 from plynx.api_models import (
+    CleanResponse,
     NodeLogEvent,
     NodePosition,
     OpEntry,
@@ -29,8 +32,18 @@ from plynx.api_models import (
     WorkflowLayout,
     WorkflowListItem,
 )
-from plynx.server import create_app
+from plynx.cas import BlobStore
+from plynx.cli import main
+from plynx.server import (
+    NonLoopbackHostError,
+    create_app,
+    is_loopback_host,
+    run_server,
+    validate_host,
+)
 from plynx.store import RunStore
+from plynx.store.run_store import generate_run_id
+from plynx_sdk.protocol import ResultFileValue, ResultManifest
 from pydantic import TypeAdapter
 
 from tests.test_validator import EXAMPLE_WORKFLOW
@@ -916,5 +929,191 @@ nodes:
             assert val_invalid.status_code == 200
             val_invalid_res = ValidateWorkflowResponse.model_validate(val_invalid.json())
             assert any(i.severity == "error" for i in val_invalid_res.issues)
+
+    asyncio.run(_test())
+
+
+def test_server_cors_dev_origin_only(tmp_path: Path) -> None:
+    app = create_app(tmp_path, dev_mode=True)
+
+    async def _test() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            # 1. Allowed dev origin: localhost:3000
+            resp_local = await client.get("/health", headers={"Origin": "http://localhost:3000"})
+            assert resp_local.status_code == 200
+            assert resp_local.headers.get("access-control-allow-origin") == "http://localhost:3000"
+
+            # 2. Allowed dev origin: 127.0.0.1:3000
+            resp_loop = await client.get("/health", headers={"Origin": "http://127.0.0.1:3000"})
+            assert resp_loop.status_code == 200
+            assert resp_loop.headers.get("access-control-allow-origin") == "http://127.0.0.1:3000"
+
+            # 3. Disallowed origin: evil.com receives no CORS header
+            resp_evil = await client.get("/health", headers={"Origin": "http://evil.com"})
+            assert resp_evil.status_code == 200
+            assert "access-control-allow-origin" not in resp_evil.headers
+
+            # 4. Preflight request from allowed origin
+            preflight_ok = await client.options(
+                "/runs",
+                headers={
+                    "Origin": "http://localhost:3000",
+                    "Access-Control-Request-Method": "POST",
+                },
+            )
+            assert preflight_ok.headers.get("access-control-allow-origin") == "http://localhost:3000"
+
+            # 5. Preflight request from disallowed origin receives no CORS header
+            preflight_evil = await client.options(
+                "/runs",
+                headers={
+                    "Origin": "http://evil.com",
+                    "Access-Control-Request-Method": "POST",
+                },
+            )
+            assert "access-control-allow-origin" not in preflight_evil.headers
+
+        # 6. Dev mode disabled: even dev origin gets no CORS header
+        prod_app = create_app(tmp_path, dev_mode=False)
+        prod_transport = httpx.ASGITransport(app=prod_app)
+        async with httpx.AsyncClient(
+            transport=prod_transport, base_url="http://testserver"
+        ) as prod_client:
+            resp_prod = await prod_client.get(
+                "/health", headers={"Origin": "http://localhost:3000"}
+            )
+            assert resp_prod.status_code == 200
+            assert "access-control-allow-origin" not in resp_prod.headers
+
+    asyncio.run(_test())
+
+
+def test_server_loopback_host_binding_refusal(tmp_path: Path) -> None:
+    # 1. Allowed loopback interfaces
+    assert is_loopback_host("127.0.0.1") is True
+    assert is_loopback_host("localhost") is True
+    assert is_loopback_host("::1") is True
+    assert is_loopback_host("127.0.0.42") is True
+    assert validate_host("127.0.0.1") == "127.0.0.1"
+    assert validate_host("localhost") == "localhost"
+    assert validate_host("::1") == "::1"
+
+    # 2. Refused non-loopback hosts
+    assert is_loopback_host("0.0.0.0") is False
+    assert is_loopback_host("192.168.1.100") is False
+    assert is_loopback_host("example.com") is False
+    assert is_loopback_host("::") is False
+
+    with pytest.raises(NonLoopbackHostError, match=r"Binding to non-loopback host.*refused"):
+        validate_host("0.0.0.0")
+
+    with pytest.raises(NonLoopbackHostError, match=r"Binding to non-loopback host.*refused"):
+        validate_host("192.168.1.100")
+
+    # 3. create_app with non-loopback host raises
+    with pytest.raises(NonLoopbackHostError):
+        create_app(tmp_path, host="0.0.0.0")
+
+    # create_app with loopback host succeeds
+    valid_app = create_app(tmp_path, host="127.0.0.1")
+    assert valid_app is not None
+
+    # 4. run_server with non-loopback host raises
+    with pytest.raises(NonLoopbackHostError):
+        run_server(valid_app, host="0.0.0.0")
+
+    # 5. CLI plynx ui --host 0.0.0.0 fails with parameter error
+    runner = CliRunner()
+    res = runner.invoke(main, ["ui", "--host", "0.0.0.0", "--no-browser"])
+    assert res.exit_code != 0
+    assert "refused" in res.output.lower() or "loopback" in res.output.lower()
+
+
+def test_server_clean_endpoint(tmp_path: Path) -> None:
+    store = RunStore(tmp_path)
+    blob_store = BlobStore.from_workspace(tmp_path)
+    now = time.time()
+    old_time = now - (20 * 86400)  # 20 days ago
+
+    # Create unreferenced blob and old run blob
+    sha_unreferenced, _ = blob_store.put_bytes(b"orphan-server-blob")
+    sha_old_run_out, _ = blob_store.put_bytes(b"old-server-run-output")
+
+    # Create old unpinned run in store
+    old_run_id = generate_run_id(now=old_time)
+    with store._connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO runs (id, workflow_path, workflow_sha256, status, created_at, pinned)
+            VALUES (?, 'wf.yaml', 'sha_wf', 'SUCCESS', ?, 0)
+            """,
+            (old_run_id, old_time),
+        )
+    old_run_dir = store.run_dir(old_run_id)
+    n1_dir = old_run_dir / "nodes" / "n1"
+    n1_dir.mkdir(parents=True, exist_ok=True)
+    manifest = ResultManifest(
+        status="SUCCESS",
+        cache_key="key",
+        cache_hit=False,
+        started_at=old_time,
+        finished_at=old_time,
+        outputs={
+            "out": ResultFileValue(
+                sha256=sha_old_run_out,
+                size_bytes=len(b"old-server-run-output"),
+                media=None,
+                filename="out.txt",
+            )
+        },
+    )
+    (n1_dir / "result.json").write_text(manifest.to_json(), encoding="utf-8")
+
+    app = create_app(tmp_path)
+
+    async def _test() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            # 1. Validation error on negative days
+            neg_resp = await client.post("/clean", json={"days": -1})
+            assert neg_resp.status_code == 422
+
+            # 2. Dry run clean (14 days): identifies 1 run, 2 blobs
+            dry_resp = await client.post("/clean", json={"days": 14, "dry_run": True})
+            assert dry_resp.status_code == 200
+            dry_data = CleanResponse.model_validate(dry_resp.json())
+            assert dry_data.deleted_runs == 1
+            assert dry_data.deleted_blobs == 2
+            assert dry_data.reclaimed_bytes > 0
+
+            # Verify files still exist after dry run
+            assert old_run_dir.exists()
+            assert blob_store.exists(sha_unreferenced)
+            assert blob_store.exists(sha_old_run_out)
+
+            # 3. Real clean on /api/v1/clean: deletes old run and unreferenced blobs
+            real_resp = await client.post(
+                "/api/v1/clean",
+                json={"days": 14, "dry_run": False},
+            )
+            assert real_resp.status_code == 200
+            real_data = CleanResponse.model_validate(real_resp.json())
+            assert real_data.deleted_runs == 1
+            assert real_data.deleted_blobs == 2
+            assert real_data.reclaimed_bytes > 0
+
+            # Verify files deleted from disk
+            assert not old_run_dir.exists()
+            assert not blob_store.exists(sha_unreferenced)
+            assert not blob_store.exists(sha_old_run_out)
+
+            # 4. Subsequent clean on empty: returns 0 deleted
+            empty_resp = await client.post("/clean", json={})
+            assert empty_resp.status_code == 200
+            empty_data = CleanResponse.model_validate(empty_resp.json())
+            assert empty_data.deleted_runs == 0
+            assert empty_data.deleted_blobs == 0
+            assert empty_data.reclaimed_bytes == 0
 
     asyncio.run(_test())

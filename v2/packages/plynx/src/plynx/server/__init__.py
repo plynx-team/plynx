@@ -1,5 +1,17 @@
 """FastAPI server for PLynx v2 (PROTOCOL.md sections 9 & 10)."""
 
-from plynx.server.app import create_app
+from plynx.server.app import (
+    NonLoopbackHostError,
+    create_app,
+    is_loopback_host,
+    run_server,
+    validate_host,
+)
 
-__all__ = ["create_app"]
+__all__ = [
+    "NonLoopbackHostError",
+    "create_app",
+    "is_loopback_host",
+    "run_server",
+    "validate_host",
+]

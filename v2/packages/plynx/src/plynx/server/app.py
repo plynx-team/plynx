@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import json
 import time
 from collections.abc import AsyncIterator, Callable, Mapping, MutableMapping
@@ -11,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, FastAPI, Query, Request, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from plynx_sdk.protocol import ResultFileValue, ResultManifest
@@ -21,6 +23,8 @@ from plynx.api_models import (
     AnswerCheckpointRequest,
     ApiErrorDetail,
     ApiErrorResponse,
+    CleanRequest,
+    CleanResponse,
     CreateRunRequest,
     CreateRunResponse,
     HealthResponse,
@@ -40,7 +44,7 @@ from plynx.api_models import (
     WorkflowLayout,
     WorkflowListItem,
 )
-from plynx.cas import BlobStore
+from plynx.cas import BlobStore, clean
 from plynx.engine import Executor, Scheduler, SchedulerOptions, create_executor
 from plynx.registry import OpRegistry, Registry, find_workspace_root
 from plynx.store import (
@@ -184,14 +188,65 @@ def _workflow_to_dict(wf: Any) -> dict[str, Any]:
     return out
 
 
+DEV_ORIGINS: list[str] = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+
+class NonLoopbackHostError(ValueError):
+    """Raised when an attempt is made to bind or configure a non-loopback host."""
+
+
+def is_loopback_host(host: str) -> bool:
+    """Return True if host resolves to a loopback address or loopback hostname."""
+    h = host.strip().lower()
+    if h in {"localhost", "127.0.0.1", "::1", "ip6-localhost", "ip6-loopback"}:
+        return True
+    try:
+        ip = ipaddress.ip_address(h)
+        return ip.is_loopback
+    except ValueError:
+        return False
+
+
+def validate_host(host: str) -> str:
+    """Validate that host is a loopback interface, raising NonLoopbackHostError otherwise."""
+    if not is_loopback_host(host):
+        raise NonLoopbackHostError(
+            f"Binding to non-loopback host {host!r} is refused. "
+            "PLynx local server only binds to loopback interfaces (e.g. 127.0.0.1, localhost, ::1)."
+        )
+    return host
+
+
+def run_server(
+    app: FastAPI,
+    *,
+    host: str = "127.0.0.1",
+    port: int = 8080,
+    **kwargs: Any,
+) -> None:
+    """Run the FastAPI application with uvicorn after validating loopback binding."""
+    validate_host(host)
+    import uvicorn
+
+    uvicorn.run(app, host=host, port=port, **kwargs)
+
+
 def create_app(
     workspace_root: Path | None = None,
     *,
     executor_factory: Callable[[Path | None], Executor] = create_executor,
     registry: OpRegistry | None = None,
     static_dir: Path | None = None,
+    dev_mode: bool = True,
+    allowed_origins: list[str] | None = None,
+    host: str | None = None,
 ) -> FastAPI:
     """Create and configure the PLynx FastAPI application."""
+    if host is not None:
+        validate_host(host)
     ws_root = (workspace_root or find_workspace_root()).resolve()
     ui_static_dir = (static_dir or DEFAULT_STATIC_DIR).resolve()
     store = RunStore(ws_root)
@@ -200,6 +255,17 @@ def create_app(
     background_tasks: set[asyncio.Task[Any]] = set()
 
     app = FastAPI(title="PLynx", version="2.0.0")
+
+    origins = allowed_origins if allowed_origins is not None else (DEV_ORIGINS if dev_mode else [])
+    if origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
     app.state.workspace_root = ws_root
     app.state.store = store
     app.state.registry = op_registry
@@ -909,6 +975,26 @@ def create_app(
                 "Connection": "keep-alive",
                 "X-Accel-Buffering": "no",
             },
+        )
+
+    @router.post("/clean", response_model=CleanResponse)
+    async def clean_endpoint(req: CleanRequest | None = None) -> Any:
+        """Mark-and-sweep garbage collection of old unpinned runs and unreferenced blobs."""
+        clean_req = req if req is not None else CleanRequest()
+        try:
+            res = await asyncio.to_thread(
+                clean,
+                ws_root,
+                days=clean_req.days,
+                dry_run=clean_req.dry_run,
+            )
+        except Exception as exc:
+            return _error_response(500, "clean_failed", str(exc))
+
+        return CleanResponse(
+            deleted_runs=res.runs_deleted,
+            deleted_blobs=res.blobs_deleted,
+            reclaimed_bytes=res.bytes_reclaimed,
         )
 
     app.include_router(router)
