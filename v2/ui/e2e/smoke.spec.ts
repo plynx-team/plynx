@@ -32,7 +32,8 @@ test.describe("PLynx UI Smoke Test", () => {
     await expect(page.getByRole("heading", { name: "Workflows" })).toBeVisible();
 
     // Click "Run" on the foo_or_woo workflow
-    await page.getByRole("button", { name: "Run", exact: true }).click();
+    const fooCard = page.getByTestId("workflow-card-examples/workflows/foo_or_woo.yaml");
+    await fooCard.getByRole("button", { name: "Run" }).click();
     await expect(page).toHaveURL(/.*#\/workflows\/examples\/workflows\/foo_or_woo\.yaml/);
 
     // Form is displayed
@@ -75,5 +76,32 @@ test.describe("PLynx UI Smoke Test", () => {
     // Close logs panel
     await page.getByRole("button", { name: "Close logs" }).click();
     await expect(page.getByTestId("logs-panel")).not.toBeVisible();
+  });
+
+  test("Task 6.6: handles Stage approval card with Approve & Continue", async ({ page }) => {
+    await page.goto("/#/workflows");
+    await expect(page.getByRole("heading", { name: "Workflows" })).toBeVisible();
+
+    // Click "Run" on the staged workflow
+    const stagedCard = page.getByTestId("workflow-card-examples/workflows/staged.yaml");
+    await stagedCard.getByRole("button", { name: "Run" }).click();
+    await expect(page).toHaveURL(/.*#\/workflows\/examples\/workflows\/staged\.yaml/);
+
+    // Launch the run
+    await page.getByRole("button", { name: "Start Run" }).click();
+    await expect(page).toHaveURL(/.*#\/runs\/[0-9a-f-]+/);
+
+    // Wait for stage gate approval card to appear
+    const gateCard = page.getByTestId("stage-approval-card-stage_1");
+    await expect(gateCard).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Stage Gate: Approval Required")).toBeVisible();
+
+    // Click "Approve & Continue"
+    const approveBtn = page.getByRole("button", { name: "Approve & Continue" });
+    await expect(approveBtn).toBeVisible();
+    await approveBtn.click();
+
+    // Gate card disappears on approval!
+    await expect(gateCard).not.toBeVisible({ timeout: 10000 });
   });
 });

@@ -132,7 +132,7 @@ export async function approveStage(
   stageId: string,
 ): Promise<void> {
   const response = await fetch(
-    `/api/v1/runs/${encodeURIComponent(runId)}/stage-gates/${encodeURIComponent(
+    `/api/v1/runs/${encodeURIComponent(runId)}/stages/${encodeURIComponent(
       stageId,
     )}/approve`,
     {

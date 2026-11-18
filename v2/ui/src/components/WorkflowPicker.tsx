@@ -96,6 +96,7 @@ export function WorkflowPicker() {
           {filtered.map((wf) => (
             <div
               key={wf.path}
+              data-testid={`workflow-card-${wf.path}`}
               className="flex flex-col justify-between rounded-lg border border-slate-800 bg-slate-900/50 p-5 transition-colors hover:border-slate-700"
             >
               <div className="space-y-2">

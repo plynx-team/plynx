@@ -120,6 +120,7 @@ export function StepperView({
           return (
             <StageCard
               key={stageId}
+              runId={runState.id}
               stageId={stageId}
               stageDef={stageDef}
               gateState={gateState}

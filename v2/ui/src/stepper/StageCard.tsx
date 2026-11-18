@@ -5,8 +5,10 @@ import type {
   StageGateState,
 } from "../api/types.gen";
 import { NodeRow } from "./NodeRow";
+import { StageApprovalCard } from "./StageApprovalCard";
 
 export interface StageCardProps {
+  runId: string;
   stageId: string;
   stageDef?: Stage;
   gateState?: StageGateState;
@@ -20,6 +22,7 @@ export interface StageCardProps {
 }
 
 export function StageCard({
+  runId,
   stageId,
   stageDef,
   gateState,
@@ -116,6 +119,18 @@ export function StageCard({
           />
         ))}
       </div>
+
+      {/* Approval Card if gate is waiting */}
+      {gateState?.status === "WAITING" && (
+        <div className="pt-2">
+          <StageApprovalCard
+            runId={runId}
+            stageId={stageId}
+            stageTitle={title}
+            gateState={gateState}
+          />
+        </div>
+      )}
     </div>
   );
 }
