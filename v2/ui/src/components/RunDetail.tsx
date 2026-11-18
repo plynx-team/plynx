@@ -2,40 +2,24 @@ import { useEffect, useState } from "react";
 import {
   cancelRun,
   fetchRunState,
+  fetchWorkflow,
   resumeRun,
   subscribeRunEvents,
 } from "../api/client";
 import { applyRunEvent, createInitialRunState } from "../api/reducer";
 import type {
-  NodeRunState,
-  NodeStatus,
   RunState,
+  WorkflowDocument,
 } from "../api/types.gen";
 import { Link, useRouter } from "../router/Router";
+import { StepperView } from "../stepper/StepperView";
 import { formatDuration, formatTimestamp, runStatusBadgeClasses } from "./RunList";
-
-function nodeStatusBadgeClasses(status: NodeStatus): string {
-  switch (status) {
-    case "SUCCESS":
-      return "bg-emerald-950 text-emerald-300 border-emerald-800";
-    case "RUNNING":
-    case "BUILDING_ENVIRONMENT":
-      return "bg-sky-950 text-sky-300 border-sky-800 animate-pulse";
-    case "WAITING_FOR_USER":
-      return "bg-amber-950 text-amber-300 border-amber-800";
-    case "FAILED":
-      return "bg-rose-950 text-rose-300 border-rose-800";
-    case "CANCELED":
-    case "BLOCKED":
-      return "bg-slate-900 text-slate-400 border-slate-700";
-    case "PENDING":
-      return "bg-slate-950 text-slate-400 border-slate-800";
-  }
-}
 
 export function RunDetail({ runId }: { runId: string }) {
   const { navigate } = useRouter();
   const [runState, setRunState] = useState<RunState | null>(null);
+  const [workflowDoc, setWorkflowDoc] = useState<WorkflowDocument | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -49,9 +33,19 @@ export function RunDetail({ runId }: { runId: string }) {
 
     fetchRunState(runId)
       .then((initial) => {
-        if (active) {
-          setRunState(initial);
-          setLoading(false);
+        if (!active) return;
+        setRunState(initial);
+        setLoading(false);
+
+        // Fetch workflow document for stage definitions
+        if (initial.workflow_path) {
+          fetchWorkflow(initial.workflow_path)
+            .then((doc) => {
+              if (active) setWorkflowDoc(doc);
+            })
+            .catch(() => {
+              // Silently ignore workflow doc fetch error if not critical
+            });
         }
       })
       .catch((err: unknown) => {
@@ -102,10 +96,6 @@ export function RunDetail({ runId }: { runId: string }) {
       setActionInProgress(false);
     }
   };
-
-  const nodes: ReadonlyArray<NodeRunState> = runState
-    ? Object.values(runState.nodes)
-    : [];
 
   const isTerminal =
     runState?.status === "SUCCESS" ||
@@ -211,8 +201,10 @@ export function RunDetail({ runId }: { runId: string }) {
                 </p>
               </div>
               <div>
-                <span className="text-slate-500">Nodes</span>
-                <p className="mt-0.5 text-slate-300">{nodes.length}</p>
+                <span className="text-slate-500">Total Nodes</span>
+                <p className="mt-0.5 text-slate-300">
+                  {Object.keys(runState.nodes).length}
+                </p>
               </div>
             </div>
 
@@ -223,44 +215,17 @@ export function RunDetail({ runId }: { runId: string }) {
             )}
           </div>
 
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold tracking-wide text-slate-200">
-              Nodes ({nodes.length})
+          {/* Stepper View */}
+          <div className="space-y-4">
+            <h2 className="text-sm font-bold tracking-wide text-white">
+              Workflow Stages (Stepper)
             </h2>
-            {nodes.length === 0 ? (
-              <div className="rounded-md border border-slate-800 bg-slate-900/40 p-6 text-center text-xs text-slate-500">
-                No nodes reported yet.
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-800 rounded-lg border border-slate-800 bg-slate-900/40">
-                {nodes.map((node) => (
-                  <div
-                    key={node.node_id}
-                    className="flex items-center justify-between px-4 py-3 text-sm"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono text-xs font-semibold text-slate-200">
-                        {node.node_id}
-                      </span>
-                      {node.cache_hit && (
-                        <span className="rounded bg-teal-950 border border-teal-800 px-1.5 py-0.2 text-[10px] font-medium text-teal-300">
-                          cache hit
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={`rounded border px-2 py-0.5 text-xs font-medium ${nodeStatusBadgeClasses(
-                          node.status,
-                        )}`}
-                      >
-                        {node.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <StepperView
+              runState={runState}
+              workflowDoc={workflowDoc}
+              selectedNodeId={selectedNodeId}
+              onSelectNode={setSelectedNodeId}
+            />
           </div>
         </div>
       ) : null}

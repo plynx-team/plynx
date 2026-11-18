@@ -27,7 +27,7 @@ test.describe("PLynx UI Smoke Test", () => {
     await expect(page.getByRole("heading", { name: "Runs" })).toBeVisible();
   });
 
-  test("Task 6.2: opens Run inputs form and launches workflow", async ({ page }) => {
+  test("Task 6.2 & 6.3: opens Run inputs form, launches workflow, displays Stepper view", async ({ page }) => {
     await page.goto("/#/workflows");
     await expect(page.getByRole("heading", { name: "Workflows" })).toBeVisible();
 
@@ -46,5 +46,11 @@ test.describe("PLynx UI Smoke Test", () => {
     // Navigates to /runs/<run_id>
     await expect(page).toHaveURL(/.*#\/runs\/[0-9a-f-]+/);
     await expect(page.getByText("Workflow: examples/workflows/foo_or_woo.yaml")).toBeVisible();
+
+    // Task 6.3: Stepper view elements are visible
+    await expect(page.getByText("Workflow Stages (Stepper)")).toBeVisible();
+    await expect(page.getByText("Overall Progress")).toBeVisible();
+    await expect(page.getByText("1. Ask")).toBeVisible();
+    await expect(page.getByText("pick", { exact: true })).toBeVisible();
   });
 });
