@@ -103,7 +103,11 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
                   position={Position.Left}
                   id={inputHandleId(port.name)}
                   data-testid={`handle-in-${nodeId}-${port.name}`}
-                  className="!h-2.5 !w-2.5 !border-2 !border-slate-950 !bg-sky-400"
+                  className={
+                    data.readOnly
+                      ? "!h-2.5 !w-2.5 !border-2 !border-slate-950 !bg-sky-400"
+                      : "!h-3.5 !w-3.5 !border-2 !border-slate-950 !bg-sky-400 hover:!bg-sky-300"
+                  }
                 />
                 <span
                   className={`truncate font-mono text-[11px] ${
@@ -144,7 +148,11 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
                 position={Position.Right}
                 id={outputHandleId(port.name)}
                 data-testid={`handle-out-${nodeId}-${port.name}`}
-                className="!h-2.5 !w-2.5 !border-2 !border-slate-950 !bg-emerald-400"
+                className={
+                  data.readOnly
+                    ? "!h-2.5 !w-2.5 !border-2 !border-slate-950 !bg-emerald-400"
+                    : "!h-3.5 !w-3.5 !border-2 !border-slate-950 !bg-emerald-400 hover:!bg-emerald-300"
+                }
               />
             </div>
           ))}

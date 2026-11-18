@@ -39,6 +39,8 @@ export interface GraphViewProps {
   ops?: ReadonlyArray<OpEntry>;
   selectedNodeId?: string;
   onSelectNode?: (nodeId: string | undefined) => void;
+  selectedEdgeId?: string;
+  onSelectEdge?: (edgeId: string | undefined) => void;
   readOnly?: boolean;
   onNodesChange?: OnNodesChange<GraphNode>;
   onEdgesChange?: OnEdgesChange<Edge>;
@@ -46,6 +48,8 @@ export interface GraphViewProps {
   onNodeDragStop?: (nodeId: string, absX: number, absY: number) => void;
   onDropOp?: (opId: string, position: { x: number; y: number }) => void;
   onViewportChange?: (viewport: { x: number; y: number; zoom: number }) => void;
+  hasSavedViewport?: boolean;
+  fitViewTrigger?: number;
   heightClassName?: string;
 }
 
@@ -74,6 +78,8 @@ function GraphCanvasInner({
   ops = [],
   selectedNodeId,
   onSelectNode,
+  selectedEdgeId,
+  onSelectEdge,
   readOnly = true,
   onNodesChange: externalOnNodesChange,
   onEdgesChange,
@@ -81,6 +87,8 @@ function GraphCanvasInner({
   onNodeDragStop,
   onDropOp,
   onViewportChange,
+  hasSavedViewport,
+  fitViewTrigger = 0,
   heightClassName = "h-[540px]",
 }: GraphViewProps) {
   const reactFlow = useReactFlow<GraphNode, Edge>();
@@ -124,6 +132,34 @@ function GraphCanvasInner({
   useEffect(() => {
     setRfNodes(built.nodes);
   }, [built.nodes]);
+
+  useEffect(() => {
+    if (fitViewTrigger > 0) {
+      requestAnimationFrame(() => {
+        void reactFlow.fitView({ padding: 0.2 });
+      });
+    }
+  }, [fitViewTrigger, reactFlow]);
+
+  const useSavedViewport =
+    hasSavedViewport ?? Boolean(effectiveLayout?.viewport);
+
+  const renderedEdges = useMemo(() => {
+    if (!selectedEdgeId) return built.edges;
+    return built.edges.map((edge) =>
+      edge.id === selectedEdgeId
+        ? {
+            ...edge,
+            selected: true,
+            style: {
+              ...edge.style,
+              stroke: "#f59e0b",
+              strokeWidth: 3,
+            },
+          }
+        : edge,
+    );
+  }, [built.edges, selectedEdgeId]);
 
   const handleNodesChange: OnNodesChange<GraphNode> = useCallback(
     (changes) => {
@@ -181,10 +217,12 @@ function GraphCanvasInner({
     >
       <ReactFlow<GraphNode, Edge>
         nodes={rfNodes}
-        edges={built.edges}
+        edges={renderedEdges}
         nodeTypes={NODE_TYPES}
-        defaultViewport={effectiveLayout?.viewport ?? undefined}
-        fitView={!effectiveLayout?.viewport}
+        defaultViewport={
+          useSavedViewport ? (effectiveLayout?.viewport ?? undefined) : undefined
+        }
+        fitView={!useSavedViewport}
         fitViewOptions={{ padding: 0.2 }}
         nodesDraggable={!readOnly}
         nodesConnectable={!readOnly}
@@ -196,12 +234,20 @@ function GraphCanvasInner({
         onConnect={onConnect}
         onNodeClick={(_event, node) => {
           if (!isStageGroupId(node.id)) {
+            onSelectEdge?.(undefined);
             onSelectNode?.(node.id);
+          }
+        }}
+        onEdgeClick={(_event, edge) => {
+          if (!readOnly) {
+            onSelectNode?.(undefined);
+            onSelectEdge?.(edge.id);
           }
         }}
         onPaneClick={() => {
           if (!readOnly) {
             onSelectNode?.(undefined);
+            onSelectEdge?.(undefined);
           }
         }}
         onNodeDragStop={(_event, node) => {

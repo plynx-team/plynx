@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { Connection } from "@xyflow/react";
 import { fetchOps, fetchWorkflow } from "../api/client";
 import type {
   NodePosition,
@@ -11,11 +12,14 @@ import { GraphView } from "./GraphView";
 import { computeDagrePositions, DEFAULT_STAGE_ID, getOrderedStageIds } from "./layout";
 import {
   addNodeToWorkflow,
+  connectEdgeInWorkflow,
   deleteNodeFromWorkflow,
+  disconnectEdgeInWorkflow,
   duplicateNodeInWorkflow,
   ensureLayout,
 } from "./mutations";
 import { OpPalette } from "./OpPalette";
+import { validateConnection } from "./validation";
 
 function isEditableElement(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -28,10 +32,16 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   const { navigate } = useRouter();
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
   const [layout, setLayout] = useState<WorkflowLayout | null>(null);
+  const [hasSavedViewport, setHasSavedViewport] = useState<boolean>(false);
+  const [fitViewTrigger, setFitViewTrigger] = useState<number>(0);
   const [ops, setOps] = useState<Array<OpEntry>>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(
     undefined,
   );
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | undefined>(
+    undefined,
+  );
+  const [wireError, setWireError] = useState<string | null>(null);
   const [targetStage, setTargetStage] = useState<string>(DEFAULT_STAGE_ID);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +59,8 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     setLoading(true);
     setError(null);
     setSelectedNodeId(undefined);
+    setSelectedEdgeId(undefined);
+    setWireError(null);
 
     Promise.all([fetchWorkflow(workflowPath), fetchOps()])
       .then(([doc, opEntries]) => {
@@ -61,6 +73,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         const stageIds = getOrderedStageIds(doc.workflow);
         setWorkflow(doc.workflow);
         setLayout(initialLayout);
+        setHasSavedViewport(Boolean(doc.layout?.viewport));
         setOps(opEntries);
         setTargetStage(stageIds[stageIds.length - 1] ?? DEFAULT_STAGE_ID);
         setLoading(false);
@@ -141,7 +154,49 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     setWorkflow(result.workflow);
     setLayout(result.layout);
     setSelectedNodeId(undefined);
+    setSelectedEdgeId(undefined);
+    setWireError(null);
   }, [workflow, layout, selectedNodeId, opsMap]);
+
+  const handleConnect = useCallback(
+    (connection: Connection) => {
+      if (!workflow) return;
+      const result = validateConnection(connection, workflow, opsMap);
+      if (!result.valid) {
+        setWireError(result.reason);
+        return;
+      }
+      setWireError(null);
+      setWorkflow((prev) =>
+        prev
+          ? connectEdgeInWorkflow(
+              prev,
+              result.sourceNodeId,
+              result.sourcePort,
+              result.targetNodeId,
+              result.targetPort,
+            )
+          : prev,
+      );
+    },
+    [workflow, opsMap],
+  );
+
+  const handleDeleteSelectedEdge = useCallback(() => {
+    if (!workflow || !selectedEdgeId) return;
+    const arrowIdx = selectedEdgeId.indexOf("->");
+    if (arrowIdx === -1) return;
+    const targetPart = selectedEdgeId.slice(arrowIdx + 2);
+    const dotIdx = targetPart.indexOf(".");
+    if (dotIdx === -1) return;
+    const targetNodeId = targetPart.slice(0, dotIdx);
+    const targetPort = targetPart.slice(dotIdx + 1);
+    setWorkflow((prev) =>
+      prev ? disconnectEdgeInWorkflow(prev, targetNodeId, targetPort) : prev,
+    );
+    setSelectedEdgeId(undefined);
+    setWireError(null);
+  }, [workflow, selectedEdgeId]);
 
   const handleAutoLayout = useCallback(() => {
     if (!workflow) return;
@@ -151,6 +206,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
       nodes: positions,
       viewport: prev?.viewport ?? { x: 0, y: 0, zoom: 1 },
     }));
+    setFitViewTrigger((c) => c + 1);
   }, [workflow, opsMap]);
 
   const handleNodeDragStop = useCallback(
@@ -190,18 +246,28 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     [],
   );
 
-  // Keyboard shortcuts: Delete/Backspace to delete selected node, Cmd/Ctrl+D to duplicate
+  // Keyboard shortcuts: Delete/Backspace to delete selected node or edge, Cmd/Ctrl+D to duplicate
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (isEditableElement(event.target)) return;
-      if (!selectedNodeId) return;
 
       if (event.key === "Delete" || event.key === "Backspace") {
-        event.preventDefault();
-        handleDeleteSelected();
-        return;
+        if (selectedEdgeId) {
+          event.preventDefault();
+          handleDeleteSelectedEdge();
+          return;
+        }
+        if (selectedNodeId) {
+          event.preventDefault();
+          handleDeleteSelected();
+          return;
+        }
       }
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d") {
+      if (
+        selectedNodeId &&
+        (event.metaKey || event.ctrlKey) &&
+        event.key.toLowerCase() === "d"
+      ) {
         event.preventDefault();
         handleDuplicateSelected();
       }
@@ -211,7 +277,13 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [selectedNodeId, handleDeleteSelected, handleDuplicateSelected]);
+  }, [
+    selectedNodeId,
+    selectedEdgeId,
+    handleDeleteSelected,
+    handleDeleteSelectedEdge,
+    handleDuplicateSelected,
+  ]);
 
   const selectedSpec =
     selectedNodeId && workflow?.nodes ? workflow.nodes[selectedNodeId] : undefined;
@@ -255,6 +327,16 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
           >
             Delete Node
           </button>
+          {selectedEdgeId && (
+            <button
+              type="button"
+              data-testid="btn-delete-edge"
+              onClick={handleDeleteSelectedEdge}
+              className="rounded-md border border-amber-800 bg-amber-950/60 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-900/60"
+            >
+              Disconnect Edge
+            </button>
+          )}
           <button
             type="button"
             data-testid="btn-auto-layout"
@@ -283,6 +365,29 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         </div>
       )}
 
+      {wireError && (
+        <div
+          role="alert"
+          data-testid="wire-error-banner"
+          className="flex items-center justify-between gap-3 rounded-md border border-amber-800 bg-amber-950/70 px-4 py-2.5 text-xs text-amber-200"
+        >
+          <div>
+            <span className="font-semibold text-amber-300">
+              Connection rejected:{" "}
+            </span>
+            <span>{wireError}</span>
+          </div>
+          <button
+            type="button"
+            aria-label="Dismiss connection error"
+            onClick={() => setWireError(null)}
+            className="rounded px-1.5 py-0.5 text-amber-400 hover:bg-amber-900/50 hover:text-amber-200"
+          >
+            &times;
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-10 text-center text-sm text-slate-400">
           Loading workflow graph editor...
@@ -306,10 +411,15 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
               ops={ops}
               selectedNodeId={selectedNodeId}
               onSelectNode={handleSelectNode}
+              selectedEdgeId={selectedEdgeId}
+              onSelectEdge={setSelectedEdgeId}
               readOnly={false}
+              onConnect={handleConnect}
               onNodeDragStop={handleNodeDragStop}
               onDropOp={handleDropOp}
               onViewportChange={handleViewportChange}
+              hasSavedViewport={hasSavedViewport}
+              fitViewTrigger={fitViewTrigger}
               heightClassName="h-full"
             />
           </div>

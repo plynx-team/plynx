@@ -265,3 +265,55 @@ export function deleteNodeFromWorkflow(
     },
   };
 }
+
+export function connectEdgeInWorkflow(
+  workflow: Workflow,
+  sourceNodeId: string,
+  sourcePort: string,
+  targetNodeId: string,
+  targetPort: string,
+): Workflow {
+  const existingNodes = workflow.nodes ?? {};
+  const targetSpec = existingNodes[targetNodeId];
+  if (!targetSpec) return workflow;
+
+  return {
+    ...workflow,
+    nodes: {
+      ...existingNodes,
+      [targetNodeId]: {
+        ...targetSpec,
+        inputs: {
+          ...(targetSpec.inputs ?? {}),
+          [targetPort]: { from_node: sourceNodeId, output: sourcePort },
+        },
+      },
+    },
+  };
+}
+
+export function disconnectEdgeInWorkflow(
+  workflow: Workflow,
+  targetNodeId: string,
+  targetPort: string,
+): Workflow {
+  const existingNodes = workflow.nodes ?? {};
+  const targetSpec = existingNodes[targetNodeId];
+  if (!targetSpec || !targetSpec.inputs || !(targetPort in targetSpec.inputs)) {
+    return workflow;
+  }
+
+  const nextInputs = { ...targetSpec.inputs };
+  delete nextInputs[targetPort];
+
+  return {
+    ...workflow,
+    nodes: {
+      ...existingNodes,
+      [targetNodeId]: {
+        ...targetSpec,
+        inputs: nextInputs,
+      },
+    },
+  };
+}

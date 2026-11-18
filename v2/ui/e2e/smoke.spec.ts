@@ -195,4 +195,49 @@ test.describe("PLynx UI Smoke Test", () => {
     await expect(page.getByTestId("graph-node-concat_copy")).not.toBeVisible();
     await expect(page.getByTestId("graph-node-concat")).toBeVisible();
   });
+
+  test("Task 6.10: drags edges between ports and visibly rejects backward stage edges and type mismatches", async ({ page }) => {
+    const dragHandle = async (sourceTestId: string, targetTestId: string) => {
+      const src = page.getByTestId(sourceTestId);
+      const dst = page.getByTestId(targetTestId);
+      await expect(src).toBeVisible();
+      await expect(dst).toBeVisible();
+      const srcBox = await src.boundingBox();
+      const dstBox = await dst.boundingBox();
+      if (!srcBox || !dstBox) {
+        throw new Error(`Missing bounding box for ${sourceTestId} or ${targetTestId}`);
+      }
+      await page.mouse.move(srcBox.x + srcBox.width / 2, srcBox.y + srcBox.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(dstBox.x + dstBox.width / 2, dstBox.y + dstBox.height / 2, {
+        steps: 12,
+      });
+      await page.mouse.up();
+    };
+
+    await page.goto("/#/editor/examples/workflows/foo_or_woo.yaml");
+    await expect(page.getByTestId("graph-node-pick")).toBeVisible();
+    await expect(page.getByTestId("graph-node-echo")).toBeVisible();
+
+    // 1. Backward stage edge: echo (stage print) -> pick (stage ask) rejected visibly
+    await dragHandle("handle-out-echo-text", "handle-in-pick-prompt");
+    await expect(page.getByTestId("wire-error-banner")).toBeVisible();
+    await expect(page.getByTestId("wire-error-banner")).toContainText("Backward stage edge");
+
+    // 2. Add ReadText (input path: file) to stage print and try connecting echo.text (str) -> read_text.path (file)
+    await page.getByTestId("palette-op-standard_io/demo:ReadText").click();
+    await expect(page.getByTestId("graph-node-read_text")).toBeVisible();
+    await page.getByTestId("btn-auto-layout").click();
+    await dragHandle("handle-out-echo-text", "handle-in-read_text-path");
+    await expect(page.getByTestId("wire-error-banner")).toBeVisible();
+    await expect(page.getByTestId("wire-error-banner")).toContainText("Port type mismatch");
+
+    // 3. Add Concat (inputs a: str, b: str) and drag valid edge echo.text (str) -> concat.a (str)
+    await page.getByTestId("palette-op-standard_io/text:Concat").click();
+    await expect(page.getByTestId("graph-node-concat")).toBeVisible();
+    await page.getByTestId("btn-auto-layout").click();
+    await dragHandle("handle-out-echo-text", "handle-in-concat-a");
+    await expect(page.getByTestId("wire-error-banner")).not.toBeVisible();
+    await expect(page.locator('[data-id="echo.text->concat.a"]')).toBeVisible();
+  });
 });
