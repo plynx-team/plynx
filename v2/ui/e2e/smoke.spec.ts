@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("PLynx UI App Shell (Task 6.1)", () => {
-  test("renders navbar and navigates between Runs and Workflows", async ({ page }) => {
+test.describe("PLynx UI Smoke Test", () => {
+  test("Task 6.1: renders navbar and navigates between Runs and Workflows", async ({ page }) => {
     // 1. Visit root
     await page.goto("/");
 
@@ -25,5 +25,26 @@ test.describe("PLynx UI App Shell (Task 6.1)", () => {
     await page.getByRole("link", { name: "Runs" }).click();
     await expect(page).toHaveURL(/.*#\/runs/);
     await expect(page.getByRole("heading", { name: "Runs" })).toBeVisible();
+  });
+
+  test("Task 6.2: opens Run inputs form and launches workflow", async ({ page }) => {
+    await page.goto("/#/workflows");
+    await expect(page.getByRole("heading", { name: "Workflows" })).toBeVisible();
+
+    // Click "Run" on the foo_or_woo workflow
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await expect(page).toHaveURL(/.*#\/workflows\/examples\/workflows\/foo_or_woo\.yaml/);
+
+    // Form is displayed
+    await expect(page.getByRole("heading", { name: "foo_or_woo" })).toBeVisible();
+    await expect(page.getByText("Path: examples/workflows/foo_or_woo.yaml")).toBeVisible();
+    await expect(page.getByText("Force re-run (disable cache lookup:")).toBeVisible();
+
+    // Launch the run
+    await page.getByRole("button", { name: "Start Run" }).click();
+
+    // Navigates to /runs/<run_id>
+    await expect(page).toHaveURL(/.*#\/runs\/[0-9a-f-]+/);
+    await expect(page.getByText("Workflow: examples/workflows/foo_or_woo.yaml")).toBeVisible();
   });
 });
