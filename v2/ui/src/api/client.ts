@@ -3,6 +3,7 @@ import type {
   CreateRunRequest,
   CreateRunResponse,
   EventType,
+  OpEntry,
   RunEvent,
   RunListResponse,
   RunState,
@@ -21,6 +22,14 @@ const EVENT_TYPES: ReadonlyArray<EventType> = [
   "stage_resolved",
   "node_log",
 ];
+
+export async function fetchOps(): Promise<Array<OpEntry>> {
+  const response = await fetch("/api/v1/ops");
+  if (!response.ok) {
+    throw new Error(`Failed to fetch ops (${response.status})`);
+  }
+  return (await response.json()) as Array<OpEntry>;
+}
 
 export async function fetchRuns(): Promise<RunListResponse> {
   const response = await fetch("/api/v1/runs");

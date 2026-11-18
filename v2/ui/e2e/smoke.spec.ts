@@ -115,4 +115,45 @@ test.describe("PLynx UI Smoke Test", () => {
     // Gate card disappears on approval!
     await expect(gateCard).not.toBeVisible({ timeout: 10000 });
   });
+
+  test("Task 6.8: toggles between Stepper and read-only Graph view with stage groups and live status", async ({ page }) => {
+    await page.goto("/#/workflows");
+    const fooCard = page.getByTestId("workflow-card-examples/workflows/foo_or_woo.yaml");
+    await fooCard.getByRole("button", { name: "Run" }).click();
+    await page.getByRole("button", { name: "Start Run" }).click();
+    await expect(page).toHaveURL(/.*#\/runs\/[0-9a-zA-Z_-]+/);
+
+    // Default view is Stepper
+    await expect(page.getByTestId("view-toggle-stepper")).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByText("Workflow Stages (Stepper)")).toBeVisible();
+
+    // Switch to Graph view
+    await page.getByTestId("view-toggle-graph").click();
+    await expect(page.getByTestId("view-toggle-graph")).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByTestId("graph-view")).toBeVisible();
+
+    // Stage group nodes and workflow nodes render
+    await expect(page.getByTestId("stage-group-ask")).toBeVisible();
+    await expect(page.getByTestId("stage-group-print")).toBeVisible();
+    await expect(page.getByTestId("graph-node-pick")).toBeVisible();
+    await expect(page.getByTestId("graph-node-echo")).toBeVisible();
+
+    // Wait for checkpoint to pause pick node, verify live WAITING_FOR_USER status in Graph view
+    const checkpointCard = page.getByTestId("checkpoint-card-cp_0");
+    await expect(checkpointCard).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId("graph-node-status-pick")).toHaveText("WAITING_FOR_USER");
+
+    // Answer checkpoint while in Graph view and observe live transition to SUCCESS
+    await checkpointCard.getByRole("button", { name: "foo", exact: true }).click();
+    await expect(page.getByTestId("graph-node-status-pick")).toHaveText("SUCCESS", { timeout: 10000 });
+    await expect(page.getByTestId("graph-node-status-echo")).toHaveText("SUCCESS", { timeout: 10000 });
+
+    // Clicking a node in Graph view selects it and opens Logs panel
+    await page.getByTestId("graph-node-echo").click();
+    await expect(page.getByTestId("logs-panel")).toBeVisible();
+
+    // Toggle back to Stepper
+    await page.getByTestId("view-toggle-stepper").click();
+    await expect(page.getByText("Workflow Stages (Stepper)")).toBeVisible();
+  });
 });

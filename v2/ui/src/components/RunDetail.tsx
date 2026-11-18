@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   cancelRun,
+  fetchOps,
   fetchRunState,
   fetchWorkflow,
   resumeRun,
@@ -8,19 +9,27 @@ import {
 } from "../api/client";
 import { applyRunEvent, createInitialRunState } from "../api/reducer";
 import type {
+  OpEntry,
   RunState,
   WorkflowDocument,
 } from "../api/types.gen";
+import { GraphView } from "../graph/GraphView";
 import { Link, useRouter } from "../router/Router";
+import { CheckpointCard } from "../stepper/CheckpointCard";
+import { StageApprovalCard } from "../stepper/StageApprovalCard";
 import { StepperView } from "../stepper/StepperView";
 import { ArtifactPreviewDialog } from "../previewers/ArtifactPreviewDialog";
 import { LogsPanel } from "./LogsPanel";
 import { formatDuration, formatTimestamp, runStatusBadgeClasses } from "./RunList";
 
+export type RunViewMode = "stepper" | "graph";
+
 export function RunDetail({ runId }: { runId: string }) {
   const { navigate } = useRouter();
   const [runState, setRunState] = useState<RunState | null>(null);
   const [workflowDoc, setWorkflowDoc] = useState<WorkflowDocument | null>(null);
+  const [ops, setOps] = useState<Array<OpEntry>>([]);
+  const [viewMode, setViewMode] = useState<RunViewMode>("stepper");
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
   const [previewTarget, setPreviewTarget] = useState<{
     title: string;
@@ -39,6 +48,14 @@ export function RunDetail({ runId }: { runId: string }) {
     setLoading(true);
     setError(null);
     setRunState(createInitialRunState(runId));
+
+    fetchOps()
+      .then((entries) => {
+        if (active) setOps(entries);
+      })
+      .catch(() => {
+        // Non-critical: GraphView can fall back to inferred ports
+      });
 
     fetchRunState(runId)
       .then((initial) => {
@@ -224,17 +241,92 @@ export function RunDetail({ runId }: { runId: string }) {
             )}
           </div>
 
-          {/* Stepper View */}
+          {/* Dual View: Stepper | Graph */}
           <div className="space-y-4">
-            <h2 className="text-sm font-bold tracking-wide text-white">
-              Workflow Stages (Stepper)
-            </h2>
-            <StepperView
-              runState={runState}
-              workflowDoc={workflowDoc}
-              selectedNodeId={selectedNodeId}
-              onSelectNode={setSelectedNodeId}
-            />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-sm font-bold tracking-wide text-white">
+                {viewMode === "stepper"
+                  ? "Workflow Stages (Stepper)"
+                  : "Workflow DAG (Graph)"}
+              </h2>
+
+              <div
+                role="tablist"
+                aria-label="Run view mode"
+                className="inline-flex rounded-md border border-slate-800 bg-slate-900 p-0.5 text-xs"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={viewMode === "stepper"}
+                  data-testid="view-toggle-stepper"
+                  onClick={() => setViewMode("stepper")}
+                  className={`rounded px-3 py-1 font-semibold transition-colors ${
+                    viewMode === "stepper"
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  Stepper
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={viewMode === "graph"}
+                  data-testid="view-toggle-graph"
+                  onClick={() => setViewMode("graph")}
+                  className={`rounded px-3 py-1 font-semibold transition-colors ${
+                    viewMode === "graph"
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  Graph
+                </button>
+              </div>
+            </div>
+
+            {viewMode === "stepper" ? (
+              <StepperView
+                runState={runState}
+                workflowDoc={workflowDoc}
+                selectedNodeId={selectedNodeId}
+                onSelectNode={setSelectedNodeId}
+              />
+            ) : (
+              <div className="space-y-4">
+                {runState.checkpoints
+                  .filter((cp) => !cp.answered_at)
+                  .map((cp) => (
+                    <CheckpointCard
+                      key={`${cp.node_id}-${cp.checkpoint_id}`}
+                      runId={runState.id}
+                      checkpoint={cp}
+                    />
+                  ))}
+                {Object.entries(runState.stage_gates)
+                  .filter(([, gate]) => gate.status === "WAITING")
+                  .map(([stageId, gate]) => (
+                    <StageApprovalCard
+                      key={stageId}
+                      runId={runState.id}
+                      stageId={stageId}
+                      stageTitle={
+                        workflowDoc?.workflow.stages?.[stageId]?.title || stageId
+                      }
+                      gateState={gate}
+                    />
+                  ))}
+                <GraphView
+                  workflowDoc={workflowDoc}
+                  runState={runState}
+                  ops={ops}
+                  selectedNodeId={selectedNodeId}
+                  onSelectNode={setSelectedNodeId}
+                  readOnly={true}
+                />
+              </div>
+            )}
           </div>
 
           {/* Logs Panel & Output Actions for Selected Node */}
