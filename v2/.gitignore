@@ -14,6 +14,7 @@ dist/
 build/
 node_modules/
 packages/plynx/src/plynx/static/
+packages/plynx/src/plynx/builtin_packs/
 test-results/
 playwright-report/
 

@@ -30,12 +30,19 @@ def find_workspace_root(start: Path | None = None) -> Path:
 def discover_builtin_packs_dirs() -> list[Path]:
     """Return candidate directories containing built-in packs."""
     dirs: list[Path] = []
-    # 1. Check inside installed plynx package (e.g. when distributed in a wheel)
+    # 1. Check workspace repo ancestor directories (development mode)
+    for ancestor in Path(__file__).resolve().parents:
+        if (ancestor / "pyproject.toml").is_file() and ancestor.name != "plynx":
+            candidate = ancestor / "builtin_packs"
+            if candidate.is_dir() and candidate not in dirs:
+                dirs.append(candidate)
+
+    # 2. Check inside installed plynx package (e.g. when distributed in a wheel)
     wheel_builtin = Path(__file__).resolve().parent.parent / "builtin_packs"
-    if wheel_builtin.is_dir():
+    if wheel_builtin.is_dir() and wheel_builtin not in dirs:
         dirs.append(wheel_builtin)
 
-    # 2. Check repo ancestor directories (development mode)
+    # 3. Check any other repo ancestor directories
     for ancestor in Path(__file__).resolve().parents:
         candidate = ancestor / "builtin_packs"
         if candidate.is_dir() and candidate not in dirs:

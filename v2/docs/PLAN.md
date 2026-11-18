@@ -146,7 +146,7 @@ Accept for every 6.x: the component has a vitest test; `lint`, `typecheck`, `tes
 
 ## Phase 7: Packaging and agent docs
 
-- [ ] **7.1 Wheel.** `uv build` for `plynx-sdk` and `plynx`; the `plynx` wheel contains built `static/` and the shipped `builtin_packs`.
+- [x] **7.1 Wheel.** `uv build` for `plynx-sdk` and `plynx`; the `plynx` wheel contains built `static/` and the shipped `builtin_packs`.
   Accept: `uvx --from <wheel> plynx ui` serves the UI in a clean machine environment.
 - [ ] **7.2 CI.** GitHub Actions `v2-ci.yml`: ruff, mypy, pytest, UI checks, wheel smoke test on Linux, macOS, Windows.
   Accept: green on all three. The workflow file is the only file added outside `v2/`.

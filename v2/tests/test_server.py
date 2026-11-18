@@ -297,11 +297,13 @@ def test_read_workflows_and_workflow_by_path(tmp_path: Path) -> None:
     # Layout sidecar
     sidecar = wf_dir / ".foo_or_woo.layout.json"
     sidecar.write_text(
-        json.dumps({
-            "schema": 1,
-            "nodes": {"pick": {"x": 10.0, "y": 20.0}},
-            "viewport": {"x": 0.0, "y": 0.0, "zoom": 1.5},
-        }),
+        json.dumps(
+            {
+                "schema": 1,
+                "nodes": {"pick": {"x": 10.0, "y": 20.0}},
+                "viewport": {"x": 0.0, "y": 0.0, "zoom": 1.5},
+            }
+        ),
         encoding="utf-8",
     )
 
@@ -962,7 +964,9 @@ def test_server_cors_dev_origin_only(tmp_path: Path) -> None:
                     "Access-Control-Request-Method": "POST",
                 },
             )
-            assert preflight_ok.headers.get("access-control-allow-origin") == "http://localhost:3000"
+            assert (
+                preflight_ok.headers.get("access-control-allow-origin") == "http://localhost:3000"
+            )
 
             # 5. Preflight request from disallowed origin receives no CORS header
             preflight_evil = await client.options(
