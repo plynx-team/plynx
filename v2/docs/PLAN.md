@@ -152,7 +152,7 @@ Accept for every 6.x: the component has a vitest test; `lint`, `typecheck`, `tes
   Accept: green on all three. The workflow file is the only file added outside `v2/`.
 - [x] **7.3 Pack author and agent docs.** Finalize `PACK_RULES.md`; add short guides: create a workflow, author a pack, debug a failed node with `plynx run-node`.
   Accept: a fresh agent session given only these docs and the CLI creates and debugs a two-node workflow (record the transcript path in the commit message).
-- [ ] **7.4 Quickstart README.**
+- [x] **7.4 Quickstart README.**
   Accept: its commands work verbatim on all three OSes.
 
 ## Phase 8: Dogfood gate
