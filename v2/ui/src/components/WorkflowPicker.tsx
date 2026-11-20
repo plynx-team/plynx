@@ -9,6 +9,7 @@ import {
   SearchBar,
 } from "./ControlPanel";
 import { FeatherIcon } from "./FeatherIcon";
+import { NewWorkflowModal } from "./NewWorkflowModal";
 
 export function WorkflowPicker() {
   const { navigate } = useRouter();
@@ -18,6 +19,7 @@ export function WorkflowPicker() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState<string>("");
+  const [isNewModalOpen, setIsNewModalOpen] = useState<boolean>(false);
 
   const loadWorkflows = async () => {
     try {
@@ -54,6 +56,13 @@ export function WorkflowPicker() {
           className="w-80"
         />
         <ControlSeparator />
+        <ControlButton
+          icon="plus"
+          text="New Workflow"
+          variant="primary"
+          data-testid="btn-new-workflow"
+          onClick={() => setIsNewModalOpen(true)}
+        />
         <ControlButton
           icon="refresh-cw"
           text="Refresh"
@@ -167,6 +176,12 @@ export function WorkflowPicker() {
           ))
         )}
       </div>
+
+      <NewWorkflowModal
+        isOpen={isNewModalOpen}
+        onClose={() => setIsNewModalOpen(false)}
+        existingPaths={workflows.map((wf) => wf.path)}
+      />
     </div>
   );
 }

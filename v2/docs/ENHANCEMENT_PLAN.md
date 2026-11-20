@@ -99,10 +99,10 @@ This document tracks the design decisions, architectural models, and implementat
 - [x] Add unit tests for stage drop detection and palette rendering.
 
 ### Phase 4: "New Workflow" Button & Creation Modal
-- [ ] Add `+ New Workflow` button to `WorkflowPicker.tsx` toolbar.
-- [ ] Create `NewWorkflowModal.tsx` component with name validation, path generation, and duplicate checking.
-- [ ] Hook into `saveWorkflow` and router navigation (`/editor/:path`).
-- [ ] Add unit tests in `WorkflowPicker.test.tsx` for new workflow creation.
+- [x] Add `+ New Workflow` button to `WorkflowPicker.tsx` toolbar.
+- [x] Create `NewWorkflowModal.tsx` component with name validation, path generation, and duplicate checking.
+- [x] Hook into `saveWorkflow` and router navigation (`/editor/:path`).
+- [x] Add unit tests in `WorkflowPicker.test.tsx` for new workflow creation.
 
 ### Phase 5: Quick-Connect on Wire Drop (Unreal / Blender Style)
 - [ ] In `GraphView.tsx`, hook `onConnectStart` and `onConnectEnd`.
