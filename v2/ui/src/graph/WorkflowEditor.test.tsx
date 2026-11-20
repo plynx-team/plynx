@@ -273,4 +273,122 @@ describe("WorkflowEditor palette & node operations (Task 6.9)", () => {
     );
     expect(screen.getByTestId("op-palette")).toHaveClass("is-expanded");
   });
+
+  describe("WorkflowEditor history (Undo/Redo)", () => {
+    it("handles undo and redo via toolbar buttons and keyboard shortcuts", async () => {
+      vi.mocked(client.fetchWorkflow).mockResolvedValue(MOCK_DOC);
+      vi.mocked(client.fetchOps).mockResolvedValue(MOCK_OPS);
+
+      render(
+        <RouterProvider>
+          <WorkflowEditor workflowPath="examples/workflows/sample.yaml" />
+        </RouterProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("graph-node-echo")).toBeInTheDocument();
+      });
+
+      const undoBtn = screen.getByTestId("btn-undo");
+      const redoBtn = screen.getByTestId("btn-redo");
+      const saveBtn = screen.getByTestId("btn-save-workflow");
+
+      // Initially, clean state: cannot undo, cannot redo, not dirty
+      expect(undoBtn).toBeDisabled();
+      expect(redoBtn).toBeDisabled();
+      expect(saveBtn).not.toHaveClass("primary");
+
+      // Add a Concat node
+      fireEvent.click(screen.getByTestId("palette-op-standard_io/text:Concat"));
+      await waitFor(() => {
+        expect(screen.getByTestId("graph-node-concat")).toBeInTheDocument();
+      });
+
+      // After adding node: can undo, cannot redo, dirty
+      expect(undoBtn).not.toBeDisabled();
+      expect(redoBtn).toBeDisabled();
+      expect(saveBtn).toHaveClass("primary");
+
+      // Click Undo button
+      fireEvent.click(undoBtn);
+      await waitFor(() => {
+        expect(screen.queryByTestId("graph-node-concat")).not.toBeInTheDocument();
+      });
+      // Back to initial snapshot: cannot undo, can redo, not dirty!
+      expect(undoBtn).toBeDisabled();
+      expect(redoBtn).not.toBeDisabled();
+      expect(saveBtn).not.toHaveClass("primary");
+
+      // Click Redo button
+      fireEvent.click(redoBtn);
+      await waitFor(() => {
+        expect(screen.getByTestId("graph-node-concat")).toBeInTheDocument();
+      });
+      expect(undoBtn).not.toBeDisabled();
+      expect(redoBtn).toBeDisabled();
+      expect(saveBtn).toHaveClass("primary");
+
+      // Test keyboard shortcut Ctrl+Z (or Cmd+Z) for Undo
+      fireEvent.keyDown(window, { key: "z", ctrlKey: true });
+      await waitFor(() => {
+        expect(screen.queryByTestId("graph-node-concat")).not.toBeInTheDocument();
+      });
+      expect(undoBtn).toBeDisabled();
+      expect(redoBtn).not.toBeDisabled();
+
+      // Test keyboard shortcut Ctrl+Shift+Z for Redo
+      fireEvent.keyDown(window, { key: "z", ctrlKey: true, shiftKey: true });
+      await waitFor(() => {
+        expect(screen.getByTestId("graph-node-concat")).toBeInTheDocument();
+      });
+      expect(undoBtn).not.toBeDisabled();
+      expect(redoBtn).toBeDisabled();
+
+      // Test keyboard shortcut Ctrl+Y for Redo after undoing
+      fireEvent.keyDown(window, { key: "z", metaKey: true });
+      await waitFor(() => {
+        expect(screen.queryByTestId("graph-node-concat")).not.toBeInTheDocument();
+      });
+      fireEvent.keyDown(window, { key: "y", metaKey: true });
+      await waitFor(() => {
+        expect(screen.getByTestId("graph-node-concat")).toBeInTheDocument();
+      });
+      expect(undoBtn).not.toBeDisabled();
+      expect(redoBtn).toBeDisabled();
+    });
+
+    it("does not trigger canvas undo when typing in an input element", async () => {
+      vi.mocked(client.fetchWorkflow).mockResolvedValue(MOCK_DOC);
+      vi.mocked(client.fetchOps).mockResolvedValue(MOCK_OPS);
+
+      render(
+        <RouterProvider>
+          <WorkflowEditor workflowPath="examples/workflows/sample.yaml" />
+        </RouterProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("graph-node-echo")).toBeInTheDocument();
+      });
+
+      // Add a node so past history is non-empty
+      fireEvent.click(screen.getByTestId("palette-op-standard_io/text:Concat"));
+      await waitFor(() => {
+        expect(screen.getByTestId("graph-node-concat")).toBeInTheDocument();
+      });
+
+      // Create an input element simulating user typing in an inspector field
+      const input = document.createElement("input");
+      document.body.appendChild(input);
+      input.focus();
+
+      // Fire Ctrl+Z targeted at the input element
+      fireEvent.keyDown(input, { key: "z", ctrlKey: true });
+
+      // Node should NOT be undone because focus was inside an input
+      expect(screen.getByTestId("graph-node-concat")).toBeInTheDocument();
+
+      document.body.removeChild(input);
+    });
+  });
 });

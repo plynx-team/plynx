@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Connection } from "@xyflow/react";
 import {
   cancelRun,
@@ -61,6 +61,13 @@ import {
   updateStageInWorkflow,
 } from "./mutations";
 import {
+  createHistory,
+  pushHistory,
+  redoHistory,
+  undoHistory,
+  type WorkflowHistory,
+} from "./history";
+import {
   buildOutputPreviewTarget,
   NodeInspector,
   type ArtifactPreviewTarget,
@@ -92,6 +99,18 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   const [viewMode, setViewMode] = useState<EditorViewMode>("graph");
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
   const [layout, setLayout] = useState<WorkflowLayout | null>(null);
+  const [history, setHistory] = useState<WorkflowHistory | null>(null);
+  const lastTextEditTimeRef = useRef<number>(0);
+  const workflowRef = useRef<Workflow | null>(null);
+  const layoutRef = useRef<WorkflowLayout | null>(null);
+
+  useEffect(() => {
+    workflowRef.current = workflow;
+  }, [workflow]);
+
+  useEffect(() => {
+    layoutRef.current = layout;
+  }, [layout]);
   const [savedSnapshot, setSavedSnapshot] = useState<string | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -101,6 +120,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   const [ops, setOps] = useState<Array<OpEntry>>([]);
   const [workflowRuns, setWorkflowRuns] = useState<Array<RunSummary>>([]);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const isInspectingRun = selectedRunId !== null;
   const [selectedRun, setSelectedRun] = useState<RunState | null>(null);
   const [runsCollapsed, setRunsCollapsed] = useState<boolean>(false);
   const [opsCollapsed, setOpsCollapsed] = useState<boolean>(false);
@@ -164,8 +184,11 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         }
         const initialLayout = ensureLayout(doc.workflow, doc.layout, map);
         const stageIds = getOrderedStageIds(doc.workflow);
+        workflowRef.current = doc.workflow;
+        layoutRef.current = initialLayout;
         setWorkflow(doc.workflow);
         setLayout(initialLayout);
+        setHistory(createHistory({ workflow: doc.workflow, layout: initialLayout }));
         setSavedSnapshot(serializeSnapshot(doc.workflow, initialLayout));
         setHasSavedViewport(Boolean(doc.layout?.viewport));
         setOps(opEntries);
@@ -222,6 +245,116 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     }
   }, []);
 
+  const commitStateChange = useCallback(
+    (
+      nextWorkflowOrUpdater: Workflow | ((prev: Workflow) => Workflow),
+      nextLayoutOrUpdater?:
+        | WorkflowLayout
+        | ((prev: WorkflowLayout) => WorkflowLayout)
+        | null,
+      options?: { coalesce?: boolean },
+    ) => {
+      const currentWf = workflowRef.current;
+      if (!currentWf) return;
+
+      const finalWf =
+        typeof nextWorkflowOrUpdater === "function"
+          ? nextWorkflowOrUpdater(currentWf)
+          : nextWorkflowOrUpdater;
+
+      const currentLayout = layoutRef.current ?? {
+        schema: 1 as const,
+        nodes: {},
+        viewport: { x: 0, y: 0, zoom: 1 },
+      };
+
+      const finalLayout = nextLayoutOrUpdater
+        ? typeof nextLayoutOrUpdater === "function"
+          ? nextLayoutOrUpdater(currentLayout)
+          : nextLayoutOrUpdater
+        : currentLayout;
+
+      workflowRef.current = finalWf;
+      layoutRef.current = finalLayout;
+      setWorkflow(finalWf);
+      if (nextLayoutOrUpdater) {
+        setLayout(finalLayout);
+      }
+
+      setHistory((curr) => {
+        if (!curr) {
+          return createHistory({ workflow: finalWf, layout: finalLayout });
+        }
+        const updated = pushHistory(
+          curr,
+          { workflow: finalWf, layout: finalLayout },
+          {
+            coalesce: options?.coalesce,
+            lastActionTime: lastTextEditTimeRef.current,
+          },
+        );
+        if (options?.coalesce) {
+          lastTextEditTimeRef.current = Date.now();
+        } else {
+          lastTextEditTimeRef.current = 0;
+        }
+        return updated;
+      });
+    },
+    [],
+  );
+
+  const canUndo = Boolean(history && history.past.length > 0 && !isInspectingRun);
+  const canRedo = Boolean(history && history.future.length > 0 && !isInspectingRun);
+
+  const handleUndo = useCallback(() => {
+    if (isInspectingRun) return;
+    setHistory((curr) => {
+      if (!curr) return null;
+      const res = undoHistory(curr);
+      if (!res) return curr;
+      workflowRef.current = res.restored.workflow;
+      layoutRef.current = res.restored.layout;
+      setWorkflow(res.restored.workflow);
+      setLayout((prevLayout) => ({
+        ...res.restored.layout,
+        viewport: prevLayout?.viewport ?? res.restored.layout.viewport,
+      }));
+      setSelectedNodeId((prev) =>
+        prev && res.restored.workflow.nodes?.[prev] ? prev : undefined,
+      );
+      setSelectedStageId((prev) =>
+        prev && res.restored.workflow.stages?.[prev] ? prev : undefined,
+      );
+      setSelectedEdgeId(undefined);
+      return res.history;
+    });
+  }, [isInspectingRun]);
+
+  const handleRedo = useCallback(() => {
+    if (isInspectingRun) return;
+    setHistory((curr) => {
+      if (!curr) return null;
+      const res = redoHistory(curr);
+      if (!res) return curr;
+      workflowRef.current = res.restored.workflow;
+      layoutRef.current = res.restored.layout;
+      setWorkflow(res.restored.workflow);
+      setLayout((prevLayout) => ({
+        ...res.restored.layout,
+        viewport: prevLayout?.viewport ?? res.restored.layout.viewport,
+      }));
+      setSelectedNodeId((prev) =>
+        prev && res.restored.workflow.nodes?.[prev] ? prev : undefined,
+      );
+      setSelectedStageId((prev) =>
+        prev && res.restored.workflow.stages?.[prev] ? prev : undefined,
+      );
+      setSelectedEdgeId(undefined);
+      return res.history;
+    });
+  }, [isInspectingRun]);
+
   const handleAddStage = useCallback(
     (
       rawStageId: string,
@@ -230,13 +363,13 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     ) => {
       if (!workflow) return;
       const res = addStageToWorkflow(workflow, rawStageId, title, options);
-      setWorkflow(res.workflow);
+      commitStateChange(res.workflow);
       setSelectedStageId(res.stageId);
       setSelectedNodeId(undefined);
       setSelectedEdgeId(undefined);
       setTargetStage(res.stageId);
     },
-    [workflow],
+    [workflow, commitStateChange],
   );
 
   const handleUpdateStage = useCallback(
@@ -246,9 +379,9 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     ) => {
       if (!workflow) return;
       const nextWf = updateStageInWorkflow(workflow, stageId, updates);
-      setWorkflow(nextWf);
+      commitStateChange(nextWf, undefined, { coalesce: true });
     },
-    [workflow],
+    [workflow, commitStateChange],
   );
 
   const handleDeleteStageRequest = useCallback(
@@ -261,8 +394,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         const res = deleteStageFromWorkflow(workflow, layout, stageId, {
           opsMap,
         });
-        setWorkflow(res.workflow);
-        setLayout(res.layout);
+        commitStateChange(res.workflow, res.layout);
         if (selectedStageId === stageId) {
           setSelectedStageId(undefined);
         }
@@ -275,7 +407,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         setDeleteStageChoice("reassign");
       }
     },
-    [workflow, layout, opsMap, selectedStageId, targetStage],
+    [workflow, layout, opsMap, selectedStageId, targetStage, commitStateChange],
   );
 
   const handleConfirmDeleteStage = useCallback(() => {
@@ -285,8 +417,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
       reassignToStageId: DEFAULT_STAGE_ID,
       opsMap,
     });
-    setWorkflow(res.workflow);
-    setLayout(res.layout);
+    commitStateChange(res.workflow, res.layout);
     if (selectedStageId === stageToDelete) {
       setSelectedStageId(undefined);
     }
@@ -303,6 +434,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     opsMap,
     selectedStageId,
     targetStage,
+    commitStateChange,
   ]);
 
   const handleReorderStages = useCallback(
@@ -310,12 +442,12 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
       if (!workflow) return { success: false, reason: "No workflow loaded" };
       const res = reorderStagesInWorkflow(workflow, newOrder);
       if (res.success) {
-        setWorkflow(res.workflow);
+        commitStateChange(res.workflow);
         return { success: true };
       }
       return { success: false, reason: res.reason };
     },
-    [workflow],
+    [workflow, commitStateChange],
   );
 
   const handleAddOp = useCallback(
@@ -326,11 +458,10 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         position,
         opsMap,
       });
-      setWorkflow(result.workflow);
-      setLayout(result.layout);
+      commitStateChange(result.workflow, result.layout);
       setSelectedNodeId(result.nodeId);
     },
-    [workflow, layout, targetStage, opsMap],
+    [workflow, layout, targetStage, opsMap, commitStateChange],
   );
 
   const handleDropOp = useCallback(
@@ -343,60 +474,61 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   );
 
   const handleDuplicateSelected = useCallback(() => {
-    if (!workflow || !selectedNodeId) return;
+    const currentWf = workflowRef.current;
+    const currentLayout = layoutRef.current;
+    if (!currentWf || !selectedNodeId) return;
     const result = duplicateNodeInWorkflow(
-      workflow,
-      layout,
+      currentWf,
+      currentLayout,
       selectedNodeId,
       opsMap,
     );
     if (!result) return;
-    setWorkflow(result.workflow);
-    setLayout(result.layout);
+    commitStateChange(result.workflow, result.layout);
     setSelectedNodeId(result.nodeId);
-  }, [workflow, layout, selectedNodeId, opsMap]);
+  }, [selectedNodeId, opsMap, commitStateChange]);
 
   const handleDeleteSelected = useCallback(() => {
-    if (!workflow || !selectedNodeId) return;
+    const currentWf = workflowRef.current;
+    const currentLayout = layoutRef.current;
+    if (!currentWf || !selectedNodeId) return;
     const result = deleteNodeFromWorkflow(
-      workflow,
-      layout,
+      currentWf,
+      currentLayout,
       selectedNodeId,
       opsMap,
     );
-    setWorkflow(result.workflow);
-    setLayout(result.layout);
+    commitStateChange(result.workflow, result.layout);
     setSelectedNodeId(undefined);
     setSelectedEdgeId(undefined);
     setWireError(null);
-  }, [workflow, layout, selectedNodeId, opsMap]);
+  }, [selectedNodeId, opsMap, commitStateChange]);
 
   const handleConnect = useCallback(
     (connection: Connection) => {
-      if (!workflow) return;
-      const result = validateConnection(connection, workflow, opsMap);
+      const currentWf = workflowRef.current;
+      if (!currentWf) return;
+      const result = validateConnection(connection, currentWf, opsMap);
       if (!result.valid) {
         setWireError(result.reason);
         return;
       }
       setWireError(null);
-      setWorkflow((prev) =>
-        prev
-          ? connectEdgeInWorkflow(
-              prev,
-              result.sourceNodeId,
-              result.sourcePort,
-              result.targetNodeId,
-              result.targetPort,
-            )
-          : prev,
+      const nextWf = connectEdgeInWorkflow(
+        currentWf,
+        result.sourceNodeId,
+        result.sourcePort,
+        result.targetNodeId,
+        result.targetPort,
       );
+      commitStateChange(nextWf);
     },
-    [workflow, opsMap],
+    [opsMap, commitStateChange],
   );
 
   const handleDeleteSelectedEdge = useCallback(() => {
-    if (!workflow || !selectedEdgeId) return;
+    const currentWf = workflowRef.current;
+    if (!currentWf || !selectedEdgeId) return;
     const arrowIdx = selectedEdgeId.indexOf("->");
     if (arrowIdx === -1) return;
     const targetPart = selectedEdgeId.slice(arrowIdx + 2);
@@ -404,27 +536,36 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     if (dotIdx === -1) return;
     const targetNodeId = targetPart.slice(0, dotIdx);
     const targetPort = targetPart.slice(dotIdx + 1);
-    setWorkflow((prev) =>
-      prev ? disconnectEdgeInWorkflow(prev, targetNodeId, targetPort) : prev,
+    const nextWf = disconnectEdgeInWorkflow(
+      currentWf,
+      targetNodeId,
+      targetPort,
     );
+    commitStateChange(nextWf);
     setSelectedEdgeId(undefined);
     setWireError(null);
-  }, [workflow, selectedEdgeId]);
+  }, [selectedEdgeId, commitStateChange]);
 
   const handleUpdateNodeSpec = useCallback(
-    (nodeId: string, updater: (spec: NodeSpec) => NodeSpec) => {
-      setWorkflow((prev) => {
-        if (!prev?.nodes?.[nodeId]) return prev;
-        return {
-          ...prev,
-          nodes: {
-            ...prev.nodes,
-            [nodeId]: updater(prev.nodes[nodeId]),
-          },
-        };
+    (
+      nodeId: string,
+      updater: (spec: NodeSpec) => NodeSpec,
+      options?: { coalesce?: boolean },
+    ) => {
+      const currentWf = workflowRef.current;
+      if (!currentWf?.nodes?.[nodeId]) return;
+      const nextWf: Workflow = {
+        ...currentWf,
+        nodes: {
+          ...currentWf.nodes,
+          [nodeId]: updater(currentWf.nodes[nodeId]),
+        },
+      };
+      commitStateChange(nextWf, undefined, {
+        coalesce: options?.coalesce ?? true,
       });
     },
-    [],
+    [commitStateChange],
   );
 
   const handleInlineLiteralChange = useCallback(
@@ -567,42 +708,48 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
       sourceNodeId: string,
       sourcePort: string,
     ) => {
+      const currentWf = workflowRef.current;
+      if (!currentWf) return;
       setWireError(null);
-      setWorkflow((prev) =>
-        prev
-          ? connectEdgeInWorkflow(
-              prev,
-              sourceNodeId,
-              sourcePort,
-              targetNodeId,
-              targetPort,
-            )
-          : prev,
+      const nextWf = connectEdgeInWorkflow(
+        currentWf,
+        sourceNodeId,
+        sourcePort,
+        targetNodeId,
+        targetPort,
       );
+      commitStateChange(nextWf);
     },
-    [],
+    [commitStateChange],
   );
 
   const handleUnbindInput = useCallback(
     (targetNodeId: string, targetPort: string) => {
+      const currentWf = workflowRef.current;
+      if (!currentWf) return;
       setWireError(null);
-      setWorkflow((prev) =>
-        prev ? disconnectEdgeInWorkflow(prev, targetNodeId, targetPort) : prev,
+      const nextWf = disconnectEdgeInWorkflow(
+        currentWf,
+        targetNodeId,
+        targetPort,
       );
+      commitStateChange(nextWf);
     },
-    [],
+    [commitStateChange],
   );
 
   const handleAutoLayout = useCallback(() => {
-    if (!workflow) return;
-    const positions = computeDagrePositions(workflow, opsMap);
-    setLayout((prev) => ({
+    const currentWf = workflowRef.current;
+    if (!currentWf) return;
+    const positions = computeDagrePositions(currentWf, opsMap);
+    const nextLayout: WorkflowLayout = {
       schema: 1,
       nodes: positions,
-      viewport: prev?.viewport ?? { x: 0, y: 0, zoom: 1 },
-    }));
+      viewport: layoutRef.current?.viewport ?? { x: 0, y: 0, zoom: 1 },
+    };
+    commitStateChange(currentWf, nextLayout);
     setFitViewTrigger((c) => c + 1);
-  }, [workflow, opsMap]);
+  }, [opsMap, commitStateChange]);
 
   const isDirty = useMemo(() => {
     if (savedSnapshot === null || !workflow) return false;
@@ -610,13 +757,15 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   }, [savedSnapshot, workflow, layout]);
 
   const handleSave = useCallback(async () => {
-    if (!workflow || saving) return;
-    const finalLayout = ensureLayout(workflow, layout, opsMap);
+    const currentWf = workflowRef.current;
+    if (!currentWf || saving) return;
+    const currentLayout = layoutRef.current;
+    const finalLayout = ensureLayout(currentWf, currentLayout, opsMap);
     try {
       setSaving(true);
       setSaveError(null);
       const savedDoc = await saveWorkflow(workflowPath, {
-        workflow: prepareWorkflowForSave(workflow),
+        workflow: prepareWorkflowForSave(currentWf),
         layout: finalLayout,
       });
       const normalizedLayout = ensureLayout(
@@ -624,6 +773,8 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         savedDoc.layout ?? finalLayout,
         opsMap,
       );
+      workflowRef.current = savedDoc.workflow;
+      layoutRef.current = normalizedLayout;
       setWorkflow(savedDoc.workflow);
       setLayout(normalizedLayout);
       setSavedSnapshot(serializeSnapshot(savedDoc.workflow, normalizedLayout));
@@ -634,57 +785,58 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     } finally {
       setSaving(false);
     }
-  }, [workflow, layout, opsMap, saving, workflowPath]);
+  }, [opsMap, saving, workflowPath]);
 
   const handleNodeDragStop = useCallback(
     (nodeId: string, absX: number, absY: number) => {
-      setLayout((prev) => {
-        const base = prev ?? {
-          schema: 1 as const,
-          nodes: {},
-          viewport: { x: 0, y: 0, zoom: 1 },
-        };
-        const existing = base.nodes[nodeId];
-        if (existing && existing.x === absX && existing.y === absY) {
-          return prev;
-        }
-        return {
-          ...base,
-          nodes: {
-            ...base.nodes,
-            [nodeId]: { x: absX, y: absY },
-          },
-        };
-      });
+      const currentLayout = layoutRef.current ?? {
+        schema: 1 as const,
+        nodes: {},
+        viewport: { x: 0, y: 0, zoom: 1 },
+      };
+      const existing = currentLayout.nodes[nodeId];
+      if (existing && existing.x === absX && existing.y === absY) {
+        return;
+      }
+      const nextLayout: WorkflowLayout = {
+        ...currentLayout,
+        nodes: {
+          ...currentLayout.nodes,
+          [nodeId]: { x: absX, y: absY },
+        },
+      };
+      if (workflowRef.current) {
+        commitStateChange(workflowRef.current, nextLayout);
+      }
     },
-    [],
+    [commitStateChange],
   );
 
   const handleStageDragStop = useCallback(
     (stageId: string, dx: number, dy: number) => {
-      if (!workflow || (dx === 0 && dy === 0)) return;
-      const memberNodeIds = Object.keys(workflow.nodes ?? {}).filter(
-        (nid) => (workflow.nodes?.[nid]?.stage || DEFAULT_STAGE_ID) === stageId,
+      const wf = workflowRef.current;
+      if (!wf || (dx === 0 && dy === 0)) return;
+      const memberNodeIds = Object.keys(wf.nodes ?? {}).filter(
+        (nid) => (wf.nodes?.[nid]?.stage || DEFAULT_STAGE_ID) === stageId,
       );
       if (memberNodeIds.length === 0) return;
 
-      setLayout((prev) => {
-        const base = ensureLayout(workflow, prev, opsMap);
-        const nextNodes = { ...base.nodes };
-        for (const nid of memberNodeIds) {
-          const currentPos = nextNodes[nid] ?? { x: 0, y: 0 };
-          nextNodes[nid] = {
-            x: Math.round(currentPos.x + dx),
-            y: Math.round(currentPos.y + dy),
-          };
-        }
-        return {
-          ...base,
-          nodes: nextNodes,
+      const base = ensureLayout(wf, layoutRef.current, opsMap);
+      const nextNodes = { ...base.nodes };
+      for (const nid of memberNodeIds) {
+        const currentPos = nextNodes[nid] ?? { x: 0, y: 0 };
+        nextNodes[nid] = {
+          x: Math.round(currentPos.x + dx),
+          y: Math.round(currentPos.y + dy),
         };
-      });
+      }
+      const nextLayout: WorkflowLayout = {
+        ...base,
+        nodes: nextNodes,
+      };
+      commitStateChange(wf, nextLayout);
     },
-    [workflow, opsMap],
+    [opsMap, commitStateChange],
   );
 
   const handleViewportChange = useCallback(
@@ -733,6 +885,31 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
       if (isEditableElement(event.target)) return;
       if (selectedRunId !== null) return;
 
+      // Undo: Cmd+Z (Mac) or Ctrl+Z (Win/Linux) without Shift
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        !event.shiftKey &&
+        event.key.toLowerCase() === "z"
+      ) {
+        event.preventDefault();
+        handleUndo();
+        return;
+      }
+
+      // Redo: Cmd+Shift+Z, Ctrl+Shift+Z, Cmd+Y, or Ctrl+Y
+      if (
+        ((event.metaKey || event.ctrlKey) &&
+          event.shiftKey &&
+          event.key.toLowerCase() === "z") ||
+        ((event.metaKey || event.ctrlKey) &&
+          !event.shiftKey &&
+          event.key.toLowerCase() === "y")
+      ) {
+        event.preventDefault();
+        handleRedo();
+        return;
+      }
+
       if (event.key === "Delete" || event.key === "Backspace") {
         if (selectedEdgeId) {
           event.preventDefault();
@@ -772,13 +949,14 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     selectedRunId,
     handleSelectRun,
     handleSave,
+    handleUndo,
+    handleRedo,
     handleDeleteSelected,
     handleDeleteSelectedEdge,
     handleDeleteStageRequest,
     handleDuplicateSelected,
   ]);
 
-  const isInspectingRun = selectedRunId !== null;
   const activeRunState = isInspectingRun ? selectedRun : null;
 
   const runDiff = useMemo(
@@ -900,6 +1078,24 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
           variant={isDirty ? "primary" : "default"}
           disabled={!workflow || saving}
           onClick={() => void handleSave()}
+        />
+
+        <ControlButton
+          icon="rotate-ccw"
+          text="Undo"
+          data-testid="btn-undo"
+          disabled={!canUndo}
+          onClick={handleUndo}
+          title="Undo (Ctrl+Z / ⌘Z)"
+        />
+
+        <ControlButton
+          icon="rotate-cw"
+          text="Redo"
+          data-testid="btn-redo"
+          disabled={!canRedo}
+          onClick={handleRedo}
+          title="Redo (Ctrl+Shift+Z / ⌘⇧Z)"
         />
 
         <ControlButton
