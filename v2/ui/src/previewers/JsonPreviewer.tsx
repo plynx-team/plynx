@@ -15,7 +15,7 @@ export function JsonPreviewer({ content }: JsonPreviewerProps) {
   }, [content]);
 
   return (
-    <div className="overflow-x-auto rounded border border-slate-800 bg-slate-950 p-4 font-mono text-xs leading-relaxed text-emerald-300 selection:bg-emerald-950">
+    <div className="overflow-x-auto rounded border border-[var(--border-subtle)] bg-[var(--bg-app)] p-3 font-mono text-xs leading-relaxed text-[#80cbc4] selection:bg-[#244b7a]">
       <pre>{formatted}</pre>
     </div>
   );

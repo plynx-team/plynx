@@ -47,7 +47,7 @@ export function CsvPreviewer({
 
   if (rows.length === 0) {
     return (
-      <div className="p-8 text-center text-xs text-slate-500 font-mono">
+      <div className="p-8 text-center text-xs text-[var(--text-tertiary)] font-mono">
         (Empty CSV file)
       </div>
     );
@@ -59,35 +59,35 @@ export function CsvPreviewer({
 
   return (
     <div className="space-y-2">
-      <div className="overflow-x-auto rounded border border-slate-800 bg-slate-950">
-        <table className="w-full text-left text-xs font-mono text-slate-300">
-          <thead className="border-b border-slate-800 bg-slate-900/90 text-slate-400 font-semibold uppercase tracking-wider">
+      <div className="overflow-x-auto rounded border border-[var(--border-subtle)] bg-[var(--bg-app)]">
+        <table className="w-full text-left text-xs font-mono text-[var(--text-primary)]">
+          <thead className="border-b border-[var(--border-subtle)] bg-[var(--bg-panel-secondary)] text-[var(--text-secondary)] font-semibold uppercase tracking-wider">
             <tr>
-              <th className="px-3 py-2 w-10 text-slate-600 select-none">#</th>
+              <th className="px-3 py-2 w-10 text-[var(--text-tertiary)] select-none">#</th>
               {header.map((col, idx) => (
-                <th key={idx} className="px-3 py-2 border-r border-slate-800/60 last:border-0">
+                <th key={idx} className="px-3 py-2 border-r border-[var(--border-subtle)] last:border-0">
                   {col}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/60">
+          <tbody className="divide-y divide-[var(--border-subtle)]">
             {bodyRows.map((row, rIdx) => (
               <tr
                 key={rIdx}
                 className={
                   rIdx % 2 === 0
-                    ? "bg-slate-950 hover:bg-slate-900/50"
-                    : "bg-slate-900/30 hover:bg-slate-900/60"
+                    ? "bg-[var(--bg-app)] hover:bg-[var(--bg-panel-secondary)]"
+                    : "bg-[var(--bg-canvas)] hover:bg-[var(--bg-panel-secondary)]"
                 }
               >
-                <td className="px-3 py-2 text-slate-600 select-none">
+                <td className="px-3 py-2 text-[var(--text-tertiary)] select-none">
                   {rIdx + 1}
                 </td>
                 {row.map((cell, cIdx) => (
                   <td
                     key={cIdx}
-                    className="px-3 py-2 whitespace-nowrap border-r border-slate-800/40 last:border-0"
+                    className="px-3 py-2 whitespace-nowrap border-r border-[var(--border-subtle)] last:border-0"
                   >
                     {cell}
                   </td>
@@ -98,7 +98,7 @@ export function CsvPreviewer({
         </table>
       </div>
       {hasMore && (
-        <p className="text-[11px] text-slate-500 text-center font-mono">
+        <p className="text-[11px] text-[var(--text-tertiary)] text-center font-mono">
           Showing first {maxRows} rows of {rows.length - 1} total rows.
         </p>
       )}

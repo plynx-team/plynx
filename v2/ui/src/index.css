@@ -283,7 +283,7 @@ textarea:read-only {
   transition: all 0.1s ease-in;
 }
 
-.control-button:hover:not(:disabled):not(.disabled) {
+.control-button:hover:not(:disabled):not(.disabled):not(.selected) {
   background-color: var(--bg-button-hover);
   border-color: var(--border-strong);
 }
@@ -293,7 +293,9 @@ textarea:read-only {
   border-color: var(--color-primary);
 }
 
-.control-button.selected {
+.control-button.selected,
+.control-button.selected:hover,
+.control-button.selected:focus {
   background-color: var(--color-primary-selected);
   border-color: var(--color-primary);
 }
@@ -351,12 +353,22 @@ textarea:read-only {
 }
 
 .control-toggle > .control-button {
+  position: relative;
   border-radius: 0;
   margin: 0;
 }
 
 .control-toggle > .control-button + .control-button {
-  border-left: none;
+  margin-left: -1px;
+}
+
+.control-toggle > .control-button:hover:not(:disabled):not(.disabled) {
+  z-index: 1;
+}
+
+.control-toggle > .control-button.selected,
+.control-toggle > .control-button.selected:hover {
+  z-index: 2;
 }
 
 .control-toggle > .first {
@@ -1073,6 +1085,18 @@ textarea:read-only {
   font-size: 12px;
   color: var(--text-primary);
   transition: background-color 180ms ease-out;
+}
+
+.run-mode-hud.is-graph-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background-color: rgba(19, 24, 32, 0.94);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
 }
 
 .node-diff-badge {

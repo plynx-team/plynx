@@ -906,13 +906,18 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
           {/* Center Workspace */}
           <div
             data-testid="workspace-center"
-            className={`workspace-center flex flex-1 min-w-0 flex-col overflow-hidden ${
+            className={`workspace-center flex flex-1 min-w-0 flex-col overflow-hidden relative ${
               isInspectingRun ? "is-inspecting-run" : ""
             }`}
           >
-            {/* Run Inspection Mode Top HUD Banner (shown in both Graph and Stepper views) */}
+            {/* Run Inspection Mode Top HUD Banner (overlay in Graph view, inline in Stepper/Runs) */}
             {isInspectingRun && (
-              <div data-testid="run-mode-hud" className="run-mode-hud">
+              <div
+                data-testid="run-mode-hud"
+                className={`run-mode-hud ${
+                  viewMode === "graph" ? "is-graph-overlay" : ""
+                }`}
+              >
                 <div className="flex items-center gap-2 min-w-0 flex-wrap">
                   <span
                     className="inline-flex items-center gap-1.5 font-semibold"
@@ -995,34 +1000,49 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
 
             {/* Open Checkpoints & Stage Approvals for the Selected Run */}
             {isInspectingRun && selectedRun && (
-              <div className="space-y-2 px-3 pt-2 empty:hidden">
+              <div
+                className={
+                  viewMode === "graph"
+                    ? "absolute top-11 left-3 right-3 z-20 space-y-2 pointer-events-none empty:hidden max-h-[40vh] overflow-y-auto"
+                    : "space-y-2 px-3 pt-2 empty:hidden"
+                }
+              >
                 {Object.values(selectedRun.stage_gates)
                   .filter((g) => g.status === "WAITING")
                   .map((gate) => (
-                    <StageApprovalCard
-                      key={gate.stage_id}
-                      runId={selectedRun.id}
-                      stageId={gate.stage_id}
-                      gateState={gate}
-                      stageTitle={
-                        workflow.stages?.[gate.stage_id]?.title ||
-                        gate.stage_id
-                      }
-                    />
+                    <div key={gate.stage_id} className="pointer-events-auto">
+                      <StageApprovalCard
+                        runId={selectedRun.id}
+                        stageId={gate.stage_id}
+                        gateState={gate}
+                        stageTitle={
+                          workflow.stages?.[gate.stage_id]?.title ||
+                          gate.stage_id
+                        }
+                      />
+                    </div>
                   ))}
                 {selectedRun.checkpoints
                   .filter((cp) => cp.answer === null || cp.answer === undefined)
                   .map((cp) => (
-                    <CheckpointCard
+                    <div
                       key={`${cp.node_id}.${cp.checkpoint_id}`}
-                      runId={selectedRun.id}
-                      checkpoint={cp}
-                    />
+                      className="pointer-events-auto"
+                    >
+                      <CheckpointCard
+                        runId={selectedRun.id}
+                        checkpoint={cp}
+                      />
+                    </div>
                   ))}
               </div>
             )}
 
-            <div className="flex-1 min-h-0 overflow-y-auto">
+            <div
+              className={`flex-1 min-h-0 ${
+                viewMode === "graph" ? "overflow-hidden h-full" : "overflow-y-auto"
+              }`}
+            >
               {viewMode === "graph" ? (
                 <GraphView
                   workflow={workflow}

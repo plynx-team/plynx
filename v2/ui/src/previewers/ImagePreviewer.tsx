@@ -5,7 +5,7 @@ export interface ImagePreviewerProps {
 
 export function ImagePreviewer({ url, alt = "Artifact preview" }: ImagePreviewerProps) {
   return (
-    <div className="flex flex-col items-center justify-center rounded border border-slate-800 bg-slate-950 p-6">
+    <div className="flex flex-col items-center justify-center rounded border border-[var(--border-subtle)] bg-[var(--bg-app)] p-4">
       <img
         src={url}
         alt={alt}

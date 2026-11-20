@@ -143,7 +143,7 @@ function InlineOutputPreview({ target }: { target: ArtifactPreviewTarget }) {
       data-testid={`inline-output-preview-${target.title}`}
       className="mt-1 max-h-40 overflow-auto rounded p-2 text-xs"
       style={{
-        backgroundColor: "var(--bg-canvas)",
+        backgroundColor: "var(--bg-panel-secondary)",
         border: "1px solid var(--border-subtle)",
       }}
     >

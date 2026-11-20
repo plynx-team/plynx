@@ -23,20 +23,20 @@ function renderInline(text: string): React.ReactNode {
       parts.push(
         <code
           key={match.index}
-          className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-xs text-emerald-300"
+          className="rounded bg-[var(--bg-panel-secondary)] border border-[var(--border-subtle)] px-1.5 py-0.5 font-mono text-xs text-[#80cbc4]"
         >
           {token.slice(1, -1)}
         </code>,
       );
     } else if (token.startsWith("**") && token.endsWith("**")) {
       parts.push(
-        <strong key={match.index} className="font-bold text-white">
+        <strong key={match.index} className="font-bold text-[var(--text-primary)]">
           {token.slice(2, -2)}
         </strong>,
       );
     } else if (token.startsWith("*") && token.endsWith("*")) {
       parts.push(
-        <em key={match.index} className="italic text-slate-200">
+        <em key={match.index} className="italic text-[var(--text-secondary)]">
           {token.slice(1, -1)}
         </em>,
       );
@@ -50,7 +50,7 @@ function renderInline(text: string): React.ReactNode {
           href={linkUrl}
           target="_blank"
           rel="noreferrer"
-          className="text-sky-400 underline hover:text-sky-300"
+          className="text-[var(--color-primary-hover)] underline hover:text-[var(--color-primary)]"
         >
           {linkText}
         </a>,
@@ -82,7 +82,7 @@ export function MarkdownPreviewer({ content }: MarkdownPreviewerProps) {
         elements.push(
           <div
             key={`code-${i}`}
-            className="my-3 overflow-x-auto rounded border border-slate-800 bg-slate-950 p-3 font-mono text-xs text-slate-200"
+            className="my-2 overflow-x-auto rounded border border-[var(--border-subtle)] bg-[var(--bg-app)] p-2.5 font-mono text-xs text-[var(--text-primary)]"
           >
             <pre>{codeBlockLines.join("\n")}</pre>
           </div>,
@@ -102,19 +102,19 @@ export function MarkdownPreviewer({ content }: MarkdownPreviewerProps) {
 
     if (line.startsWith("# ")) {
       elements.push(
-        <h1 key={i} className="mt-4 mb-2 text-xl font-bold text-white border-b border-slate-800 pb-1">
+        <h1 key={i} className="mt-3 mb-1.5 text-base font-bold text-[var(--text-primary)] border-b border-[var(--border-subtle)] pb-1">
           {renderInline(line.slice(2))}
         </h1>,
       );
     } else if (line.startsWith("## ")) {
       elements.push(
-        <h2 key={i} className="mt-3 mb-1.5 text-lg font-bold text-slate-100">
+        <h2 key={i} className="mt-2.5 mb-1 text-sm font-bold text-[var(--text-primary)]">
           {renderInline(line.slice(3))}
         </h2>,
       );
     } else if (line.startsWith("### ")) {
       elements.push(
-        <h3 key={i} className="mt-2.5 mb-1 text-base font-semibold text-slate-200">
+        <h3 key={i} className="mt-2 mb-0.5 text-xs font-semibold text-[var(--text-secondary)]">
           {renderInline(line.slice(4))}
         </h3>,
       );
@@ -122,22 +122,22 @@ export function MarkdownPreviewer({ content }: MarkdownPreviewerProps) {
       elements.push(
         <blockquote
           key={i}
-          className="my-2 border-l-2 border-slate-700 pl-3 italic text-slate-400"
+          className="my-1.5 border-l-2 border-[var(--border-strong)] pl-2.5 italic text-[var(--text-secondary)]"
         >
           {renderInline(line.slice(2))}
         </blockquote>,
       );
     } else if (line.startsWith("- ") || line.startsWith("* ")) {
       elements.push(
-        <li key={i} className="ml-4 list-disc text-sm text-slate-300">
+        <li key={i} className="ml-4 list-disc text-xs text-[var(--text-primary)]">
           {renderInline(line.slice(2))}
         </li>,
       );
     } else if (!line.trim()) {
-      elements.push(<div key={i} className="h-2" />);
+      elements.push(<div key={i} className="h-1.5" />);
     } else {
       elements.push(
-        <p key={i} className="my-1 text-sm leading-relaxed text-slate-300">
+        <p key={i} className="my-1 text-xs leading-relaxed text-[var(--text-primary)]">
           {renderInline(line)}
         </p>,
       );
@@ -148,7 +148,7 @@ export function MarkdownPreviewer({ content }: MarkdownPreviewerProps) {
     elements.push(
       <div
         key="code-last"
-        className="my-3 overflow-x-auto rounded border border-slate-800 bg-slate-950 p-3 font-mono text-xs text-slate-200"
+        className="my-2 overflow-x-auto rounded border border-[var(--border-subtle)] bg-[var(--bg-app)] p-2.5 font-mono text-xs text-[var(--text-primary)]"
       >
         <pre>{codeBlockLines.join("\n")}</pre>
       </div>,
@@ -156,7 +156,7 @@ export function MarkdownPreviewer({ content }: MarkdownPreviewerProps) {
   }
 
   return (
-    <div className="prose-invert rounded border border-slate-800 bg-slate-950/70 p-5">
+    <div className="markdown-content text-xs text-[var(--text-primary)]">
       {elements}
     </div>
   );
