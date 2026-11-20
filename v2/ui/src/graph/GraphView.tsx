@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
   Controls,
@@ -118,6 +118,13 @@ function GraphCanvasInner({
     return map;
   }, [ops]);
 
+  const measuredDimsRef = useRef<
+    Record<string, { width: number; height: number }>
+  >({});
+  const [measuredDims, setMeasuredDims] = useState<
+    Record<string, { width: number; height: number }>
+  >({});
+
   const built = useMemo(() => {
     if (!effectiveWorkflow) {
       return {
@@ -135,6 +142,7 @@ function GraphCanvasInner({
       readOnly,
       onLiteralChange,
       onPreviewOutput,
+      measuredDimensions: measuredDims,
     });
   }, [
     effectiveWorkflow,
@@ -146,6 +154,7 @@ function GraphCanvasInner({
     readOnly,
     onLiteralChange,
     onPreviewOutput,
+    measuredDims,
   ]);
 
   const [rfNodes, setRfNodes] = useState<Array<GraphNode>>(built.nodes);
@@ -184,6 +193,31 @@ function GraphCanvasInner({
 
   const handleNodesChange: OnNodesChange<GraphNode> = useCallback(
     (changes) => {
+      let dimsChanged = false;
+      const nextDims = { ...measuredDimsRef.current };
+      for (const change of changes) {
+        if (
+          change.type === "dimensions" &&
+          change.dimensions &&
+          change.dimensions.width > 0 &&
+          change.dimensions.height > 0
+        ) {
+          const prev = nextDims[change.id];
+          if (
+            !prev ||
+            Math.abs(prev.width - change.dimensions.width) > 1 ||
+            Math.abs(prev.height - change.dimensions.height) > 1
+          ) {
+            nextDims[change.id] = change.dimensions;
+            dimsChanged = true;
+          }
+        }
+      }
+      if (dimsChanged) {
+        measuredDimsRef.current = nextDims;
+        setMeasuredDims(nextDims);
+      }
+
       if (!readOnly) {
         setRfNodes((prev) => changes.applyTo(prev));
       }

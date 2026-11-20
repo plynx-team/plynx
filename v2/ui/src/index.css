@@ -605,6 +605,7 @@ textarea:read-only {
 }
 
 .flow-node {
+  box-sizing: border-box;
   width: 260px;
   border: 2px solid #3c3c3c;
   border-radius: 10px;

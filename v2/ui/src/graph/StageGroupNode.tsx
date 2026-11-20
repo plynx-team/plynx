@@ -8,27 +8,22 @@ export function StageGroupNode({ data }: NodeProps<StageGroupGraphNode>) {
   return (
     <div
       data-testid={`stage-group-${data.stageId}`}
-      className="h-full w-full rounded-lg pointer-events-none"
+      className="h-full w-full rounded-lg pointer-events-none relative"
       style={{
         border: "1px dashed #3c3c3c",
         backgroundColor: "rgba(38, 38, 38, 0.28)",
       }}
     >
-      <div
-        className="flex items-center justify-between px-3 py-1.5 rounded-t-lg"
-        style={{
-          borderBottom: "1px solid #363636",
-          backgroundColor: "rgba(38, 38, 38, 0.75)",
-        }}
-      >
-        <div className="flex items-center gap-1.5 min-w-0">
+      {/* Windowless Stage Title: compact textbox pinned in top-left corner */}
+      <div className="absolute top-2.5 left-3 flex items-center gap-2 max-w-[calc(100%-24px)] pointer-events-none select-none">
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#2a2a2a] border border-[#3c3c3c] text-xs shadow-sm">
           <FeatherIcon
             name="layers"
-            size={12}
+            size={11}
             style={{ color: "var(--text-secondary)" }}
           />
           <span
-            className="truncate text-xs font-semibold"
+            className="truncate font-semibold text-xs"
             style={{ color: "var(--text-primary)" }}
           >
             {data.title}
@@ -41,17 +36,19 @@ export function StageGroupNode({ data }: NodeProps<StageGroupGraphNode>) {
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          {gateStatus === "WAITING" ? (
-            <span className="status-badge WAITING text-[10px]">
-              WAITING APPROVAL
-            </span>
-          ) : gateStatus === "APPROVED" ? (
-            <span className="status-badge APPROVED text-[10px]">APPROVED</span>
-          ) : data.requireApproval ? (
-            <span className="status-badge CREATED text-[10px]">Gate</span>
-          ) : null}
-        </div>
+        {gateStatus === "WAITING" ? (
+          <span className="status-badge WAITING text-[10px] px-1.5 py-0.5 rounded bg-[#2a2a2a] border border-[#3c3c3c]">
+            WAITING APPROVAL
+          </span>
+        ) : gateStatus === "APPROVED" ? (
+          <span className="status-badge APPROVED text-[10px] px-1.5 py-0.5 rounded bg-[#2a2a2a] border border-[#3c3c3c]">
+            APPROVED
+          </span>
+        ) : data.requireApproval ? (
+          <span className="status-badge CREATED text-[10px] px-1.5 py-0.5 rounded bg-[#2a2a2a] border border-[#3c3c3c]">
+            Gate
+          </span>
+        ) : null}
       </div>
     </div>
   );

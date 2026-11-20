@@ -23,17 +23,13 @@ import {
   type WorkflowGraphNode,
 } from "./types";
 
-export const NODE_WIDTH = 220;
-const NODE_HEADER_HEIGHT = 56;
-const PORT_ROW_HEIGHT = 32;
-const NODE_FOOTER_PADDING = 20;
-
-export const STAGE_PAD_X = 36;
-export const STAGE_PAD_TOP = 54;
-export const STAGE_PAD_BOTTOM = 32;
+export const NODE_WIDTH = 260;
+export const STAGE_PAD_X = 32;
+export const STAGE_PAD_TOP = 48;
+export const STAGE_PAD_BOTTOM = 52;
 export const STAGE_GAP_X = 80;
-export const EMPTY_STAGE_WIDTH = 280;
-export const EMPTY_STAGE_HEIGHT = 140;
+export const EMPTY_STAGE_WIDTH = NODE_WIDTH + STAGE_PAD_X * 2;
+export const EMPTY_STAGE_HEIGHT = 150;
 
 export const DEFAULT_STAGE_ID = "main";
 export const DEFAULT_STAGE_TITLE = "Workflow";
@@ -121,11 +117,17 @@ export function resolveNodePorts(
 export function estimateNodeDimensions(
   inputsCount: number,
   outputsCount: number,
+  unwiredCount: number = 0,
 ): { width: number; height: number } {
-  const portRows = Math.max(inputsCount + outputsCount, 1);
+  const socketRows = Math.max(inputsCount, outputsCount);
+  const headerHeight = 28;
+  const socketsHeight = socketRows > 0 ? 18 + socketRows * 24 : 0;
+  const widgetsHeight = unwiredCount > 0 ? 8 + unwiredCount * 28 : 0;
+  const border = 4;
+  const height = headerHeight + socketsHeight + widgetsHeight + border;
   return {
     width: NODE_WIDTH,
-    height: NODE_HEADER_HEIGHT + portRows * PORT_ROW_HEIGHT + NODE_FOOTER_PADDING,
+    height: Math.max(height, 56),
   };
 }
 
@@ -173,7 +175,14 @@ export function computeDagrePositions(
     for (const nodeId of memberIds) {
       const spec = nodesDef[nodeId];
       const ports = resolveNodePorts(nodeId, spec, workflow, opsMap[spec.op]);
-      const dims = estimateNodeDimensions(ports.inputs.length, ports.outputs.length);
+      const unwiredCount = ports.inputs.filter(
+        (p) => !extractNodeRef(spec.inputs?.[p.name]),
+      ).length;
+      const dims = estimateNodeDimensions(
+        ports.inputs.length,
+        ports.outputs.length,
+        unwiredCount,
+      );
       dimsMap[nodeId] = dims;
       g.setNode(nodeId, { width: dims.width, height: dims.height });
     }
@@ -237,6 +246,7 @@ export interface BuildGraphOptions {
   readOnly?: boolean;
   onLiteralChange?: (nodeId: string, portName: string, value: unknown) => void;
   onPreviewOutput?: (nodeId: string, output: OutputPortSpec) => void;
+  measuredDimensions?: Record<string, { width: number; height: number }>;
 }
 
 export interface BuiltGraphElements {
@@ -394,11 +404,24 @@ export function buildGraphElements(
         const spec = nodesDef[nodeId];
         const pos = absolutePositions[nodeId];
         const ports = resolveNodePorts(nodeId, spec, effectiveWf, opsMap[spec.op]);
-        const dims = estimateNodeDimensions(ports.inputs.length, ports.outputs.length);
+        const unwiredCount = ports.inputs.filter(
+          (p) => !extractNodeRef(spec.inputs?.[p.name]),
+        ).length;
+        const dims = estimateNodeDimensions(
+          ports.inputs.length,
+          ports.outputs.length,
+          unwiredCount,
+        );
+        const measured = options.measuredDimensions?.[nodeId];
+        const nodeWidth =
+          measured?.width && measured.width > 0 ? measured.width : dims.width;
+        const nodeHeight =
+          measured?.height && measured.height > 0 ? measured.height : dims.height;
+
         if (pos.x < minX) minX = pos.x;
         if (pos.y < minY) minY = pos.y;
-        if (pos.x + dims.width > maxX) maxX = pos.x + dims.width;
-        if (pos.y + dims.height > maxY) maxY = pos.y + dims.height;
+        if (pos.x + nodeWidth > maxX) maxX = pos.x + nodeWidth;
+        if (pos.y + nodeHeight > maxY) maxY = pos.y + nodeHeight;
       }
 
       groupX = Math.round(minX - STAGE_PAD_X);

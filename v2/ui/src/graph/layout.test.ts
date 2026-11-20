@@ -272,4 +272,21 @@ describe("graph layout utilities (Task 6.8)", () => {
     });
     expect(absolutePositions["echo_2"]).toEqual({ x: 408, y: 204 });
   });
+
+  it("dynamically sizes stage groups to fit custom/variable measured node widths and heights", () => {
+    // Simulate nodes having non-standard, dynamic measured widths (e.g., 380px wide) and heights (220px tall)
+    const { nodes } = buildGraphElements(SAMPLE_WORKFLOW, {
+      opsMap: SAMPLE_OPS,
+      measuredDimensions: {
+        pick: { width: 380, height: 220 },
+      },
+    });
+
+    const askGroup = nodes.find((n) => n.id === stageGroupId("ask"));
+    expect(askGroup).toBeDefined();
+    // Width should cleanly enclose the 380px wide node + 2 * STAGE_PAD_X (32px) = 444px
+    expect(askGroup?.style?.width).toBe(380 + 32 * 2);
+    // Height should cleanly enclose the 220px tall node + STAGE_PAD_TOP (48px) + STAGE_PAD_BOTTOM (52px) = 320px
+    expect(askGroup?.style?.height).toBe(220 + 48 + 52);
+  });
 });
