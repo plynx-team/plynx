@@ -15,6 +15,7 @@ import {
 } from "@xyflow/react";
 import type {
   OpEntry,
+  OutputPortSpec,
   RunState,
   Workflow,
   WorkflowDocument,
@@ -48,6 +49,8 @@ export interface GraphViewProps {
   onNodeDragStop?: (nodeId: string, absX: number, absY: number) => void;
   onDropOp?: (opId: string, position: { x: number; y: number }) => void;
   onViewportChange?: (viewport: { x: number; y: number; zoom: number }) => void;
+  onLiteralChange?: (nodeId: string, portName: string, value: unknown) => void;
+  onPreviewOutput?: (nodeId: string, output: OutputPortSpec) => void;
   hasSavedViewport?: boolean;
   fitViewTrigger?: number;
   heightClassName?: string;
@@ -87,9 +90,11 @@ function GraphCanvasInner({
   onNodeDragStop,
   onDropOp,
   onViewportChange,
+  onLiteralChange,
+  onPreviewOutput,
   hasSavedViewport,
   fitViewTrigger = 0,
-  heightClassName = "h-[540px]",
+  heightClassName = "h-full",
 }: GraphViewProps) {
   const reactFlow = useReactFlow<GraphNode, Edge>();
 
@@ -124,8 +129,19 @@ function GraphCanvasInner({
       runState,
       selectedNodeId,
       readOnly,
+      onLiteralChange,
+      onPreviewOutput,
     });
-  }, [effectiveWorkflow, effectiveLayout, opsMap, runState, selectedNodeId, readOnly]);
+  }, [
+    effectiveWorkflow,
+    effectiveLayout,
+    opsMap,
+    runState,
+    selectedNodeId,
+    readOnly,
+    onLiteralChange,
+    onPreviewOutput,
+  ]);
 
   const [rfNodes, setRfNodes] = useState<Array<GraphNode>>(built.nodes);
 
@@ -153,8 +169,8 @@ function GraphCanvasInner({
             selected: true,
             style: {
               ...edge.style,
-              stroke: "#f59e0b",
-              strokeWidth: 3,
+              stroke: "#2680eb",
+              strokeWidth: 5,
             },
           }
         : edge,
@@ -173,7 +189,6 @@ function GraphCanvasInner({
 
   const handleMoveEnd: OnMoveEnd | undefined = onViewportChange
     ? (event, viewport) => {
-        // Ignore programmatic fitView updates so initial load does not mark the editor dirty
         if (!event) return;
         onViewportChange({
           x: Math.round(viewport.x * 100) / 100,
@@ -187,7 +202,11 @@ function GraphCanvasInner({
     return (
       <div
         data-testid="graph-view-empty"
-        className={`flex ${heightClassName} items-center justify-center rounded-lg border border-slate-800 bg-slate-950/80 text-sm text-slate-400`}
+        className={`flex ${heightClassName} items-center justify-center text-sm`}
+        style={{
+          backgroundColor: "var(--bg-canvas)",
+          color: "var(--text-secondary)",
+        }}
       >
         No workflow loaded.
       </div>
@@ -197,7 +216,8 @@ function GraphCanvasInner({
   return (
     <div
       data-testid="graph-view"
-      className={`${heightClassName} w-full overflow-hidden rounded-lg border border-slate-800 bg-slate-950`}
+      className={`${heightClassName} relative w-full overflow-hidden`}
+      style={{ backgroundColor: "var(--bg-canvas)" }}
       onDragOver={(e) => {
         if (readOnly || !onDropOp) return;
         if (e.dataTransfer.types.includes(OP_DRAG_MIME)) {
@@ -217,6 +237,14 @@ function GraphCanvasInner({
         onDropOp(opId, flowPos);
       }}
     >
+      {/* Legacy v1 bottom-left workflow title watermark */}
+      <div className="BackgroundLabels">
+        <div className="Title">{effectiveWorkflow.name}</div>
+        {effectiveWorkflow.description && (
+          <div className="Description">{effectiveWorkflow.description}</div>
+        )}
+      </div>
+
       <ReactFlow<GraphNode, Edge>
         nodes={rfNodes}
         edges={renderedEdges}
@@ -265,20 +293,20 @@ function GraphCanvasInner({
         onMoveEnd={handleMoveEnd}
         proOptions={{ hideAttribution: true }}
       >
-        <Background color="#1e293b" gap={20} size={1} />
+        <Background color="#383838" gap={16} size={1.5} />
         <Controls showInteractive={!readOnly} />
         <MiniMap
           nodeColor={(node) => {
-            if (node.type === "stageGroup") return "#0f172a";
-            const status = (node.data as { nodeState?: { status?: string } })?.nodeState
-              ?.status;
-            if (status === "SUCCESS") return "#10b981";
-            if (status === "RUNNING") return "#38bdf8";
-            if (status === "FAILED") return "#f43f5e";
-            if (status === "WAITING_FOR_USER") return "#f59e0b";
-            return "#475569";
+            if (node.type === "stageGroup") return "#2b2b2b";
+            const status = (node.data as { nodeState?: { status?: string } })
+              ?.nodeState?.status;
+            if (status === "SUCCESS") return "#38c172";
+            if (status === "RUNNING") return "#00d8ff";
+            if (status === "FAILED") return "#f44336";
+            if (status === "WAITING_FOR_USER") return "#ffa726";
+            return "#666666";
           }}
-          maskColor="rgba(2, 6, 23, 0.75)"
+          maskColor="rgba(30, 30, 30, 0.6)"
         />
       </ReactFlow>
     </div>

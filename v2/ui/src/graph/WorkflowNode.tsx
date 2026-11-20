@@ -1,6 +1,9 @@
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import type { NodeStatus } from "../api/types.gen";
-import { nodeStatusBadgeClasses } from "../stepper/NodeRow";
+import {
+  FeatherIcon,
+  getPortIconColor,
+  getPortIconName,
+} from "../components/FeatherIcon";
 import {
   extractNodeRef,
   inputHandleId,
@@ -8,76 +11,81 @@ import {
   type WorkflowGraphNode,
 } from "./types";
 
-function nodeBorderClasses(status: NodeStatus | undefined, selected: boolean): string {
-  if (selected) {
-    return "border-emerald-400 ring-2 ring-emerald-500/30";
-  }
-  switch (status) {
-    case "SUCCESS":
-      return "border-emerald-700/80";
-    case "RUNNING":
-      return "border-sky-500/90 shadow-sky-900/30";
-    case "BUILDING_ENVIRONMENT":
-      return "border-indigo-500/90";
-    case "WAITING_FOR_USER":
-      return "border-amber-500/90";
-    case "FAILED":
-      return "border-rose-600/90";
-    case "CANCELED":
-    case "BLOCKED":
-      return "border-slate-700";
-    default:
-      return "border-slate-700/90 hover:border-slate-500";
-  }
-}
+const SCALAR_PORT_TYPES = new Set(["str", "int", "float", "bool"]);
 
 export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
-  const { nodeId, spec, opEntry, nodeState, inputs, outputs, isSelected } = data;
+  const {
+    nodeId,
+    spec,
+    opEntry,
+    nodeState,
+    inputs,
+    outputs,
+    isSelected,
+    readOnly,
+    onLiteralChange,
+    onPreviewOutput,
+  } = data;
   const status = nodeState?.status;
+  const statusLower = (status || "ready").toLowerCase();
   const activeSelected = Boolean(selected || isSelected);
   const displayTitle = spec.title || opEntry?.title || nodeId;
+  const description = opEntry?.description || "";
 
   return (
     <div
       data-testid={`graph-node-${nodeId}`}
       data-node-status={status ?? "IDLE"}
-      className={`w-[260px] rounded-lg border bg-slate-950/95 shadow-lg transition-colors ${nodeBorderClasses(
-        status,
-        activeSelected,
-      )}`}
+      className={`flow-node node-running-status-${statusLower} ${
+        activeSelected ? "selected" : ""
+      }`}
     >
       {/* Header */}
-      <div className="border-b border-slate-800 bg-slate-900/90 px-3 py-2 rounded-t-lg">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="truncate text-xs font-semibold text-white">
+      <div className="flow-node-header">
+        <div className="flex items-center justify-between gap-1.5">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <FeatherIcon
+              name="cpu"
+              size={13}
+              style={{ color: "var(--color-primary)" }}
+            />
+            <div className="flow-title-text" title={displayTitle}>
               {displayTitle}
-            </div>
-            <div className="truncate font-mono text-[10px] text-slate-400">
-              {nodeId}
             </div>
           </div>
 
-          {status && (
-            <span
-              data-testid={`graph-node-status-${nodeId}`}
-              className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide ${nodeStatusBadgeClasses(
-                status,
-              )}`}
-            >
-              {status}
-            </span>
-          )}
+          <div className="flex items-center gap-1 shrink-0">
+            {status && (
+              <span
+                data-testid={`graph-node-status-${nodeId}`}
+                className={`status-badge ${status} !text-[9px] !px-1.5 !py-0`}
+              >
+                {status}
+              </span>
+            )}
+            {description && (
+              <span title={description} className="cursor-help">
+                <FeatherIcon
+                  name="help-circle"
+                  size={12}
+                  style={{ color: "var(--text-secondary)" }}
+                />
+              </span>
+            )}
+          </div>
         </div>
 
-        <div className="mt-1 flex items-center justify-between gap-2">
-          <span className="truncate font-mono text-[10px] text-slate-500">
-            {spec.op}
+        <div className="mt-0.5 flex items-center justify-between gap-1 text-[10px] font-normal normal-case tracking-normal">
+          <span
+            className="truncate font-mono"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            {nodeId}
           </span>
           {nodeState?.cache_hit && (
             <span
               data-testid={`graph-node-cache-${nodeId}`}
-              className="shrink-0 rounded border border-teal-800 bg-teal-950 px-1.5 py-0.2 text-[9px] font-semibold text-teal-300"
+              className="status-badge READY !text-[9px] !px-1 !py-0"
             >
               cache hit
             </span>
@@ -85,83 +93,195 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
         </div>
       </div>
 
-      {/* Ports body */}
-      <div className="flex justify-between gap-2 px-0 py-2 text-[11px]">
-        {/* Input ports */}
-        <div className="flex-1 min-w-0 space-y-1">
-          {inputs.map((port) => {
-            const rawVal = spec.inputs?.[port.name];
-            const isWired = extractNodeRef(rawVal) !== null;
-            const hasLiteral = rawVal !== undefined && !isWired;
-            return (
-              <div
-                key={port.name}
-                className="relative flex items-center gap-1.5 pl-3 pr-1 h-5"
-              >
-                <Handle
-                  type="target"
-                  position={Position.Left}
-                  id={inputHandleId(port.name)}
-                  data-testid={`handle-in-${nodeId}-${port.name}`}
-                  className={
-                    data.readOnly
-                      ? "!h-2.5 !w-2.5 !border-2 !border-slate-950 !bg-sky-400"
-                      : "!h-3.5 !w-3.5 !border-2 !border-slate-950 !bg-sky-400 hover:!bg-sky-300"
-                  }
-                />
-                <span
-                  className={`truncate font-mono text-[11px] ${
-                    isWired
-                      ? "text-sky-300"
-                      : hasLiteral
-                      ? "text-slate-300"
-                      : port.required && port.default === null
-                      ? "text-amber-300"
-                      : "text-slate-400"
-                  }`}
-                >
-                  {port.name}
-                </span>
-                <span className="shrink-0 rounded bg-slate-900 px-1 text-[9px] text-slate-500">
-                  {port.type}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+      {/* Body: Inputs then Outputs (Legacy v1 OperationNode layout) */}
+      <div className="flow-node-body">
+        {inputs.map((port) => {
+          const rawVal = spec.inputs?.[port.name];
+          const isWired = extractNodeRef(rawVal) !== null;
+          const showPrimitive =
+            !isWired && SCALAR_PORT_TYPES.has(port.type);
+          const effectiveVal =
+            rawVal !== undefined
+              ? rawVal
+              : port.default !== undefined && port.default !== null
+              ? port.default
+              : "";
 
-        {/* Output ports */}
-        <div className="flex-1 min-w-0 space-y-1">
-          {outputs.map((port) => (
+          return (
             <div
               key={port.name}
-              className="relative flex items-center justify-end gap-1.5 pl-1 pr-3 h-5"
+              className="flow-node-item flow-node-item-input"
             >
-              <span className="shrink-0 rounded bg-slate-900 px-1 text-[9px] text-slate-500">
-                {port.type}
-              </span>
-              <span className="truncate font-mono text-[11px] text-emerald-300">
-                {port.name}
-              </span>
+              <Handle
+                type="target"
+                position={Position.Left}
+                id={inputHandleId(port.name)}
+                data-testid={`handle-in-${nodeId}-${port.name}`}
+                style={{
+                  width: "11px",
+                  height: "11px",
+                  left: "-7px",
+                  top: "10px",
+                }}
+              />
+              <div className="flex items-center gap-1.5">
+                <FeatherIcon
+                  name={getPortIconName(port.type, port.media)}
+                  size={12}
+                  style={{ color: getPortIconColor(port.type) }}
+                />
+                <span className="truncate">{port.name}</span>
+              </div>
+
+              {showPrimitive && (
+                <div
+                  className="flow-node-primitive-input nodrag"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {port.type === "bool" ? (
+                    <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        disabled={readOnly}
+                        checked={Boolean(effectiveVal)}
+                        onChange={(e) =>
+                          onLiteralChange?.(
+                            nodeId,
+                            port.name,
+                            e.target.checked,
+                          )
+                        }
+                        className="!w-3.5 !h-3.5"
+                      />
+                      <span
+                        className="text-[11px]"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        {effectiveVal ? "true" : "false"}
+                      </span>
+                    </label>
+                  ) : port.options && port.options.length > 0 ? (
+                    <select
+                      disabled={readOnly}
+                      value={String(effectiveVal)}
+                      onChange={(e) =>
+                        onLiteralChange?.(nodeId, port.name, e.target.value)
+                      }
+                    >
+                      {port.options.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type={
+                        port.type === "int" || port.type === "float"
+                          ? "number"
+                          : "text"
+                      }
+                      disabled={readOnly}
+                      placeholder={
+                        port.default !== null && port.default !== undefined
+                          ? String(port.default)
+                          : port.name
+                      }
+                      value={
+                        rawVal !== undefined && rawVal !== null
+                          ? String(rawVal)
+                          : ""
+                      }
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        if (raw === "") {
+                          onLiteralChange?.(nodeId, port.name, undefined);
+                          return;
+                        }
+                        if (port.type === "int") {
+                          const parsed = parseInt(raw, 10);
+                          onLiteralChange?.(
+                            nodeId,
+                            port.name,
+                            Number.isNaN(parsed) ? raw : parsed,
+                          );
+                        } else if (port.type === "float") {
+                          const parsed = parseFloat(raw);
+                          onLiteralChange?.(
+                            nodeId,
+                            port.name,
+                            Number.isNaN(parsed) ? raw : parsed,
+                          );
+                        } else {
+                          onLiteralChange?.(nodeId, port.name, raw);
+                        }
+                      }}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {outputs.map((port) => {
+          const canPreview = nodeState?.status === "SUCCESS";
+          return (
+            <div
+              key={port.name}
+              className="flow-node-item flow-node-item-output"
+            >
+              <div className="flex items-center justify-end gap-1.5">
+                <span className="truncate">{port.name}</span>
+                <FeatherIcon
+                  name={getPortIconName(port.type, port.media)}
+                  size={12}
+                  style={{ color: getPortIconColor(port.type) }}
+                />
+              </div>
+
+              {canPreview && onPreviewOutput && (
+                <button
+                  type="button"
+                  data-testid={`node-output-preview-${nodeId}-${port.name}`}
+                  className="flow-node-item-thumbnail nodrag"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPreviewOutput(nodeId, port);
+                  }}
+                >
+                  <FeatherIcon name="eye" size={11} />
+                  <span className="preview-button">preview</span>
+                </button>
+              )}
+
               <Handle
                 type="source"
                 position={Position.Right}
                 id={outputHandleId(port.name)}
                 data-testid={`handle-out-${nodeId}-${port.name}`}
-                className={
-                  data.readOnly
-                    ? "!h-2.5 !w-2.5 !border-2 !border-slate-950 !bg-emerald-400"
-                    : "!h-3.5 !w-3.5 !border-2 !border-slate-950 !bg-emerald-400 hover:!bg-emerald-300"
-                }
+                style={{
+                  width: "11px",
+                  height: "11px",
+                  right: "-7px",
+                  top: "10px",
+                }}
               />
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
       {/* Error footer if failed */}
       {nodeState?.error && (
-        <div className="border-t border-rose-900/70 bg-rose-950/50 px-2.5 py-1.5 font-mono text-[10px] text-rose-300 truncate rounded-b-lg">
+        <div
+          className="px-2.5 py-1.5 font-mono text-[10px] truncate rounded-b-lg"
+          style={{
+            borderTop: "1px solid rgba(244, 67, 54, 0.5)",
+            backgroundColor: "rgba(80, 0, 0, 0.5)",
+            color: "#ff8a80",
+          }}
+        >
           {nodeState.error}
         </div>
       )}

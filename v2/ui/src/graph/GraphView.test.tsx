@@ -183,6 +183,11 @@ describe("GraphView component (Task 6.8)", () => {
 
     expect(screen.getByTestId("graph-node-echo")).toBeInTheDocument();
     expect(screen.getByTestId("graph-node-status-echo")).toHaveTextContent("RUNNING");
+    expect(screen.getByTestId("graph-node-echo")).toHaveClass(
+      "flow-node",
+      "node-running-status-running",
+    );
+    expect(screen.getByText("foo_or_woo")).toBeInTheDocument();
   });
 
   it("toggles between Stepper and Graph views in RunDetail and displays live status updates", async () => {

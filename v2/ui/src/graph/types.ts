@@ -85,6 +85,8 @@ export interface WorkflowNodeData extends Record<string, unknown> {
   outputs: ReadonlyArray<OutputPortSpec>;
   isSelected: boolean;
   readOnly: boolean;
+  onLiteralChange?: (nodeId: string, portName: string, value: unknown) => void;
+  onPreviewOutput?: (nodeId: string, output: OutputPortSpec) => void;
 }
 
 export type StageGroupGraphNode = Node<StageGroupNodeData, "stageGroup">;

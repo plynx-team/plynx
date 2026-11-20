@@ -57,3 +57,4 @@ Add a row per copied file in the same commit as the copy.
 | 2026-11-19 | `ui/src/components/Common/Icon.tsx` | `v2/ui/src/components/FeatherIcon.tsx` | Ported `feather-icons` inline SVG renderer with typed port/media icon helpers |
 | 2026-11-19 | `ui/src/components/Common/{ControlButton,SearchBar}.tsx` | `v2/ui/src/components/ControlPanel.tsx` | Ported toolbar buttons, segmented toggles, separator, and search input to functional React 19 components using `FeatherIcon` |
 | 2026-11-19 | `ui/public/{logo,favicon}.png` | `v2/ui/public/{logo,favicon}.png` | Copied PLynx header logo and favicon |
+| 2026-11-19 | `ui/src/components/Graph/nodes/{OperationNode.tsx,OperationNode.css}`, `ui/src/components/Graph/style.css` | `v2/ui/src/graph/{WorkflowNode,GraphView}.tsx`, `v2/ui/src/index.css` | Ported `#2a2a2a` node cards, status-tinted uppercase headers, `#00d8ff` conic-gradient running glow, inline scalar inputs/previews, and `.BackgroundLabels` canvas watermark |

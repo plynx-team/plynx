@@ -22,9 +22,9 @@ import {
   type WorkflowGraphNode,
 } from "./types";
 
-export const NODE_WIDTH = 260;
-const NODE_HEADER_HEIGHT = 64;
-const PORT_ROW_HEIGHT = 24;
+export const NODE_WIDTH = 220;
+const NODE_HEADER_HEIGHT = 56;
+const PORT_ROW_HEIGHT = 32;
 const NODE_FOOTER_PADDING = 20;
 
 export const STAGE_PAD_X = 36;
@@ -121,7 +121,7 @@ export function estimateNodeDimensions(
   inputsCount: number,
   outputsCount: number,
 ): { width: number; height: number } {
-  const portRows = Math.max(inputsCount, outputsCount, 1);
+  const portRows = Math.max(inputsCount + outputsCount, 1);
   return {
     width: NODE_WIDTH,
     height: NODE_HEADER_HEIGHT + portRows * PORT_ROW_HEIGHT + NODE_FOOTER_PADDING,
@@ -233,6 +233,8 @@ export interface BuildGraphOptions {
   runState?: RunState | null;
   selectedNodeId?: string;
   readOnly?: boolean;
+  onLiteralChange?: (nodeId: string, portName: string, value: unknown) => void;
+  onPreviewOutput?: (nodeId: string, output: OutputPortSpec) => void;
 }
 
 export interface BuiltGraphElements {
@@ -252,6 +254,8 @@ export function buildGraphElements(
     runState = null,
     selectedNodeId,
     readOnly = true,
+    onLiteralChange,
+    onPreviewOutput,
   } = options;
 
   const nodesDef = workflow.nodes ?? {};
@@ -382,6 +386,8 @@ export function buildGraphElements(
           outputs: ports.outputs,
           isSelected: selectedNodeId === nodeId,
           readOnly,
+          onLiteralChange,
+          onPreviewOutput,
         },
       });
     }
@@ -401,13 +407,13 @@ export function buildGraphElements(
         targetState?.status === "RUNNING" ||
         targetState?.status === "BUILDING_ENVIRONMENT";
 
-      let stroke = "#64748b";
+      let stroke = "#777777";
       if (sourceState?.status === "SUCCESS") {
-        stroke = "#10b981";
+        stroke = "#38c172";
       } else if (sourceState?.status === "FAILED") {
-        stroke = "#f43f5e";
+        stroke = "#f44336";
       } else if (isRunning) {
-        stroke = "#38bdf8";
+        stroke = "#00d8ff";
       }
 
       edges.push({
@@ -419,7 +425,7 @@ export function buildGraphElements(
         animated: isRunning,
         style: {
           stroke,
-          strokeWidth: 2,
+          strokeWidth: 4,
         },
         data: {
           fromNode: ref.from_node,
