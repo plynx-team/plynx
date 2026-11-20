@@ -12,6 +12,7 @@ import {
 } from "../api/client";
 import { applyRunEvent, createInitialRunState } from "../api/reducer";
 import type {
+  InputPortSpec,
   NodePosition,
   NodeSpec,
   OpEntry,
@@ -40,12 +41,18 @@ import { useRouter } from "../router/Router";
 import { CheckpointCard } from "../stepper/CheckpointCard";
 import { StageApprovalCard } from "../stepper/StageApprovalCard";
 import { StepperView } from "../stepper/StepperView";
-import { GraphView } from "./GraphView";
+import { GraphView, type WireDropOnPaneEvent } from "./GraphView";
 import {
   computeDagrePositions,
   DEFAULT_STAGE_ID,
   getOrderedStageIds,
+  resolveNodePorts,
 } from "./layout";
+import { parseHandleId } from "./types";
+import {
+  QuickConnectPopover,
+  type QuickConnectDropData,
+} from "./QuickConnectPopover";
 import {
   addNodeToWorkflow,
   addStageToWorkflow,
@@ -146,6 +153,8 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   const [newStageModalRequireApproval, setNewStageModalRequireApproval] =
     useState<boolean>(false);
   const [wireError, setWireError] = useState<string | null>(null);
+  const [quickConnectData, setQuickConnectData] =
+    useState<QuickConnectDropData | null>(null);
   const [targetStage, setTargetStage] = useState<string>(DEFAULT_STAGE_ID);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -527,6 +536,115 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
       commitStateChange(nextWf);
     },
     [opsMap, commitStateChange],
+  );
+
+  const handleWireDropOnPane = useCallback(
+    (event: WireDropOnPaneEvent) => {
+      if (isInspectingRun) return;
+      const currentWf = workflowRef.current;
+      if (!currentWf) return;
+      const originNode = currentWf.nodes?.[event.originNodeId];
+      if (!originNode) return;
+      const opEntry = opsMap[originNode.op];
+      const ports = resolveNodePorts(
+        event.originNodeId,
+        originNode,
+        currentWf,
+        opEntry,
+      );
+      const parsed = parseHandleId(event.originHandleId);
+      const portName = parsed?.name ?? event.originHandleId;
+
+      let originPort: InputPortSpec | OutputPortSpec | undefined;
+      if (event.handleType === "source") {
+        originPort = ports.outputs.find((p) => p.name === portName);
+      } else {
+        originPort = ports.inputs.find((p) => p.name === portName);
+      }
+      if (!originPort) {
+        originPort = { name: portName, type: "str" };
+      }
+
+      setQuickConnectData({
+        originNodeId: event.originNodeId,
+        originNodeTitle: originNode.title || originNode.op,
+        originPortName: portName,
+        handleType: event.handleType,
+        originPort,
+        screenPos: event.screenPos,
+        flowPos: event.flowPos,
+        stageId: event.stageId,
+      });
+    },
+    [isInspectingRun, opsMap],
+  );
+
+  const handleQuickConnectSelect = useCallback(
+    (opId: string, portName: string) => {
+      const data = quickConnectData;
+      setQuickConnectData(null);
+      if (!data) return;
+
+      const currentWf = workflowRef.current;
+      const currentLayout = layoutRef.current;
+      if (!currentWf) return;
+
+      const op = opsMap[opId];
+      if (!op || !op.valid) return;
+
+      // Stage order preservation: inter-stage edges must only go forward
+      let effectiveStage = data.stageId;
+      const originNodeSpec = currentWf.nodes?.[data.originNodeId];
+      if (originNodeSpec) {
+        const originStage = originNodeSpec.stage || DEFAULT_STAGE_ID;
+        const orderedStages = getOrderedStageIds(currentWf);
+        const stageIdx = (sid: string) => orderedStages.indexOf(sid);
+        if (data.handleType === "source") {
+          // origin -> new: new node stage must be >= origin stage
+          if (stageIdx(effectiveStage) < stageIdx(originStage)) {
+            effectiveStage = originStage;
+          }
+        } else {
+          // new -> origin: new node stage must be <= origin stage
+          if (stageIdx(effectiveStage) > stageIdx(originStage)) {
+            effectiveStage = originStage;
+          }
+        }
+      }
+
+      // Add node
+      const added = addNodeToWorkflow(currentWf, currentLayout, op, {
+        stageId: effectiveStage,
+        position: data.flowPos,
+        opsMap,
+      });
+
+      // Connect edge
+      let nextWf: Workflow;
+      if (data.handleType === "source") {
+        // Wire: origin (output) -> new node (input)
+        nextWf = connectEdgeInWorkflow(
+          added.workflow,
+          data.originNodeId,
+          data.originPortName,
+          added.nodeId,
+          portName,
+        );
+      } else {
+        // Wire: new node (output) -> origin (input)
+        nextWf = connectEdgeInWorkflow(
+          added.workflow,
+          added.nodeId,
+          portName,
+          data.originNodeId,
+          data.originPortName,
+        );
+      }
+
+      commitStateChange(nextWf, added.layout);
+      setSelectedNodeId(added.nodeId);
+    },
+    [quickConnectData, opsMap, commitStateChange],
   );
 
   const handleDeleteSelectedEdge = useCallback(() => {
@@ -1443,6 +1561,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
                   onNodeDragStop={handleNodeDragStop}
                   onStageDragStop={handleStageDragStop}
                   onDropOp={handleDropOp}
+                  onWireDropOnPane={handleWireDropOnPane}
                   onViewportChange={handleViewportChange}
                   onLiteralChange={handleInlineLiteralChange}
                   onPreviewOutput={handlePreviewNodeOutput}
@@ -1834,6 +1953,15 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
             </div>
           </div>
         </div>
+      )}
+
+      {quickConnectData && (
+        <QuickConnectPopover
+          data={quickConnectData}
+          ops={ops}
+          onSelect={handleQuickConnectSelect}
+          onClose={() => setQuickConnectData(null)}
+        />
       )}
     </div>
   );

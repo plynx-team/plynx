@@ -9,6 +9,7 @@ import {
   type Connection,
   type Edge,
   type NodeTypes,
+  type OnConnectStartParams,
   type OnEdgesChange,
   type OnMoveEnd,
   type OnNodesChange,
@@ -43,6 +44,15 @@ const NODE_TYPES: NodeTypes = {
   workflowNode: WorkflowNode,
 };
 
+export interface WireDropOnPaneEvent {
+  originNodeId: string;
+  originHandleId: string;
+  handleType: "source" | "target";
+  screenPos: { x: number; y: number };
+  flowPos: { x: number; y: number };
+  stageId: string;
+}
+
 export interface GraphViewProps {
   workflowDoc?: WorkflowDocument | null;
   workflow?: Workflow | null;
@@ -68,6 +78,7 @@ export interface GraphViewProps {
     position: { x: number; y: number },
     stageId?: string,
   ) => void;
+  onWireDropOnPane?: (event: WireDropOnPaneEvent) => void;
   onViewportChange?: (viewport: { x: number; y: number; zoom: number }) => void;
   onLiteralChange?: (nodeId: string, portName: string, value: unknown) => void;
   onPreviewOutput?: (nodeId: string, output: OutputPortSpec) => void;
@@ -114,6 +125,7 @@ function GraphCanvasInner({
   onNodeDragStop,
   onStageDragStop,
   onDropOp,
+  onWireDropOnPane,
   onViewportChange,
   onLiteralChange,
   onPreviewOutput,
@@ -122,6 +134,9 @@ function GraphCanvasInner({
   heightClassName = "h-full",
 }: GraphViewProps) {
   const reactFlow = useReactFlow<GraphNode, Edge>();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const connectingRef = useRef<OnConnectStartParams | null>(null);
+  const didConnectRef = useRef<boolean>(false);
 
   const effectiveWorkflow = useMemo<Workflow | null>(() => {
     if (workflowProp) return workflowProp;
@@ -311,6 +326,7 @@ function GraphCanvasInner({
 
   return (
     <div
+      ref={containerRef}
       data-testid="graph-view"
       className={`${heightClassName} relative w-full overflow-hidden`}
       style={{ backgroundColor: "var(--bg-canvas)" }}
@@ -412,7 +428,79 @@ function GraphCanvasInner({
         deleteKeyCode={null}
         onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
+        onConnectStart={(_event, params) => {
+          didConnectRef.current = false;
+          connectingRef.current = params;
+        }}
+        onConnect={(connection) => {
+          didConnectRef.current = true;
+          connectingRef.current = null;
+          onConnect?.(connection);
+        }}
+        onConnectEnd={(event) => {
+          if (didConnectRef.current || readOnly || !onWireDropOnPane) {
+            connectingRef.current = null;
+            return;
+          }
+          const startParams = connectingRef.current;
+          connectingRef.current = null;
+          if (!startParams?.nodeId || !startParams?.handleId) {
+            return;
+          }
+
+          const target = event.target as HTMLElement | null;
+          const isPane =
+            Boolean(
+              target?.classList?.contains("react-flow__pane") ||
+                target?.closest(".react-flow__pane"),
+            ) &&
+            !target?.closest(".react-flow__handle") &&
+            !target?.closest(".workflow-node");
+
+          if (!isPane) return;
+
+          const clientX =
+            "clientX" in event
+              ? event.clientX
+              : event.touches?.[0]?.clientX ?? 0;
+          const clientY =
+            "clientY" in event
+              ? event.clientY
+              : event.touches?.[0]?.clientY ?? 0;
+
+          let flowPos = reactFlow.screenToFlowPosition({
+            x: clientX,
+            y: clientY,
+          });
+          if (!Number.isFinite(flowPos.x) || !Number.isFinite(flowPos.y)) {
+            const vp = reactFlow.getViewport?.() ?? { x: 0, y: 0, zoom: 1 };
+            const zoom = Number.isFinite(vp.zoom) && vp.zoom > 0 ? vp.zoom : 1;
+            const vpX = Number.isFinite(vp.x) ? vp.x : 0;
+            const vpY = Number.isFinite(vp.y) ? vp.y : 0;
+            const containerRect = containerRef.current?.getBoundingClientRect() ?? {
+              left: 0,
+              top: 0,
+            };
+            flowPos = {
+              x: (clientX - containerRect.left - vpX) / zoom,
+              y: (clientY - containerRect.top - vpY) / zoom,
+            };
+          }
+
+          const stageId =
+            findStageAtPosition(flowPos, stageNodes) ??
+            findClosestStage(flowPos, stageNodes, DEFAULT_STAGE_ID);
+
+          onWireDropOnPane({
+            originNodeId: startParams.nodeId,
+            originHandleId: startParams.handleId,
+            handleType:
+              startParams.handleType === "target" ? "target" : "source",
+            screenPos: { x: clientX, y: clientY },
+            flowPos,
+            stageId,
+          });
+        }}
         onNodeClick={(_event, node) => {
           if (!isStageGroupId(node.id)) {
             onSelectEdge?.(undefined);

@@ -105,15 +105,15 @@ This document tracks the design decisions, architectural models, and implementat
 - [x] Add unit tests in `WorkflowPicker.test.tsx` for new workflow creation.
 
 ### Phase 5: Quick-Connect on Wire Drop (Unreal / Blender Style)
-- [ ] In `GraphView.tsx`, hook `onConnectStart` and `onConnectEnd`.
-- [ ] Detect release over `.react-flow__pane` and capture drop flow coordinates and origin handle type/node.
-- [ ] Create `QuickConnectPopover.tsx` component:
+- [x] In `GraphView.tsx`, hook `onConnectStart` and `onConnectEnd`.
+- [x] Detect release over `.react-flow__pane` and capture drop flow coordinates and origin handle type/node.
+- [x] Create `QuickConnectPopover.tsx` component:
   - Positioned at mouse release point.
   - Type-safe port compatibility matching (`type` and `media` check).
   - Searchable list of compatible ops with nested port choices.
   - Keyboard navigation (Search focus, Up/Down, Enter, Esc).
-- [ ] Wire insertion handler in `WorkflowEditor.tsx`: atomic `addNodeToWorkflow` + `connectEdgeInWorkflow` via `commitStateChange`.
-- [ ] Add unit tests for quick-connect port filtering, node spawn, and edge wiring.
+- [x] Wire insertion handler in `WorkflowEditor.tsx`: atomic `addNodeToWorkflow` + `connectEdgeInWorkflow` via `commitStateChange`.
+- [x] Add unit tests for quick-connect port filtering, node spawn, and edge wiring.
 
 ### Phase 6: Staged Input Prompting & Execution
 - [ ] In `RunInputsForm.tsx`, group/filter unbound inputs: only require inputs for the initial active stage (Stage 1) at run launch.

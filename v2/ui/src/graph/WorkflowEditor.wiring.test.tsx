@@ -15,7 +15,12 @@ vi.mock("../api/client", () => ({
 }));
 
 vi.mock("./GraphView", () => ({
-  GraphView: ({ workflow, onConnect, onSelectEdge }: GraphViewProps) => {
+  GraphView: ({
+    workflow,
+    onConnect,
+    onSelectEdge,
+    onWireDropOnPane,
+  }: GraphViewProps) => {
     const edges: Array<string> = [];
     for (const [targetId, spec] of Object.entries(workflow?.nodes ?? {})) {
       for (const [port, val] of Object.entries(spec.inputs ?? {})) {
@@ -95,6 +100,22 @@ vi.mock("./GraphView", () => ({
           onClick={() => onSelectEdge?.(edges[0])}
         >
           Select Edge
+        </button>
+        <button
+          type="button"
+          data-testid="trigger-wire-drop-on-pane"
+          onClick={() =>
+            onWireDropOnPane?.({
+              originNodeId: "pick",
+              originHandleId: outputHandleId("choice"),
+              handleType: "source",
+              screenPos: { x: 100, y: 100 },
+              flowPos: { x: 300, y: 300 },
+              stageId: "ask",
+            })
+          }
+        >
+          Trigger Wire Drop
         </button>
       </div>
     );
@@ -306,5 +327,43 @@ describe("WorkflowEditor wiring & rejection reasons (Task 6.10)", () => {
     fireEvent.click(screen.getByTestId("select-first-edge"));
     fireEvent.click(screen.getByTestId("btn-delete-edge"));
     expect(screen.getByTestId("edge-list")).toHaveTextContent("");
+  });
+
+  it("opens QuickConnectPopover on wire drop in pane and auto-wires selected operation", async () => {
+    vi.mocked(client.fetchWorkflow).mockResolvedValue(DOC);
+    vi.mocked(client.fetchOps).mockResolvedValue(OPS);
+
+    render(
+      <RouterProvider>
+        <WorkflowEditor workflowPath="foo_or_woo.yaml" />
+      </RouterProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("mock-graph-view")).toBeInTheDocument();
+    });
+
+    // Drop wire from pick.choice (output: str) on empty pane
+    fireEvent.click(screen.getByTestId("trigger-wire-drop-on-pane"));
+
+    expect(screen.getByTestId("quick-connect-popover")).toBeInTheDocument();
+
+    // Echo should be visible since it has an input 'text: str'
+    const echoItem = screen.getByTestId(
+      "quick-connect-item-standard_io/demo:Echo-text",
+    );
+    expect(echoItem).toBeInTheDocument();
+
+    // Select Echo -> text
+    fireEvent.click(echoItem);
+
+    // Popover closes
+    expect(screen.queryByTestId("quick-connect-popover")).not.toBeInTheDocument();
+
+    // Edge list should now include wire from pick.choice to the new node's text input!
+    await waitFor(() => {
+      expect(screen.getByTestId("edge-list").textContent).toContain("pick.choice->");
+      expect(screen.getByTestId("edge-list").textContent).toContain(".text");
+    });
   });
 });
