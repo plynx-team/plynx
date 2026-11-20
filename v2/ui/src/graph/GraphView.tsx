@@ -23,6 +23,7 @@ import type {
 } from "../api/types.gen";
 import { buildGraphElements } from "./layout";
 import { OP_DRAG_MIME } from "./OpPalette";
+import type { WorkflowRunDiff } from "./runDiff";
 import { StageGroupNode } from "./StageGroupNode";
 import { isStageGroupId, type GraphNode } from "./types";
 import { WorkflowNode } from "./WorkflowNode";
@@ -37,6 +38,7 @@ export interface GraphViewProps {
   workflow?: Workflow | null;
   layout?: WorkflowLayout | null;
   runState?: RunState | null;
+  runDiff?: WorkflowRunDiff | null;
   ops?: ReadonlyArray<OpEntry>;
   selectedNodeId?: string;
   onSelectNode?: (nodeId: string | undefined) => void;
@@ -78,6 +80,7 @@ function GraphCanvasInner({
   workflow: workflowProp,
   layout: layoutProp,
   runState,
+  runDiff = null,
   ops = [],
   selectedNodeId,
   onSelectNode,
@@ -127,6 +130,7 @@ function GraphCanvasInner({
       layout: effectiveLayout,
       opsMap,
       runState,
+      runDiff,
       selectedNodeId,
       readOnly,
       onLiteralChange,
@@ -137,6 +141,7 @@ function GraphCanvasInner({
     effectiveLayout,
     opsMap,
     runState,
+    runDiff,
     selectedNodeId,
     readOnly,
     onLiteralChange,

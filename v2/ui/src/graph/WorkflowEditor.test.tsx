@@ -172,4 +172,105 @@ describe("WorkflowEditor palette & node operations (Task 6.9)", () => {
     expect(screen.getByTestId("graph-node-echo")).toBeInTheDocument();
     expect(screen.getByTestId("graph-node-concat")).toBeInTheDocument();
   });
+
+  it("starts in Clean Blueprint mode and switches to Run Inspection mode with diff badges when a run is selected (Task 6.20)", async () => {
+    vi.mocked(client.fetchWorkflow).mockResolvedValue(MOCK_DOC);
+    vi.mocked(client.fetchOps).mockResolvedValue(MOCK_OPS);
+    vi.mocked(client.fetchRuns).mockResolvedValue({
+      runs: [
+        {
+          id: "20261120-120000-run1",
+          workflow_path: "examples/workflows/sample.yaml",
+          workflow_sha256: "sha1",
+          status: "SUCCESS",
+          cancel_requested: false,
+          pinned: false,
+          created_at: 1700000000,
+          started_at: 1700000000,
+          finished_at: 1700000005,
+        },
+      ],
+    });
+    vi.mocked(client.fetchRunState).mockResolvedValue({
+      id: "20261120-120000-run1",
+      workflow_path: "examples/workflows/sample.yaml",
+      workflow_sha256: "sha1",
+      status: "SUCCESS",
+      run_inputs: {},
+      cancel_requested: false,
+      pinned: false,
+      created_at: 1700000000,
+      started_at: 1700000000,
+      finished_at: 1700000005,
+      nodes: {
+        echo: {
+          node_id: "echo",
+          status: "SUCCESS",
+          cache_hit: true,
+          attempt: 1,
+        },
+      },
+      checkpoints: [],
+      stage_gates: {},
+      workflow_snapshot: {
+        version: 1,
+        name: "sample_wf",
+        nodes: {
+          echo: {
+            op: "standard_io/demo:Echo",
+            title: "Echo one",
+            stage: "main",
+            inputs: { text: "older-run-value" },
+          },
+        },
+      },
+    });
+
+    render(
+      <RouterProvider>
+        <WorkflowEditor workflowPath="examples/workflows/sample.yaml" />
+      </RouterProvider>,
+    );
+
+    const echoNode = await screen.findByTestId("graph-node-echo");
+    // In Editor mode (Clean Blueprint), the node status is IDLE even though a run exists
+    expect(echoNode).toHaveAttribute("data-node-status", "IDLE");
+    expect(screen.queryByTestId("run-mode-hud")).not.toBeInTheDocument();
+
+    // Wait for the run item to appear in the Left Dock RunsHistoryPane
+    const runItem = await screen.findByTestId(
+      "run-history-item-20261120-120000-run1",
+    );
+    fireEvent.click(runItem);
+
+    // Selecting a run activates Run Inspection Mode:
+    // 1. HUD banner appears with Return to Editor button
+    // 2. Operations palette collapses automatically
+    // 3. Node displays the run's SUCCESS status AND a DIFF badge because "hello" !== "older-run-value"
+    await waitFor(() => {
+      expect(screen.getByTestId("run-mode-hud")).toBeInTheDocument();
+      expect(screen.getByTestId("graph-node-echo")).toHaveAttribute(
+        "data-node-status",
+        "SUCCESS",
+      );
+      expect(screen.getByTestId("graph-node-diff-echo")).toHaveTextContent(
+        "DIFF",
+      );
+    });
+    expect(screen.getByTestId("workspace-center")).toHaveClass(
+      "is-inspecting-run",
+    );
+    expect(screen.getByTestId("op-palette")).toHaveClass("is-collapsed");
+
+    // Clicking Return to Editor restores Clean Blueprint mode and expands Operations palette
+    fireEvent.click(screen.getByTestId("btn-return-to-editor"));
+    await waitFor(() => {
+      expect(screen.queryByTestId("run-mode-hud")).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId("graph-node-echo")).toHaveAttribute(
+      "data-node-status",
+      "IDLE",
+    );
+    expect(screen.getByTestId("op-palette")).toHaveClass("is-expanded");
+  });
 });

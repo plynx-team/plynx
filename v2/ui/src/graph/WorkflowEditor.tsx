@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Connection } from "@xyflow/react";
 import {
+  cancelRun,
   fetchOps,
   fetchRuns,
   fetchRunState,
   fetchWorkflow,
+  resumeRun,
   saveWorkflow,
+  subscribeRunEvents,
 } from "../api/client";
+import { applyRunEvent, createInitialRunState } from "../api/reducer";
 import type {
   NodePosition,
   NodeSpec,
@@ -30,8 +34,11 @@ import {
   formatTimestamp,
   runStatusBadgeClasses,
 } from "../components/RunList";
+import { RunsHistoryPane } from "../components/RunsHistoryPane";
 import { ArtifactPreviewDialog } from "../previewers/ArtifactPreviewDialog";
 import { useRouter } from "../router/Router";
+import { CheckpointCard } from "../stepper/CheckpointCard";
+import { StageApprovalCard } from "../stepper/StageApprovalCard";
 import { StepperView } from "../stepper/StepperView";
 import { GraphView } from "./GraphView";
 import {
@@ -54,9 +61,12 @@ import {
   type ArtifactPreviewTarget,
 } from "./NodeInspector";
 import { OpPalette } from "./OpPalette";
+import { computeWorkflowRunDiff } from "./runDiff";
 import { validateConnection } from "./validation";
 
 export type EditorViewMode = "graph" | "stepper" | "runs";
+
+const TERMINAL_RUN_STATUSES = new Set(["SUCCESS", "FAILED", "CANCELED"]);
 
 function serializeSnapshot(
   workflow: Workflow | null,
@@ -85,7 +95,11 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   const [fitViewTrigger, setFitViewTrigger] = useState<number>(0);
   const [ops, setOps] = useState<Array<OpEntry>>([]);
   const [workflowRuns, setWorkflowRuns] = useState<Array<RunSummary>>([]);
-  const [latestRun, setLatestRun] = useState<RunState | null>(null);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [selectedRun, setSelectedRun] = useState<RunState | null>(null);
+  const [runsCollapsed, setRunsCollapsed] = useState<boolean>(false);
+  const [opsCollapsed, setOpsCollapsed] = useState<boolean>(false);
+  const [runActionBusy, setRunActionBusy] = useState<boolean>(false);
   const [showRunModal, setShowRunModal] = useState<boolean>(false);
   const [previewTarget, setPreviewTarget] =
     useState<ArtifactPreviewTarget | null>(null);
@@ -117,6 +131,10 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     setSavedSnapshot(null);
     setSelectedNodeId(undefined);
     setSelectedEdgeId(undefined);
+    setSelectedRunId(null);
+    setSelectedRun(null);
+    setRunsCollapsed(false);
+    setOpsCollapsed(false);
     setWireError(null);
 
     Promise.all([fetchWorkflow(workflowPath), fetchOps()])
@@ -144,12 +162,6 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
                 (r) => r.workflow_path === workflowPath,
               );
               setWorkflowRuns(matches);
-              if (matches.length > 0 && typeof fetchRunState === "function") {
-                return fetchRunState(matches[0].id).then((state) => {
-                  if (active) setLatestRun(state);
-                });
-              }
-              return undefined;
             })
             .catch(() => {});
         }
@@ -304,12 +316,121 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     [handleUpdateNodeSpec],
   );
 
+  const handleSelectRun = useCallback((nextRunId: string | null) => {
+    setSelectedRunId(nextRunId);
+    setSelectedEdgeId(undefined);
+    if (nextRunId !== null) {
+      setOpsCollapsed(true);
+      setRunsCollapsed(false);
+      setViewMode((prev) => (prev === "runs" ? "graph" : prev));
+    } else {
+      setSelectedRun(null);
+      setOpsCollapsed(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectedRunId || typeof fetchRunState !== "function") {
+      setSelectedRun(null);
+      return;
+    }
+
+    let active = true;
+    let unsubscribe: (() => void) | undefined;
+    let resyncPending = false;
+
+    fetchRunState(selectedRunId)
+      .then((initial) => {
+        if (!active) return;
+        setSelectedRun(initial);
+        setWorkflowRuns((prev) =>
+          prev.map((item) =>
+            item.id === initial.id
+              ? {
+                  ...item,
+                  status: initial.status,
+                  started_at: initial.started_at,
+                  finished_at: initial.finished_at,
+                  error: initial.error,
+                }
+              : item,
+          ),
+        );
+
+        if (
+          !TERMINAL_RUN_STATUSES.has(initial.status) &&
+          typeof subscribeRunEvents === "function"
+        ) {
+          unsubscribe = subscribeRunEvents(
+            selectedRunId,
+            (event) => {
+              if (!active) return;
+              setSelectedRun((prev) => {
+                const updated = applyRunEvent(
+                  prev ?? createInitialRunState(selectedRunId),
+                  event,
+                );
+                return updated;
+              });
+              if (event.type === "run_status") {
+                setWorkflowRuns((prev) =>
+                  prev.map((item) =>
+                    item.id === selectedRunId
+                      ? { ...item, status: event.data.status }
+                      : item,
+                  ),
+                );
+              }
+            },
+            () => {
+              if (!active || resyncPending) return;
+              resyncPending = true;
+              fetchRunState(selectedRunId)
+                .then((latest) => {
+                  if (!active) return;
+                  setSelectedRun(latest);
+                  setWorkflowRuns((prev) =>
+                    prev.map((item) =>
+                      item.id === latest.id
+                        ? {
+                            ...item,
+                            status: latest.status,
+                            started_at: latest.started_at,
+                            finished_at: latest.finished_at,
+                            error: latest.error,
+                          }
+                        : item,
+                    ),
+                  );
+                  if (TERMINAL_RUN_STATUSES.has(latest.status)) {
+                    unsubscribe?.();
+                    unsubscribe = undefined;
+                  }
+                })
+                .catch(() => {})
+                .finally(() => {
+                  resyncPending = false;
+                });
+            },
+          );
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+      unsubscribe?.();
+    };
+  }, [selectedRunId]);
+
   const handlePreviewNodeOutput = useCallback(
     (nodeId: string, output: OutputPortSpec) => {
-      if (!latestRun) return;
-      setPreviewTarget(buildOutputPreviewTarget(latestRun.id, nodeId, output));
+      if (!selectedRun) return;
+      setPreviewTarget(
+        buildOutputPreviewTarget(selectedRun.id, nodeId, output),
+      );
     },
-    [latestRun],
+    [selectedRun],
   );
 
   const handleBindReference = useCallback(
@@ -449,7 +570,14 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         return;
       }
 
+      if (event.key === "Escape" && selectedRunId !== null) {
+        event.preventDefault();
+        handleSelectRun(null);
+        return;
+      }
+
       if (isEditableElement(event.target)) return;
+      if (selectedRunId !== null) return;
 
       if (event.key === "Delete" || event.key === "Backspace") {
         if (selectedEdgeId) {
@@ -480,14 +608,55 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   }, [
     selectedNodeId,
     selectedEdgeId,
+    selectedRunId,
+    handleSelectRun,
     handleSave,
     handleDeleteSelected,
     handleDeleteSelectedEdge,
     handleDuplicateSelected,
   ]);
 
+  const isInspectingRun = selectedRunId !== null;
+  const activeRunState = isInspectingRun ? selectedRun : null;
+
+  const runDiff = useMemo(
+    () =>
+      isInspectingRun && selectedRun
+        ? computeWorkflowRunDiff(workflow, selectedRun)
+        : null,
+    [isInspectingRun, selectedRun, workflow],
+  );
+
+  const handleCancelActiveRun = useCallback(async () => {
+    if (!selectedRunId || typeof cancelRun !== "function") return;
+    try {
+      setRunActionBusy(true);
+      await cancelRun(selectedRunId);
+      const updated = await fetchRunState(selectedRunId);
+      setSelectedRun(updated);
+    } catch {
+      // ignore
+    } finally {
+      setRunActionBusy(false);
+    }
+  }, [selectedRunId]);
+
+  const handleResumeActiveRun = useCallback(async () => {
+    if (!selectedRunId || typeof resumeRun !== "function") return;
+    try {
+      setRunActionBusy(true);
+      await resumeRun(selectedRunId);
+      const updated = await fetchRunState(selectedRunId);
+      setSelectedRun(updated);
+    } catch {
+      // ignore
+    } finally {
+      setRunActionBusy(false);
+    }
+  }, [selectedRunId]);
+
   const syntheticRunState = useMemo<RunState>(() => {
-    if (latestRun) return latestRun;
+    if (activeRunState) return activeRunState;
     const nodes: RunState["nodes"] = {};
     for (const nodeId of Object.keys(workflow?.nodes ?? {})) {
       nodes[nodeId] = {
@@ -498,7 +667,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
       };
     }
     return {
-      id: "preview",
+      id: "draft",
       workflow_path: workflowPath,
       workflow_sha256: "",
       status: "RUNNING",
@@ -510,7 +679,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
       checkpoints: [],
       stage_gates: {},
     };
-  }, [latestRun, workflow, workflowPath]);
+  }, [activeRunState, workflow, workflowPath]);
 
   return (
     <div
@@ -712,34 +881,158 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         </div>
       ) : workflow ? (
         <div className="flex flex-1 min-h-0 flex-row overflow-hidden">
-          {/* Left Docked HubPanel (only in Graph view) */}
-          {viewMode === "graph" && (
+          {/* Left Docked Accordion Column (Fixed 250px: Runs & Mode + Operations) */}
+          <div data-testid="left-dock" className="left-dock">
+            <RunsHistoryPane
+              runs={workflowRuns}
+              selectedRunId={selectedRunId}
+              onSelectRun={handleSelectRun}
+              collapsed={runsCollapsed}
+              onToggleCollapse={() => setRunsCollapsed((v) => !v)}
+              hasUnsavedChanges={isDirty}
+            />
             <OpPalette
               ops={ops}
               stages={stageIds}
               targetStage={targetStage}
               onTargetStageChange={setTargetStage}
               onAddOp={(op) => handleAddOp(op)}
+              collapsed={opsCollapsed}
+              onToggleCollapse={() => setOpsCollapsed((v) => !v)}
+              readOnly={isInspectingRun}
             />
-          )}
+          </div>
 
           {/* Center Workspace */}
           <div
-            className="flex flex-1 min-w-0 flex-col overflow-hidden"
-            style={{ backgroundColor: "var(--bg-canvas)" }}
+            data-testid="workspace-center"
+            className={`workspace-center flex flex-1 min-w-0 flex-col overflow-hidden ${
+              isInspectingRun ? "is-inspecting-run" : ""
+            }`}
           >
+            {/* Run Inspection Mode Top HUD Banner (shown in both Graph and Stepper views) */}
+            {isInspectingRun && (
+              <div data-testid="run-mode-hud" className="run-mode-hud">
+                <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                  <span
+                    className="inline-flex items-center gap-1.5 font-semibold"
+                    style={{ color: "#00d8ff" }}
+                  >
+                    <FeatherIcon
+                      name={
+                        selectedRun?.status === "RUNNING"
+                          ? "loader"
+                          : "eye"
+                      }
+                      size={13}
+                      className={
+                        selectedRun?.status === "RUNNING"
+                          ? "animate-spin"
+                          : ""
+                      }
+                    />
+                    <span>Inspecting Run</span>
+                  </span>
+                  <span className="font-mono text-xs truncate">
+                    #{selectedRunId}
+                  </span>
+                  {selectedRun && (
+                    <span className={runStatusBadgeClasses(selectedRun.status)}>
+                      {selectedRun.status}
+                    </span>
+                  )}
+                  <span
+                    className="text-[11px]"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    Read-only snapshot
+                  </span>
+                  {runDiff?.hasChanges && (
+                    <span
+                      data-testid="run-hud-diff-indicator"
+                      className="node-diff-badge"
+                    >
+                      <FeatherIcon name="git-commit" size={10} />
+                      <span>Editor modified since this run</span>
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {selectedRun &&
+                    (selectedRun.status === "RUNNING" ||
+                      selectedRun.status === "WAITING_FOR_USER") && (
+                      <ControlButton
+                        icon="x"
+                        text="Cancel Run"
+                        variant="danger"
+                        disabled={runActionBusy || selectedRun.cancel_requested}
+                        onClick={() => void handleCancelActiveRun()}
+                      />
+                    )}
+                  {selectedRun &&
+                    (selectedRun.status === "FAILED" ||
+                      selectedRun.status === "CANCELED") && (
+                      <ControlButton
+                        icon="rotate-ccw"
+                        text="Resume Run"
+                        disabled={runActionBusy}
+                        onClick={() => void handleResumeActiveRun()}
+                      />
+                    )}
+                  <ControlButton
+                    icon="edit-3"
+                    text="Return to Editor"
+                    data-testid="btn-return-to-editor"
+                    variant="primary"
+                    onClick={() => handleSelectRun(null)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Open Checkpoints & Stage Approvals for the Selected Run */}
+            {isInspectingRun && selectedRun && (
+              <div className="space-y-2 px-3 pt-2 empty:hidden">
+                {Object.values(selectedRun.stage_gates)
+                  .filter((g) => g.status === "WAITING")
+                  .map((gate) => (
+                    <StageApprovalCard
+                      key={gate.stage_id}
+                      runId={selectedRun.id}
+                      stageId={gate.stage_id}
+                      gateState={gate}
+                      stageTitle={
+                        workflow.stages?.[gate.stage_id]?.title ||
+                        gate.stage_id
+                      }
+                    />
+                  ))}
+                {selectedRun.checkpoints
+                  .filter((cp) => cp.answer === null || cp.answer === undefined)
+                  .map((cp) => (
+                    <CheckpointCard
+                      key={`${cp.node_id}.${cp.checkpoint_id}`}
+                      runId={selectedRun.id}
+                      checkpoint={cp}
+                    />
+                  ))}
+              </div>
+            )}
+
             <div className="flex-1 min-h-0 overflow-y-auto">
               {viewMode === "graph" ? (
                 <GraphView
                   workflow={workflow}
                   layout={layout}
-                  runState={latestRun}
+                  runState={activeRunState}
+                  runDiff={runDiff}
                   ops={ops}
                   selectedNodeId={selectedNodeId}
                   onSelectNode={handleSelectNode}
                   selectedEdgeId={selectedEdgeId}
                   onSelectEdge={setSelectedEdgeId}
-                  readOnly={false}
+                  readOnly={isInspectingRun}
                   onConnect={handleConnect}
                   onNodeDragStop={handleNodeDragStop}
                   onDropOp={handleDropOp}
@@ -763,13 +1056,14 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
                     className="list-header"
                     style={{
                       gridTemplateColumns:
-                        "minmax(200px, 1.5fr) 150px 120px 180px",
+                        "minmax(200px, 1.5fr) 150px 120px 180px 110px",
                     }}
                   >
                     <div className="list-field">Run ID</div>
                     <div className="list-field">Status</div>
                     <div className="list-field">Duration</div>
                     <div className="list-field">Created</div>
+                    <div className="list-field">View</div>
                   </div>
                   {workflowRuns.length === 0 ? (
                     <div
@@ -783,11 +1077,13 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
                     workflowRuns.map((run) => (
                       <div
                         key={run.id}
-                        onClick={() => navigate(`/runs/${run.id}`)}
-                        className="list-item"
+                        onClick={() => handleSelectRun(run.id)}
+                        className={`list-item ${
+                          selectedRunId === run.id ? "selected" : ""
+                        }`}
                         style={{
                           gridTemplateColumns:
-                            "minmax(200px, 1.5fr) 150px 120px 180px",
+                            "minmax(200px, 1.5fr) 150px 120px 180px 110px",
                         }}
                       >
                         <div
@@ -813,6 +1109,19 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
                         >
                           {formatTimestamp(run.created_at)}
                         </div>
+                        <div className="list-field">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/runs/${run.id}`);
+                            }}
+                            className="control-button !h-6 !min-h-6 !px-2 !text-xs"
+                          >
+                            <FeatherIcon name="external-link" size={11} />
+                            <span>Snapshot</span>
+                          </button>
+                        </div>
                       </div>
                     ))
                   )}
@@ -820,10 +1129,10 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
               )}
             </div>
 
-            {/* Bottom Docked Logs Drawer if a node from latestRun is selected */}
-            {selectedNodeId && latestRun && (
+            {/* Bottom Docked Logs Drawer if a node is selected while inspecting a run */}
+            {selectedNodeId && activeRunState && (
               <LogsPanel
-                runId={latestRun.id}
+                runId={activeRunState.id}
                 nodeId={selectedNodeId}
                 onClose={() => setSelectedNodeId(undefined)}
               />
@@ -835,8 +1144,11 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
             nodeId={selectedNodeId}
             workflow={workflow}
             opsMap={opsMap}
-            runState={latestRun}
-            readOnly={false}
+            runState={activeRunState}
+            nodeDiff={
+              selectedNodeId ? runDiff?.nodes?.[selectedNodeId] : undefined
+            }
+            readOnly={isInspectingRun}
             onUpdateNodeSpec={handleUpdateNodeSpec}
             onBindReference={handleBindReference}
             onUnbindInput={handleUnbindInput}
@@ -852,7 +1164,33 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
           onClose={() => setShowRunModal(false)}
           onRunStarted={(newRunId) => {
             setShowRunModal(false);
-            navigate(`/runs/${newRunId}`);
+            const now = Date.now() / 1000;
+            setWorkflowRuns((prev) => [
+              {
+                id: newRunId,
+                workflow_path: workflowPath,
+                workflow_sha256: "",
+                status: "RUNNING",
+                cancel_requested: false,
+                pinned: false,
+                created_at: now,
+                started_at: now,
+              },
+              ...prev.filter((r) => r.id !== newRunId),
+            ]);
+            handleSelectRun(newRunId);
+            if (typeof fetchRuns === "function") {
+              fetchRuns()
+                .then((list) => {
+                  const matches = list.runs.filter(
+                    (r) => r.workflow_path === workflowPath,
+                  );
+                  if (matches.length > 0) {
+                    setWorkflowRuns(matches);
+                  }
+                })
+                .catch(() => {});
+            }
           }}
         />
       )}

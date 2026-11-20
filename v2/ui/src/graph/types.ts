@@ -8,6 +8,7 @@ import type {
   OutputPortSpec,
   StageGateState,
 } from "../api/types.gen";
+import type { NodeDiff } from "./runDiff";
 
 export const STAGE_NODE_PREFIX = "__stage__:";
 
@@ -81,6 +82,7 @@ export interface WorkflowNodeData extends Record<string, unknown> {
   spec: NodeSpec;
   opEntry?: OpEntry;
   nodeState?: NodeRunState;
+  nodeDiff?: NodeDiff;
   inputs: ReadonlyArray<InputPortSpec>;
   outputs: ReadonlyArray<OutputPortSpec>;
   isSelected: boolean;

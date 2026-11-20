@@ -50,6 +50,7 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
     spec,
     opEntry,
     nodeState,
+    nodeDiff,
     inputs,
     outputs,
     isSelected,
@@ -81,13 +82,15 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
     (port) => extractNodeRef(spec.inputs?.[port.name]) === null,
   );
 
+  const hasDiff = Boolean(nodeDiff && nodeDiff.status !== "unchanged");
+
   return (
     <div
       data-testid={`graph-node-${nodeId}`}
       data-node-status={status ?? "IDLE"}
       className={`flow-node node-running-status-${statusLower} ${
         activeSelected ? "selected" : ""
-      }`}
+      } ${nodeDiff?.status === "added" ? "is-added-in-editor" : ""}`}
     >
       {/* Blender / ComfyUI Status-Colored Header */}
       <div className="flow-node-header">
@@ -112,6 +115,20 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
+            {hasDiff && nodeDiff && (
+              <span
+                data-testid={`graph-node-diff-${nodeId}`}
+                className="node-diff-badge"
+                title={
+                  nodeDiff.status === "added"
+                    ? "This node was added in the editor after this run"
+                    : "This node's inputs or operation differ from the selected run"
+                }
+              >
+                <FeatherIcon name="git-commit" size={9} />
+                <span>{nodeDiff.status === "added" ? "NEW" : "DIFF"}</span>
+              </span>
+            )}
             {nodeState?.cache_hit && (
               <span
                 data-testid={`graph-node-cache-${nodeId}`}
@@ -272,6 +289,12 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
             onClick={(e) => e.stopPropagation()}
           >
             {unwiredInputs.map((port) => {
+              const inputDiff = nodeDiff?.changedInputs?.[port.name];
+              const diffTitle = inputDiff
+                ? `Changed since run (Run value: ${JSON.stringify(
+                    inputDiff.runValue ?? null,
+                  )})`
+                : undefined;
               const rawVal = spec.inputs?.[port.name];
               const effectiveVal =
                 rawVal !== undefined
@@ -298,7 +321,13 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
                 isExpanded
               ) {
                 return (
-                  <div key={port.name} className="comfy-widget-multiline">
+                  <div
+                    key={port.name}
+                    title={diffTitle}
+                    className={`comfy-widget-multiline ${
+                      inputDiff ? "is-diff" : ""
+                    }`}
+                  >
                     <div className="flex items-center justify-between">
                       <span className="comfy-widget-label">
                         <FeatherIcon
@@ -357,7 +386,11 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
               }
 
               return (
-                <div key={port.name} className="comfy-widget-pill">
+                <div
+                  key={port.name}
+                  title={diffTitle}
+                  className={`comfy-widget-pill ${inputDiff ? "is-diff" : ""}`}
+                >
                   <span className="comfy-widget-label">
                     <FeatherIcon
                       name={getPortIconName(port.type, port.media)}

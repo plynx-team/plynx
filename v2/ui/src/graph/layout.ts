@@ -12,6 +12,7 @@ import type {
   Workflow,
   WorkflowLayout,
 } from "../api/types.gen";
+import type { WorkflowRunDiff } from "./runDiff";
 import {
   extractNodeRef,
   inputHandleId,
@@ -231,6 +232,7 @@ export interface BuildGraphOptions {
   layout?: WorkflowLayout | null;
   opsMap?: Record<string, OpEntry>;
   runState?: RunState | null;
+  runDiff?: WorkflowRunDiff | null;
   selectedNodeId?: string;
   readOnly?: boolean;
   onLiteralChange?: (nodeId: string, portName: string, value: unknown) => void;
@@ -252,6 +254,7 @@ export function buildGraphElements(
     layout = null,
     opsMap = {},
     runState = null,
+    runDiff = null,
     selectedNodeId,
     readOnly = true,
     onLiteralChange,
@@ -382,6 +385,7 @@ export function buildGraphElements(
           spec,
           opEntry,
           nodeState,
+          nodeDiff: runDiff?.nodes?.[nodeId],
           inputs: ports.inputs,
           outputs: ports.outputs,
           isSelected: selectedNodeId === nodeId,

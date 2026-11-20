@@ -19,6 +19,7 @@ import { MarkdownPreviewer } from "../previewers/MarkdownPreviewer";
 import { TextPreviewer } from "../previewers/TextPreviewer";
 import { DEFAULT_STAGE_ID, getOrderedStageIds, resolveNodePorts } from "./layout";
 import { LiteralWidget } from "./LiteralWidget";
+import type { NodeDiff } from "./runDiff";
 import { extractNodeRef } from "./types";
 import { getCompatibleUpstreamOutputs, validateStageChange } from "./validation";
 
@@ -34,6 +35,7 @@ export interface NodeInspectorProps {
   workflow: Workflow;
   opsMap: Record<string, OpEntry>;
   runState?: RunState | null;
+  nodeDiff?: NodeDiff;
   readOnly?: boolean;
   onUpdateNodeSpec?: (
     nodeId: string,
@@ -170,6 +172,7 @@ export function NodeInspector({
   workflow,
   opsMap,
   runState,
+  nodeDiff,
   readOnly = false,
   onUpdateNodeSpec,
   onBindReference,
@@ -399,6 +402,70 @@ export function NodeInspector({
             )}
           </div>
         </div>
+
+        {/* Diff Box when inspecting a Run that differs from Current Editor Node */}
+        {nodeDiff && nodeDiff.status !== "unchanged" && (
+          <div data-testid="inspector-node-diff" className="PropertiesBox">
+            <div
+              className="PropertiesBoxHeader flex items-center gap-1.5"
+              style={{ color: "#ffcc80" }}
+            >
+              <FeatherIcon name="git-commit" size={12} />
+              <span>Changes vs. Selected Run</span>
+            </div>
+            <div className="PropertiesBoxContent space-y-1.5 text-xs">
+              {nodeDiff.status === "added" ? (
+                <div style={{ color: "#ffcc80" }}>
+                  This node was added in the editor after this run executed.
+                </div>
+              ) : (
+                <>
+                  {nodeDiff.opChanged && (
+                    <div className="font-mono text-[11px]">
+                      <div style={{ color: "#ff8a80" }}>
+                        - Run op: {nodeDiff.runOp}
+                      </div>
+                      <div style={{ color: "#80cbc4" }}>
+                        + Editor op: {nodeDiff.editorOp}
+                      </div>
+                    </div>
+                  )}
+                  {Object.values(nodeDiff.changedInputs).map((entry) => (
+                    <div
+                      key={entry.portName}
+                      className="rounded p-1.5 font-mono text-[11px]"
+                      style={{
+                        backgroundColor: "var(--bg-canvas)",
+                        border: "1px solid rgba(255, 167, 38, 0.35)",
+                      }}
+                    >
+                      <div
+                        className="font-semibold mb-0.5"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {entry.portName}
+                      </div>
+                      <div
+                        className="truncate"
+                        style={{ color: "#ff8a80" }}
+                        title={JSON.stringify(entry.runValue ?? null)}
+                      >
+                        - Run: {JSON.stringify(entry.runValue ?? null)}
+                      </div>
+                      <div
+                        className="truncate"
+                        style={{ color: "#80cbc4" }}
+                        title={JSON.stringify(entry.editorValue ?? null)}
+                      >
+                        + Editor: {JSON.stringify(entry.editorValue ?? null)}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Multiline / Markdown Description Box */}
         {opEntry?.description && (
