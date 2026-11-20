@@ -18,6 +18,7 @@ from plynx.api_models import (
     CleanResponse,
     NodeLogEvent,
     NodePosition,
+    NodeStatus,
     OpEntry,
     RunEvent,
     RunListResponse,
@@ -1183,5 +1184,55 @@ def test_get_run_includes_workflow_snapshot(tmp_path: Path) -> None:
             assert data["workflow_snapshot"] is not None
             assert data["workflow_snapshot"]["name"] == "Snapshot Test Workflow"
             assert data["workflow_snapshot"]["nodes"]["step1"]["inputs"]["text"] == "initial-value"
+
+    asyncio.run(_test())
+
+
+def test_answer_checkpoint_auto_resumes_unowned_waiting_run(tmp_path: Path) -> None:
+    """Answering a checkpoint on a WAITING_FOR_USER run with owner_pid=None auto-resumes it."""
+    wf_dir = tmp_path / "workflows"
+    wf_dir.mkdir(parents=True)
+    shutil.copy(EXAMPLE_WORKFLOW, wf_dir / "foo_or_woo.yaml")
+
+    store = RunStore(tmp_path)
+    run_id = store.create_run(
+        workflow_path="workflows/foo_or_woo.yaml",
+        workflow_bytes=(wf_dir / "foo_or_woo.yaml").read_bytes(),
+        node_ids=["pick", "echo"],
+    )
+    store.update_node_status(run_id, "pick", NodeStatus.WAITING_FOR_USER, attempt=1, exit_code=10)
+    store.create_checkpoint(
+        run_id,
+        "pick",
+        "cp_0",
+        "foo or woo?",
+        options=["foo", "woo"],
+        allow_freeform=False,
+    )
+    store.update_run_status(run_id, RunStatus.WAITING_FOR_USER)
+    store.release_ownership(run_id)
+
+    app = create_app(tmp_path)
+
+    async def _test() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            resp = await client.post(
+                f"/api/v1/runs/{run_id}/checkpoints/pick/cp_0/answer",
+                json={"answer": "foo"},
+            )
+            assert resp.status_code == 200
+
+            deadline = time.monotonic() + 10.0
+            while time.monotonic() < deadline:
+                state_resp = await client.get(f"/api/v1/runs/{run_id}")
+                state_data = state_resp.json()
+                if state_data["status"] == "SUCCESS":
+                    break
+                await asyncio.sleep(0.02)
+
+            assert state_data["status"] == "SUCCESS"
+            assert state_data["nodes"]["pick"]["status"] == "SUCCESS"
+            assert state_data["nodes"]["echo"]["status"] == "SUCCESS"
 
     asyncio.run(_test())

@@ -223,7 +223,10 @@ export function RunDetail({ runId }: { runId: string }) {
     runState?.status === "CANCELED";
   const canCancel = runState && !isTerminal && !runState.cancel_requested;
   const canResume =
-    runState && (runState.status === "FAILED" || runState.status === "CANCELED");
+    runState &&
+    (runState.status === "FAILED" ||
+      runState.status === "CANCELED" ||
+      (runState.status === "WAITING_FOR_USER" && !runState.owner_pid));
 
   return (
     <div className="flex flex-1 min-h-0 flex-col overflow-hidden">

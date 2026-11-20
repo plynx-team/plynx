@@ -972,7 +972,9 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
                     )}
                   {selectedRun &&
                     (selectedRun.status === "FAILED" ||
-                      selectedRun.status === "CANCELED") && (
+                      selectedRun.status === "CANCELED" ||
+                      (selectedRun.status === "WAITING_FOR_USER" &&
+                        !selectedRun.owner_pid)) && (
                       <ControlButton
                         icon="rotate-ccw"
                         text="Resume Run"

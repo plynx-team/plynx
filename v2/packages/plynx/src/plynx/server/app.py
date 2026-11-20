@@ -46,6 +46,7 @@ from plynx.api_models import (
 )
 from plynx.cas import BlobStore, clean
 from plynx.engine import Executor, Scheduler, SchedulerOptions, create_executor
+from plynx.engine.procgroup import is_pid_alive
 from plynx.registry import OpRegistry, Registry, find_workspace_root
 from plynx.store import (
     AmbiguousRunIdError,
@@ -580,6 +581,24 @@ def create_app(
         task.add_done_callback(background_tasks.discard)
         return CreateRunResponse(run_id=resolved_id)
 
+    async def _auto_resume_if_unowned(resolved_id: str) -> None:
+        """If a WAITING_FOR_USER run has no live owner process, resume it automatically."""
+        state = await asyncio.to_thread(store.get_run_state, resolved_id)
+        if state is None or state.status != RunStatus.WAITING_FOR_USER:
+            return
+        if state.owner_pid is not None and is_pid_alive(int(state.owner_pid)):
+            return
+        try:
+            await asyncio.to_thread(store.claim_run_for_resume, resolved_id)
+        except StoreError:
+            return
+        executor = executor_factory(ws_root)
+        scheduler = Scheduler(store, executor, op_registry)
+        opts = SchedulerOptions(no_cache=True)
+        task = asyncio.create_task(scheduler.resume(resolved_id, options=opts))
+        background_tasks.add(task)
+        task.add_done_callback(background_tasks.discard)
+
     @router.post("/runs/{run_id}/checkpoints/{node_id}/{checkpoint_id}/answer")
     async def answer_checkpoint_endpoint(
         run_id: str,
@@ -622,6 +641,7 @@ def create_app(
                 "checkpoint_already_answered",
                 f"Checkpoint '{node_id}.{checkpoint_id}' has already been answered",
             )
+        await _auto_resume_if_unowned(resolved_id)
         return {"status": "ok", "checkpoint_id": checkpoint_id, "answer": body.answer}
 
     @router.post("/runs/{run_id}/stages/{stage_id}/approve")
@@ -655,6 +675,7 @@ def create_app(
                 "stage_gate_already_approved",
                 f"Stage gate '{stage_id}' has already been approved",
             )
+        await _auto_resume_if_unowned(resolved_id)
         return {"status": "ok", "stage_id": stage_id}
 
     @router.get("/runs/{run_id}/nodes/{node_id}/logs/{stream}")
