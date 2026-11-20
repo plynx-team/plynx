@@ -53,3 +53,7 @@ Add a row per copied file in the same commit as the copy.
 |---|---|---|---|
 | 2026-11-17 | `ui/src/components/Dialogs/PreviewDialog.tsx` | `v2/ui/src/previewers/ArtifactPreviewDialog.tsx` | Ported to React 19 functional component with Tailwind CSS modal |
 | 2026-11-17 | `plynx/plugins/resources/common.py` | `v2/ui/src/previewers/{Csv,Json,Image,Pdf,Text,Markdown}Previewer.tsx` | Ported preview logic from Python classes to React components |
+| 2026-11-19 | `ui/src/index.css`, `ui/src/App.css`, `ui/src/components/header/style.css`, `ui/src/components/controls.css`, `ui/src/components/NodeList/{List,items}.css` | `v2/ui/src/index.css` | Ported Photoshop dark gray & blue theme tokens, 40px Header, control-panel, control-button, and ListPage styles |
+| 2026-11-19 | `ui/src/components/Common/Icon.tsx` | `v2/ui/src/components/FeatherIcon.tsx` | Ported `feather-icons` inline SVG renderer with typed port/media icon helpers |
+| 2026-11-19 | `ui/src/components/Common/{ControlButton,SearchBar}.tsx` | `v2/ui/src/components/ControlPanel.tsx` | Ported toolbar buttons, segmented toggles, separator, and search input to functional React 19 components using `FeatherIcon` |
+| 2026-11-19 | `ui/public/{logo,favicon}.png` | `v2/ui/public/{logo,favicon}.png` | Copied PLynx header logo and favicon |

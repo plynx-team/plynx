@@ -11,7 +11,6 @@ function AppShell() {
   const { currentPath } = useRouter();
 
   const editorMatch = matchRoute("/editor/:path*", currentPath);
-  const isWide = editorMatch.matched && Boolean(editorMatch.params.path);
 
   let content: ReactNode;
   if (editorMatch.matched && editorMatch.params.path) {
@@ -33,15 +32,9 @@ function AppShell() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="App">
       <Navbar />
-      <main
-        className={`mx-auto w-full flex-1 px-6 py-8 ${
-          isWide ? "max-w-[1600px]" : "max-w-6xl"
-        }`}
-      >
-        {content}
-      </main>
+      <main className="Content">{content}</main>
     </div>
   );
 }

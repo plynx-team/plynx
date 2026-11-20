@@ -1,30 +1,566 @@
 @import "tailwindcss";
 @import "@xyflow/react/dist/style.css";
 
+:root {
+  --font-sans: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-weight-regular: 400;
+  --font-weight-semibold: 600;
+
+  /* Photoshop-inspired Gray & Blue Theme */
+  --bg-app: #1e1e1e;
+  --bg-canvas: #232323;
+  --bg-header: #262626;
+  --bg-panel: #2b2b2b;
+  --bg-panel-secondary: #242424;
+  --bg-card: #333333;
+  --bg-card-hover: #3e3e3e;
+  --bg-button: #303030;
+  --bg-button-hover: #3d3d3d;
+
+  --border-subtle: #363636;
+  --border-default: #404040;
+  --border-strong: #525252;
+
+  --color-primary: #2680eb;
+  --color-primary-hover: #3d91f5;
+  --color-primary-active: #1b6cd4;
+  --color-primary-selected: #244b7a;
+  --color-primary-subtle: rgba(38, 128, 235, 0.18);
+
+  --text-primary: #ebebeb;
+  --text-secondary: #b0b0b0;
+  --text-tertiary: #787878;
+
+  /* Status Colors */
+  --color-status-success: #38c172;
+  --color-status-ready: #48bb78;
+  --color-status-running: #00d8ff;
+  --color-status-in-queue: #ffa726;
+  --color-status-failed: #f44336;
+  --color-status-canceled: #d946ef;
+  --color-status-created: #b0b0b0;
+  --color-status-static: #ecc94b;
+  --color-status-deprecated: #f44336;
+  --color-status-mandatory-deprecated: #b71c1c;
+
+  /* Semantic Feedback */
+  --color-success: #38c172;
+  --color-warning: #ffa726;
+  --color-error: #f44336;
+  --color-info: #00d8ff;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  max-height: 100%;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
+  margin: 0;
+  padding: 0;
+}
+
+.App {
+  height: 100vh;
+  max-height: 100vh;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  overflow: hidden;
+}
+
+.Content {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Base form elements */
+input,
+select,
+textarea {
+  box-sizing: border-box;
+  font-family: var(--font-sans);
+  border: 1px solid var(--border-default);
+  border-radius: 2px;
+  background-color: var(--bg-panel-secondary);
+  color: var(--text-primary);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+input:read-only,
+select:disabled,
+textarea:read-only {
+  color: var(--text-tertiary);
+}
+
+/* Custom dark scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-app);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
+
+/* Top application header (.Header) */
+.Header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--bg-header);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--font-size-lg);
+  font-family: var(--font-sans);
+  text-align: left;
+  position: relative;
+  height: 40px;
+  min-height: 40px;
+  flex-shrink: 0;
+  padding: 0 12px;
+  box-sizing: border-box;
+  z-index: 1000;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.Header .logo {
+  height: 40px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  color: var(--text-primary);
+  text-decoration: none;
+  font-weight: var(--font-weight-semibold);
+  transition: all 0.1s ease-in;
+}
+
+.Header .logo:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-card-hover);
+  text-decoration: none;
+}
+
+.Header .logo:active {
+  background-color: var(--color-primary);
+}
+
+.Header .logo .icon {
+  height: 24px;
+  width: auto;
+  display: block;
+}
+
+.Header .Navigation {
+  font-weight: var(--font-weight-regular);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+.Header .NavigationItems {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  font-size: var(--font-size-base);
+}
+
+.Header .NavigationItems .Item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 14px;
+  box-sizing: border-box;
+  color: var(--text-secondary);
+  border: none;
+  border-bottom: 3px solid transparent;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: all 0.1s ease-in;
+}
+
+.Header .NavigationItems .Item:hover:not(.active) {
+  color: var(--text-primary);
+  border-bottom: 3px solid var(--border-strong);
+  text-decoration: none;
+}
+
+.Header .NavigationItems .Item.active {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+  border-bottom: 3px solid var(--color-primary);
+}
+
+.Header .separator {
+  display: inline-flex;
+  align-self: center;
+  border-left: 1px solid var(--border-default);
+  width: 0;
+  height: 18px;
+  margin: 0 2px;
+}
+
+/* Common control panel / toolbar */
+.control-panel {
+  background-color: var(--bg-panel);
+  padding: 4px 8px;
+  border-top: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-sizing: border-box;
+  min-height: 40px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.control-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 3px;
+  padding: 4px 10px;
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-regular);
+  font-size: var(--font-size-base);
+  text-decoration: none;
+  background-color: var(--bg-button);
+  border: 1px solid var(--border-default);
+  margin: 0 2px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  line-height: 1;
+  user-select: none;
+  transition: all 0.1s ease-in;
+}
+
+.control-button:hover:not(:disabled):not(.disabled) {
+  background-color: var(--bg-button-hover);
+  border-color: var(--border-strong);
+}
+
+.control-button:active:not(:disabled):not(.disabled) {
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.control-button.selected {
+  background-color: var(--color-primary-selected);
+  border-color: var(--color-primary);
+}
+
+.control-button.primary {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-selected);
+  font-weight: var(--font-weight-semibold);
+}
+
+.control-button.primary:hover:not(:disabled):not(.disabled) {
+  background-color: var(--color-primary);
+  color: #fff;
+}
+
+.control-button.danger {
+  border-color: #7f231c;
+  color: #ff8a80;
+}
+
+.control-button.danger:hover:not(:disabled):not(.disabled) {
+  background-color: rgba(244, 67, 54, 0.25);
+  border-color: var(--color-error);
+}
+
+.control-button:disabled,
+.control-button.disabled {
+  background-color: var(--bg-panel-secondary);
+  cursor: not-allowed;
+  color: var(--text-tertiary);
+  border-color: var(--border-subtle);
+  opacity: 0.6;
+}
+
+.control-button-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.control-separator {
+  display: inline-block;
+  width: 1px;
+  height: 22px;
+  background-color: #444;
+  margin: 0 8px;
+  flex-shrink: 0;
+}
+
+.control-toggle {
+  display: inline-flex;
+  align-items: center;
+}
+
+.control-toggle > .control-button {
+  border-radius: 0;
+  margin: 0;
+}
+
+.control-toggle > .control-button + .control-button {
+  border-left: none;
+}
+
+.control-toggle > .first {
+  border-radius: 4px 0 0 4px;
+}
+
+.control-toggle > .last {
+  border-radius: 0 4px 4px 0;
+}
+
+/* SearchBar */
+.SearchBar {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+  height: 32px;
+  background-color: var(--bg-panel-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: 3px;
+  padding: 0 8px;
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+.SearchBar:focus-within {
+  border-color: var(--color-primary);
+}
+
+.SearchBar input {
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  height: 100%;
+  width: 100%;
+  padding: 0 6px;
+}
+
+.SearchBar input:focus {
+  outline: none;
+}
+
+/* ListPage & List items (/workflows, /runs) */
+.ListPage {
+  overflow: hidden;
+  background-color: var(--bg-app);
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.list {
+  background-color: var(--bg-panel);
+  overflow: auto;
+  flex: 1 1 auto;
+  border-top: 1px solid var(--border-subtle);
+  padding: 4px;
+}
+
+.list-header {
+  margin: 3px;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-base);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-default);
+  display: grid;
+  align-items: center;
+  gap: 12px;
+}
+
+.list-item {
+  border-radius: 4px;
+  margin: 3px;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-weight: var(--font-weight-regular);
+  font-size: var(--font-size-base);
+  cursor: pointer;
+  padding: 7px 10px;
+  text-decoration: none;
+  display: grid;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.1s ease-in;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+}
+
+.list-item:hover {
+  background-color: var(--bg-card-hover);
+  border-color: var(--border-strong);
+}
+
+.list-item:active,
+.list-item.selected {
+  background-color: var(--color-primary-selected);
+  border-color: var(--color-primary);
+}
+
+.list-field {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-block;
+  border: 1px solid var(--border-default);
+  border-radius: 5px;
+  background-color: var(--bg-card);
+  text-align: center;
+  padding: 1px 8px;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.4;
+}
+
+.status-badge.PENDING,
+.status-badge.CREATED {
+  color: var(--color-status-created);
+}
+
+.status-badge.READY,
+.status-badge.SUCCESS,
+.status-badge.APPROVED,
+.status-badge.COMPLETED {
+  color: var(--color-status-success);
+}
+
+.status-badge.RUNNING,
+.status-badge.BUILDING_ENVIRONMENT {
+  color: var(--color-status-running);
+}
+
+.status-badge.WAITING_FOR_USER,
+.status-badge.WAITING,
+.status-badge.IN_QUEUE {
+  color: var(--color-status-in-queue);
+}
+
+.status-badge.FAILED {
+  color: var(--color-status-failed);
+}
+
+.status-badge.CANCELED,
+.status-badge.BLOCKED {
+  color: var(--color-status-canceled);
+}
+
+/* React Flow Overrides */
 .react-flow__controls {
-  border: 1px solid #334155;
-  border-radius: 0.5rem;
+  border: 1px solid #444;
+  border-radius: 3px;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .react-flow__controls-button {
-  background-color: #0f172a;
-  border-bottom: 1px solid #1e293b;
-  color: #cbd5e1;
-  fill: #cbd5e1;
+  background-color: #2b2b2b;
+  border-bottom: 1px solid #444;
+  color: #eee;
+  fill: #eee;
 }
 
 .react-flow__controls-button:hover {
-  background-color: #1e293b;
-  color: #f8fafc;
-  fill: #f8fafc;
+  background-color: #444;
+  color: #fff;
+  fill: #fff;
 }
 
 .react-flow__minimap {
-  background-color: #020617;
-  border: 1px solid #1e293b;
-  border-radius: 0.5rem;
+  background-color: #1e1e1e;
+  border: 1px solid #404040;
+  border-radius: 3px;
+}
+
+.react-flow__minimap-mask {
+  fill: rgba(30, 30, 30, 0.6);
+}
+
+.react-flow__minimap-node {
+  fill: #666;
+  stroke: none;
+}
+
+.react-flow__edge .react-flow__edge-path {
+  stroke: #777;
+  stroke-opacity: 0.7;
+  stroke-width: 4px;
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:focus .react-flow__edge-path,
+.react-flow__edge:focus-visible .react-flow__edge-path {
+  stroke: var(--color-primary) !important;
+  stroke-opacity: 0.95;
 }
 
 .react-flow__attribution {

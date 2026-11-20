@@ -2,6 +2,13 @@ import { useEffect, useState } from "react";
 import { fetchRuns } from "../api/client";
 import type { RunStatus, RunSummary } from "../api/types.gen";
 import { Link, useRouter } from "../router/Router";
+import {
+  ControlButton,
+  ControlPanel,
+  ControlSeparator,
+  SearchBar,
+} from "./ControlPanel";
+import { FeatherIcon } from "./FeatherIcon";
 
 export function formatTimestamp(ts: number | null | undefined): string {
   if (!ts) return "—";
@@ -25,18 +32,7 @@ export function formatDuration(
 }
 
 export function runStatusBadgeClasses(status: RunStatus): string {
-  switch (status) {
-    case "SUCCESS":
-      return "bg-emerald-950 text-emerald-400 border-emerald-800";
-    case "RUNNING":
-      return "bg-sky-950 text-sky-400 border-sky-800 animate-pulse";
-    case "WAITING_FOR_USER":
-      return "bg-amber-950 text-amber-400 border-amber-800";
-    case "FAILED":
-      return "bg-rose-950 text-rose-400 border-rose-800";
-    case "CANCELED":
-      return "bg-slate-900 text-slate-400 border-slate-700";
-  }
+  return `status-badge ${status}`;
 }
 
 export function RunList() {
@@ -61,7 +57,7 @@ export function RunList() {
   };
 
   useEffect(() => {
-    loadRuns();
+    void loadRuns();
   }, []);
 
   const filteredRuns = runs.filter((run) => {
@@ -78,44 +74,19 @@ export function RunList() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-white">Runs</h1>
-          <p className="text-xs text-slate-400">
-            Execution history and active workflows
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={loadRuns}
-            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800"
-          >
-            Refresh
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/workflows")}
-            className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-500"
-          >
-            New Run
-          </button>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <input
-          type="text"
-          placeholder="Filter by run ID or workflow..."
+    <div className="ListPage">
+      <ControlPanel>
+        <SearchBar
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="min-w-[240px] flex-1 rounded-md border border-slate-800 bg-slate-900 px-3 py-1.5 text-sm text-slate-200 placeholder-slate-500 focus:border-slate-600 focus:outline-none"
+          onChange={setSearchQuery}
+          placeholder="Filter by run ID or workflow..."
+          className="w-80"
         />
+
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="rounded-md border border-slate-800 bg-slate-900 px-3 py-1.5 text-sm text-slate-300 focus:border-slate-600 focus:outline-none"
+          className="h-8 px-2.5 text-xs"
         >
           <option value="ALL">All Statuses</option>
           <option value="RUNNING">RUNNING</option>
@@ -124,99 +95,139 @@ export function RunList() {
           <option value="FAILED">FAILED</option>
           <option value="CANCELED">CANCELED</option>
         </select>
-      </div>
+
+        <ControlSeparator />
+
+        <ControlButton
+          icon="refresh-cw"
+          text="Refresh"
+          onClick={() => void loadRuns()}
+        />
+        <ControlButton
+          icon="plus"
+          text="New Run"
+          variant="primary"
+          onClick={() => navigate("/workflows")}
+        />
+      </ControlPanel>
 
       {error && (
         <div
           role="alert"
-          className="rounded-md border border-rose-900 bg-rose-950/60 p-3 text-sm text-rose-300"
+          className="m-2 rounded border px-3 py-2 text-xs"
+          style={{
+            borderColor: "var(--color-error)",
+            backgroundColor: "rgba(244, 67, 54, 0.15)",
+            color: "#ff8a80",
+          }}
         >
           {error}
         </div>
       )}
 
-      {loading ? (
-        <div className="rounded-md border border-slate-800 bg-slate-900/40 p-8 text-center text-sm text-slate-400">
-          Loading runs...
+      <div className="list">
+        <div
+          className="list-header"
+          style={{
+            gridTemplateColumns:
+              "minmax(180px, 1.5fr) 150px minmax(200px, 1.5fr) 110px 180px",
+          }}
+        >
+          <div className="list-field">Workflow</div>
+          <div className="list-field">Status</div>
+          <div className="list-field">Run ID</div>
+          <div className="list-field">Duration</div>
+          <div className="list-field">Created</div>
         </div>
-      ) : filteredRuns.length === 0 ? (
-        <div className="rounded-md border border-slate-800 bg-slate-900/30 p-12 text-center">
-          <p className="text-sm font-medium text-slate-300">No runs found</p>
-          <p className="mt-1 text-xs text-slate-500">
-            {runs.length === 0
-              ? "You haven't run any workflows yet in this workspace."
-              : "No runs match the selected filter."}
-          </p>
-          {runs.length === 0 && (
-            <button
-              type="button"
-              onClick={() => navigate("/workflows")}
-              className="mt-4 rounded-md bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500"
+
+        {loading ? (
+          <div
+            className="p-8 text-center text-sm"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            Loading runs...
+          </div>
+        ) : filteredRuns.length === 0 ? (
+          <div className="p-10 text-center">
+            <p
+              className="text-sm font-semibold"
+              style={{ color: "var(--text-primary)" }}
             >
-              Browse Workflows
-            </button>
-          )}
-        </div>
-      ) : (
-        <div className="overflow-hidden rounded-lg border border-slate-800 bg-slate-900/40">
-          <table className="w-full text-left text-sm text-slate-300">
-            <thead className="border-b border-slate-800 bg-slate-900/80 text-xs font-semibold uppercase tracking-wider text-slate-400">
-              <tr>
-                <th scope="col" className="px-4 py-3">
-                  Run ID
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Workflow
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Status
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Duration
-                </th>
-                <th scope="col" className="px-4 py-3">
-                  Created
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60">
-              {filteredRuns.map((run) => (
-                <tr
-                  key={run.id}
-                  className="transition-colors hover:bg-slate-800/40"
+              No runs found
+            </p>
+            <p
+              className="mt-1 text-xs"
+              style={{ color: "var(--text-tertiary)" }}
+            >
+              {runs.length === 0
+                ? "You haven't run any workflows yet in this workspace."
+                : "No runs match the selected filter."}
+            </p>
+            {runs.length === 0 && (
+              <div className="mt-4">
+                <ControlButton
+                  icon="grid"
+                  text="Browse Workflows"
+                  variant="primary"
+                  onClick={() => navigate("/workflows")}
+                />
+              </div>
+            )}
+          </div>
+        ) : (
+          filteredRuns.map((run) => (
+            <div
+              key={run.id}
+              onClick={() => navigate(`/runs/${run.id}`)}
+              className="list-item"
+              style={{
+                gridTemplateColumns:
+                  "minmax(180px, 1.5fr) 150px minmax(200px, 1.5fr) 110px 180px",
+              }}
+            >
+              <div className="list-field flex items-center gap-2 font-mono text-xs">
+                <FeatherIcon
+                  name="play-circle"
+                  size={14}
+                  style={{ color: "var(--color-primary)" }}
+                />
+                <span>{run.workflow_path}</span>
+              </div>
+
+              <div className="list-field">
+                <span className={runStatusBadgeClasses(run.status)}>
+                  {run.status}
+                </span>
+              </div>
+
+              <div className="list-field font-mono text-xs">
+                <Link
+                  to={`/runs/${run.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ color: "var(--color-primary)" }}
+                  className="hover:underline font-semibold"
                 >
-                  <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">
-                    <Link
-                      to={`/runs/${run.id}`}
-                      className="font-semibold text-emerald-400 hover:text-emerald-300 hover:underline"
-                    >
-                      {run.id.slice(0, 8)}...
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-slate-300 font-mono">
-                    {run.workflow_path}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-block rounded border px-2 py-0.5 text-[11px] font-medium tracking-wide ${runStatusBadgeClasses(
-                        run.status,
-                      )}`}
-                    >
-                      {run.status}
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-xs text-slate-400">
-                    {formatDuration(run.started_at, run.finished_at)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-xs text-slate-400">
-                    {formatTimestamp(run.created_at)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                  {run.id}
+                </Link>
+              </div>
+
+              <div
+                className="list-field text-xs"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                {formatDuration(run.started_at, run.finished_at)}
+              </div>
+
+              <div
+                className="list-field text-xs"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                {formatTimestamp(run.created_at)}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }

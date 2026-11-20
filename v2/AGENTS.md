@@ -9,6 +9,7 @@ You are building PLynx v2.0.0 in `v2/`. This folder is the project root. The leg
 3. `docs/PLAN.md`: do the first unchecked task. Only that task.
 4. `docs/WORKFLOW.md`: git and legacy rules.
 5. `docs/PACK_RULES.md`: before writing any Node Pack or built-in op.
+6. `docs/UI_STYLE.md`: before writing or changing any UI component or stylesheet.
 
 ## Hard rules
 
