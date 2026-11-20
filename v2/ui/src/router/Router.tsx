@@ -12,7 +12,7 @@ export interface RouterContextValue {
 }
 
 const RouterContext = createContext<RouterContextValue>({
-  currentPath: "/runs",
+  currentPath: "/workflows",
   params: {},
   navigate: () => {},
 });
@@ -23,7 +23,7 @@ export function useRouter(): RouterContextValue {
 
 function parseHash(hash: string): string {
   const clean = hash.replace(/^#\/?/, "");
-  return clean ? `/${clean}` : "/runs";
+  return clean ? `/${clean}` : "/workflows";
 }
 
 export function matchRoute(
@@ -71,7 +71,7 @@ export function matchRoute(
 
 export function RouterProvider({ children }: { children: React.ReactNode }) {
   const [currentPath, setCurrentPath] = useState<string>(() =>
-    typeof window !== "undefined" ? parseHash(window.location.hash) : "/runs",
+    typeof window !== "undefined" ? parseHash(window.location.hash) : "/workflows",
   );
 
   useEffect(() => {

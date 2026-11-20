@@ -733,8 +733,18 @@ class RunStore:
             for r in gate_rows
         }
         run_inputs = json.loads(str(run_row["run_inputs_json"] or "{}"))
+        run_id_str = str(run_row["id"])
+        workflow_snapshot = None
+        snapshot_path = self.run_dir(run_id_str) / "workflow.snapshot.yaml"
+        if snapshot_path.is_file():
+            try:
+                from plynx.workflow.models import load_workflow
+
+                workflow_snapshot = load_workflow(snapshot_path)
+            except Exception:
+                workflow_snapshot = None
         return RunState(
-            id=str(run_row["id"]),
+            id=run_id_str,
             workflow_path=str(run_row["workflow_path"]),
             workflow_sha256=str(run_row["workflow_sha256"]),
             status=RunStatus(str(run_row["status"])),
@@ -749,6 +759,7 @@ class RunStore:
             nodes=nodes,
             checkpoints=checkpoints,
             stage_gates=stage_gates,
+            workflow_snapshot=workflow_snapshot,
         )
 
     def list_runs(

@@ -117,7 +117,21 @@ export function RunDetail({ runId }: { runId: string }) {
         setRunState(initial);
         setLoading(false);
 
-        if (initial.workflow_path) {
+        if (initial.workflow_snapshot) {
+          setWorkflowDoc({ workflow: initial.workflow_snapshot, layout: null });
+          if (initial.workflow_path) {
+            fetchWorkflow(initial.workflow_path)
+              .then((doc) => {
+                if (active) {
+                  setWorkflowDoc({
+                    workflow: initial.workflow_snapshot ?? doc.workflow,
+                    layout: doc.layout,
+                  });
+                }
+              })
+              .catch(() => {});
+          }
+        } else if (initial.workflow_path) {
           fetchWorkflow(initial.workflow_path)
             .then((doc) => {
               if (active) setWorkflowDoc(doc);

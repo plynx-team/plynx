@@ -5,13 +5,15 @@ export function Navbar() {
   const { currentPath } = useRouter();
 
   const isWorkflowsActive =
-    currentPath.startsWith("/workflows") || currentPath.startsWith("/editor");
-  const isRunsActive = currentPath === "/" || currentPath.startsWith("/runs");
+    currentPath === "/" ||
+    currentPath.startsWith("/workflows") ||
+    currentPath.startsWith("/editor");
+  const isRunsActive = currentPath.startsWith("/runs");
 
   return (
     <header className="Header">
       <div className="header-left">
-        <Link to="/runs" className="logo">
+        <Link to="/workflows" className="logo">
           <img src="/logo.png" alt="PLynx" className="icon" />
           <span className="sr-only">PLynx</span>
         </Link>

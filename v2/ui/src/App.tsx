@@ -23,10 +23,10 @@ function AppShell() {
       const workflowMatch = matchRoute("/workflows/:path*", currentPath);
       if (workflowMatch.matched && workflowMatch.params.path) {
         content = <RunInputsForm workflowPath={workflowMatch.params.path} />;
-      } else if (currentPath === "/workflows") {
-        content = <WorkflowPicker />;
-      } else {
+      } else if (currentPath === "/runs") {
         content = <RunList />;
+      } else {
+        content = <WorkflowPicker />;
       }
     }
   }

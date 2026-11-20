@@ -20,7 +20,7 @@ describe("App component shell", () => {
     ]);
   });
 
-  it("renders Navbar and default RunList view", async () => {
+  it("renders Navbar and default WorkflowPicker view", async () => {
     window.location.hash = "";
     render(<App />);
 
@@ -29,16 +29,16 @@ describe("App component shell", () => {
     expect(screen.getAllByText("Workflows").length).toBeGreaterThan(0);
 
     await waitFor(() => {
-      expect(screen.getByText("No runs found")).toBeDefined();
+      expect(screen.getByText("Foo or Woo Demo")).toBeDefined();
     });
   });
 
-  it("switches to Workflows view on hash change", async () => {
-    window.location.hash = "#/workflows";
+  it("switches to Runs view on hash change", async () => {
+    window.location.hash = "#/runs";
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByText("Foo or Woo Demo")).toBeDefined();
+      expect(screen.getByText("No runs found")).toBeDefined();
     });
   });
 

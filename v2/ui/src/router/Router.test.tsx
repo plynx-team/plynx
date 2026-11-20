@@ -40,14 +40,14 @@ describe("matchRoute", () => {
 });
 
 describe("Router and Link component", () => {
-  it("renders with default route /runs", () => {
+  it("renders with default route /workflows", () => {
     window.location.hash = "";
     render(
       <RouterProvider>
         <DummyPage />
       </RouterProvider>,
     );
-    expect(screen.getByTestId("current-path").textContent).toBe("/runs");
+    expect(screen.getByTestId("current-path").textContent).toBe("/workflows");
   });
 
   it("updates path on navigation button click", () => {

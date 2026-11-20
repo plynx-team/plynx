@@ -110,6 +110,7 @@ export interface RunState {
   nodes: Record<string, NodeRunState>;
   checkpoints: Array<CheckpointState>;
   stage_gates: Record<string, StageGateState>;
+  workflow_snapshot?: Workflow | null;
 }
 
 /** Payload for ``run_status`` events. */

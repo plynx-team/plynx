@@ -88,7 +88,7 @@ Full-viewport desktop IDE layout (`display: flex; flex-direction: column; height
 
 - **Top Header (`.Header`)**:
   - `height: 40px; flex-shrink: 0; background-color: var(--bg-header); border-bottom: 1px solid var(--border-subtle); padding: 0 12px;`
-  - Left logo (`/logo.png`, `height: 28px`) + navigation links (`Workflows`, `Runs`) separated by `18px` vertical `1px solid var(--border-default)` dividers (`.separator`).
+  - Left logo (`/logo.png`, `height: 28px`, links to `/workflows`) + navigation links (`Workflows`, `Runs`) separated by `18px` vertical `1px solid var(--border-default)` dividers (`.separator`). Default route `/` lands on `/workflows`.
   - Navigation items (`.Item`): full `40px` height, `padding: 0 14px`, `border-bottom: 3px solid transparent`.
     - Hover: `color: var(--text-primary); border-bottom-color: var(--border-strong);`
     - Active: `color: var(--color-primary); border-bottom-color: var(--color-primary);` (regular font-weight 400 to prevent tab width changes and layout shifting).
@@ -116,21 +116,30 @@ Every primary view (`ListPage` and Unified `WorkflowEditor` / `RunDetail`) rende
 
 ## 5. Unified Workflow & Run Workspace
 
-Clicking a workflow in `/workflows` opens the unified workspace directly:
+Clicking a workflow in `/workflows` opens the unified Workflow-Centric workspace directly:
 - **Control Panel Toolbar**:
-  - View mode toggle group (`.control-toggle`): **`Stepper`** (`sliders`) | **`Graph`** (`grid`) | **`Runs`** (`list`, filtered to runs of this workflow).
+  - View mode toggle group (`.control-toggle`): **`Graph`** (`grid`) | **`Stepper`** (`sliders`) | **`Runs`** (`list`, filtered to runs of this workflow).
   - Separator.
-  - Action buttons: **`Save`** (`save`, with dirty indicator), **`Validate`** (`check-square`), **`Rearrange`** (`layout`, auto-layout), **`Run`** (`play`), plus **`Duplicate`** (`copy`) / **`Delete`** (`trash-2`) when a node/edge is selected, and **`Cancel`** (`x`) / **`Resume`** (`rotate-ccw`) when viewing an active/failed run.
-  - When clicking **`Run`**, if the workflow has unbound required inputs (or if the user opens run options), show a compact v1-styled Run Inputs modal/drawer; if all inputs have defaults or are wired, start immediately (or allow one-click launch).
+  - Action buttons: **`Save`** (`save`, with dirty indicator), **`Run Workflow`** (`play`), **`Auto Layout`** (`layout`), plus **`Duplicate Node`** (`copy`) / **`Delete Node`** (`trash-2`) when a node/edge is selected.
+  - When clicking **`Run Workflow`**, launching a run stays inside the Workflow workspace, automatically selects the new run in the Left Dock Runs accordion, and streams live SSE events (`node_status`, `node_log`, checkpoints, stage gates) onto the canvas in real time.
 - **3-Pane Docked Workspace (`flex: 1; min-height: 0; display: flex; flex-direction: row; overflow: hidden`)**:
-  1. **Left Docked Sidebar — Operations Hub (`.hub-panel`, `width: 250px` in editable Graph mode)**:
-     - `background-color: var(--bg-panel-secondary); border-right: 1px solid var(--border-subtle);`
-     - Top search input (`/` or `Cmd+K`) + target stage selector.
-     - Collapsible category tree with `.hub-arrow` chevron and `.hub-entry-group-title` (`font-weight: 600`, hover `var(--bg-card-hover)`).
-     - Compact draggable operation items (`.hub-item-node`): `background-color: var(--bg-card); padding: 5px; border-radius: 3px; margin: 2px 0; display: grid; grid-template-columns: 27px 1fr 16px;` (icon, title, `?` description tooltip).
-  2. **Center Workspace (`flex: 1; min-width: 0; display: flex; flex-direction: column; background-color: var(--bg-canvas)`)**:
-     - Top area (`flex: 1; min-height: 0`): either **Graph Canvas** or **Stepper View** (or **Workflow Runs List**).
-     - Bottom area (when viewing a run with a selected node): **Collapsible Logs Drawer** docked to the bottom edge of the center pane (`border-top: 1px solid var(--border-subtle); background-color: var(--bg-app)`).
+  1. **Left Docked Accordion Sidebar (`.left-dock`, fixed `width: 250px` — zero horizontal layout shift)**:
+     - Contains two collapsible accordion sections with smooth CSS transitions (`180ms ease-out`):
+       - **Top Accordion — `Runs & Mode` (`RunsHistoryPane`)**:
+         - Always displays the pinned **`[ ✎ Working Draft (Editor) ]`** row at the top.
+         - Below it displays runs for this workflow (with animated spinning indicator on `RUNNING` runs, status badge, relative time/duration, and `< Prev | 1/N | Next >` pagination).
+         - In **Editor Mode** (`selectedRunId === null`), shows a compact preview (pinned `Working Draft` + latest 2–3 runs) so Operations below has full space.
+         - In **Run Inspection Mode** (`selectedRunId !== null`), `Runs & Mode` smoothly expands (`flex: 1`) while `Operations` collapses to its header bar.
+       - **Bottom Accordion — `Operations` (`.hub-panel`)**:
+         - Collapsible header bar (`Operations`). Expanded by default in Editor Mode; automatically collapses when a run is selected (and can be toggled manually or auto-expands when returning to `Working Draft`).
+         - Top search input (`/` or `Cmd+K`) + target stage selector + collapsible category tree with compact draggable `.hub-item-node` cards.
+  2. **Center Workspace (`flex: 1; min-width: 0; display: flex; flex-direction: column; transition: background-color 180ms ease-out`)**:
+     - **Editor Mode (`selectedRunId === null`) — Clean Blueprint**:
+       - Standard canvas background (`var(--bg-canvas)`, `#161616`). Nodes render with neutral dark gray headers (`#2b2b2b`) and no run statuses.
+     - **Run Inspection Mode (`selectedRunId !== null`) — Read-Only Snapshot Overlay (in both `Graph` and `Stepper` views)**:
+       - Smoothly transitions to a darker inspection background (`#0d0f13`) with a `2px` status-tinted inset frame and a top HUD banner (`Inspecting Run #<id> [STATUS]` + `Cancel`/`Resume` actions + primary **`[ ✎ Return to Editor ]`** button).
+       - In the Workflow Workspace, renders the **Current Editor Nodes** overlaid with the selected run's statuses/outputs/logs and simple **Diff badges** (`MODIFIED` when inputs or `op` changed since the run's `workflow_snapshot`, or `NEW IN EDITOR` when a node was added after that run). (By contrast, the standalone `/runs/<id>` route renders the run's frozen `workflow_snapshot` without referencing the up-to-date editor graph.)
+     - Bottom area (when viewing a run with a selected node): **Collapsible Logs Drawer** docked to the bottom edge of the center pane.
   3. **Right Docked Sidebar — Properties Bar (`.PropertiesBar`, `width: 300px; min-width: 300px`)**:
      - `background-color: var(--bg-panel); border-left: 1px solid var(--border-subtle); padding: 5px; overflow-y: auto;`
      - When no node is selected: shows **`Properties of <Workflow Name>`** (workflow title, description, concurrency, stages summary, latest run summary).

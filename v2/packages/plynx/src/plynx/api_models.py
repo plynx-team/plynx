@@ -141,6 +141,7 @@ class RunState(BaseModel):
     nodes: dict[str, NodeRunState] = Field(default_factory=dict)
     checkpoints: list[CheckpointState] = Field(default_factory=list)
     stage_gates: dict[str, StageGateState] = Field(default_factory=dict)
+    workflow_snapshot: Workflow | None = None
 
 
 # ---------------------------------------------------------------------------

@@ -1146,3 +1146,42 @@ def test_server_serves_static_logo_and_favicon(tmp_path: Path) -> None:
             assert fav_resp.content == b"\x89PNG\r\n\x1a\nfavicon"
 
     asyncio.run(_test())
+
+
+def test_get_run_includes_workflow_snapshot(tmp_path: Path) -> None:
+    """GET /runs/{id} returns workflow_snapshot loaded from workflow.snapshot.yaml."""
+    wf_yaml = (
+        "version: 1\n"
+        "name: Snapshot Test Workflow\n"
+        "nodes:\n"
+        "  step1:\n"
+        "    op: builtin/demo:echo\n"
+        "    inputs:\n"
+        "      text: initial-value\n"
+    )
+    wf_file = tmp_path / "wf.yaml"
+    wf_file.write_text(wf_yaml, encoding="utf-8")
+
+    store = RunStore(tmp_path)
+    run_id = store.create_run(
+        workflow_path="wf.yaml",
+        workflow_bytes=wf_yaml.encode("utf-8"),
+        node_ids=["step1"],
+    )
+
+    # Modify the workflow on disk after the run was created
+    wf_file.write_text(wf_yaml.replace("initial-value", "edited-value"), encoding="utf-8")
+
+    app = create_app(tmp_path)
+
+    async def _test() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            resp = await client.get(f"/api/v1/runs/{run_id}")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["workflow_snapshot"] is not None
+            assert data["workflow_snapshot"]["name"] == "Snapshot Test Workflow"
+            assert data["workflow_snapshot"]["nodes"]["step1"]["inputs"]["text"] == "initial-value"
+
+    asyncio.run(_test())
