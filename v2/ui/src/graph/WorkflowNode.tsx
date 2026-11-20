@@ -304,9 +304,9 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
             {unwiredInputs.map((port) => {
               const inputDiff = nodeDiff?.changedInputs?.[port.name];
               const diffTitle = inputDiff
-                ? `Changed since run (Run value: ${JSON.stringify(
-                    inputDiff.runValue ?? null,
-                  )})`
+                ? `Changed in run (Editor: ${JSON.stringify(
+                    inputDiff.editorValue ?? null,
+                  )} → Run: ${JSON.stringify(inputDiff.runValue ?? null)})`
                 : undefined;
               const rawVal = spec.inputs?.[port.name];
               const effectiveVal =

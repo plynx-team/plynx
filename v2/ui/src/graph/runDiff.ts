@@ -66,7 +66,12 @@ function resolveSnapshotInput(
 }
 
 /**
- * Compare the current Editor workflow against a selected Run's frozen workflow_snapshot.
+ * Compare a selected Run against the current Editor workflow.
+ *
+ * Diff Philosophy (Run as Newer):
+ * The Editor workflow serves as the baseline blueprint (- Editor, red).
+ * The selected Run serves as the newer execution instance (+ Run, teal/green).
+ * This answers: "What values/operations were executed in this run compared to the workflow?"
  */
 export function computeWorkflowRunDiff(
   editorWorkflow: Workflow | null | undefined,

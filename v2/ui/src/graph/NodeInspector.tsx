@@ -990,13 +990,13 @@ export function NodeInspector({
                   ? "Not in Selected Run"
                   : nodeDiff.status === "new_in_run"
                     ? "New in Selected Run"
-                    : "Changes vs. Selected Run"}
+                    : "Run Changes vs. Editor"}
               </span>
             </div>
             <div className="PropertiesBoxContent space-y-1.5 text-xs">
               {nodeDiff.status === "not_in_run" ? (
                 <div style={{ color: "#ff8a80" }}>
-                  This operation was not part of this run (it was added to the workflow later).
+                  This operation is in the current workflow, but was not executed in this run.
                 </div>
               ) : nodeDiff.status === "new_in_run" ? (
                 <div style={{ color: "#00d8ff" }}>
@@ -1007,10 +1007,10 @@ export function NodeInspector({
                   {nodeDiff.opChanged && (
                     <div className="font-mono text-[11px]">
                       <div style={{ color: "#ff8a80" }}>
-                        - Run op: {nodeDiff.runOp}
+                        - Editor op: {nodeDiff.editorOp}
                       </div>
                       <div style={{ color: "#80cbc4" }}>
-                        + Editor op: {nodeDiff.editorOp}
+                        + Run op: {nodeDiff.runOp}
                       </div>
                     </div>
                   )}
@@ -1032,16 +1032,16 @@ export function NodeInspector({
                       <div
                         className="truncate"
                         style={{ color: "#ff8a80" }}
-                        title={JSON.stringify(entry.runValue ?? null)}
+                        title={JSON.stringify(entry.editorValue ?? null)}
                       >
-                        - Run: {JSON.stringify(entry.runValue ?? null)}
+                        - Editor: {JSON.stringify(entry.editorValue ?? null)}
                       </div>
                       <div
                         className="truncate"
                         style={{ color: "#80cbc4" }}
-                        title={JSON.stringify(entry.editorValue ?? null)}
+                        title={JSON.stringify(entry.runValue ?? null)}
                       >
-                        + Editor: {JSON.stringify(entry.editorValue ?? null)}
+                        + Run: {JSON.stringify(entry.runValue ?? null)}
                       </div>
                     </div>
                   ))}

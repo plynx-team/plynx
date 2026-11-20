@@ -139,6 +139,10 @@ Clicking a workflow in `/workflows` opens the unified Workflow-Centric workspace
      - **Run Inspection Mode (`selectedRunId !== null`) — Read-Only Snapshot Overlay (in both `Graph` and `Stepper` views)**:
        - Smoothly transitions to a darker inspection background (`#0d0f13`) with a `2px` status-tinted inset frame and a top HUD banner (`Inspecting Run #<id> [STATUS]` + `Cancel`/`Resume` actions + primary **`[ ✎ Return to Editor ]`** button).
        - In the Workflow Workspace, renders the **Current Editor Nodes** overlaid with the selected run's statuses/outputs/logs and clear **Run Diff indicators** (`NOT IN RUN` crossed out with diagonal slash line and dimmed opacity when an operation did not exist in that run; `NEW` highlighted with bright cyan border when an operation ran in that run but is absent from the current workflow; `DIFF` when inputs or `op` changed). (By contrast, the standalone `/runs/<id>` route renders the run's frozen `workflow_snapshot` without referencing the up-to-date editor graph.)
+       - **Run Diff Philosophy (Run as Newer)**: When comparing a selected Run against the current Workflow Editor, the editor workflow acts as the baseline blueprint and the selected run acts as the **newer execution instance**. Diffs follow standard git diff visual convention:
+         - Base / Old (Editor): `- Editor` rendered in red (`#ff8a80`).
+         - Newer / Applied (Run): `+ Run` rendered in teal/green (`#80cbc4`).
+         - Inspector Header: Displays **`Run Changes vs. Editor`** answering "what was executed in this run compared to the workflow blueprint?".
      - Bottom area (when viewing a run with a selected node): **Collapsible Logs Drawer** docked to the bottom edge of the center pane.
   3. **Right Docked Sidebar — Properties Bar (`.PropertiesBar`, `width: 300px; min-width: 300px`)**:
      - `background-color: var(--bg-panel); border-left: 1px solid var(--border-subtle); padding: 5px; overflow-y: auto;`
