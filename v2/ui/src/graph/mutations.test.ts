@@ -2,10 +2,15 @@ import { describe, expect, it } from "vitest";
 import type { OpEntry, Workflow, WorkflowLayout } from "../api/types.gen";
 import {
   addNodeToWorkflow,
+  addStageToWorkflow,
   deleteNodeFromWorkflow,
+  deleteStageFromWorkflow,
   duplicateNodeInWorkflow,
   generateNodeId,
+  generateStageId,
+  reorderStagesInWorkflow,
   toSnakeCaseId,
+  updateStageInWorkflow,
 } from "./mutations";
 
 const CONCAT_OP: OpEntry = {
@@ -120,5 +125,65 @@ describe("graph mutations (Task 6.9)", () => {
     expect(res.layout.nodes.pick).toBeUndefined();
     // Downstream reference to $pick.choice is cleaned up
     expect(res.workflow.nodes?.echo?.inputs).toEqual({});
+  });
+
+  it("creates, updates, and deduplicates stage IDs", () => {
+    expect(generateStageId("Data Prep", ["ask", "print"])).toBe("data_prep");
+    expect(generateStageId("ask", ["ask", "print"])).toBe("ask_2");
+
+    const addRes = addStageToWorkflow(BASE_WORKFLOW, "eval", "Evaluation", {
+      requireApproval: true,
+    });
+    expect(addRes.stageId).toBe("eval");
+    expect(addRes.workflow.stages?.eval).toEqual({
+      title: "Evaluation",
+      require_approval: true,
+    });
+
+    const updateRes = updateStageInWorkflow(addRes.workflow, "eval", {
+      title: "Final Evaluation",
+      require_approval: false,
+    });
+    expect(updateRes.stages?.eval).toEqual({
+      title: "Final Evaluation",
+      require_approval: false,
+    });
+  });
+
+  it("deletes a stage and reassigns member nodes to default main stage", () => {
+    const res = deleteStageFromWorkflow(BASE_WORKFLOW, BASE_LAYOUT, "print", {
+      reassignToStageId: "main",
+    });
+    expect(res.workflow.stages?.print).toBeUndefined();
+    // echo was moved to main
+    expect(res.workflow.nodes?.echo?.stage).toBe("main");
+    // pick was in ask and remains in ask
+    expect(res.workflow.nodes?.pick?.stage).toBe("ask");
+  });
+
+  it("deletes a stage and deletes all member nodes when deleteNodes is true", () => {
+    const res = deleteStageFromWorkflow(BASE_WORKFLOW, BASE_LAYOUT, "print", {
+      deleteNodes: true,
+    });
+    expect(res.workflow.stages?.print).toBeUndefined();
+    expect(res.workflow.nodes?.echo).toBeUndefined();
+    expect(res.layout.nodes.echo).toBeUndefined();
+  });
+
+  it("reorders stages and prevents invalid DAG backwards edge order", () => {
+    // pick in ask -> echo in print. Valid order: ask, print
+    const invalid = reorderStagesInWorkflow(BASE_WORKFLOW, ["print", "ask"]);
+    expect(invalid.success).toBe(false);
+    if (!invalid.success) {
+      expect(invalid.reason).toContain("depends on");
+    }
+
+    // Adding an independent stage 'prep' before 'ask'
+    const wfWithPrep = addStageToWorkflow(BASE_WORKFLOW, "prep", "Prep").workflow;
+    const valid = reorderStagesInWorkflow(wfWithPrep, ["prep", "ask", "print"]);
+    expect(valid.success).toBe(true);
+    if (valid.success) {
+      expect(Object.keys(valid.workflow.stages ?? {})).toEqual(["prep", "ask", "print"]);
+    }
   });
 });

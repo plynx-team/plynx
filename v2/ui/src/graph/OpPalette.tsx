@@ -8,6 +8,7 @@ export interface OpPaletteProps {
   targetStage: string;
   onTargetStageChange: (stageId: string) => void;
   onAddOp: (op: OpEntry) => void;
+  onAddStage?: () => void;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
   readOnly?: boolean;
@@ -28,6 +29,7 @@ export function OpPalette({
   targetStage,
   onTargetStageChange,
   onAddOp,
+  onAddStage,
   collapsed = false,
   onToggleCollapse,
   readOnly = false,
@@ -183,10 +185,22 @@ export function OpPalette({
             >
               {stages.map((stageId) => (
                 <option key={stageId} value={stageId}>
-                  {stageId}
+                  {stageId === "main" ? "Workflow (main - Default)" : stageId}
                 </option>
               ))}
             </select>
+            {!readOnly && onAddStage && (
+              <button
+                type="button"
+                aria-label="Add new stage"
+                title="Add new stage"
+                data-testid="palette-btn-add-stage"
+                onClick={onAddStage}
+                className="p-1 rounded hover:bg-[#3c3c3c] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                <FeatherIcon name="plus" size={12} />
+              </button>
+            )}
           </div>
         )}
       </div>

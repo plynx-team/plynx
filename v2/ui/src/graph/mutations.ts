@@ -2,17 +2,20 @@ import type {
   NodePosition,
   NodeSpec,
   OpEntry,
+  Stage,
   Workflow,
   WorkflowLayout,
 } from "../api/types.gen";
 import {
   computeDagrePositions,
   DEFAULT_STAGE_ID,
+  DEFAULT_STAGE_TITLE,
   getOrderedStageIds,
   STAGE_PAD_TOP,
   STAGE_PAD_X,
 } from "./layout";
 import { extractNodeRef } from "./types";
+import { validateStageOrder } from "./validation";
 
 export function toSnakeCaseId(raw: string): string {
   const withUnderscores = raw
@@ -26,6 +29,22 @@ export function toSnakeCaseId(raw: string): string {
 }
 
 export function generateNodeId(
+  baseName: string,
+  existingIds: Iterable<string>,
+): string {
+  const existing = new Set(existingIds);
+  const base = toSnakeCaseId(baseName);
+  if (!existing.has(base)) {
+    return base;
+  }
+  let suffix = 2;
+  while (existing.has(`${base}_${suffix}`)) {
+    suffix += 1;
+  }
+  return `${base}_${suffix}`;
+}
+
+export function generateStageId(
   baseName: string,
   existingIds: Iterable<string>,
 ): string {
@@ -344,3 +363,174 @@ export function prepareWorkflowForSave(workflow: Workflow): Workflow {
     nodes: nextNodes,
   };
 }
+
+export function addStageToWorkflow(
+  workflow: Workflow,
+  rawStageId: string,
+  title?: string | null,
+  options: {
+    requireApproval?: boolean;
+    afterStageId?: string;
+  } = {},
+): {
+  workflow: Workflow;
+  stageId: string;
+} {
+  const existingStages = workflow.stages ?? {};
+  const stageId = generateStageId(rawStageId || "stage", Object.keys(existingStages));
+  const newStage: Stage = {
+    title: title?.trim() || stageId,
+    require_approval: Boolean(options.requireApproval),
+  };
+
+  const nextStages: Record<string, Stage> = {};
+  const orderedIds = getOrderedStageIds(workflow);
+
+  if (options.afterStageId && orderedIds.includes(options.afterStageId)) {
+    for (const sid of orderedIds) {
+      nextStages[sid] = existingStages[sid] ?? {
+        title: sid === DEFAULT_STAGE_ID ? DEFAULT_STAGE_TITLE : sid,
+        require_approval: false,
+      };
+      if (sid === options.afterStageId) {
+        nextStages[stageId] = newStage;
+      }
+    }
+  } else {
+    for (const sid of orderedIds) {
+      nextStages[sid] = existingStages[sid] ?? {
+        title: sid === DEFAULT_STAGE_ID ? DEFAULT_STAGE_TITLE : sid,
+        require_approval: false,
+      };
+    }
+    nextStages[stageId] = newStage;
+  }
+
+  return {
+    workflow: {
+      ...workflow,
+      stages: nextStages,
+    },
+    stageId,
+  };
+}
+
+export function deleteStageFromWorkflow(
+  workflow: Workflow,
+  layout: WorkflowLayout | null | undefined,
+  targetStageId: string,
+  options: {
+    reassignToStageId?: string;
+    deleteNodes?: boolean;
+    opsMap?: Record<string, OpEntry>;
+  } = {},
+): {
+  workflow: Workflow;
+  layout: WorkflowLayout;
+} {
+  const existingStages = { ...(workflow.stages ?? {}) };
+  delete existingStages[targetStageId];
+
+  // If there are no stages left, ensure DEFAULT_STAGE_ID exists
+  if (Object.keys(existingStages).length === 0) {
+    existingStages[DEFAULT_STAGE_ID] = {
+      title: DEFAULT_STAGE_TITLE,
+      require_approval: false,
+    };
+  }
+
+  let nextWf: Workflow = {
+    ...workflow,
+    stages: existingStages,
+  };
+  let nextLayout: WorkflowLayout = ensureLayout(workflow, layout, options.opsMap);
+
+  const reassignTarget = options.reassignToStageId || DEFAULT_STAGE_ID;
+
+  if (options.deleteNodes) {
+    const nodesToDelete = Object.entries(workflow.nodes ?? {})
+      .filter(([, spec]) => (spec.stage || DEFAULT_STAGE_ID) === targetStageId)
+      .map(([nid]) => nid);
+
+    for (const nid of nodesToDelete) {
+      const res = deleteNodeFromWorkflow(nextWf, nextLayout, nid, options.opsMap);
+      nextWf = res.workflow;
+      nextLayout = res.layout;
+    }
+  } else {
+    const nextNodes: Record<string, NodeSpec> = {};
+    for (const [nid, spec] of Object.entries(nextWf.nodes ?? {})) {
+      if ((spec.stage || DEFAULT_STAGE_ID) === targetStageId) {
+        nextNodes[nid] = {
+          ...spec,
+          stage: reassignTarget,
+        };
+      } else {
+        nextNodes[nid] = spec;
+      }
+    }
+    nextWf = {
+      ...nextWf,
+      nodes: nextNodes,
+    };
+  }
+
+  return { workflow: nextWf, layout: nextLayout };
+}
+
+export function updateStageInWorkflow(
+  workflow: Workflow,
+  stageId: string,
+  updates: {
+    title?: string | null;
+    require_approval?: boolean;
+  },
+): Workflow {
+  const existingStages = { ...(workflow.stages ?? {}) };
+  const current = existingStages[stageId] ?? {
+    title: stageId === DEFAULT_STAGE_ID ? DEFAULT_STAGE_TITLE : stageId,
+    require_approval: false,
+  };
+
+  existingStages[stageId] = {
+    ...current,
+    title: updates.title !== undefined ? (updates.title?.trim() || null) : current.title,
+    require_approval:
+      updates.require_approval !== undefined
+        ? updates.require_approval
+        : current.require_approval,
+  };
+
+  return {
+    ...workflow,
+    stages: existingStages,
+  };
+}
+
+export function reorderStagesInWorkflow(
+  workflow: Workflow,
+  newOrder: string[],
+): { success: true; workflow: Workflow } | { success: false; reason: string } {
+  const check = validateStageOrder(workflow, newOrder);
+  if (!check.valid) {
+    return { success: false, reason: check.reason };
+  }
+
+  const existingStages = workflow.stages ?? {};
+  const nextStages: Record<string, Stage> = {};
+  for (const sid of newOrder) {
+    nextStages[sid] = existingStages[sid] ?? {
+      title: sid === DEFAULT_STAGE_ID ? DEFAULT_STAGE_TITLE : sid,
+      require_approval: false,
+    };
+  }
+
+  return {
+    success: true,
+    workflow: {
+      ...workflow,
+      stages: nextStages,
+    },
+  };
+}
+

@@ -75,6 +75,9 @@ export interface StageGroupNodeData extends Record<string, unknown> {
   requireApproval: boolean;
   gateState?: StageGateState;
   nodeCount: number;
+  isSelected?: boolean;
+  onSelectStage?: (stageId: string) => void;
+  onDeleteStage?: (stageId: string) => void;
 }
 
 export interface WorkflowNodeData extends Record<string, unknown> {

@@ -25,7 +25,7 @@ import { buildGraphElements } from "./layout";
 import { OP_DRAG_MIME } from "./OpPalette";
 import type { WorkflowRunDiff } from "./runDiff";
 import { StageGroupNode } from "./StageGroupNode";
-import { isStageGroupId, type GraphNode } from "./types";
+import { extractStageId, isStageGroupId, type GraphNode } from "./types";
 import { WorkflowNode } from "./WorkflowNode";
 
 const NODE_TYPES: NodeTypes = {
@@ -44,11 +44,15 @@ export interface GraphViewProps {
   onSelectNode?: (nodeId: string | undefined) => void;
   selectedEdgeId?: string;
   onSelectEdge?: (edgeId: string | undefined) => void;
+  selectedStageId?: string;
+  onSelectStage?: (stageId: string | undefined) => void;
+  onDeleteStage?: (stageId: string) => void;
   readOnly?: boolean;
   onNodesChange?: OnNodesChange<GraphNode>;
   onEdgesChange?: OnEdgesChange<Edge>;
   onConnect?: (connection: Connection) => void;
   onNodeDragStop?: (nodeId: string, absX: number, absY: number) => void;
+  onStageDragStop?: (stageId: string, dx: number, dy: number) => void;
   onDropOp?: (opId: string, position: { x: number; y: number }) => void;
   onViewportChange?: (viewport: { x: number; y: number; zoom: number }) => void;
   onLiteralChange?: (nodeId: string, portName: string, value: unknown) => void;
@@ -86,11 +90,15 @@ function GraphCanvasInner({
   onSelectNode,
   selectedEdgeId,
   onSelectEdge,
+  selectedStageId,
+  onSelectStage,
+  onDeleteStage,
   readOnly = true,
   onNodesChange: externalOnNodesChange,
   onEdgesChange,
   onConnect,
   onNodeDragStop,
+  onStageDragStop,
   onDropOp,
   onViewportChange,
   onLiteralChange,
@@ -139,6 +147,9 @@ function GraphCanvasInner({
       runState,
       runDiff,
       selectedNodeId,
+      selectedStageId,
+      onSelectStage,
+      onDeleteStage,
       readOnly,
       onLiteralChange,
       onPreviewOutput,
@@ -151,6 +162,9 @@ function GraphCanvasInner({
     runState,
     runDiff,
     selectedNodeId,
+    selectedStageId,
+    onSelectStage,
+    onDeleteStage,
     readOnly,
     onLiteralChange,
     onPreviewOutput,
@@ -304,12 +318,18 @@ function GraphCanvasInner({
         onNodeClick={(_event, node) => {
           if (!isStageGroupId(node.id)) {
             onSelectEdge?.(undefined);
+            onSelectStage?.(undefined);
             onSelectNode?.(node.id);
+          } else {
+            onSelectNode?.(undefined);
+            onSelectEdge?.(undefined);
+            onSelectStage?.(extractStageId(node.id));
           }
         }}
         onEdgeClick={(_event, edge) => {
           if (!readOnly) {
             onSelectNode?.(undefined);
+            onSelectStage?.(undefined);
             onSelectEdge?.(edge.id);
           }
         }}
@@ -317,10 +337,22 @@ function GraphCanvasInner({
           if (!readOnly) {
             onSelectNode?.(undefined);
             onSelectEdge?.(undefined);
+            onSelectStage?.(undefined);
           }
         }}
         onNodeDragStop={(_event, node) => {
-          if (!onNodeDragStop || isStageGroupId(node.id)) return;
+          if (isStageGroupId(node.id)) {
+            if (!onStageDragStop) return;
+            const stageId = extractStageId(node.id);
+            const initialPos = built.stageGroupPositions[stageId] ?? { x: 0, y: 0 };
+            const dx = Math.round(node.position.x - initialPos.x);
+            const dy = Math.round(node.position.y - initialPos.y);
+            if (dx !== 0 || dy !== 0) {
+              onStageDragStop(stageId, dx, dy);
+            }
+            return;
+          }
+          if (!onNodeDragStop) return;
           const stageId = effectiveWorkflow.nodes?.[node.id]?.stage || "main";
           const groupPos = built.stageGroupPositions[stageId] ?? { x: 0, y: 0 };
           onNodeDragStop(

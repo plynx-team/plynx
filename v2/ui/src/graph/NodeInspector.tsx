@@ -17,8 +17,14 @@ import { ImagePreviewer } from "../previewers/ImagePreviewer";
 import { JsonPreviewer } from "../previewers/JsonPreviewer";
 import { MarkdownPreviewer } from "../previewers/MarkdownPreviewer";
 import { TextPreviewer } from "../previewers/TextPreviewer";
-import { DEFAULT_STAGE_ID, getOrderedStageIds, resolveNodePorts } from "./layout";
+import {
+  DEFAULT_STAGE_ID,
+  DEFAULT_STAGE_TITLE,
+  getOrderedStageIds,
+  resolveNodePorts,
+} from "./layout";
 import { LiteralWidget } from "./LiteralWidget";
+import { toSnakeCaseId } from "./mutations";
 import type { NodeDiff } from "./runDiff";
 import { extractNodeRef } from "./types";
 import { getCompatibleUpstreamOutputs, validateStageChange } from "./validation";
@@ -32,6 +38,8 @@ export interface ArtifactPreviewTarget {
 
 export interface NodeInspectorProps {
   nodeId: string | undefined;
+  selectedStageId?: string | undefined;
+  onSelectStage?: (stageId: string | undefined) => void;
   workflow: Workflow;
   opsMap: Record<string, OpEntry>;
   runState?: RunState | null;
@@ -49,6 +57,22 @@ export interface NodeInspectorProps {
   ) => void;
   onUnbindInput?: (targetNodeId: string, targetPort: string) => void;
   onPreviewArtifact?: (target: ArtifactPreviewTarget) => void;
+  onAddStage?: (
+    stageId: string,
+    title?: string,
+    options?: { requireApproval?: boolean },
+  ) => void;
+  onUpdateStage?: (
+    stageId: string,
+    updates: { title?: string; require_approval?: boolean },
+  ) => void;
+  onDeleteStage?: (
+    stageId: string,
+    options?: { reassignToStageId?: string; deleteNodes?: boolean },
+  ) => void;
+  onReorderStages?: (
+    newOrder: string[],
+  ) => { success: boolean; reason?: string };
 }
 
 export function buildOutputPreviewTarget(
@@ -169,6 +193,8 @@ function InlineOutputPreview({ target }: { target: ArtifactPreviewTarget }) {
 
 export function NodeInspector({
   nodeId,
+  selectedStageId,
+  onSelectStage,
   workflow,
   opsMap,
   runState,
@@ -178,8 +204,17 @@ export function NodeInspector({
   onBindReference,
   onUnbindInput,
   onPreviewArtifact,
+  onAddStage,
+  onUpdateStage,
+  onDeleteStage,
+  onReorderStages,
 }: NodeInspectorProps) {
   const [stageError, setStageError] = useState<string | null>(null);
+  const [isAddingStage, setIsAddingStage] = useState<boolean>(false);
+  const [newStageTitle, setNewStageTitle] = useState<string>("");
+  const [newStageRequireApproval, setNewStageRequireApproval] = useState<boolean>(false);
+  const [isCreatingStageForNode, setIsCreatingStageForNode] = useState<boolean>(false);
+  const [newNodeStageTitle, setNewNodeStageTitle] = useState<string>("");
 
   const stageIds = getOrderedStageIds(workflow);
   const spec =
@@ -194,6 +229,242 @@ export function NodeInspector({
           inputs: {},
         }
       : undefined);
+
+  if (selectedStageId && (!nodeId || !spec)) {
+    const stageSpec = workflow.stages?.[selectedStageId];
+    const isDefaultStage = selectedStageId === DEFAULT_STAGE_ID;
+    const memberNodes = Object.entries(workflow.nodes ?? {}).filter(
+      ([, nSpec]) => (nSpec.stage || DEFAULT_STAGE_ID) === selectedStageId,
+    );
+    const stageIndex = stageIds.indexOf(selectedStageId);
+    const canMoveEarlier = stageIndex > 0;
+    const canMoveLater = stageIndex >= 0 && stageIndex < stageIds.length - 1;
+
+    const handleMove = (direction: "earlier" | "later") => {
+      if (!onReorderStages) return;
+      const targetIdx = direction === "earlier" ? stageIndex - 1 : stageIndex + 1;
+      const nextOrder = [...stageIds];
+      const temp = nextOrder[stageIndex];
+      nextOrder[stageIndex] = nextOrder[targetIdx];
+      nextOrder[targetIdx] = temp;
+      const res = onReorderStages(nextOrder);
+      if (!res.success && res.reason) {
+        setStageError(res.reason);
+      } else {
+        setStageError(null);
+      }
+    };
+
+    return (
+      <aside
+        data-testid="stage-inspector"
+        className="PropertiesBar"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="PropertiesHeader">
+          <div className="flex items-center gap-1.5 truncate">
+            <FeatherIcon
+              name="layers"
+              size={14}
+              style={{ color: "var(--color-primary)" }}
+            />
+            <span className="truncate">
+              Stage: {stageSpec?.title || selectedStageId}
+            </span>
+          </div>
+          {onSelectStage && (
+            <button
+              type="button"
+              aria-label="Close stage properties"
+              onClick={() => onSelectStage(undefined)}
+              className="control-button !h-5 !min-h-5 !px-1.5 !text-[10px]"
+            >
+              <FeatherIcon name="x" size={12} />
+            </button>
+          )}
+        </div>
+
+        <div className="PropertiesBoxRoot">
+          <div className="PropertiesBox">
+            <div className="PropertiesBoxHeader">Stage Details</div>
+            <div className="PropertiesBoxContent space-y-2">
+              <div className="ParameterItem">
+                <div className="ParameterNameCell">Stage ID</div>
+                <div className="ParameterValueCell font-mono text-xs flex items-center gap-1">
+                  <span>{selectedStageId}</span>
+                  {isDefaultStage && (
+                    <span className="status-badge CREATED !text-[9px]">Default</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="ParameterItem">
+                <label
+                  htmlFor="inspector-stage-title"
+                  className="ParameterNameCell"
+                >
+                  Title
+                </label>
+                <div className="ParameterValueCell">
+                  <input
+                    id="inspector-stage-title"
+                    data-testid="inspector-stage-title"
+                    type="text"
+                    disabled={readOnly}
+                    value={
+                      stageSpec?.title ??
+                      (isDefaultStage ? DEFAULT_STAGE_TITLE : selectedStageId)
+                    }
+                    onChange={(e) =>
+                      onUpdateStage?.(selectedStageId, { title: e.target.value })
+                    }
+                    className="w-full px-1.5 py-1 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-1 border-t border-[#3c3c3c]">
+                <label className="flex items-start gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    data-testid="inspector-stage-gate-checkbox"
+                    disabled={readOnly}
+                    checked={Boolean(stageSpec?.require_approval)}
+                    onChange={(e) =>
+                      onUpdateStage?.(selectedStageId, {
+                        require_approval: e.target.checked,
+                      })
+                    }
+                    className="mt-0.5 rounded"
+                  />
+                  <div className="text-xs">
+                    <span
+                      className="font-semibold block"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      Approval Gate
+                    </span>
+                    <span
+                      className="text-[11px] block"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      Pauses the run before downstream stages start until approved.
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="PropertiesBox">
+            <div className="PropertiesBoxHeader">Stage Order</div>
+            <div className="PropertiesBoxContent space-y-1.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span style={{ color: "var(--text-secondary)" }}>
+                  Position: #{stageIndex + 1} of {stageIds.length}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    data-testid="btn-stage-move-earlier"
+                    disabled={readOnly || !canMoveEarlier}
+                    onClick={() => handleMove("earlier")}
+                    title="Move stage earlier in execution order"
+                    className="control-button !h-6 !min-h-6 !px-2 !text-xs"
+                  >
+                    <FeatherIcon name="chevron-up" size={12} />
+                    <span>Earlier</span>
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="btn-stage-move-later"
+                    disabled={readOnly || !canMoveLater}
+                    onClick={() => handleMove("later")}
+                    title="Move stage later in execution order"
+                    className="control-button !h-6 !min-h-6 !px-2 !text-xs"
+                  >
+                    <FeatherIcon name="chevron-down" size={12} />
+                    <span>Later</span>
+                  </button>
+                </div>
+              </div>
+              {stageError && (
+                <p
+                  role="alert"
+                  data-testid="inspector-stage-reorder-error"
+                  className="mt-1 text-[11px]"
+                  style={{ color: "var(--color-error)" }}
+                >
+                  {stageError}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="PropertiesBox">
+            <div className="PropertiesBoxHeader">
+              <span>Operations ({memberNodes.length})</span>
+            </div>
+            <div className="PropertiesBoxContent text-xs">
+              {memberNodes.length === 0 ? (
+                <p
+                  className="py-1 italic"
+                  style={{ color: "var(--text-tertiary)" }}
+                >
+                  No operations in this stage.
+                </p>
+              ) : (
+                <div className="space-y-1">
+                  {memberNodes.map(([nid, nSpec]) => (
+                    <div
+                      key={nid}
+                      className="flex items-center justify-between px-2 py-1 rounded bg-[#242424] border border-[#363636]"
+                    >
+                      <span className="font-semibold truncate">
+                        {nSpec.title || nid}
+                      </span>
+                      <span
+                        className="font-mono text-[10px]"
+                        style={{ color: "var(--text-tertiary)" }}
+                      >
+                        {nid}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {!readOnly && onDeleteStage && (
+            <div className="pt-2">
+              <button
+                type="button"
+                data-testid="btn-delete-stage-inspector"
+                disabled={stageIds.length <= 1}
+                title={
+                  stageIds.length <= 1
+                    ? "Cannot delete the only stage in the workflow"
+                    : "Delete stage"
+                }
+                onClick={() => onDeleteStage(selectedStageId)}
+                className="control-button danger w-full justify-center !h-7 !text-xs"
+              >
+                <FeatherIcon name="trash-2" size={12} />
+                <span>
+                  {memberNodes.length === 0
+                    ? "Delete Empty Stage"
+                    : `Delete Stage (${memberNodes.length} ${
+                        memberNodes.length === 1 ? "op" : "ops"
+                      })`}
+                </span>
+              </button>
+            </div>
+          )}
+        </div>
+      </aside>
+    );
+  }
 
   if (!nodeId || !spec) {
     const totalNodes = Object.keys(workflow.nodes ?? {}).length;
@@ -225,12 +496,6 @@ export function NodeInspector({
                 </div>
               )}
               <div className="ParameterItem">
-                <div className="ParameterNameCell">Stages</div>
-                <div className="ParameterValueCell font-mono">
-                  {stageIds.length} ({stageIds.join(", ")})
-                </div>
-              </div>
-              <div className="ParameterItem">
                 <div className="ParameterNameCell">Nodes</div>
                 <div className="ParameterValueCell font-mono">{totalNodes}</div>
               </div>
@@ -242,6 +507,166 @@ export function NodeInspector({
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Interactive Stages Management in Workflow Properties */}
+          <div className="PropertiesBox">
+            <div className="PropertiesBoxHeader flex items-center justify-between">
+              <span>Stages ({stageIds.length})</span>
+              {!readOnly && onAddStage && (
+                <button
+                  type="button"
+                  data-testid="btn-add-stage-workflow"
+                  onClick={() => setIsAddingStage(true)}
+                  className="control-button !h-5 !min-h-5 !px-1.5 !text-[10px]"
+                >
+                  <FeatherIcon name="plus" size={11} />
+                  <span>Add Stage</span>
+                </button>
+              )}
+            </div>
+            <div className="PropertiesBoxContent space-y-1.5">
+              {isAddingStage && (
+                <div
+                  data-testid="inline-add-stage-form"
+                  className="p-2 rounded bg-[#242424] border border-[#404040] space-y-2 mb-2"
+                >
+                  <div className="text-xs font-semibold">New Stage</div>
+                  <div>
+                    <label className="text-[11px] block text-[var(--text-secondary)] mb-0.5">
+                      Title
+                    </label>
+                    <input
+                      type="text"
+                      data-testid="input-new-stage-title"
+                      placeholder="e.g. Data Preparation"
+                      value={newStageTitle}
+                      onChange={(e) => setNewStageTitle(e.target.value)}
+                      className="w-full px-1.5 py-1 text-xs"
+                      autoFocus
+                    />
+                  </div>
+                  <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                    <input
+                      type="checkbox"
+                      data-testid="checkbox-new-stage-gate"
+                      checked={newStageRequireApproval}
+                      onChange={(e) =>
+                        setNewStageRequireApproval(e.target.checked)
+                      }
+                      className="rounded"
+                    />
+                    <span>Approval Gate</span>
+                  </label>
+                  <div className="flex items-center justify-end gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingStage(false);
+                        setNewStageTitle("");
+                        setNewStageRequireApproval(false);
+                      }}
+                      className="control-button !h-6 !min-h-6 !px-2 !text-[11px]"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="btn-submit-add-stage"
+                      disabled={!newStageTitle.trim()}
+                      onClick={() => {
+                        const title = newStageTitle.trim();
+                        const slug = toSnakeCaseId(title);
+                        onAddStage?.(slug, title, {
+                          requireApproval: newStageRequireApproval,
+                        });
+                        setIsAddingStage(false);
+                        setNewStageTitle("");
+                        setNewStageRequireApproval(false);
+                      }}
+                      className="control-button primary !h-6 !min-h-6 !px-2 !text-[11px]"
+                    >
+                      Add Stage
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                {stageIds.map((sid, idx) => {
+                  const sDef = workflow.stages?.[sid];
+                  const sTitle =
+                    sDef?.title ||
+                    (sid === DEFAULT_STAGE_ID ? DEFAULT_STAGE_TITLE : sid);
+                  const isDef = sid === DEFAULT_STAGE_ID;
+                  const nodeCount = Object.values(workflow.nodes ?? {}).filter(
+                    (n) => (n.stage || DEFAULT_STAGE_ID) === sid,
+                  ).length;
+
+                  return (
+                    <div
+                      key={sid}
+                      data-testid={`workflow-stage-row-${sid}`}
+                      className="flex items-center justify-between p-1.5 rounded bg-[#242424] border border-[#363636] hover:border-[#4c4c4c] text-xs transition-colors"
+                    >
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => onSelectStage?.(sid)}
+                        className="flex items-center gap-1.5 min-w-0 cursor-pointer flex-1"
+                        title="Click to inspect and edit stage"
+                      >
+                        <span className="font-mono text-[10px] text-[var(--text-tertiary)] w-4">
+                          #{idx + 1}
+                        </span>
+                        <FeatherIcon
+                          name="layers"
+                          size={11}
+                          style={{ color: "var(--text-secondary)" }}
+                        />
+                        <span className="truncate font-semibold">{sTitle}</span>
+                        {isDef && (
+                          <span className="status-badge CREATED !text-[9px]">
+                            Default
+                          </span>
+                        )}
+                        {sDef?.require_approval && (
+                          <span className="status-badge WAITING !text-[9px]">
+                            Gate
+                          </span>
+                        )}
+                        <span className="font-mono text-[10px] text-[var(--text-tertiary)] ml-auto pr-1">
+                          {nodeCount} {nodeCount === 1 ? "op" : "ops"}
+                        </span>
+                      </div>
+
+                      {!readOnly && (
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <button
+                            type="button"
+                            title="Edit stage"
+                            onClick={() => onSelectStage?.(sid)}
+                            className="p-1 rounded hover:bg-[#3c3c3c] text-[var(--text-secondary)]"
+                          >
+                            <FeatherIcon name="edit-2" size={11} />
+                          </button>
+                          {stageIds.length > 1 && onDeleteStage && (
+                            <button
+                              type="button"
+                              title="Delete stage"
+                              onClick={() => onDeleteStage(sid)}
+                              className="p-1 rounded hover:bg-[#3c3c3c] text-[var(--text-secondary)] hover:text-[var(--color-error)]"
+                            >
+                              <FeatherIcon name="trash-2" size={11} />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -392,19 +817,78 @@ export function NodeInspector({
                   data-testid="inspector-node-stage"
                   disabled={effectiveReadOnly}
                   value={currentStage}
-                  onChange={(e) => handleStageSelect(e.target.value)}
+                  onChange={(e) => {
+                    if (e.target.value === "__NEW_STAGE__") {
+                      setIsCreatingStageForNode(true);
+                      setNewNodeStageTitle("");
+                    } else {
+                      handleStageSelect(e.target.value);
+                    }
+                  }}
                   className="w-full px-1.5 py-1 text-xs"
                 >
                   {stageIds.map((sid) => (
                     <option key={sid} value={sid}>
-                      {workflow.stages?.[sid]?.title
+                      {sid === DEFAULT_STAGE_ID
+                        ? "Workflow (main - Default)"
+                        : workflow.stages?.[sid]?.title
                         ? `${workflow.stages[sid].title} (${sid})`
                         : sid}
                     </option>
                   ))}
+                  {!effectiveReadOnly && onAddStage && (
+                    <option value="__NEW_STAGE__">+ Create new stage...</option>
+                  )}
                 </select>
               </div>
             </div>
+            {isCreatingStageForNode && (
+              <div
+                data-testid="inline-create-stage-for-node"
+                className="mt-2 p-2 rounded bg-[#242424] border border-[#404040] space-y-1.5"
+              >
+                <div className="text-[11px] font-semibold text-[var(--text-secondary)]">
+                  Create New Stage
+                </div>
+                <input
+                  type="text"
+                  data-testid="input-node-new-stage-title"
+                  placeholder="e.g. Evaluation"
+                  value={newNodeStageTitle}
+                  onChange={(e) => setNewNodeStageTitle(e.target.value)}
+                  className="w-full px-1.5 py-1 text-xs"
+                  autoFocus
+                />
+                <div className="flex items-center justify-end gap-1.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCreatingStageForNode(false);
+                      setNewNodeStageTitle("");
+                    }}
+                    className="control-button !h-5 !min-h-5 !px-2 !text-[10px]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="btn-node-submit-new-stage"
+                    disabled={!newNodeStageTitle.trim()}
+                    onClick={() => {
+                      const title = newNodeStageTitle.trim();
+                      const slug = toSnakeCaseId(title);
+                      onAddStage?.(slug, title);
+                      handleStageSelect(slug);
+                      setIsCreatingStageForNode(false);
+                      setNewNodeStageTitle("");
+                    }}
+                    className="control-button primary !h-5 !min-h-5 !px-2 !text-[10px]"
+                  >
+                    Create & Move
+                  </button>
+                </div>
+              </div>
+            )}
             {stageError && (
               <p
                 role="alert"

@@ -350,4 +350,20 @@ describe("GraphView component (Task 6.8)", () => {
     expect(echoNode).toHaveAttribute("data-node-status", "NOT_IN_RUN");
     expect(screen.getByTestId("graph-node-diff-echo")).toHaveTextContent("NOT IN RUN");
   });
+
+  it("renders stage drag area and handle for non-empty stages", () => {
+    render(
+      <GraphView
+        workflowDoc={MOCK_WORKFLOW_DOC}
+        ops={MOCK_OPS}
+        readOnly={false}
+      />,
+    );
+
+    const askDragArea = screen.getByTestId("stage-drag-area-ask");
+    expect(askDragArea).toHaveClass("stage-drag-handle");
+
+    const askBadge = screen.getByTestId("stage-badge-ask");
+    expect(askBadge).toHaveClass("stage-drag-handle");
+  });
 });

@@ -289,4 +289,34 @@ describe("graph layout utilities (Task 6.8)", () => {
     // Height should cleanly enclose the 220px tall node + STAGE_PAD_TOP (48px) + STAGE_PAD_BOTTOM (52px) = 320px
     expect(askGroup?.style?.height).toBe(220 + 48 + 52);
   });
+
+  it("marks non-empty stages as draggable with dragHandle when not readOnly", () => {
+    const wfWithEmptyStage: Workflow = {
+      ...SAMPLE_WORKFLOW,
+      stages: {
+        ...SAMPLE_WORKFLOW.stages,
+        empty_stage: { title: "Empty Stage" },
+      },
+    };
+
+    const editableElements = buildGraphElements(wfWithEmptyStage, {
+      opsMap: SAMPLE_OPS,
+      readOnly: false,
+    });
+
+    const askGroup = editableElements.nodes.find((n) => n.id === stageGroupId("ask"));
+    const emptyGroup = editableElements.nodes.find((n) => n.id === stageGroupId("empty_stage"));
+
+    expect(askGroup?.draggable).toBe(true);
+    expect(askGroup?.dragHandle).toBe(".stage-drag-handle");
+    expect(emptyGroup?.draggable).toBe(false);
+
+    const readOnlyElements = buildGraphElements(wfWithEmptyStage, {
+      opsMap: SAMPLE_OPS,
+      readOnly: true,
+    });
+
+    const readOnlyAskGroup = readOnlyElements.nodes.find((n) => n.id === stageGroupId("ask"));
+    expect(readOnlyAskGroup?.draggable).toBe(false);
+  });
 });

@@ -48,12 +48,17 @@ import {
 } from "./layout";
 import {
   addNodeToWorkflow,
+  addStageToWorkflow,
   connectEdgeInWorkflow,
   deleteNodeFromWorkflow,
+  deleteStageFromWorkflow,
   disconnectEdgeInWorkflow,
   duplicateNodeInWorkflow,
   ensureLayout,
   prepareWorkflowForSave,
+  reorderStagesInWorkflow,
+  toSnakeCaseId,
+  updateStageInWorkflow,
 } from "./mutations";
 import {
   buildOutputPreviewTarget,
@@ -109,6 +114,17 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | undefined>(
     undefined,
   );
+  const [selectedStageId, setSelectedStageId] = useState<string | undefined>(
+    undefined,
+  );
+  const [stageToDelete, setStageToDelete] = useState<string | null>(null);
+  const [deleteStageChoice, setDeleteStageChoice] = useState<
+    "reassign" | "delete"
+  >("reassign");
+  const [showAddStageModal, setShowAddStageModal] = useState<boolean>(false);
+  const [newStageModalTitle, setNewStageModalTitle] = useState<string>("");
+  const [newStageModalRequireApproval, setNewStageModalRequireApproval] =
+    useState<boolean>(false);
   const [wireError, setWireError] = useState<string | null>(null);
   const [targetStage, setTargetStage] = useState<string>(DEFAULT_STAGE_ID);
   const [loading, setLoading] = useState<boolean>(true);
@@ -131,6 +147,8 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     setSavedSnapshot(null);
     setSelectedNodeId(undefined);
     setSelectedEdgeId(undefined);
+    setSelectedStageId(undefined);
+    setStageToDelete(null);
     setSelectedRunId(null);
     setSelectedRun(null);
     setRunsCollapsed(false);
@@ -185,9 +203,117 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   const handleSelectNode = useCallback(
     (nodeId: string | undefined) => {
       setSelectedNodeId(nodeId);
+      if (nodeId) {
+        setSelectedStageId(undefined);
+      }
       if (nodeId && workflow?.nodes?.[nodeId]) {
         setTargetStage(workflow.nodes[nodeId].stage || DEFAULT_STAGE_ID);
       }
+    },
+    [workflow],
+  );
+
+  const handleSelectStage = useCallback((stageId: string | undefined) => {
+    setSelectedStageId(stageId);
+    if (stageId) {
+      setSelectedNodeId(undefined);
+      setSelectedEdgeId(undefined);
+      setTargetStage(stageId);
+    }
+  }, []);
+
+  const handleAddStage = useCallback(
+    (
+      rawStageId: string,
+      title?: string,
+      options?: { requireApproval?: boolean },
+    ) => {
+      if (!workflow) return;
+      const res = addStageToWorkflow(workflow, rawStageId, title, options);
+      setWorkflow(res.workflow);
+      setSelectedStageId(res.stageId);
+      setSelectedNodeId(undefined);
+      setSelectedEdgeId(undefined);
+      setTargetStage(res.stageId);
+    },
+    [workflow],
+  );
+
+  const handleUpdateStage = useCallback(
+    (
+      stageId: string,
+      updates: { title?: string; require_approval?: boolean },
+    ) => {
+      if (!workflow) return;
+      const nextWf = updateStageInWorkflow(workflow, stageId, updates);
+      setWorkflow(nextWf);
+    },
+    [workflow],
+  );
+
+  const handleDeleteStageRequest = useCallback(
+    (stageId: string) => {
+      if (!workflow) return;
+      const memberNodeIds = Object.keys(workflow.nodes ?? {}).filter(
+        (nid) => (workflow.nodes?.[nid]?.stage || DEFAULT_STAGE_ID) === stageId,
+      );
+      if (memberNodeIds.length === 0) {
+        const res = deleteStageFromWorkflow(workflow, layout, stageId, {
+          opsMap,
+        });
+        setWorkflow(res.workflow);
+        setLayout(res.layout);
+        if (selectedStageId === stageId) {
+          setSelectedStageId(undefined);
+        }
+        if (targetStage === stageId) {
+          const remaining = getOrderedStageIds(res.workflow);
+          setTargetStage(remaining[remaining.length - 1] ?? DEFAULT_STAGE_ID);
+        }
+      } else {
+        setStageToDelete(stageId);
+        setDeleteStageChoice("reassign");
+      }
+    },
+    [workflow, layout, opsMap, selectedStageId, targetStage],
+  );
+
+  const handleConfirmDeleteStage = useCallback(() => {
+    if (!workflow || !stageToDelete) return;
+    const res = deleteStageFromWorkflow(workflow, layout, stageToDelete, {
+      deleteNodes: deleteStageChoice === "delete",
+      reassignToStageId: DEFAULT_STAGE_ID,
+      opsMap,
+    });
+    setWorkflow(res.workflow);
+    setLayout(res.layout);
+    if (selectedStageId === stageToDelete) {
+      setSelectedStageId(undefined);
+    }
+    if (targetStage === stageToDelete) {
+      const remaining = getOrderedStageIds(res.workflow);
+      setTargetStage(remaining[remaining.length - 1] ?? DEFAULT_STAGE_ID);
+    }
+    setStageToDelete(null);
+  }, [
+    workflow,
+    layout,
+    stageToDelete,
+    deleteStageChoice,
+    opsMap,
+    selectedStageId,
+    targetStage,
+  ]);
+
+  const handleReorderStages = useCallback(
+    (newOrder: string[]) => {
+      if (!workflow) return { success: false, reason: "No workflow loaded" };
+      const res = reorderStagesInWorkflow(workflow, newOrder);
+      if (res.success) {
+        setWorkflow(res.workflow);
+        return { success: true };
+      }
+      return { success: false, reason: res.reason };
     },
     [workflow],
   );
@@ -319,6 +445,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   const handleSelectRun = useCallback((nextRunId: string | null) => {
     setSelectedRunId(nextRunId);
     setSelectedEdgeId(undefined);
+    setSelectedStageId(undefined);
     if (nextRunId !== null) {
       setOpsCollapsed(true);
       setRunsCollapsed(false);
@@ -533,6 +660,33 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     [],
   );
 
+  const handleStageDragStop = useCallback(
+    (stageId: string, dx: number, dy: number) => {
+      if (!workflow || (dx === 0 && dy === 0)) return;
+      const memberNodeIds = Object.keys(workflow.nodes ?? {}).filter(
+        (nid) => (workflow.nodes?.[nid]?.stage || DEFAULT_STAGE_ID) === stageId,
+      );
+      if (memberNodeIds.length === 0) return;
+
+      setLayout((prev) => {
+        const base = ensureLayout(workflow, prev, opsMap);
+        const nextNodes = { ...base.nodes };
+        for (const nid of memberNodeIds) {
+          const currentPos = nextNodes[nid] ?? { x: 0, y: 0 };
+          nextNodes[nid] = {
+            x: Math.round(currentPos.x + dx),
+            y: Math.round(currentPos.y + dy),
+          };
+        }
+        return {
+          ...base,
+          nodes: nextNodes,
+        };
+      });
+    },
+    [workflow, opsMap],
+  );
+
   const handleViewportChange = useCallback(
     (viewport: { x: number; y: number; zoom: number }) => {
       setLayout((prev) => {
@@ -590,6 +744,11 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
           handleDeleteSelected();
           return;
         }
+        if (selectedStageId && stageIds.length > 1) {
+          event.preventDefault();
+          handleDeleteStageRequest(selectedStageId);
+          return;
+        }
       }
       if (
         selectedNodeId &&
@@ -608,11 +767,14 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   }, [
     selectedNodeId,
     selectedEdgeId,
+    selectedStageId,
+    stageIds,
     selectedRunId,
     handleSelectRun,
     handleSave,
     handleDeleteSelected,
     handleDeleteSelectedEdge,
+    handleDeleteStageRequest,
     handleDuplicateSelected,
   ]);
 
@@ -755,6 +917,18 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
           onClick={handleAutoLayout}
         />
 
+        <ControlButton
+          icon="layers"
+          text="+ Stage"
+          data-testid="btn-add-stage"
+          disabled={!workflow || isInspectingRun}
+          onClick={() => {
+            setShowAddStageModal(true);
+            setNewStageModalTitle("");
+            setNewStageModalRequireApproval(false);
+          }}
+        />
+
         <ControlSeparator />
 
         <ControlButton
@@ -773,6 +947,17 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
           disabled={!selectedNodeId}
           onClick={handleDeleteSelected}
         />
+
+        {selectedStageId && (
+          <ControlButton
+            icon="trash-2"
+            text="Delete Stage"
+            data-testid="btn-delete-stage-toolbar"
+            variant="danger"
+            disabled={stageIds.length <= 1 || isInspectingRun}
+            onClick={() => handleDeleteStageRequest(selectedStageId)}
+          />
+        )}
 
         {selectedEdgeId && (
           <ControlButton
@@ -897,6 +1082,11 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
               targetStage={targetStage}
               onTargetStageChange={setTargetStage}
               onAddOp={(op) => handleAddOp(op)}
+              onAddStage={() => {
+                setShowAddStageModal(true);
+                setNewStageModalTitle("");
+                setNewStageModalRequireApproval(false);
+              }}
               collapsed={opsCollapsed}
               onToggleCollapse={() => setOpsCollapsed((v) => !v)}
               readOnly={isInspectingRun}
@@ -1054,9 +1244,13 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
                   onSelectNode={handleSelectNode}
                   selectedEdgeId={selectedEdgeId}
                   onSelectEdge={setSelectedEdgeId}
+                  selectedStageId={selectedStageId}
+                  onSelectStage={handleSelectStage}
+                  onDeleteStage={handleDeleteStageRequest}
                   readOnly={isInspectingRun}
                   onConnect={handleConnect}
                   onNodeDragStop={handleNodeDragStop}
+                  onStageDragStop={handleStageDragStop}
                   onDropOp={handleDropOp}
                   onViewportChange={handleViewportChange}
                   onLiteralChange={handleInlineLiteralChange}
@@ -1165,6 +1359,8 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
           {/* Right Docked PropertiesBar */}
           <NodeInspector
             nodeId={selectedNodeId}
+            selectedStageId={selectedStageId}
+            onSelectStage={handleSelectStage}
             workflow={workflow}
             opsMap={opsMap}
             runState={activeRunState}
@@ -1176,6 +1372,10 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
             onBindReference={handleBindReference}
             onUnbindInput={handleUnbindInput}
             onPreviewArtifact={setPreviewTarget}
+            onAddStage={handleAddStage}
+            onUpdateStage={handleUpdateStage}
+            onDeleteStage={handleDeleteStageRequest}
+            onReorderStages={handleReorderStages}
           />
         </div>
       ) : null}
@@ -1226,6 +1426,223 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
           mediaType={previewTarget.mediaType}
           onClose={() => setPreviewTarget(null)}
         />
+      )}
+
+      {/* Add Stage Modal */}
+      {showAddStageModal && (
+        <div
+          data-testid="modal-add-stage"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setShowAddStageModal(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-lg p-5 shadow-xl space-y-4"
+            style={{
+              backgroundColor: "var(--bg-panel)",
+              border: "1px solid var(--border-default)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <FeatherIcon
+                name="layers"
+                size={16}
+                style={{ color: "var(--color-primary)" }}
+              />
+              <span>Add Stage</span>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block text-[var(--text-secondary)] mb-1">
+                  Stage Title
+                </label>
+                <input
+                  type="text"
+                  data-testid="modal-input-stage-title"
+                  placeholder="e.g. Processing"
+                  value={newStageModalTitle}
+                  onChange={(e) => setNewStageModalTitle(e.target.value)}
+                  className="w-full px-2 py-1.5 text-xs rounded"
+                  autoFocus
+                />
+              </div>
+
+              <label className="flex items-start gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  data-testid="modal-checkbox-stage-gate"
+                  checked={newStageModalRequireApproval}
+                  onChange={(e) =>
+                    setNewStageModalRequireApproval(e.target.checked)
+                  }
+                  className="mt-0.5 rounded"
+                />
+                <div>
+                  <span
+                    className="font-semibold block"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    Require approval (Stage Gate)
+                  </span>
+                  <span
+                    className="text-[11px] block"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    Pauses run execution before downstream stages begin.
+                  </span>
+                </div>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#3c3c3c]">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddStageModal(false);
+                  setNewStageModalTitle("");
+                  setNewStageModalRequireApproval(false);
+                }}
+                className="control-button"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                data-testid="modal-btn-create-stage"
+                disabled={!newStageModalTitle.trim()}
+                onClick={() => {
+                  const title = newStageModalTitle.trim();
+                  const slug = toSnakeCaseId(title);
+                  handleAddStage(slug, title, {
+                    requireApproval: newStageModalRequireApproval,
+                  });
+                  setShowAddStageModal(false);
+                  setNewStageModalTitle("");
+                  setNewStageModalRequireApproval(false);
+                }}
+                className="control-button primary"
+              >
+                Create Stage
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Stage with Operations Confirmation Modal */}
+      {stageToDelete && (
+        <div
+          data-testid="modal-delete-stage"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setStageToDelete(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-lg p-5 shadow-xl space-y-4"
+            style={{
+              backgroundColor: "var(--bg-panel)",
+              border: "1px solid var(--border-default)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <FeatherIcon
+                name="alert-triangle"
+                size={16}
+                style={{ color: "var(--color-warning)" }}
+              />
+              <span>
+                Delete Stage:{" "}
+                {workflow?.stages?.[stageToDelete]?.title || stageToDelete}
+              </span>
+            </div>
+
+            <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+              This stage contains{" "}
+              <strong className="text-[var(--text-primary)]">
+                {
+                  Object.values(workflow?.nodes ?? {}).filter(
+                    (n) => (n.stage || DEFAULT_STAGE_ID) === stageToDelete,
+                  ).length
+                }{" "}
+                operations
+              </strong>
+              . Choose what to do with them:
+            </p>
+
+            <div className="space-y-2 text-xs">
+              <label className="flex items-start gap-2 p-2.5 rounded bg-[#242424] border border-[#3c3c3c] cursor-pointer">
+                <input
+                  type="radio"
+                  name="delete-stage-choice"
+                  value="reassign"
+                  checked={deleteStageChoice === "reassign"}
+                  onChange={() => setDeleteStageChoice("reassign")}
+                  className="mt-0.5"
+                />
+                <div>
+                  <span
+                    className="font-semibold block"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    Keep operations and move to Workflow (main - Default)
+                  </span>
+                  <span
+                    className="text-[11px] block"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    Operations and their connections will be retained in the
+                    default stage.
+                  </span>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-2 p-2.5 rounded bg-[#242424] border border-[#3c3c3c] cursor-pointer">
+                <input
+                  type="radio"
+                  name="delete-stage-choice"
+                  value="delete"
+                  checked={deleteStageChoice === "delete"}
+                  onChange={() => setDeleteStageChoice("delete")}
+                  className="mt-0.5"
+                />
+                <div>
+                  <span
+                    className="font-semibold block"
+                    style={{ color: "var(--color-error)" }}
+                  >
+                    Delete operations along with the stage
+                  </span>
+                  <span
+                    className="text-[11px] block"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    All operations in this stage and their incoming/outgoing
+                    wires will be deleted.
+                  </span>
+                </div>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#3c3c3c]">
+              <button
+                type="button"
+                onClick={() => setStageToDelete(null)}
+                className="control-button"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                data-testid="btn-confirm-delete-stage"
+                onClick={handleConfirmDeleteStage}
+                className="control-button danger"
+              >
+                Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

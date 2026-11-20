@@ -319,4 +319,76 @@ describe("NodeInspector component (Task 6.11)", () => {
     const titleInput = screen.getByTestId("inspector-node-title");
     expect(titleInput).toBeDisabled();
   });
+
+  it("inspects a selected stage, allows editing title and toggling approval gate", () => {
+    const handleUpdateStage = vi.fn();
+    const handleDeleteStage = vi.fn();
+    const handleReorderStages = vi.fn().mockReturnValue({ success: true });
+
+    render(
+      <NodeInspector
+        nodeId={undefined}
+        selectedStageId="s1"
+        workflow={WORKFLOW}
+        opsMap={OPS_MAP}
+        onUpdateStage={handleUpdateStage}
+        onDeleteStage={handleDeleteStage}
+        onReorderStages={handleReorderStages}
+      />,
+    );
+
+    expect(screen.getByTestId("stage-inspector")).toBeDefined();
+    expect(screen.getByText("Stage: Stage 1")).toBeDefined();
+
+    // Title editing
+    const titleInput = screen.getByTestId("inspector-stage-title");
+    fireEvent.change(titleInput, { target: { value: "User Input" } });
+    expect(handleUpdateStage).toHaveBeenCalledWith("s1", {
+      title: "User Input",
+    });
+
+    // Approval gate checkbox
+    const gateCheckbox = screen.getByTestId("inspector-stage-gate-checkbox");
+    fireEvent.click(gateCheckbox);
+    expect(handleUpdateStage).toHaveBeenCalledWith("s1", {
+      require_approval: true,
+    });
+
+    // Reorder stage
+    const moveLaterBtn = screen.getByTestId("btn-stage-move-later");
+    fireEvent.click(moveLaterBtn);
+    expect(handleReorderStages).toHaveBeenCalled();
+  });
+
+  it("allows adding a new stage from Workflow Properties", () => {
+    const handleAddStage = vi.fn();
+
+    render(
+      <NodeInspector
+        nodeId={undefined}
+        selectedStageId={undefined}
+        workflow={WORKFLOW}
+        opsMap={OPS_MAP}
+        onAddStage={handleAddStage}
+      />,
+    );
+
+    expect(screen.getByText("Properties of inspector_test")).toBeDefined();
+
+    // Click Add Stage
+    const addStageBtn = screen.getByTestId("btn-add-stage-workflow");
+    fireEvent.click(addStageBtn);
+
+    const input = screen.getByTestId("input-new-stage-title");
+    fireEvent.change(input, { target: { value: "Processing Stage" } });
+
+    const submitBtn = screen.getByTestId("btn-submit-add-stage");
+    fireEvent.click(submitBtn);
+
+    expect(handleAddStage).toHaveBeenCalledWith(
+      "processing_stage",
+      "Processing Stage",
+      { requireApproval: false },
+    );
+  });
 });

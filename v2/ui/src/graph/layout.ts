@@ -247,6 +247,9 @@ export interface BuildGraphOptions {
   onLiteralChange?: (nodeId: string, portName: string, value: unknown) => void;
   onPreviewOutput?: (nodeId: string, output: OutputPortSpec) => void;
   measuredDimensions?: Record<string, { width: number; height: number }>;
+  selectedStageId?: string;
+  onSelectStage?: (stageId: string) => void;
+  onDeleteStage?: (stageId: string) => void;
 }
 
 export interface BuiltGraphElements {
@@ -443,7 +446,8 @@ export function buildGraphElements(
         height: groupHeight,
         zIndex: -1,
       },
-      draggable: false,
+      draggable: !readOnly && memberIds.length > 0,
+      dragHandle: ".stage-drag-handle",
       selectable: false,
       focusable: false,
       data: {
@@ -452,6 +456,9 @@ export function buildGraphElements(
         requireApproval,
         gateState,
         nodeCount: memberIds.length,
+        isSelected: options.selectedStageId === sid,
+        onSelectStage: options.onSelectStage,
+        onDeleteStage: options.onDeleteStage,
       },
     });
 

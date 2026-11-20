@@ -275,3 +275,40 @@ export function validateStageChange(
 
   return { valid: true };
 }
+
+export function isValidStageId(id: string): boolean {
+  return /^[a-z][a-z0-9_]*$/.test(id);
+}
+
+export function validateStageOrder(
+  workflow: Workflow,
+  stageOrder: string[],
+): { valid: true } | { valid: false; reason: string } {
+  const stageIndex: Record<string, number> = {};
+  stageOrder.forEach((sid, idx) => {
+    stageIndex[sid] = idx;
+  });
+
+  const nodesDef = workflow.nodes ?? {};
+  for (const [targetNodeId, targetSpec] of Object.entries(nodesDef)) {
+    const targetStage = targetSpec.stage || DEFAULT_STAGE_ID;
+    const targetIdx = stageIndex[targetStage] ?? 0;
+
+    for (const val of Object.values(targetSpec.inputs ?? {})) {
+      const ref = extractNodeRef(val);
+      if (!ref || !nodesDef[ref.from_node]) continue;
+      const srcStage = nodesDef[ref.from_node].stage || DEFAULT_STAGE_ID;
+      const srcIdx = stageIndex[srcStage] ?? 0;
+
+      if (targetIdx < srcIdx) {
+        return {
+          valid: false,
+          reason: `Cannot reorder stages: node "${targetNodeId}" in stage "${targetStage}" depends on "${ref.from_node}" in later stage "${srcStage}"`,
+        };
+      }
+    }
+  }
+
+  return { valid: true };
+}
+
