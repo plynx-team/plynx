@@ -319,4 +319,90 @@ describe("graph layout utilities (Task 6.8)", () => {
     const readOnlyAskGroup = readOnlyElements.nodes.find((n) => n.id === stageGroupId("ask"));
     expect(readOnlyAskGroup?.draggable).toBe(false);
   });
+
+  it("elides stage group container for a single stage called main", () => {
+    const singleMainWf: Workflow = {
+      version: 1,
+      name: "single_main_pipeline",
+      stages: {
+        main: { title: "Workflow" },
+      },
+      nodes: {
+        ask: {
+          op: "standard_io/demo:AskFooOrWoo",
+          stage: "main",
+          inputs: { prompt: "pick?" },
+        },
+        echo: {
+          op: "standard_io/demo:Echo",
+          stage: "main",
+          inputs: { text: "hello" },
+        },
+      },
+    };
+
+    const savedLayout: WorkflowLayout = {
+      schema: 1,
+      nodes: {
+        ask: { x: 50, y: 100 },
+        echo: { x: 400, y: 150 },
+      },
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
+
+    const elements = buildGraphElements(singleMainWf, {
+      layout: savedLayout,
+      opsMap: SAMPLE_OPS,
+    });
+
+    // Zero stage group nodes rendered
+    const stageGroups = elements.nodes.filter((n) => n.type === "stageGroup");
+    expect(stageGroups).toHaveLength(0);
+
+    // Only workflowNodes rendered
+    const workflowNodes = elements.nodes.filter((n) => n.type === "workflowNode");
+    expect(workflowNodes).toHaveLength(2);
+
+    // Nodes have no parentId and their positions match absolute canvas coordinates
+    const askNode = workflowNodes.find((n) => n.id === "ask");
+    const echoNode = workflowNodes.find((n) => n.id === "echo");
+
+    expect(askNode?.parentId).toBeUndefined();
+    expect(askNode?.position).toEqual({ x: 50, y: 100 });
+
+    expect(echoNode?.parentId).toBeUndefined();
+    expect(echoNode?.position).toEqual({ x: 400, y: 150 });
+
+    // stageGroupPositions for main defaults to { x: 0, y: 0 }
+    expect(elements.stageGroupPositions.main).toEqual({ x: 0, y: 0 });
+  });
+
+  it("renders stage group container if a single stage has a non-main name", () => {
+    const singleCustomStageWf: Workflow = {
+      version: 1,
+      name: "custom_stage_pipeline",
+      stages: {
+        etl: { title: "ETL Process" },
+      },
+      nodes: {
+        echo: {
+          op: "standard_io/demo:Echo",
+          stage: "etl",
+          inputs: { text: "data" },
+        },
+      },
+    };
+
+    const elements = buildGraphElements(singleCustomStageWf, {
+      opsMap: SAMPLE_OPS,
+    });
+
+    // Stage group is rendered because stage name is not "main"
+    const stageGroups = elements.nodes.filter((n) => n.type === "stageGroup");
+    expect(stageGroups).toHaveLength(1);
+    expect(stageGroups[0].id).toBe(stageGroupId("etl"));
+
+    const echoNode = elements.nodes.find((n) => n.id === "echo");
+    expect(echoNode?.parentId).toBe(stageGroupId("etl"));
+  });
 });

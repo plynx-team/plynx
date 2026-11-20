@@ -377,6 +377,9 @@ export function buildGraphElements(
 
   let emptyStageCursorX = 0;
 
+  const isSingleMainStage =
+    stageIds.length === 1 && stageIds[0] === DEFAULT_STAGE_ID;
+
   for (const sid of stageIds) {
     const memberIds = nodesByStage[sid] ?? [];
     const stageSpec = stagesDef[sid];
@@ -435,32 +438,34 @@ export function buildGraphElements(
     }
 
     const groupId = stageGroupId(sid);
-    stageGroupPositions[sid] = { x: groupX, y: groupY };
+    stageGroupPositions[sid] = isSingleMainStage ? { x: 0, y: 0 } : { x: groupX, y: groupY };
 
-    stageNodes.push({
-      id: groupId,
-      type: "stageGroup",
-      position: { x: groupX, y: groupY },
-      style: {
-        width: groupWidth,
-        height: groupHeight,
-        zIndex: -1,
-      },
-      draggable: !readOnly && memberIds.length > 0,
-      dragHandle: ".stage-drag-handle",
-      selectable: false,
-      focusable: false,
-      data: {
-        stageId: sid,
-        title,
-        requireApproval,
-        gateState,
-        nodeCount: memberIds.length,
-        isSelected: options.selectedStageId === sid,
-        onSelectStage: options.onSelectStage,
-        onDeleteStage: options.onDeleteStage,
-      },
-    });
+    if (!isSingleMainStage) {
+      stageNodes.push({
+        id: groupId,
+        type: "stageGroup",
+        position: { x: groupX, y: groupY },
+        style: {
+          width: groupWidth,
+          height: groupHeight,
+          zIndex: -1,
+        },
+        draggable: !readOnly && memberIds.length > 0,
+        dragHandle: ".stage-drag-handle",
+        selectable: false,
+        focusable: false,
+        data: {
+          stageId: sid,
+          title,
+          requireApproval,
+          gateState,
+          nodeCount: memberIds.length,
+          isSelected: options.selectedStageId === sid,
+          onSelectStage: options.onSelectStage,
+          onDeleteStage: options.onDeleteStage,
+        },
+      });
+    }
 
     for (const nodeId of memberIds) {
       const spec = nodesDef[nodeId];
@@ -473,11 +478,16 @@ export function buildGraphElements(
       childNodes.push({
         id: nodeId,
         type: "workflowNode",
-        parentId: groupId,
-        position: {
-          x: Math.round(absPos.x - groupX),
-          y: Math.round(absPos.y - groupY),
-        },
+        parentId: isSingleMainStage ? undefined : groupId,
+        position: isSingleMainStage
+          ? {
+              x: Math.round(absPos.x),
+              y: Math.round(absPos.y),
+            }
+          : {
+              x: Math.round(absPos.x - groupX),
+              y: Math.round(absPos.y - groupY),
+            },
         selected: selectedNodeId === nodeId,
         draggable: !readOnly && !isSnapshotOnly,
         data: {

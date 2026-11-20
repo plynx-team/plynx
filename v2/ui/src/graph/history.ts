@@ -41,7 +41,7 @@ export function pushHistory(
   next: WorkflowDocSnapshot,
   options?: PushHistoryOptions,
 ): WorkflowHistory {
-  const limit = options?.limit ?? 50;
+  const limit = options?.limit ?? 300;
   const coalesceWindowMs = options?.coalesceWindowMs ?? 600;
 
   // No-op if content is identical
