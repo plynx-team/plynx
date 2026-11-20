@@ -290,4 +290,64 @@ describe("GraphView component (Task 6.8)", () => {
       expect(screen.getByText("Workflow Stages (Stepper)")).toBeInTheDocument();
     });
   });
+
+  it("renders not_in_run nodes visually crossed out and new_in_run nodes highlighted", () => {
+    const diffRunState: RunState = {
+      ...MOCK_RUN_STATE,
+      nodes: {
+        pick: {
+          node_id: "pick",
+          status: "SUCCESS",
+          cache_hit: true,
+          attempt: 1,
+        },
+      },
+      workflow_snapshot: {
+        version: 1,
+        name: "foo_or_woo",
+        stages: { ask: { title: "1. Ask" } },
+        nodes: {
+          pick: {
+            op: "standard_io/demo:AskFooOrWoo",
+            title: "Pick one",
+            stage: "ask",
+          },
+        },
+      },
+    };
+
+    const diff = {
+      hasChanges: true,
+      nodes: {
+        pick: {
+          nodeId: "pick",
+          status: "unchanged" as const,
+          opChanged: false,
+          changedInputs: {},
+        },
+        echo: {
+          nodeId: "echo",
+          status: "not_in_run" as const,
+          opChanged: false,
+          changedInputs: {},
+        },
+      },
+      removedNodeIds: [],
+    };
+
+    render(
+      <GraphView
+        workflowDoc={MOCK_WORKFLOW_DOC}
+        runState={diffRunState}
+        runDiff={diff}
+        ops={MOCK_OPS}
+        readOnly={true}
+      />,
+    );
+
+    const echoNode = screen.getByTestId("graph-node-echo");
+    expect(echoNode).toHaveClass("is-not-in-run");
+    expect(echoNode).toHaveAttribute("data-node-status", "NOT_IN_RUN");
+    expect(screen.getByTestId("graph-node-diff-echo")).toHaveTextContent("NOT IN RUN");
+  });
 });

@@ -5,12 +5,14 @@ import type {
   Stage,
   WorkflowDocument,
 } from "../api/types.gen";
+import type { WorkflowRunDiff } from "../graph/runDiff";
 import { CheckpointCard } from "./CheckpointCard";
 import { StageCard } from "./StageCard";
 
 export interface StepperViewProps {
   runState: RunState;
   workflowDoc?: WorkflowDocument | null;
+  runDiff?: WorkflowRunDiff | null;
   selectedNodeId?: string;
   onSelectNode?: (nodeId: string) => void;
 }
@@ -18,15 +20,23 @@ export interface StepperViewProps {
 export function StepperView({
   runState,
   workflowDoc,
+  runDiff = null,
   selectedNodeId,
   onSelectNode,
 }: StepperViewProps) {
   const workflow = workflowDoc?.workflow;
-  const stagesDef = workflow?.stages || {};
+  const stagesDef = {
+    ...(runState.workflow_snapshot?.stages || {}),
+    ...(workflow?.stages || {}),
+  };
   const nodesDef = workflow?.nodes || {};
 
   const allNodeIds = Array.from(
-    new Set([...Object.keys(nodesDef), ...Object.keys(runState.nodes)]),
+    new Set([
+      ...Object.keys(nodesDef),
+      ...Object.keys(runState.nodes),
+      ...Object.keys(runDiff?.nodes ?? {}),
+    ]),
   );
 
   const stageGroups: Record<
@@ -39,7 +49,8 @@ export function StepperView({
   }
 
   for (const nodeId of allNodeIds) {
-    const spec = nodesDef[nodeId];
+    const spec =
+      nodesDef[nodeId] ?? runState.workflow_snapshot?.nodes?.[nodeId];
     const state = runState.nodes[nodeId];
     const stageId = spec?.stage || "default";
 
@@ -137,6 +148,7 @@ export function StepperView({
               stageDef={stageDef}
               gateState={gateState}
               runActive={isRunActive}
+              runDiff={runDiff}
               nodes={nodes}
               selectedNodeId={selectedNodeId}
               onSelectNode={onSelectNode}

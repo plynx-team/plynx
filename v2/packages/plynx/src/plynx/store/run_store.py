@@ -743,6 +743,17 @@ class RunStore:
                 workflow_snapshot = load_workflow(snapshot_path)
             except Exception:
                 workflow_snapshot = None
+        layout_snapshot = None
+        layout_path = self.run_dir(run_id_str) / "layout.snapshot.json"
+        if layout_path.is_file():
+            try:
+                from plynx.api_models import WorkflowLayout
+
+                layout_snapshot = WorkflowLayout.model_validate_json(
+                    layout_path.read_text(encoding="utf-8")
+                )
+            except Exception:
+                layout_snapshot = None
         return RunState(
             id=run_id_str,
             workflow_path=str(run_row["workflow_path"]),
@@ -760,6 +771,7 @@ class RunStore:
             checkpoints=checkpoints,
             stage_gates=stage_gates,
             workflow_snapshot=workflow_snapshot,
+            layout_snapshot=layout_snapshot,
         )
 
     def list_runs(

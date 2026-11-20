@@ -63,12 +63,16 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
     {},
   );
 
+  const isNotInRun = nodeDiff?.status === "not_in_run";
+  const isNewInRun = nodeDiff?.status === "new_in_run";
   const status = nodeState?.status;
-  const statusLower = (status || "ready").toLowerCase();
+  const statusLower = isNotInRun ? "not_in_run" : (status || "ready").toLowerCase();
   const activeSelected = Boolean(selected || isSelected);
   const displayTitle = spec.title || opEntry?.title || nodeId;
   const description = opEntry?.description?.trim() || "";
-  const statusIcon = getStatusIcon(status);
+  const statusIcon = isNotInRun
+    ? { icon: "slash" as const, color: "var(--color-status-failed)" }
+    : getStatusIcon(status);
 
   const togglePortExpanded = (portName: string) => {
     setExpandedPorts((prev) => ({
@@ -87,10 +91,10 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
   return (
     <div
       data-testid={`graph-node-${nodeId}`}
-      data-node-status={status ?? "IDLE"}
+      data-node-status={isNotInRun ? "NOT_IN_RUN" : (status ?? "IDLE")}
       className={`flow-node node-running-status-${statusLower} ${
         activeSelected ? "selected" : ""
-      } ${nodeDiff?.status === "added" ? "is-added-in-editor" : ""}`}
+      } ${isNotInRun ? "is-not-in-run" : ""} ${isNewInRun ? "is-new-in-run" : ""}`}
     >
       {/* Blender / ComfyUI Status-Colored Header */}
       <div className="flow-node-header">
@@ -98,7 +102,7 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
           <div className="flex items-center gap-1.5 min-w-0">
             <span
               data-testid={status ? `graph-node-status-${nodeId}` : undefined}
-              title={status ? `Status: ${status}` : "Idle"}
+              title={isNotInRun ? "Not in this run" : status ? `Status: ${status}` : "Idle"}
               className="inline-flex items-center shrink-0"
             >
               <FeatherIcon
@@ -118,15 +122,24 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
             {hasDiff && nodeDiff && (
               <span
                 data-testid={`graph-node-diff-${nodeId}`}
-                className="node-diff-badge"
+                className={`node-diff-badge ${
+                  isNotInRun ? "not-in-run" : isNewInRun ? "new-in-run" : ""
+                }`}
                 title={
-                  nodeDiff.status === "added"
-                    ? "This node was added in the editor after this run"
-                    : "This node's inputs or operation differ from the selected run"
+                  isNotInRun
+                    ? "This operation did not exist in this run"
+                    : isNewInRun
+                      ? "This operation was present in this run, but is not in the current workflow"
+                      : "This node's inputs or operation differ from the selected run"
                 }
               >
-                <FeatherIcon name="git-commit" size={9} />
-                <span>{nodeDiff.status === "added" ? "NEW" : "DIFF"}</span>
+                <FeatherIcon
+                  name={isNotInRun ? "slash" : isNewInRun ? "plus" : "git-commit"}
+                  size={9}
+                />
+                <span>
+                  {isNotInRun ? "NOT IN RUN" : isNewInRun ? "NEW" : "DIFF"}
+                </span>
               </span>
             )}
             {nodeState?.cache_hit && (

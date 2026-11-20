@@ -182,7 +182,18 @@ export function NodeInspector({
   const [stageError, setStageError] = useState<string | null>(null);
 
   const stageIds = getOrderedStageIds(workflow);
-  const spec = nodeId ? workflow.nodes?.[nodeId] : undefined;
+  const spec =
+    (nodeId ? workflow.nodes?.[nodeId] : undefined) ??
+    (nodeId && runState?.workflow_snapshot?.nodes
+      ? runState.workflow_snapshot.nodes[nodeId]
+      : undefined) ??
+    (nodeId && runState?.nodes?.[nodeId]
+      ? {
+          op: nodeDiff?.runOp || "unknown",
+          stage: DEFAULT_STAGE_ID,
+          inputs: {},
+        }
+      : undefined);
 
   if (!nodeId || !spec) {
     const totalNodes = Object.keys(workflow.nodes ?? {}).length;
@@ -268,6 +279,9 @@ export function NodeInspector({
     );
   }
 
+  const isSnapshotOnly = Boolean(nodeId && !workflow.nodes?.[nodeId]);
+  const effectiveReadOnly = readOnly || isSnapshotOnly;
+
   const opEntry = opsMap[spec.op];
   const ports = resolveNodePorts(nodeId, spec, workflow, opEntry);
   const currentStage = spec.stage || DEFAULT_STAGE_ID;
@@ -275,7 +289,7 @@ export function NodeInspector({
   const displayTitle = spec.title || opEntry?.title || nodeId;
 
   const handleLiteralChange = (portName: string, nextVal: unknown) => {
-    if (!onUpdateNodeSpec) return;
+    if (!onUpdateNodeSpec || effectiveReadOnly) return;
     onUpdateNodeSpec(nodeId, (prev) => {
       const nextInputs = { ...(prev.inputs ?? {}) };
       if (nextVal === undefined) {
@@ -288,6 +302,7 @@ export function NodeInspector({
   };
 
   const handleStageSelect = (nextStage: string) => {
+    if (effectiveReadOnly) return;
     const check = validateStageChange(workflow, nodeId, nextStage);
     if (!check.valid) {
       setStageError(check.reason);
@@ -350,7 +365,7 @@ export function NodeInspector({
                   id="inspector-node-title"
                   data-testid="inspector-node-title"
                   type="text"
-                  disabled={readOnly}
+                  disabled={effectiveReadOnly}
                   value={spec.title ?? ""}
                   placeholder={opEntry?.title || nodeId}
                   onChange={(e) =>
@@ -375,7 +390,7 @@ export function NodeInspector({
                 <select
                   id="inspector-node-stage"
                   data-testid="inspector-node-stage"
-                  disabled={readOnly}
+                  disabled={effectiveReadOnly}
                   value={currentStage}
                   onChange={(e) => handleStageSelect(e.target.value)}
                   className="w-full px-1.5 py-1 text-xs"
@@ -408,15 +423,41 @@ export function NodeInspector({
           <div data-testid="inspector-node-diff" className="PropertiesBox">
             <div
               className="PropertiesBoxHeader flex items-center gap-1.5"
-              style={{ color: "#ffcc80" }}
+              style={{
+                color:
+                  nodeDiff.status === "not_in_run"
+                    ? "#ff8a80"
+                    : nodeDiff.status === "new_in_run"
+                      ? "#00d8ff"
+                      : "#ffcc80",
+              }}
             >
-              <FeatherIcon name="git-commit" size={12} />
-              <span>Changes vs. Selected Run</span>
+              <FeatherIcon
+                name={
+                  nodeDiff.status === "not_in_run"
+                    ? "slash"
+                    : nodeDiff.status === "new_in_run"
+                      ? "plus"
+                      : "git-commit"
+                }
+                size={12}
+              />
+              <span>
+                {nodeDiff.status === "not_in_run"
+                  ? "Not in Selected Run"
+                  : nodeDiff.status === "new_in_run"
+                    ? "New in Selected Run"
+                    : "Changes vs. Selected Run"}
+              </span>
             </div>
             <div className="PropertiesBoxContent space-y-1.5 text-xs">
-              {nodeDiff.status === "added" ? (
-                <div style={{ color: "#ffcc80" }}>
-                  This node was added in the editor after this run executed.
+              {nodeDiff.status === "not_in_run" ? (
+                <div style={{ color: "#ff8a80" }}>
+                  This operation was not part of this run (it was added to the workflow later).
+                </div>
+              ) : nodeDiff.status === "new_in_run" ? (
+                <div style={{ color: "#00d8ff" }}>
+                  This operation was executed in this run, but is not present in the current workflow.
                 </div>
               ) : (
                 <>
@@ -498,7 +539,7 @@ export function NodeInspector({
                 {ports.inputs.map((port) => {
                   const rawVal = spec.inputs?.[port.name];
                   const ref = extractNodeRef(rawVal);
-                  const compatibleOutputs = readOnly
+                  const compatibleOutputs = effectiveReadOnly
                     ? []
                     : getCompatibleUpstreamOutputs(
                         workflow,
@@ -545,7 +586,7 @@ export function NodeInspector({
                               >
                                 ${ref.from_node}.{ref.output}
                               </span>
-                              {!readOnly && (
+                              {!effectiveReadOnly && (
                                 <button
                                   type="button"
                                   data-testid={`inspector-unbind-${port.name}`}
@@ -564,7 +605,7 @@ export function NodeInspector({
                             <LiteralWidget
                               port={port}
                               value={rawVal}
-                              readOnly={readOnly}
+                              readOnly={effectiveReadOnly}
                               onChange={(nextVal) =>
                                 handleLiteralChange(port.name, nextVal)
                               }
@@ -586,7 +627,7 @@ export function NodeInspector({
                               </span>
                             )}
 
-                          {!readOnly && compatibleOutputs.length > 0 && (
+                          {!effectiveReadOnly && compatibleOutputs.length > 0 && (
                             <select
                               aria-label={`Bind ${port.name} to upstream output`}
                               data-testid={`inspector-bind-${port.name}`}

@@ -1049,6 +1049,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
                 <StepperView
                   runState={syntheticRunState}
                   workflowDoc={{ workflow, layout }}
+                  runDiff={runDiff}
                   selectedNodeId={selectedNodeId}
                   onSelectNode={handleSelectNode}
                 />

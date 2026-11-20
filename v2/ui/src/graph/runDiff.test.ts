@@ -68,7 +68,7 @@ describe("computeWorkflowRunDiff (Task 6.19)", () => {
     expect(diff.nodes.step1.changedInputs.count).toBeUndefined();
   });
 
-  it("detects added and removed nodes in the editor relative to the run snapshot", () => {
+  it("detects not_in_run (workflow node absent from run) and new_in_run (run node absent from workflow)", () => {
     const snapshot: Workflow = {
       version: 1,
       nodes: {
@@ -83,7 +83,8 @@ describe("computeWorkflowRunDiff (Task 6.19)", () => {
     };
     const diff = computeWorkflowRunDiff(editor, makeBaseRun(snapshot));
     expect(diff.hasChanges).toBe(true);
-    expect(diff.nodes.new_node.status).toBe("added");
+    expect(diff.nodes.new_node.status).toBe("not_in_run");
+    expect(diff.nodes.old_node.status).toBe("new_in_run");
     expect(diff.removedNodeIds).toEqual(["old_node"]);
   });
 });

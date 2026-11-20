@@ -6,12 +6,18 @@ export interface InputDiffEntry {
   editorValue: unknown;
 }
 
+export type NodeDiffStatus =
+  | "unchanged"
+  | "modified"
+  | "not_in_run"
+  | "new_in_run";
+
 export interface NodeDiff {
   nodeId: string;
-  status: "unchanged" | "modified" | "added";
+  status: NodeDiffStatus;
   opChanged: boolean;
   runOp?: string;
-  editorOp: string;
+  editorOp?: string;
   changedInputs: Record<string, InputDiffEntry>;
 }
 
@@ -66,12 +72,27 @@ export function computeWorkflowRunDiff(
   editorWorkflow: Workflow | null | undefined,
   runState: RunState | null | undefined,
 ): WorkflowRunDiff {
-  if (!editorWorkflow || !runState || !runState.workflow_snapshot) {
+  if (!editorWorkflow || !runState) {
     return { hasChanges: false, nodes: {}, removedNodeIds: [] };
   }
 
   const editorNodes = editorWorkflow.nodes ?? {};
-  const snapshotNodes = runState.workflow_snapshot.nodes ?? {};
+  // Prefer workflow_snapshot nodes, but fall back to runState.nodes
+  const snapshotNodes: Record<string, NodeSpec> = {
+    ...(runState.workflow_snapshot?.nodes ?? {}),
+  };
+  if (runState.nodes) {
+    for (const nodeId of Object.keys(runState.nodes)) {
+      if (!snapshotNodes[nodeId]) {
+        snapshotNodes[nodeId] = {
+          op: "unknown",
+          stage: "default",
+          inputs: {},
+        };
+      }
+    }
+  }
+
   const runInputs = runState.run_inputs;
 
   const nodes: Record<string, NodeDiff> = {};
@@ -83,7 +104,7 @@ export function computeWorkflowRunDiff(
       hasChanges = true;
       nodes[nodeId] = {
         nodeId,
-        status: "added",
+        status: "not_in_run",
         opChanged: false,
         editorOp: editorNode.op,
         changedInputs: {},
@@ -143,6 +164,16 @@ export function computeWorkflowRunDiff(
   );
   if (removedNodeIds.length > 0) {
     hasChanges = true;
+    for (const snapId of removedNodeIds) {
+      const snapNode = snapshotNodes[snapId];
+      nodes[snapId] = {
+        nodeId: snapId,
+        status: "new_in_run",
+        opChanged: false,
+        runOp: snapNode?.op,
+        changedInputs: {},
+      };
+    }
   }
 
   return {

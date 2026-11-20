@@ -504,7 +504,8 @@ textarea:read-only {
   color: var(--color-status-in-queue);
 }
 
-.status-badge.FAILED {
+.status-badge.FAILED,
+.status-badge.NOT_IN_RUN {
   color: var(--color-status-failed);
 }
 
@@ -1090,15 +1091,89 @@ textarea:read-only {
   color: #ffcc80;
 }
 
+.node-diff-badge.not-in-run {
+  background-color: rgba(244, 67, 54, 0.18);
+  border-color: rgba(244, 67, 54, 0.6);
+  color: #ff8a80;
+}
+
+.node-diff-badge.new-in-run {
+  background-color: rgba(0, 216, 255, 0.2);
+  border-color: #00d8ff;
+  color: #00d8ff;
+}
+
 .comfy-widget-pill.is-diff,
 .comfy-widget-multiline.is-diff {
   border-color: rgba(255, 167, 38, 0.75);
   background-color: rgba(255, 167, 38, 0.08);
 }
 
-.flow-node.is-added-in-editor {
+/* Operation is in Workflow, but was NOT in this Run (crossed out visually) */
+.flow-node.is-not-in-run {
+  opacity: 0.48;
+  filter: grayscale(0.5);
   border-style: dashed;
-  border-color: rgba(255, 167, 38, 0.7);
+  border-color: rgba(244, 67, 54, 0.45);
+}
+
+.flow-node.is-not-in-run .flow-node-header {
+  background-color: rgba(45, 45, 45, 0.85) !important;
+}
+
+.flow-node.is-not-in-run .flow-title-text {
+  text-decoration: line-through;
+  text-decoration-color: var(--color-error);
+  color: var(--text-secondary);
+}
+
+.flow-node.is-not-in-run::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    to top right,
+    transparent calc(50% - 1.5px),
+    rgba(244, 67, 54, 0.6) calc(50% - 1.5px),
+    rgba(244, 67, 54, 0.6) calc(50% + 1.5px),
+    transparent calc(50% + 1.5px)
+  );
+  pointer-events: none;
+  border-radius: 8px;
+  z-index: 5;
+}
+
+/* Operation was in Run, but is NOT in current Workflow (highlighted as NEW) */
+.flow-node.is-new-in-run {
+  border: 2px solid #00d8ff;
+  box-shadow: 0 0 14px rgba(0, 216, 255, 0.35);
+  background-color: rgba(24, 24, 24, 0.7);
+}
+
+.flow-node.is-new-in-run .flow-node-header {
+  background-color: rgba(35, 40, 45, 0.85) !important;
+}
+
+.flow-node.is-new-in-run .flow-title-text {
+  color: var(--text-secondary);
+}
+
+.flow-node.is-new-in-run .flow-node-body,
+.flow-node.is-new-in-run .flow-node-widgets {
+  opacity: 0.65;
+  transition: opacity 0.15s ease;
+}
+
+.flow-node.is-new-in-run:hover .flow-node-body,
+.flow-node.is-new-in-run:hover .flow-node-widgets {
+  opacity: 0.85;
+}
+
+.flow-node.is-new-in-run .node-diff-badge.new-in-run {
+  opacity: 1 !important;
 }
 
 .hub-list-header {

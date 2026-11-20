@@ -281,4 +281,42 @@ describe("NodeInspector component (Task 6.11)", () => {
       filename: "rich-summary.json",
     });
   });
+
+  it("inspects a node that was removed from workflow but exists in run snapshot", () => {
+    const wfWithoutRich: Workflow = {
+      ...WORKFLOW,
+      nodes: {
+        producer: WORKFLOW.nodes!.producer,
+      },
+    };
+
+    const runDiff = {
+      nodeId: "rich",
+      status: "new_in_run" as const,
+      opChanged: false,
+      runOp: "pack/mod:RichOp",
+      changedInputs: {},
+    };
+
+    render(
+      <NodeInspector
+        nodeId="rich"
+        workflow={wfWithoutRich}
+        opsMap={OPS_MAP}
+        runState={RUN_STATE}
+        nodeDiff={runDiff}
+      />,
+    );
+
+    expect(screen.getByText("Properties of Rich Op")).toBeDefined();
+    expect(screen.getByTestId("inspector-node-diff")).toBeDefined();
+    expect(
+      screen.getByText(
+        "This operation was executed in this run, but is not present in the current workflow.",
+      ),
+    ).toBeDefined();
+
+    const titleInput = screen.getByTestId("inspector-node-title");
+    expect(titleInput).toBeDisabled();
+  });
 });

@@ -111,6 +111,7 @@ export interface RunState {
   checkpoints: Array<CheckpointState>;
   stage_gates: Record<string, StageGateState>;
   workflow_snapshot?: Workflow | null;
+  layout_snapshot?: WorkflowLayout | null;
 }
 
 /** Payload for ``run_status`` events. */

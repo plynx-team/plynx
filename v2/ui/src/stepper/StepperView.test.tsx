@@ -137,4 +137,44 @@ describe("StepperView component (Task 6.3)", () => {
     fireEvent.click(screen.getByText("branch_a"));
     expect(onSelect).toHaveBeenCalledWith("branch_a");
   });
+
+  it("renders NEW badge for operations present in run but removed from workflow", () => {
+    const diff = {
+      hasChanges: true,
+      nodes: {
+        removed_op: {
+          nodeId: "removed_op",
+          status: "new_in_run" as const,
+          opChanged: false,
+          runOp: "standard_io/demo:Echo",
+          changedInputs: {},
+        },
+      },
+      removedNodeIds: ["removed_op"],
+    };
+
+    const runStateWithRemovedOp: RunState = {
+      ...mockRunState,
+      nodes: {
+        ...mockRunState.nodes,
+        removed_op: {
+          node_id: "removed_op",
+          status: "SUCCESS",
+          cache_hit: false,
+          attempt: 1,
+        },
+      },
+    };
+
+    render(
+      <StepperView
+        runState={runStateWithRemovedOp}
+        workflowDoc={mockWorkflowDoc}
+        runDiff={diff}
+      />,
+    );
+
+    expect(screen.getByText("removed_op")).toBeDefined();
+    expect(screen.getByText("NEW")).toBeDefined();
+  });
 });

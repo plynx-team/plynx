@@ -4,6 +4,7 @@ import type {
   Stage,
   StageGateState,
 } from "../api/types.gen";
+import type { WorkflowRunDiff } from "../graph/runDiff";
 import { FeatherIcon } from "../components/FeatherIcon";
 import { NodeRow } from "./NodeRow";
 import { StageApprovalCard } from "./StageApprovalCard";
@@ -14,6 +15,7 @@ export interface StageCardProps {
   stageDef?: Stage;
   gateState?: StageGateState;
   runActive?: boolean;
+  runDiff?: WorkflowRunDiff | null;
   nodes: Array<{
     id: string;
     spec?: NodeSpec;
@@ -29,6 +31,7 @@ export function StageCard({
   stageDef,
   gateState,
   runActive = true,
+  runDiff = null,
   nodes,
   selectedNodeId,
   onSelectNode,
@@ -144,6 +147,7 @@ export function StageCard({
             nodeId={node.id}
             nodeState={node.state}
             spec={node.spec}
+            nodeDiff={runDiff?.nodes?.[node.id]}
             isSelected={selectedNodeId === node.id}
             onSelect={onSelectNode}
           />

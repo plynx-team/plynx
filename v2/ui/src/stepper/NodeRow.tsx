@@ -1,4 +1,5 @@
 import type { NodeRunState, NodeSpec, NodeStatus } from "../api/types.gen";
+import type { NodeDiff } from "../graph/runDiff";
 import { FeatherIcon } from "../components/FeatherIcon";
 import { formatDuration } from "../components/RunList";
 
@@ -10,6 +11,7 @@ export interface NodeRowProps {
   nodeId: string;
   nodeState?: NodeRunState;
   spec?: NodeSpec;
+  nodeDiff?: NodeDiff;
   isSelected?: boolean;
   onSelect?: (nodeId: string) => void;
 }
@@ -18,32 +20,54 @@ export function NodeRow({
   nodeId,
   nodeState,
   spec,
+  nodeDiff,
   isSelected = false,
   onSelect,
 }: NodeRowProps) {
-  const status: NodeStatus = nodeState?.status ?? "PENDING";
+  const isNotInRun = nodeDiff ? nodeDiff.status === "not_in_run" : !nodeState;
+  const isNewInRun = nodeDiff ? nodeDiff.status === "new_in_run" : !spec;
+  const status = nodeState?.status;
   const title = spec?.title || spec?.op || nodeId;
   const op = spec?.op;
 
   return (
     <div
       onClick={() => onSelect?.(nodeId)}
-      className={`list-item !block ${isSelected ? "selected" : ""}`}
+      className={`list-item !block ${isSelected ? "selected" : ""} ${
+        isNotInRun ? "opacity-60" : ""
+      }`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <FeatherIcon
-            name="cpu"
+            name={isNotInRun ? "slash" : "cpu"}
             size={13}
-            style={{ color: "var(--color-primary)" }}
+            style={{
+              color: isNotInRun
+                ? "var(--color-status-failed)"
+                : "var(--color-primary)",
+            }}
           />
-          <span className="font-mono text-xs font-bold">{nodeId}</span>
+          <span
+            className={`font-mono text-xs font-bold ${
+              isNotInRun ? "line-through text-neutral-400" : ""
+            }`}
+          >
+            {nodeId}
+          </span>
           {title !== nodeId && (
             <span
-              className="text-xs font-medium"
+              className={`text-xs font-medium ${
+                isNotInRun ? "line-through" : ""
+              }`}
               style={{ color: "var(--text-secondary)" }}
             >
               &bull; {title}
+            </span>
+          )}
+          {isNewInRun && (
+            <span className="status-badge !border-[#00d8ff] !text-[#00d8ff] !text-[10px] !px-1.5 !py-0">
+              NEW
             </span>
           )}
           {nodeState?.cache_hit && (
@@ -71,7 +95,13 @@ export function NodeRow({
           >
             {formatDuration(nodeState?.started_at, nodeState?.finished_at)}
           </span>
-          <span className={nodeStatusBadgeClasses(status)}>{status}</span>
+          {isNotInRun ? (
+            <span className="status-badge NOT_IN_RUN">NOT IN RUN</span>
+          ) : (
+            <span className={nodeStatusBadgeClasses(status ?? "PENDING")}>
+              {status ?? "PENDING"}
+            </span>
+          )}
         </div>
       </div>
 

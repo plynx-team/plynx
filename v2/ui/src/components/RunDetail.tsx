@@ -24,6 +24,7 @@ import { CheckpointCard } from "../stepper/CheckpointCard";
 import { StageApprovalCard } from "../stepper/StageApprovalCard";
 import { StepperView } from "../stepper/StepperView";
 import { ArtifactPreviewDialog } from "../previewers/ArtifactPreviewDialog";
+import { computeWorkflowRunDiff } from "../graph/runDiff";
 import { ControlButton, ControlPanel, ControlSeparator } from "./ControlPanel";
 import { FeatherIcon } from "./FeatherIcon";
 import { LogsPanel } from "./LogsPanel";
@@ -59,6 +60,8 @@ export function RunDetail({ runId }: { runId: string }) {
   const { navigate } = useRouter();
   const [runState, setRunState] = useState<RunState | null>(null);
   const [workflowDoc, setWorkflowDoc] = useState<WorkflowDocument | null>(null);
+  const [activeWorkflowDoc, setActiveWorkflowDoc] =
+    useState<WorkflowDocument | null>(null);
   const [ops, setOps] = useState<Array<OpEntry>>([]);
   const [viewMode, setViewModeState] = useState<RunViewMode>(() =>
     readSavedViewMode(runId),
@@ -119,22 +122,17 @@ export function RunDetail({ runId }: { runId: string }) {
 
         if (initial.workflow_snapshot) {
           setWorkflowDoc({ workflow: initial.workflow_snapshot, layout: null });
-          if (initial.workflow_path) {
-            fetchWorkflow(initial.workflow_path)
-              .then((doc) => {
-                if (active) {
-                  setWorkflowDoc({
-                    workflow: initial.workflow_snapshot ?? doc.workflow,
-                    layout: doc.layout,
-                  });
-                }
-              })
-              .catch(() => {});
-          }
-        } else if (initial.workflow_path) {
+        }
+        if (initial.workflow_path) {
           fetchWorkflow(initial.workflow_path)
             .then((doc) => {
-              if (active) setWorkflowDoc(doc);
+              if (active) {
+                setActiveWorkflowDoc(doc);
+                setWorkflowDoc((prev) => ({
+                  workflow: prev?.workflow ?? doc.workflow,
+                  layout: doc.layout ?? prev?.layout ?? null,
+                }));
+              }
             })
             .catch(() => {});
         }
@@ -228,6 +226,17 @@ export function RunDetail({ runId }: { runId: string }) {
       runState.status === "CANCELED" ||
       (runState.status === "WAITING_FOR_USER" && !runState.owner_pid));
 
+  const referenceWorkflow =
+    activeWorkflowDoc?.workflow ?? workflowDoc?.workflow;
+
+  const runDiff = useMemo(
+    () =>
+      referenceWorkflow && runState
+        ? computeWorkflowRunDiff(referenceWorkflow, runState)
+        : null,
+    [referenceWorkflow, runState],
+  );
+
   return (
     <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
       {/* Sub-header Control Panel Toolbar */}
@@ -303,6 +312,15 @@ export function RunDetail({ runId }: { runId: string }) {
 
         {runState && (
           <div className="ml-auto flex items-center gap-3 pr-2 text-xs">
+            {runDiff?.hasChanges && (
+              <span
+                data-testid="run-hud-diff-indicator"
+                className="node-diff-badge"
+              >
+                <FeatherIcon name="git-commit" size={10} />
+                <span>Workflow modified since this run</span>
+              </span>
+            )}
             <span className="font-mono font-semibold">{runState.id}</span>
             <span
               data-testid="run-status-badge"
@@ -391,7 +409,18 @@ export function RunDetail({ runId }: { runId: string }) {
               {viewMode === "stepper" ? (
                 <StepperView
                   runState={runState}
-                  workflowDoc={workflowDoc}
+                  workflowDoc={
+                    referenceWorkflow
+                      ? {
+                          workflow: referenceWorkflow,
+                          layout:
+                            activeWorkflowDoc?.layout ??
+                            workflowDoc?.layout ??
+                            null,
+                        }
+                      : workflowDoc
+                  }
+                  runDiff={runDiff}
                   selectedNodeId={selectedNodeId}
                   onSelectNode={setSelectedNodeId}
                 />
@@ -431,8 +460,10 @@ export function RunDetail({ runId }: { runId: string }) {
 
                   <div className="flex-1 min-h-0">
                     <GraphView
-                      workflowDoc={workflowDoc}
+                      workflow={referenceWorkflow}
+                      layout={activeWorkflowDoc?.layout ?? workflowDoc?.layout}
                       runState={runState}
+                      runDiff={runDiff}
                       ops={ops}
                       selectedNodeId={selectedNodeId}
                       onSelectNode={setSelectedNodeId}
@@ -486,12 +517,15 @@ export function RunDetail({ runId }: { runId: string }) {
           </div>
 
           {/* Right Docked PropertiesBar */}
-          {workflowDoc?.workflow && (
+          {referenceWorkflow && (
             <NodeInspector
               nodeId={selectedNodeId}
-              workflow={workflowDoc.workflow}
+              workflow={referenceWorkflow}
               opsMap={opsMap}
               runState={runState}
+              nodeDiff={
+                selectedNodeId ? runDiff?.nodes?.[selectedNodeId] : undefined
+              }
               readOnly={true}
               onPreviewArtifact={setPreviewTarget}
             />

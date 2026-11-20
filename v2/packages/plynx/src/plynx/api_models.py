@@ -121,6 +121,35 @@ class RunSummary(BaseModel):
     error: str | None = None
 
 
+class NodePosition(BaseModel):
+    """2D canvas position for a node in the layout sidecar."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    x: float
+    y: float
+
+
+class Viewport(BaseModel):
+    """Canvas viewport coordinates and zoom in the layout sidecar."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    x: float = 0.0
+    y: float = 0.0
+    zoom: float = 1.0
+
+
+class WorkflowLayout(BaseModel):
+    """Layout sidecar ``.<name>.layout.json`` (PROTOCOL.md section 2)."""
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    schema_version: Literal[1] = Field(default=1, alias="schema")
+    nodes: dict[str, NodePosition] = Field(default_factory=dict)
+    viewport: Viewport = Field(default_factory=Viewport)
+
+
 class RunState(BaseModel):
     """Full state of a run returned by ``GET /runs/{id}``."""
 
@@ -142,6 +171,7 @@ class RunState(BaseModel):
     checkpoints: list[CheckpointState] = Field(default_factory=list)
     stage_gates: dict[str, StageGateState] = Field(default_factory=dict)
     workflow_snapshot: Workflow | None = None
+    layout_snapshot: WorkflowLayout | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -366,35 +396,6 @@ class OpEntry(BaseModel):
     source: str
     valid: bool = True
     error: str | None = None
-
-
-class NodePosition(BaseModel):
-    """2D canvas position for a node in the layout sidecar."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    x: float
-    y: float
-
-
-class Viewport(BaseModel):
-    """Canvas viewport coordinates and zoom in the layout sidecar."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    x: float = 0.0
-    y: float = 0.0
-    zoom: float = 1.0
-
-
-class WorkflowLayout(BaseModel):
-    """Layout sidecar ``.<name>.layout.json`` (PROTOCOL.md section 2)."""
-
-    model_config = ConfigDict(extra="forbid", populate_by_name=True)
-
-    schema_version: Literal[1] = Field(default=1, alias="schema")
-    nodes: dict[str, NodePosition] = Field(default_factory=dict)
-    viewport: Viewport = Field(default_factory=Viewport)
 
 
 class HealthResponse(BaseModel):

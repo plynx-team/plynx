@@ -261,15 +261,84 @@ export function buildGraphElements(
     onPreviewOutput,
   } = options;
 
-  const nodesDef = workflow.nodes ?? {};
-  const stagesDef: Record<string, Stage> = workflow.stages ?? {};
-  const stageIds = getOrderedStageIds(workflow);
+  const nodesDef: Record<string, NodeSpec> = { ...(workflow.nodes ?? {}) };
+  if (runState?.workflow_snapshot?.nodes) {
+    for (const [snapId, snapNode] of Object.entries(
+      runState.workflow_snapshot.nodes,
+    )) {
+      if (!nodesDef[snapId]) {
+        nodesDef[snapId] = snapNode;
+      }
+    }
+  }
+  if (runState?.nodes) {
+    for (const nodeId of Object.keys(runState.nodes)) {
+      if (!nodesDef[nodeId]) {
+        nodesDef[nodeId] = {
+          op: runDiff?.nodes?.[nodeId]?.runOp || "unknown",
+          stage: DEFAULT_STAGE_ID,
+          inputs: {},
+        };
+      }
+    }
+  }
+  if (runDiff?.nodes) {
+    for (const [nodeId, diff] of Object.entries(runDiff.nodes)) {
+      if (!nodesDef[nodeId] && diff.status === "new_in_run") {
+        nodesDef[nodeId] = {
+          op: diff.runOp || "unknown",
+          stage: DEFAULT_STAGE_ID,
+          inputs: {},
+        };
+      }
+    }
+  }
 
-  const dagrePositions = computeDagrePositions(workflow, opsMap);
+  if (runState?.run_inputs) {
+    for (const [key, val] of Object.entries(runState.run_inputs)) {
+      const dotIdx = key.indexOf(".");
+      if (dotIdx !== -1) {
+        const nid = key.slice(0, dotIdx);
+        const port = key.slice(dotIdx + 1);
+        if (nodesDef[nid] && nodesDef[nid].inputs?.[port] === undefined) {
+          nodesDef[nid] = {
+            ...nodesDef[nid],
+            inputs: {
+              ...(nodesDef[nid].inputs ?? {}),
+              [port]: val,
+            },
+          };
+        }
+      }
+    }
+  }
+
+  const stagesDef: Record<string, Stage> = {
+    ...(runState?.workflow_snapshot?.stages ?? {}),
+    ...(workflow.stages ?? {}),
+  };
+  const stageIds = [...getOrderedStageIds(workflow)];
+  for (const spec of Object.values(nodesDef)) {
+    const sid = spec.stage || DEFAULT_STAGE_ID;
+    if (!stagesDef[sid]) {
+      stagesDef[sid] = { title: sid, require_approval: false };
+    }
+    if (!stageIds.includes(sid)) {
+      stageIds.push(sid);
+    }
+  }
+
+  const effectiveWf: Workflow = {
+    ...workflow,
+    nodes: nodesDef,
+    stages: stagesDef,
+  };
+  const dagrePositions = computeDagrePositions(effectiveWf, opsMap);
   const absolutePositions: Record<string, NodePosition> = {};
 
   for (const nodeId of Object.keys(nodesDef)) {
-    const saved = layout?.nodes?.[nodeId];
+    const saved =
+      layout?.nodes?.[nodeId] ?? runState?.layout_snapshot?.nodes?.[nodeId];
     if (saved && typeof saved.x === "number" && typeof saved.y === "number") {
       absolutePositions[nodeId] = { x: saved.x, y: saved.y };
     } else {
@@ -324,7 +393,7 @@ export function buildGraphElements(
       for (const nodeId of memberIds) {
         const spec = nodesDef[nodeId];
         const pos = absolutePositions[nodeId];
-        const ports = resolveNodePorts(nodeId, spec, workflow, opsMap[spec.op]);
+        const ports = resolveNodePorts(nodeId, spec, effectiveWf, opsMap[spec.op]);
         const dims = estimateNodeDimensions(ports.inputs.length, ports.outputs.length);
         if (pos.x < minX) minX = pos.x;
         if (pos.y < minY) minY = pos.y;
@@ -366,9 +435,10 @@ export function buildGraphElements(
     for (const nodeId of memberIds) {
       const spec = nodesDef[nodeId];
       const opEntry = opsMap[spec.op];
-      const ports = resolveNodePorts(nodeId, spec, workflow, opEntry);
+      const ports = resolveNodePorts(nodeId, spec, effectiveWf, opEntry);
       const nodeState: NodeRunState | undefined = runState?.nodes?.[nodeId];
       const absPos = absolutePositions[nodeId];
+      const isSnapshotOnly = !workflow.nodes?.[nodeId];
 
       childNodes.push({
         id: nodeId,
@@ -379,7 +449,7 @@ export function buildGraphElements(
           y: Math.round(absPos.y - groupY),
         },
         selected: selectedNodeId === nodeId,
-        draggable: !readOnly,
+        draggable: !readOnly && !isSnapshotOnly,
         data: {
           nodeId,
           spec,
@@ -389,8 +459,8 @@ export function buildGraphElements(
           inputs: ports.inputs,
           outputs: ports.outputs,
           isSelected: selectedNodeId === nodeId,
-          readOnly,
-          onLiteralChange,
+          readOnly: readOnly || isSnapshotOnly,
+          onLiteralChange: isSnapshotOnly ? undefined : onLiteralChange,
           onPreviewOutput,
         },
       });

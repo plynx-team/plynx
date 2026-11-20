@@ -161,4 +161,115 @@ describe("graph layout utilities (Task 6.8)", () => {
     expect(absolutePositions.pick).toEqual({ x: 100, y: 200 });
     expect(absolutePositions.echo).toEqual({ x: 600, y: 250 });
   });
+
+  it("includes run snapshot nodes not present in workflow as new_in_run snapshot nodes", () => {
+    const runStateWithExtraNode: RunState = {
+      id: "run-extra",
+      workflow_path: "examples/workflows/foo_or_woo.yaml",
+      workflow_sha256: "abc",
+      status: "SUCCESS",
+      run_inputs: {},
+      owner_pid: null,
+      cancel_requested: false,
+      pinned: false,
+      created_at: 100,
+      nodes: {
+        pick: { node_id: "pick", status: "SUCCESS", cache_hit: true, attempt: 1 },
+        echo: { node_id: "echo", status: "SUCCESS", cache_hit: false, attempt: 1 },
+        extra_op: { node_id: "extra_op", status: "SUCCESS", cache_hit: false, attempt: 1 },
+      },
+      checkpoints: [],
+      stage_gates: {},
+      workflow_snapshot: {
+        version: 1,
+        name: "foo_or_woo",
+        stages: { ask: { title: "1. Ask" }, print: {} },
+        nodes: {
+          pick: { op: "standard_io/demo:AskFooOrWoo", stage: "ask" },
+          echo: { op: "standard_io/demo:Echo", stage: "print" },
+          extra_op: { op: "standard_io/demo:Echo", stage: "print" },
+        },
+      },
+    };
+
+    const { nodes } = buildGraphElements(SAMPLE_WORKFLOW, {
+      opsMap: SAMPLE_OPS,
+      runState: runStateWithExtraNode,
+      readOnly: true,
+    });
+
+    const extraNode = nodes.find((n) => n.id === "extra_op");
+    expect(extraNode).toBeDefined();
+    expect(extraNode?.data.nodeId).toBe("extra_op");
+    expect(extraNode?.data.readOnly).toBe(true);
+  });
+
+  it("includes nodes that only exist in runState.nodes when workflow_snapshot is missing", () => {
+    const runStateOnlyNodes: RunState = {
+      id: "run-no-snap",
+      workflow_path: "foo.yaml",
+      workflow_sha256: "abc",
+      status: "SUCCESS",
+      run_inputs: {},
+      owner_pid: null,
+      cancel_requested: false,
+      pinned: false,
+      created_at: 100,
+      nodes: {
+        pick: { node_id: "pick", status: "SUCCESS", cache_hit: true, attempt: 1 },
+        fallback_node: { node_id: "fallback_node", status: "SUCCESS", cache_hit: false, attempt: 1 },
+      },
+      checkpoints: [],
+      stage_gates: {},
+    };
+
+    const { nodes } = buildGraphElements(SAMPLE_WORKFLOW, {
+      opsMap: SAMPLE_OPS,
+      runState: runStateOnlyNodes,
+    });
+    const fallbackNode = nodes.find((n) => n.id === "fallback_node");
+    expect(fallbackNode).toBeDefined();
+    expect(fallbackNode?.data.nodeId).toBe("fallback_node");
+  });
+
+  it("positions snapshot-only nodes from runState.layout_snapshot when present", () => {
+    const runStateWithLayout: RunState = {
+      id: "run-snap-layout",
+      workflow_path: "foo.yaml",
+      workflow_sha256: "abc",
+      status: "SUCCESS",
+      run_inputs: {},
+      owner_pid: null,
+      cancel_requested: false,
+      pinned: false,
+      created_at: 100,
+      nodes: {
+        pick: { node_id: "pick", status: "SUCCESS", cache_hit: true, attempt: 1 },
+        echo_2: { node_id: "echo_2", status: "SUCCESS", cache_hit: false, attempt: 1 },
+      },
+      checkpoints: [],
+      stage_gates: {},
+      workflow_snapshot: {
+        version: 1,
+        name: "wf",
+        stages: { print: {} },
+        nodes: {
+          echo_2: { op: "standard_io/demo:Echo", stage: "print" },
+        },
+      },
+      layout_snapshot: {
+        schema: 1,
+        nodes: {
+          echo_2: { x: 408, y: 204 },
+        },
+        viewport: { x: 0, y: 0, zoom: 1 },
+      },
+    };
+
+    const { absolutePositions } = buildGraphElements(SAMPLE_WORKFLOW, {
+      opsMap: SAMPLE_OPS,
+      runState: runStateWithLayout,
+    });
+    expect(absolutePositions["echo_2"]).toEqual({ x: 408, y: 204 });
+  });
 });
