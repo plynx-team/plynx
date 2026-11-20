@@ -136,39 +136,45 @@ Clicking a workflow in `/workflows` opens the unified workspace directly:
      - When no node is selected: shows **`Properties of <Workflow Name>`** (workflow title, description, concurrency, stages summary, latest run summary).
      - When a node is selected: shows **`Properties of <Node Title>`** with `.PropertiesBox` sections:
        - **Metadata & Stage**: Title, Stage selector, Op ID (`<pack>/<module>:<Op>`).
-       - **Inputs / Parameters**: `.PropertiesBoxContent` (`background-color: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 5px;`) containing `.ParameterItem` rows (`display: grid; grid-template-columns: 40% 1fr; margin: 5px 0; align-items: center;`) with literal widgets and reference bind/unbind controls.
-       - **Outputs**: `.OutputItem` rows (`display: grid; grid-template-columns: 40% 60%; padding: 2px 0;`) with `.OutputItemPreview` (`color: var(--color-primary)`) opening `ArtifactPreviewDialog`.
+       - **Description (Markdown)**: Formatted Markdown description rendered via `MarkdownPreviewer`.
+       - **Inputs / Parameters**: `.PropertiesBoxContent` (`background-color: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 5px;`) containing `.ParameterItem` rows (`display: grid; grid-template-columns: 38% 1fr; margin: 5px 0; align-items: center;`) with literal widgets and reference bind/unbind controls.
+       - **Outputs & Inline Previews**: `.OutputItem` rows (`display: grid; grid-template-columns: 42% 58%; padding: 2px 0;`) with `.OutputItemPreview` (`color: var(--color-primary)`) opening `ArtifactPreviewDialog`, plus an **inline live output preview box** directly below each completed output port inside the `PropertiesBar`.
 
 ---
 
-## 6. Graph Canvas & Node Cards (`.flow-node`)
+## 6. Graph Canvas & Node Cards (`.flow-node` — Blender / Photoshop Node Style)
 
 - **Canvas**:
   - `background-color: var(--bg-canvas)` (`#232323`).
   - React Flow `<Background color="#383838" gap={16} size={1.5} />`.
   - Controls button background `#2b2b2b`, border `#444`, hover `#444`, text `#eee`.
   - MiniMap background `#1e1e1e`, mask `rgba(30, 30, 30, 0.6)`, node fill `#666`.
-  - Default edges: `strokeWidth: 5px; stroke: #777; stroke-opacity: 0.7;`. Selected edge: `stroke: var(--color-primary) !important; stroke-opacity: 0.9;`.
-  - Bottom-left watermark (`.BackgroundLabels`): fixed/absolute at `bottom: 20px`, `pointer-events: none`, `.Title` `font-size: 30px; color: #fff;`.
-  - Stage group frames (`StageGroupNode`): subtle border (`1px dashed #3c3c3c`), translucent header (`rgba(43, 43, 43, 0.55)`), non-intrusive so node dragging and selection match legacy v1 feel.
+  - Default edges: `strokeWidth: 4px; stroke: #777; stroke-opacity: 0.7;`. Selected edge: `stroke: var(--color-primary) !important; stroke-opacity: 0.95;`.
+  - Bottom-left watermark (`.BackgroundLabels`): fixed/absolute at `bottom: 16px`, `pointer-events: none`, `.Title` `font-size: 26px; color: rgba(235, 235, 235, 0.75);`.
+  - Stage group frames (`StageGroupNode`): subtle border (`1px dashed #3c3c3c`), translucent header (`rgba(38, 38, 38, 0.75)`), non-intrusive so node dragging and selection match legacy v1 feel.
 - **Node Card (`.flow-node`)**:
-  - `width: 210px` (or `220px`), `border: 2px solid #3c3c3c`, `border-radius: 10px`, `background-color: #2a2a2a`, `user-select: none`.
+  - `width: 240px`, `border: 2px solid #3c3c3c`, `border-radius: 10px`, `background-color: #2a2a2a`, `user-select: none`.
   - Selected state: `border: 2px solid var(--color-primary)` (`#2680eb`).
-  - **Header (`.flow-node-header`)**:
-    - `border-top-left-radius: 8px; border-top-right-radius: 8px; border-bottom: 1px solid #383838; min-height: 23px; padding: 6px 8px 4px 8px;`
-    - `font-size: 13px; letter-spacing: 1px; font-weight: 600; text-transform: uppercase; color: var(--text-primary);`
+  - **Blender-Style Header (`.flow-node-header`)**:
+    - `border-top-left-radius: 8px; border-top-right-radius: 8px; border-bottom: 1px solid #383838; min-height: 28px; padding: 6px 8px 4px 8px;`
+    - Full header bar color encodes execution status + left status icon (`check-circle` for `SUCCESS`, spinning `loader` for `RUNNING`/`BUILDING_ENVIRONMENT`, `help-circle` for `WAITING_FOR_USER`, `alert-circle` for `FAILED`, `slash` for `CANCELED`/`BLOCKED`, `cpu` for idle) + `zap` bolt icon for cache hits. No text status pill crowding the title.
     - Status-tinted header background:
-      - `PENDING` / `BUILDING_ENVIRONMENT`: `rgba(70, 70, 70, 0.7)`
-      - `RUNNING`: `rgba(0, 70, 70, 0.7)`
-      - `WAITING_FOR_USER`: `rgba(128, 96, 44, 0.6)`
-      - `SUCCESS`: `rgba(0, 70, 0, 0.7)`
-      - `FAILED`: `rgba(80, 0, 0, 0.7)`
-      - `CANCELED` / `BLOCKED`: `rgba(70, 0, 70, 0.7)`
+      - `PENDING` / `BUILDING_ENVIRONMENT`: `rgba(70, 70, 70, 0.75)`
+      - `RUNNING`: `rgba(0, 75, 85, 0.85)`
+      - `WAITING_FOR_USER`: `rgba(140, 95, 30, 0.8)`
+      - `SUCCESS`: `rgba(25, 85, 45, 0.85)`
+      - `FAILED`: `rgba(110, 20, 20, 0.85)`
+      - `CANCELED` / `BLOCKED`: `rgba(75, 25, 75, 0.75)`
   - **Running Border Glow Animation**:
-    - When node status is `RUNNING` or `BUILDING_ENVIRONMENT`, render the rotating conic-gradient border glow (`--color-status-running: #00d8ff`, `animation: border 2s linear infinite` with `filter: blur(10px)` on `::after`) from legacy `OperationNode.css`.
-  - **Body (`.flow-node-body`)**:
-    - Stacked `.flow-node-item-input` rows (left-aligned with `11px` left handle at `left: -7px`, port name, and inline `.flow-node-primitive-input` widget when unwired).
-    - Stacked `.flow-node-item-output` rows (right-aligned with port name, `11px` right handle at `right: -7px`, and `.flow-node-item-thumbnail` `preview` button when output artifact is ready).
+    - When node status is `RUNNING` or `BUILDING_ENVIRONMENT`, render the rotating conic-gradient border glow (`--color-status-running: #00d8ff`, `animation: border 2s linear infinite` with `filter: blur(10px)` on `::after`).
+  - **Expandable Multiline / Markdown Description Section**:
+    - Hidden when description is empty. When present, a compact chevron toggle in the node card expands/collapses a formatted Markdown description block (`MarkdownPreviewer`) directly below the header.
+  - **Body (`.flow-node-body`) — ComfyUI / Blender Two-Zone Socket & Pill Widget Layout**:
+    - **Top Two-Column Socket Zone (`.flow-node-sockets`)**:
+      - Left column: Input sockets (`.flow-node-socket-row.input`) with **type-colored circular `10px` Handle dots** (`getPortIconColor(port.type)`).
+      - Right column: Output sockets (`.flow-node-socket-row.output`) with port name, a compact inline `eye` icon button on the same row when the output artifact is ready, and **type-colored circular `10px` Handle dots**.
+    - **Bottom Pill Widget Zone (`.flow-node-widgets`)**:
+      - Every **unwired input port** renders in a ComfyUI sunken pill row (`.comfy-widget-pill`, `background-color: #1c1c1c; border: 1px solid #383838; border-radius: 12px;`) with the port icon + label on the left and the editable value (`str`, `int`, `float`, `bool`, enum `options`, `file`/`directory`) on the right, plus an inline expand toggle (`maximize-2` / `minimize-2`) that switches the pill into a recessed multiline prompt/JSON editor (`.comfy-widget-multiline`).
 
 ---
 

@@ -1,9 +1,13 @@
+import { useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
+import type { InputPortSpec, NodeStatus } from "../api/types.gen";
 import {
   FeatherIcon,
   getPortIconColor,
   getPortIconName,
+  type FeatherIconName,
 } from "../components/FeatherIcon";
+import { MarkdownPreviewer } from "../previewers/MarkdownPreviewer";
 import {
   extractNodeRef,
   inputHandleId,
@@ -11,7 +15,34 @@ import {
   type WorkflowGraphNode,
 } from "./types";
 
-const SCALAR_PORT_TYPES = new Set(["str", "int", "float", "bool"]);
+function getStatusIcon(status?: NodeStatus): {
+  icon: FeatherIconName;
+  color: string;
+  spin?: boolean;
+} {
+  switch (status) {
+    case "SUCCESS":
+      return { icon: "check-circle", color: "var(--color-status-success)" };
+    case "RUNNING":
+    case "BUILDING_ENVIRONMENT":
+      return {
+        icon: "loader",
+        color: "var(--color-status-running)",
+        spin: true,
+      };
+    case "WAITING_FOR_USER":
+      return { icon: "help-circle", color: "var(--color-status-in-queue)" };
+    case "FAILED":
+      return { icon: "alert-circle", color: "var(--color-status-failed)" };
+    case "CANCELED":
+    case "BLOCKED":
+      return { icon: "slash", color: "var(--color-status-canceled)" };
+    case "PENDING":
+      return { icon: "clock", color: "var(--color-status-created)" };
+    default:
+      return { icon: "cpu", color: "var(--color-primary)" };
+  }
+}
 
 export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
   const {
@@ -26,11 +57,29 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
     onLiteralChange,
     onPreviewOutput,
   } = data;
+  const [descExpanded, setDescExpanded] = useState<boolean>(false);
+  const [expandedPorts, setExpandedPorts] = useState<Record<string, boolean>>(
+    {},
+  );
+
   const status = nodeState?.status;
   const statusLower = (status || "ready").toLowerCase();
   const activeSelected = Boolean(selected || isSelected);
   const displayTitle = spec.title || opEntry?.title || nodeId;
-  const description = opEntry?.description || "";
+  const description = opEntry?.description?.trim() || "";
+  const statusIcon = getStatusIcon(status);
+
+  const togglePortExpanded = (portName: string) => {
+    setExpandedPorts((prev) => ({
+      ...prev,
+      [portName]: !prev[portName],
+    }));
+  };
+
+  // Unwired inputs render in the ComfyUI bottom widget stack
+  const unwiredInputs: Array<InputPortSpec> = inputs.filter(
+    (port) => extractNodeRef(spec.inputs?.[port.name]) === null,
+  );
 
   return (
     <div
@@ -40,37 +89,59 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
         activeSelected ? "selected" : ""
       }`}
     >
-      {/* Header */}
+      {/* Blender / ComfyUI Status-Colored Header */}
       <div className="flow-node-header">
         <div className="flex items-center justify-between gap-1.5">
           <div className="flex items-center gap-1.5 min-w-0">
-            <FeatherIcon
-              name="cpu"
-              size={13}
-              style={{ color: "var(--color-primary)" }}
-            />
+            <span
+              data-testid={status ? `graph-node-status-${nodeId}` : undefined}
+              title={status ? `Status: ${status}` : "Idle"}
+              className="inline-flex items-center shrink-0"
+            >
+              <FeatherIcon
+                name={statusIcon.icon}
+                size={13}
+                className={statusIcon.spin ? "animate-spin" : ""}
+                style={{ color: statusIcon.color }}
+              />
+              {status && <span className="sr-only">{status}</span>}
+            </span>
             <div className="flow-title-text" title={displayTitle}>
               {displayTitle}
             </div>
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
-            {status && (
+            {nodeState?.cache_hit && (
               <span
-                data-testid={`graph-node-status-${nodeId}`}
-                className={`status-badge ${status} !text-[9px] !px-1.5 !py-0`}
+                data-testid={`graph-node-cache-${nodeId}`}
+                title="Cache hit"
+                className="inline-flex items-center"
+                style={{ color: "var(--color-status-ready)" }}
               >
-                {status}
+                <FeatherIcon name="zap" size={12} />
+                <span className="sr-only">cache hit</span>
               </span>
             )}
             {description && (
-              <span title={description} className="cursor-help">
+              <button
+                type="button"
+                data-testid={`node-desc-toggle-${nodeId}`}
+                title={
+                  descExpanded ? "Hide description" : "Show description"
+                }
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDescExpanded((v) => !v);
+                }}
+                className="nodrag p-0.5 rounded hover:bg-black/25"
+                style={{ color: "var(--text-secondary)" }}
+              >
                 <FeatherIcon
-                  name="help-circle"
+                  name={descExpanded ? "chevron-up" : "file-text"}
                   size={12}
-                  style={{ color: "var(--text-secondary)" }}
                 />
-              </span>
+              </button>
             )}
           </div>
         </div>
@@ -78,198 +149,324 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
         <div className="mt-0.5 flex items-center justify-between gap-1 text-[10px] font-normal normal-case tracking-normal">
           <span
             className="truncate font-mono"
-            style={{ color: "var(--text-secondary)" }}
+            style={{ color: "rgba(235, 235, 235, 0.7)" }}
           >
             {nodeId}
           </span>
-          {nodeState?.cache_hit && (
+          {spec.stage && (
             <span
-              data-testid={`graph-node-cache-${nodeId}`}
-              className="status-badge READY !text-[9px] !px-1 !py-0"
+              className="truncate font-mono"
+              style={{ color: "rgba(235, 235, 235, 0.55)" }}
             >
-              cache hit
+              {spec.stage}
             </span>
           )}
         </div>
       </div>
 
-      {/* Body: Inputs then Outputs (Legacy v1 OperationNode layout) */}
+      {/* Expandable Multiline / Markdown Description Section */}
+      {description && descExpanded && (
+        <div
+          data-testid={`node-description-${nodeId}`}
+          className="flow-node-description nodrag"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MarkdownPreviewer content={description} />
+        </div>
+      )}
+
+      {/* Body: ComfyUI Top Two-Column Socket Zone + Bottom Pill Widget Stack */}
       <div className="flow-node-body">
-        {inputs.map((port) => {
-          const rawVal = spec.inputs?.[port.name];
-          const isWired = extractNodeRef(rawVal) !== null;
-          const showPrimitive =
-            !isWired && SCALAR_PORT_TYPES.has(port.type);
-          const effectiveVal =
-            rawVal !== undefined
-              ? rawVal
-              : port.default !== undefined && port.default !== null
-              ? port.default
-              : "";
-
-          return (
-            <div
-              key={port.name}
-              className="flow-node-item flow-node-item-input"
-            >
-              <Handle
-                type="target"
-                position={Position.Left}
-                id={inputHandleId(port.name)}
-                data-testid={`handle-in-${nodeId}-${port.name}`}
-                style={{
-                  width: "11px",
-                  height: "11px",
-                  left: "-7px",
-                  top: "10px",
-                }}
-              />
-              <div className="flex items-center gap-1.5">
-                <FeatherIcon
-                  name={getPortIconName(port.type, port.media)}
-                  size={12}
-                  style={{ color: getPortIconColor(port.type) }}
-                />
-                <span className="truncate">{port.name}</span>
-              </div>
-
-              {showPrimitive && (
-                <div
-                  className="flow-node-primitive-input nodrag"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {port.type === "bool" ? (
-                    <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                      <input
-                        type="checkbox"
-                        disabled={readOnly}
-                        checked={Boolean(effectiveVal)}
-                        onChange={(e) =>
-                          onLiteralChange?.(
-                            nodeId,
-                            port.name,
-                            e.target.checked,
-                          )
-                        }
-                        className="!w-3.5 !h-3.5"
-                      />
-                      <span
-                        className="text-[11px]"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        {effectiveVal ? "true" : "false"}
-                      </span>
-                    </label>
-                  ) : port.options && port.options.length > 0 ? (
-                    <select
-                      disabled={readOnly}
-                      value={String(effectiveVal)}
-                      onChange={(e) =>
-                        onLiteralChange?.(nodeId, port.name, e.target.value)
+        {(inputs.length > 0 || outputs.length > 0) && (
+          <div className="flow-node-sockets">
+            {/* Left Column: Input Sockets */}
+            <div className="flow-node-sockets-col">
+              {inputs.map((port) => {
+                const rawVal = spec.inputs?.[port.name];
+                const ref = extractNodeRef(rawVal);
+                const dotColor = getPortIconColor(port.type);
+                return (
+                  <div key={port.name} className="flow-node-socket-row input">
+                    <Handle
+                      type="target"
+                      position={Position.Left}
+                      id={inputHandleId(port.name)}
+                      data-testid={`handle-in-${nodeId}-${port.name}`}
+                      style={{
+                        backgroundColor: dotColor,
+                        left: "-6px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                      }}
+                    />
+                    <span
+                      className="truncate"
+                      style={{
+                        color: ref
+                          ? "var(--text-primary)"
+                          : "var(--text-secondary)",
+                      }}
+                      title={
+                        ref
+                          ? `${port.name} <- $${ref.from_node}.${ref.output}`
+                          : `${port.name} (${port.type})`
                       }
                     >
-                      {port.options.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input
-                      type={
-                        port.type === "int" || port.type === "float"
-                          ? "number"
-                          : "text"
-                      }
+                      {port.name}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Right Column: Output Sockets */}
+            <div className="flow-node-sockets-col">
+              {outputs.map((port) => {
+                const canPreview = nodeState?.status === "SUCCESS";
+                const dotColor = getPortIconColor(port.type);
+                return (
+                  <div key={port.name} className="flow-node-socket-row output">
+                    {canPreview && onPreviewOutput && (
+                      <button
+                        type="button"
+                        data-testid={`node-output-preview-${nodeId}-${port.name}`}
+                        title={`Preview ${nodeId}.${port.name}`}
+                        className="flow-node-output-eye nodrag"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPreviewOutput(nodeId, port);
+                        }}
+                      >
+                        <FeatherIcon name="eye" size={11} />
+                      </button>
+                    )}
+                    <span
+                      className="truncate font-semibold"
+                      title={`${port.name} (${port.type})`}
+                    >
+                      {port.name}
+                    </span>
+                    <Handle
+                      type="source"
+                      position={Position.Right}
+                      id={outputHandleId(port.name)}
+                      data-testid={`handle-out-${nodeId}-${port.name}`}
+                      style={{
+                        backgroundColor: dotColor,
+                        right: "-6px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                      }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Bottom Zone: ComfyUI Pill Widgets for Unwired Inputs */}
+        {unwiredInputs.length > 0 && (
+          <div
+            className="flow-node-widgets nodrag"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {unwiredInputs.map((port) => {
+              const rawVal = spec.inputs?.[port.name];
+              const effectiveVal =
+                rawVal !== undefined
+                  ? rawVal
+                  : port.default !== undefined && port.default !== null
+                  ? port.default
+                  : "";
+              const rawString =
+                rawVal !== undefined && rawVal !== null
+                  ? typeof rawVal === "object"
+                    ? JSON.stringify(rawVal, null, 2)
+                    : String(rawVal)
+                  : "";
+              const isMultilineCapable =
+                port.type === "str" || port.type === "json";
+              const isExpanded =
+                Boolean(expandedPorts[port.name]) ||
+                port.type === "json" ||
+                rawString.includes("\n");
+
+              if (
+                isMultilineCapable &&
+                !(port.options && port.options.length > 0) &&
+                isExpanded
+              ) {
+                return (
+                  <div key={port.name} className="comfy-widget-multiline">
+                    <div className="flex items-center justify-between">
+                      <span className="comfy-widget-label">
+                        <FeatherIcon
+                          name={getPortIconName(port.type, port.media)}
+                          size={10}
+                          style={{ color: getPortIconColor(port.type) }}
+                        />
+                        <span>{port.name}</span>
+                      </span>
+                      <button
+                        type="button"
+                        data-testid={`node-input-expand-${nodeId}-${port.name}`}
+                        title="Collapse to single-line pill"
+                        onClick={() => togglePortExpanded(port.name)}
+                        className="p-0.5 rounded hover:bg-white/10"
+                        style={{ color: "var(--text-tertiary)" }}
+                      >
+                        <FeatherIcon name="minimize-2" size={10} />
+                      </button>
+                    </div>
+                    <textarea
+                      data-testid={`node-input-${nodeId}-${port.name}`}
+                      rows={3}
                       disabled={readOnly}
                       placeholder={
                         port.default !== null && port.default !== undefined
-                          ? String(port.default)
+                          ? typeof port.default === "object"
+                            ? JSON.stringify(port.default)
+                            : String(port.default)
                           : port.name
                       }
-                      value={
-                        rawVal !== undefined && rawVal !== null
-                          ? String(rawVal)
-                          : ""
-                      }
+                      value={rawString}
                       onChange={(e) => {
                         const raw = e.target.value;
                         if (raw === "") {
                           onLiteralChange?.(nodeId, port.name, undefined);
                           return;
                         }
-                        if (port.type === "int") {
-                          const parsed = parseInt(raw, 10);
-                          onLiteralChange?.(
-                            nodeId,
-                            port.name,
-                            Number.isNaN(parsed) ? raw : parsed,
-                          );
-                        } else if (port.type === "float") {
-                          const parsed = parseFloat(raw);
-                          onLiteralChange?.(
-                            nodeId,
-                            port.name,
-                            Number.isNaN(parsed) ? raw : parsed,
-                          );
+                        if (port.type === "json") {
+                          try {
+                            onLiteralChange?.(
+                              nodeId,
+                              port.name,
+                              JSON.parse(raw),
+                            );
+                          } catch {
+                            onLiteralChange?.(nodeId, port.name, raw);
+                          }
                         } else {
                           onLiteralChange?.(nodeId, port.name, raw);
                         }
                       }}
                     />
-                  )}
+                  </div>
+                );
+              }
+
+              return (
+                <div key={port.name} className="comfy-widget-pill">
+                  <span className="comfy-widget-label">
+                    <FeatherIcon
+                      name={getPortIconName(port.type, port.media)}
+                      size={10}
+                      style={{ color: getPortIconColor(port.type) }}
+                    />
+                    <span>{port.name}</span>
+                  </span>
+
+                  <div className="flex items-center justify-end gap-1 flex-1 min-w-0">
+                    {port.type === "bool" ? (
+                      <label className="flex items-center gap-1 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          data-testid={`node-input-${nodeId}-${port.name}`}
+                          disabled={readOnly}
+                          checked={Boolean(effectiveVal)}
+                          onChange={(e) =>
+                            onLiteralChange?.(
+                              nodeId,
+                              port.name,
+                              e.target.checked,
+                            )
+                          }
+                          className="!w-3.5 !h-3.5"
+                        />
+                        <span
+                          className="font-mono text-[11px]"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          {effectiveVal ? "true" : "false"}
+                        </span>
+                      </label>
+                    ) : port.options && port.options.length > 0 ? (
+                      <select
+                        data-testid={`node-input-${nodeId}-${port.name}`}
+                        disabled={readOnly}
+                        value={String(effectiveVal)}
+                        onChange={(e) =>
+                          onLiteralChange?.(nodeId, port.name, e.target.value)
+                        }
+                      >
+                        {port.options.map((opt) => (
+                          <option key={String(opt)} value={String(opt)}>
+                            {String(opt)}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        data-testid={`node-input-${nodeId}-${port.name}`}
+                        type={
+                          port.type === "int" || port.type === "float"
+                            ? "number"
+                            : "text"
+                        }
+                        disabled={readOnly}
+                        placeholder={
+                          port.default !== null && port.default !== undefined
+                            ? String(port.default)
+                            : port.name
+                        }
+                        value={rawString}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          if (raw === "") {
+                            onLiteralChange?.(nodeId, port.name, undefined);
+                            return;
+                          }
+                          if (port.type === "int") {
+                            const parsed = parseInt(raw, 10);
+                            onLiteralChange?.(
+                              nodeId,
+                              port.name,
+                              Number.isNaN(parsed) ? raw : parsed,
+                            );
+                          } else if (port.type === "float") {
+                            const parsed = parseFloat(raw);
+                            onLiteralChange?.(
+                              nodeId,
+                              port.name,
+                              Number.isNaN(parsed) ? raw : parsed,
+                            );
+                          } else {
+                            onLiteralChange?.(nodeId, port.name, raw);
+                          }
+                        }}
+                      />
+                    )}
+
+                    {isMultilineCapable &&
+                      !(port.options && port.options.length > 0) && (
+                        <button
+                          type="button"
+                          data-testid={`node-input-expand-${nodeId}-${port.name}`}
+                          title="Expand multiline editor"
+                          onClick={() => togglePortExpanded(port.name)}
+                          className="p-0.5 rounded hover:bg-white/10 shrink-0"
+                          style={{ color: "var(--text-tertiary)" }}
+                        >
+                          <FeatherIcon name="maximize-2" size={10} />
+                        </button>
+                      )}
+                  </div>
                 </div>
-              )}
-            </div>
-          );
-        })}
-
-        {outputs.map((port) => {
-          const canPreview = nodeState?.status === "SUCCESS";
-          return (
-            <div
-              key={port.name}
-              className="flow-node-item flow-node-item-output"
-            >
-              <div className="flex items-center justify-end gap-1.5">
-                <span className="truncate">{port.name}</span>
-                <FeatherIcon
-                  name={getPortIconName(port.type, port.media)}
-                  size={12}
-                  style={{ color: getPortIconColor(port.type) }}
-                />
-              </div>
-
-              {canPreview && onPreviewOutput && (
-                <button
-                  type="button"
-                  data-testid={`node-output-preview-${nodeId}-${port.name}`}
-                  className="flow-node-item-thumbnail nodrag"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onPreviewOutput(nodeId, port);
-                  }}
-                >
-                  <FeatherIcon name="eye" size={11} />
-                  <span className="preview-button">preview</span>
-                </button>
-              )}
-
-              <Handle
-                type="source"
-                position={Position.Right}
-                id={outputHandleId(port.name)}
-                data-testid={`handle-out-${nodeId}-${port.name}`}
-                style={{
-                  width: "11px",
-                  height: "11px",
-                  right: "-7px",
-                  top: "10px",
-                }}
-              />
-            </div>
-          );
-        })}
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Error footer if failed */}

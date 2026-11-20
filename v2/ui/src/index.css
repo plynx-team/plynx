@@ -593,7 +593,7 @@ textarea:read-only {
 }
 
 .flow-node {
-  width: 220px;
+  width: 260px;
   border: 2px solid #3c3c3c;
   border-radius: 10px;
   background-color: #2a2a2a;
@@ -601,7 +601,7 @@ textarea:read-only {
   position: relative;
   color: var(--text-primary);
   font-family: var(--font-sans);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
 }
 
 .flow-node.selected,
@@ -616,12 +616,12 @@ textarea:read-only {
   border-bottom: 1px solid #383838;
   min-height: 28px;
   font-size: 13px;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.6px;
   color: var(--text-primary);
   font-weight: 600;
   text-transform: uppercase;
   padding: 6px 8px 4px 8px;
-  background-color: rgba(50, 50, 50, 0.65);
+  background-color: rgba(55, 55, 55, 0.85);
 }
 
 .flow-title-text {
@@ -633,28 +633,28 @@ textarea:read-only {
 .node-running-status-pending > .flow-node-header,
 .node-running-status-building_environment > .flow-node-header,
 .node-running-status-in_queue > .flow-node-header {
-  background-color: rgba(70, 70, 70, 0.7);
+  background-color: rgba(70, 70, 70, 0.8);
 }
 
 .node-running-status-running > .flow-node-header {
-  background-color: rgba(0, 70, 70, 0.7);
+  background-color: rgba(0, 80, 95, 0.88);
 }
 
 .node-running-status-failed > .flow-node-header {
-  background-color: rgba(80, 0, 0, 0.7);
+  background-color: rgba(110, 20, 20, 0.88);
 }
 
 .node-running-status-success > .flow-node-header {
-  background-color: rgba(0, 70, 0, 0.7);
+  background-color: rgba(25, 85, 45, 0.88);
 }
 
 .node-running-status-waiting_for_user > .flow-node-header {
-  background-color: rgba(128, 96, 44, 0.6);
+  background-color: rgba(140, 95, 30, 0.85);
 }
 
 .node-running-status-canceled > .flow-node-header,
 .node-running-status-blocked > .flow-node-header {
-  background-color: rgba(70, 0, 70, 0.7);
+  background-color: rgba(75, 25, 75, 0.8);
 }
 
 @property --a {
@@ -707,54 +707,167 @@ textarea:read-only {
 }
 
 .flow-node-body {
-  padding: 4px 0 6px 0;
+  padding: 6px 0 8px 0;
 }
 
-.flow-node-item {
+/* ComfyUI / Blender Two-Column Top Socket Zone */
+.flow-node-sockets {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.flow-node-sockets-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.flow-node-socket-row {
   position: relative;
-  color: #eee;
-  font-size: 14px;
-  margin: 6px 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 20px;
   padding: 0 10px;
+  font-size: 12px;
+  color: var(--text-primary);
 }
 
-.flow-node-item-output {
+.flow-node-socket-row.output {
+  justify-content: flex-end;
   text-align: right;
 }
 
-.flow-node-item .react-flow__handle {
-  width: 11px;
-  height: 11px;
-  background: #666;
-  border: 1px solid #222;
+.flow-node-socket-row .react-flow__handle {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid #181818;
+  border-radius: 50%;
+  transition: transform 0.1s ease-in;
 }
 
-.flow-node-item .react-flow__handle:hover {
-  background: var(--color-primary);
+.flow-node-socket-row .react-flow__handle:hover {
+  transform: scale(1.25);
 }
 
-.flow-node-item .react-flow__handle-connecting {
-  background: var(--color-error);
+/* ComfyUI Sunken Pill Widgets Zone (Unwired Inputs) */
+.flow-node-widgets {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px 8px 2px 8px;
+  margin-top: 4px;
+  border-top: 1px solid #343434;
 }
 
-.flow-node-item .react-flow__handle-valid {
-  background: var(--color-success);
+.comfy-widget-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  background-color: #1c1c1c;
+  border: 1px solid #383838;
+  border-radius: 12px;
+  padding: 2px 8px;
+  min-height: 24px;
+  font-size: 11px;
 }
 
-.flow-node-primitive-input {
-  margin-top: 3px;
+.comfy-widget-pill:focus-within {
+  border-color: var(--color-primary);
 }
 
-.flow-node-primitive-input input,
-.flow-node-primitive-input select {
-  width: 100%;
-  font-size: 12px;
-  padding: 2px 5px;
-  height: 22px;
-  background-color: var(--bg-panel-secondary);
-  border: 1px solid var(--border-default);
+.comfy-widget-label {
+  color: var(--text-secondary);
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.comfy-widget-pill input[type="text"],
+.comfy-widget-pill input[type="number"],
+.comfy-widget-pill select {
+  background: transparent;
+  border: none;
   color: var(--text-primary);
-  border-radius: 2px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  text-align: right;
+  width: 100%;
+  min-width: 0;
+  height: 20px;
+  padding: 0 2px;
+}
+
+.comfy-widget-pill input:focus,
+.comfy-widget-pill select:focus {
+  outline: none;
+}
+
+.comfy-widget-multiline {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background-color: #1a1a1a;
+  border: 1px solid #383838;
+  border-radius: 6px;
+  padding: 4px 6px;
+}
+
+.comfy-widget-multiline:focus-within {
+  border-color: var(--color-primary);
+}
+
+.comfy-widget-multiline textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.35;
+  resize: vertical;
+  padding: 2px 0;
+}
+
+.comfy-widget-multiline textarea:focus {
+  outline: none;
+}
+
+.flow-node-description {
+  border-bottom: 1px solid #383838;
+  background-color: #242424;
+  padding: 5px 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  user-select: text;
+}
+
+.flow-node-output-eye {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 4px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-primary);
+  cursor: pointer;
+  transition: all 0.1s ease-in;
+}
+
+.flow-node-output-eye:hover {
+  background-color: var(--bg-card-hover);
+  border-color: var(--color-primary);
+  color: var(--color-primary-hover);
 }
 
 .flow-node-item-thumbnail {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type {
   NodeSpec,
   OpEntry,
@@ -11,6 +11,12 @@ import {
   getPortIconColor,
   getPortIconName,
 } from "../components/FeatherIcon";
+import { detectPreviewKind } from "../previewers/ArtifactPreviewDialog";
+import { CsvPreviewer } from "../previewers/CsvPreviewer";
+import { ImagePreviewer } from "../previewers/ImagePreviewer";
+import { JsonPreviewer } from "../previewers/JsonPreviewer";
+import { MarkdownPreviewer } from "../previewers/MarkdownPreviewer";
+import { TextPreviewer } from "../previewers/TextPreviewer";
 import { DEFAULT_STAGE_ID, getOrderedStageIds, resolveNodePorts } from "./layout";
 import { LiteralWidget } from "./LiteralWidget";
 import { extractNodeRef } from "./types";
@@ -67,6 +73,98 @@ export function buildOutputPreviewTarget(
   };
 }
 
+function InlineOutputPreview({ target }: { target: ArtifactPreviewTarget }) {
+  const [content, setContent] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const kind = detectPreviewKind(target.mediaType, target.filename);
+  const isDirectUrl = kind === "pdf" || kind === "image";
+
+  useEffect(() => {
+    if (isDirectUrl) {
+      setLoading(false);
+      return;
+    }
+    if (typeof fetch !== "function") {
+      setLoading(false);
+      return;
+    }
+
+    let active = true;
+    setLoading(true);
+    setError(null);
+
+    fetch(target.url)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.text();
+      })
+      .then((text) => {
+        if (active) {
+          setContent(text);
+          setLoading(false);
+        }
+      })
+      .catch((err: unknown) => {
+        if (active) {
+          setError(err instanceof Error ? err.message : String(err));
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [target.url, isDirectUrl]);
+
+  if (loading) {
+    return (
+      <div
+        className="mt-1 rounded p-1.5 text-[11px] font-mono"
+        style={{
+          backgroundColor: "var(--bg-canvas)",
+          color: "var(--text-tertiary)",
+        }}
+      >
+        Loading preview...
+      </div>
+    );
+  }
+
+  if (error) {
+    return null;
+  }
+
+  return (
+    <div
+      data-testid={`inline-output-preview-${target.title}`}
+      className="mt-1 max-h-40 overflow-auto rounded p-2 text-xs"
+      style={{
+        backgroundColor: "var(--bg-canvas)",
+        border: "1px solid var(--border-subtle)",
+      }}
+    >
+      {kind === "image" && <ImagePreviewer url={target.url} alt={target.title} />}
+      {kind === "csv" && content !== null && (
+        <CsvPreviewer content={content} delimiter="," />
+      )}
+      {kind === "tsv" && content !== null && (
+        <CsvPreviewer content={content} delimiter="\t" />
+      )}
+      {kind === "json" && content !== null && (
+        <JsonPreviewer content={content} />
+      )}
+      {kind === "markdown" && content !== null && (
+        <MarkdownPreviewer content={content} />
+      )}
+      {(kind === "text" || kind === "pdf") && content !== null && (
+        <TextPreviewer content={content} />
+      )}
+    </div>
+  );
+}
+
 export function NodeInspector({
   nodeId,
   workflow,
@@ -83,7 +181,6 @@ export function NodeInspector({
   const stageIds = getOrderedStageIds(workflow);
   const spec = nodeId ? workflow.nodes?.[nodeId] : undefined;
 
-  // Legacy v1 behavior: when no node is selected on the canvas, display Workflow Properties
   if (!nodeId || !spec) {
     const totalNodes = Object.keys(workflow.nodes ?? {}).length;
     return (
@@ -109,11 +206,8 @@ export function NodeInspector({
                 </div>
               </div>
               {workflow.description && (
-                <div className="ParameterItem">
-                  <div className="ParameterNameCell">Description</div>
-                  <div className="ParameterValueCell">
-                    {workflow.description}
-                  </div>
+                <div className="mt-2 pt-2 border-t border-[#3c3c3c] text-xs">
+                  <MarkdownPreviewer content={workflow.description} />
                 </div>
               )}
               <div className="ParameterItem">
@@ -303,16 +397,21 @@ export function NodeInspector({
                 {stageError}
               </p>
             )}
-            {opEntry?.description && (
-              <p
-                className="mt-1.5 text-[11px] leading-snug"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                {opEntry.description}
-              </p>
-            )}
           </div>
         </div>
+
+        {/* Multiline / Markdown Description Box */}
+        {opEntry?.description && (
+          <div className="PropertiesBox">
+            <div className="PropertiesBoxHeader">Description</div>
+            <div
+              data-testid="inspector-markdown-description"
+              className="PropertiesBoxContent text-xs"
+            >
+              <MarkdownPreviewer content={opEntry.description} />
+            </div>
+          </div>
+        )}
 
         {/* Parameters / Inputs Box */}
         <div className="PropertiesBox">
@@ -477,7 +576,7 @@ export function NodeInspector({
           </div>
         </div>
 
-        {/* Outputs Box */}
+        {/* Outputs & Inline Previews Box */}
         <div className="PropertiesBox">
           <div className="PropertiesBoxHeader">
             <span>Outputs ({ports.outputs.length})</span>
@@ -490,7 +589,7 @@ export function NodeInspector({
               </span>
             )}
           </div>
-          <div className="PropertiesBoxContent">
+          <div className="PropertiesBoxContent divide-y divide-[#3c3c3c]">
             {ports.outputs.length === 0 ? (
               <p
                 className="text-xs py-1"
@@ -502,54 +601,57 @@ export function NodeInspector({
               ports.outputs.map((out) => {
                 const canPreview =
                   Boolean(runState) && nodeRunState?.status === "SUCCESS";
+                const target =
+                  canPreview && runState
+                    ? buildOutputPreviewTarget(runState.id, nodeId, out)
+                    : null;
+
                 return (
                   <div
                     key={out.name}
                     data-testid={`inspector-output-${out.name}`}
-                    className="OutputItem"
+                    className="py-1"
                   >
-                    <div
-                      className="OutputNameCell"
-                      title={`${out.name} (${out.type})`}
-                    >
-                      <FeatherIcon
-                        name={getPortIconName(out.type, out.media)}
-                        size={12}
-                        style={{ color: getPortIconColor(out.type) }}
-                      />
-                      <span className="truncate font-semibold">{out.name}</span>
+                    <div className="OutputItem">
+                      <div
+                        className="OutputNameCell"
+                        title={`${out.name} (${out.type})`}
+                      >
+                        <FeatherIcon
+                          name={getPortIconName(out.type, out.media)}
+                          size={12}
+                          style={{ color: getPortIconColor(out.type) }}
+                        />
+                        <span className="truncate font-semibold">
+                          {out.name}
+                        </span>
+                      </div>
+
+                      <div className="OutputValueCell">
+                        {target ? (
+                          <button
+                            type="button"
+                            data-testid={`inspector-preview-output-${out.name}`}
+                            className="OutputItemPreview"
+                            onClick={() => onPreviewArtifact?.(target)}
+                          >
+                            <FeatherIcon name="maximize-2" size={11} />
+                            <span>Preview</span>
+                          </button>
+                        ) : (
+                          <span
+                            className="text-[11px]"
+                            style={{ color: "var(--text-tertiary)" }}
+                          >
+                            {runState
+                              ? nodeRunState?.status ?? "PENDING"
+                              : out.type}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="OutputValueCell">
-                      {canPreview && runState ? (
-                        <button
-                          type="button"
-                          data-testid={`inspector-preview-output-${out.name}`}
-                          className="OutputItemPreview"
-                          onClick={() =>
-                            onPreviewArtifact?.(
-                              buildOutputPreviewTarget(
-                                runState.id,
-                                nodeId,
-                                out,
-                              ),
-                            )
-                          }
-                        >
-                          <FeatherIcon name="eye" size={12} />
-                          <span>Preview</span>
-                        </button>
-                      ) : (
-                        <span
-                          className="text-[11px]"
-                          style={{ color: "var(--text-tertiary)" }}
-                        >
-                          {runState
-                            ? nodeRunState?.status ?? "PENDING"
-                            : out.type}
-                        </span>
-                      )}
-                    </div>
+                    {target && <InlineOutputPreview target={target} />}
                   </div>
                 );
               })

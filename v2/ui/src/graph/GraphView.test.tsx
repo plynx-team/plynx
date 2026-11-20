@@ -190,6 +190,46 @@ describe("GraphView component (Task 6.8)", () => {
     expect(screen.getByText("foo_or_woo")).toBeInTheDocument();
   });
 
+  it("supports expandable Markdown description, inline socket editing, and inline output preview icon on nodes", () => {
+    const onLiteralChange = vi.fn();
+    const onPreviewOutput = vi.fn();
+
+    render(
+      <GraphView
+        workflowDoc={MOCK_WORKFLOW_DOC}
+        runState={MOCK_RUN_STATE}
+        ops={MOCK_OPS}
+        onLiteralChange={onLiteralChange}
+        onPreviewOutput={onPreviewOutput}
+        readOnly={false}
+      />,
+    );
+
+    // 1. Expand Markdown description on 'pick' node
+    expect(screen.queryByTestId("node-description-pick")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("node-desc-toggle-pick"));
+    expect(screen.getByTestId("node-description-pick")).toHaveTextContent(
+      "Ask the user to pick foo or woo.",
+    );
+
+    // 2. Edit unwired input socket inline on 'pick' node + expand to multiline textarea
+    const inputField = screen.getByTestId("node-input-pick-prompt");
+    expect(inputField).toHaveValue("foo or woo?");
+    fireEvent.change(inputField, { target: { value: "updated prompt" } });
+    expect(onLiteralChange).toHaveBeenCalledWith("pick", "prompt", "updated prompt");
+
+    fireEvent.click(screen.getByTestId("node-input-expand-pick-prompt"));
+    expect(screen.getByTestId("node-input-pick-prompt").tagName).toBe("TEXTAREA");
+
+    // 3. Click compact inline eye icon on completed 'pick.choice' output port
+    fireEvent.click(screen.getByTestId("node-output-preview-pick-choice"));
+    expect(onPreviewOutput).toHaveBeenCalledWith("pick", {
+      name: "choice",
+      type: "str",
+      media: null,
+    });
+  });
+
   it("toggles between Stepper and Graph views in RunDetail and displays live status updates", async () => {
     let emitEvent: ((ev: Parameters<Parameters<typeof client.subscribeRunEvents>[1]>[0]) => void) | undefined;
 

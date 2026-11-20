@@ -260,7 +260,7 @@ def test_server_returns_built_index_html_at_root(tmp_path: Path) -> None:
             assert resp.status_code == 200
             assert "text/html" in resp.headers.get("content-type", "")
             assert '<div id="root"></div>' in resp.text
-            assert "PLynx v2" in resp.text
+            assert "PLynx" in resp.text
 
     asyncio.run(_check())
 
@@ -1119,5 +1119,30 @@ def test_server_clean_endpoint(tmp_path: Path) -> None:
             assert empty_data.deleted_runs == 0
             assert empty_data.deleted_blobs == 0
             assert empty_data.reclaimed_bytes == 0
+
+    asyncio.run(_test())
+
+
+def test_server_serves_static_logo_and_favicon(tmp_path: Path) -> None:
+    static_dir = tmp_path / "static"
+    static_dir.mkdir(parents=True, exist_ok=True)
+    (static_dir / "index.html").write_text("<!doctype html><title>PLynx</title>", encoding="utf-8")
+    (static_dir / "logo.png").write_bytes(b"\x89PNG\r\n\x1a\nlogo")
+    (static_dir / "favicon.png").write_bytes(b"\x89PNG\r\n\x1a\nfavicon")
+
+    app = create_app(tmp_path, static_dir=static_dir)
+
+    async def _test() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            logo_resp = await client.get("/logo.png")
+            assert logo_resp.status_code == 200
+            assert logo_resp.headers["content-type"] == "image/png"
+            assert logo_resp.content == b"\x89PNG\r\n\x1a\nlogo"
+
+            fav_resp = await client.get("/favicon.png")
+            assert fav_resp.status_code == 200
+            assert fav_resp.headers["content-type"] == "image/png"
+            assert fav_resp.content == b"\x89PNG\r\n\x1a\nfavicon"
 
     asyncio.run(_test())

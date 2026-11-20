@@ -1011,6 +1011,22 @@ def create_app(
             status_code=404,
         )
 
+    @app.get("/logo.png", response_model=None)
+    async def serve_logo() -> Any:
+        """Serve the UI header logo at ``/logo.png``."""
+        logo_file = ui_static_dir / "logo.png"
+        if logo_file.is_file():
+            return FileResponse(logo_file, media_type="image/png")
+        return Response(status_code=404)
+
+    @app.get("/favicon.png", response_model=None)
+    async def serve_favicon() -> Any:
+        """Serve the UI favicon at ``/favicon.png``."""
+        favicon_file = ui_static_dir / "favicon.png"
+        if favicon_file.is_file():
+            return FileResponse(favicon_file, media_type="image/png")
+        return Response(status_code=404)
+
     assets_dir = ui_static_dir / "assets"
     if assets_dir.is_dir():
         app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
