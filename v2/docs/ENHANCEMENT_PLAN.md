@@ -116,8 +116,8 @@ This document tracks the design decisions, architectural models, and implementat
 - [x] Add unit tests for quick-connect port filtering, node spawn, and edge wiring.
 
 ### Phase 6: Staged Input Prompting & Execution
-- [ ] In `RunInputsForm.tsx`, group/filter unbound inputs: only require inputs for the initial active stage (Stage 1) at run launch.
-- [ ] Design and implement stage transition input handling when Stage 1 completes 100%:
-  - Prompt user for Stage 2 inputs before Stage 2 nodes execute.
-  - Allow user to provide inputs via the stepper/graph run view and resume.
-- [ ] Add backend/frontend unit and integration tests.
+- [x] In `RunInputsForm.tsx`, group/filter unbound inputs: only require inputs for the initial active stage (Stage 1) at run launch.
+- [x] Design and implement stage transition input handling when Stage 1 completes 100%:
+  - [x] Prompt user for Stage 2 inputs before Stage 2 nodes execute.
+  - [x] Allow user to provide inputs via the stepper/graph run view and resume.
+- [x] Add backend/frontend unit and integration tests.

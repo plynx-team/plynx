@@ -12,44 +12,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from plynx_sdk.protocol import (
-    CheckpointManifest,
-    InputFileValue,
-    InputsManifest,
-    OutputValue,
-    ResultDirectoryValue,
-    ResultFileValue,
-    ResultManifest,
-    ResultValue,
-    ScalarValue,
-)
+from plynx_sdk.protocol import (CheckpointManifest, InputFileValue, InputsManifest, OutputValue, ResultDirectoryValue, ResultFileValue, ResultManifest,
+                                ResultValue, ScalarValue)
 
-from plynx.api_models import (
-    CheckpointResolvedData,
-    CheckpointResolvedEvent,
-    CheckpointState,
-    NodeCheckpointData,
-    NodeStatus,
-    NodeStatusData,
-    RunState,
-    RunStatus,
-    RunStatusData,
-    StageApprovalData,
-    StageGateStatus,
-    StageResolvedData,
-    StageResolvedEvent,
-)
-from plynx.cas import (
-    BlobStore,
-    compute_cache_key,
-    compute_cache_key_raw,
-    compute_inputs_hash,
-    compute_params_hash,
-    enforce_cache_budget,
-    ingest_outputs,
-    materialize_inputs,
-    write_result_manifest,
-)
+from plynx.api_models import (CheckpointResolvedData, CheckpointResolvedEvent, CheckpointState, NodeCheckpointData, NodeStatus, NodeStatusData, RunState,
+                              RunStatus, RunStatusData, StageApprovalData, StageGateStatus, StageResolvedData, StageResolvedEvent)
+from plynx.cas import (BlobStore, compute_cache_key, compute_cache_key_raw, compute_inputs_hash, compute_params_hash, enforce_cache_budget, ingest_outputs,
+                       materialize_inputs, write_result_manifest)
 from plynx.engine.executor import ExecutionRequest, Executor, NodeResult
 from plynx.registry import OpRegistry, Registry
 from plynx.store.run_store import RunNotFoundError, RunStore, atomic_write_text
@@ -232,9 +201,12 @@ class Scheduler:
         gate_tasks: dict[asyncio.Task[tuple[str, bool]], str] = {}
         runnable_nodes: set[str] = set()
         waiting_nodes: set[str] = set()
-        opened_gates: set[str] = set()
         waiting_gates: set[str] = set()
         approved_gates: set[str] = set()
+        opened_input_gates: set[str] = set()
+        approved_input_gates: set[str] = set()
+        opened_approval_gates: set[str] = set()
+        approved_approval_gates: set[str] = set()
         emitted_cp_resolutions: set[tuple[str, str]] = set()
         emitted_gate_resolutions: set[str] = set()
 
@@ -319,14 +291,44 @@ class Scheduler:
                 if opts.on_node_status is not None:
                     opts.on_node_status(nid, NodeStatus.PENDING, 0)
 
+        def _get_stage_missing_inputs(sid: str) -> list[tuple[str, str]]:
+            missing: list[tuple[str, str]] = []
+            for nid in stage_nodes.get(sid, []):
+                node_spec = workflow.nodes[nid]
+                op_entry = self.registry.get(node_spec.op)
+                if op_entry is None:
+                    continue
+                for port in op_entry.inputs:
+                    if not port.required or port.default is not None:
+                        continue
+                    if port.name in node_spec.inputs:
+                        continue
+                    key_specific = f"{nid}.{port.name}"
+                    if key_specific in opts.run_inputs and opts.run_inputs[key_specific] not in (None, ""):
+                        continue
+                    if port.name in opts.run_inputs and opts.run_inputs[port.name] not in (None, ""):
+                        continue
+                    missing.append((nid, port.name))
+            return missing
+
         def _is_node_stage_gated(nid: str) -> bool:
-            target_idx = stage_index[workflow.nodes[nid].stage]
+            node_stage = workflow.nodes[nid].stage
+            target_idx = stage_index[node_stage]
             for earlier_sid in stage_order[:target_idx]:
+                if earlier_sid in waiting_gates:
+                    return True
                 if (
                     workflow.stages[earlier_sid].require_approval
-                    and earlier_sid not in approved_gates
+                    and earlier_sid not in approved_approval_gates
                 ):
                     return True
+                earlier_nodes = stage_nodes.get(earlier_sid, [])
+                if not all(node_statuses.get(n) == NodeStatus.SUCCESS for n in earlier_nodes):
+                    return True
+            if node_stage in waiting_gates:
+                return True
+            if _get_stage_missing_inputs(node_stage) and node_stage not in approved_input_gates:
+                return True
             return False
 
         cancel_event = opts.cancel_event if opts.cancel_event is not None else asyncio.Event()
@@ -695,6 +697,10 @@ class Scheduler:
             if not approved:
                 return stage_id, False
 
+            latest_state = await asyncio.to_thread(self.store.get_run_state, active_run_id)
+            if latest_state is not None:
+                opts.run_inputs.update(latest_state.run_inputs)
+
             if stage_id not in emitted_gate_resolutions:
                 emitted_gate_resolutions.add(stage_id)
                 await asyncio.to_thread(
@@ -708,12 +714,45 @@ class Scheduler:
             progressed = False
             for sid in stage_order:
                 stage = workflow.stages[sid]
+                s_idx = stage_index[sid]
+                prior_finished = all(
+                    all(node_statuses.get(n) == NodeStatus.SUCCESS for n in stage_nodes.get(prev_sid, []))
+                    and (
+                        not workflow.stages[prev_sid].require_approval
+                        or prev_sid in approved_approval_gates
+                    )
+                    for prev_sid in stage_order[:s_idx]
+                )
+                if not prior_finished:
+                    break
+
+                # 1. Check if this stage requires inputs before running its nodes
+                if sid not in approved_input_gates and _get_stage_missing_inputs(sid):
+                    if sid not in opened_input_gates:
+                        await asyncio.to_thread(self.store.create_stage_gate, active_run_id, sid)
+                        await asyncio.to_thread(
+                            event_log.append,
+                            "stage_approval",
+                            StageApprovalData(
+                                run_id=active_run_id,
+                                stage_id=sid,
+                                title=stage.title or sid,
+                            ),
+                        )
+                        opened_input_gates.add(sid)
+                        waiting_gates.add(sid)
+                        progressed = True
+                        if not opts.non_interactive:
+                            gtask = asyncio.create_task(_wait_for_stage_gate(sid))
+                            gate_tasks[gtask] = sid
+                    break
+
+                # 2. Check if this stage has finished execution and requires approval
                 if not stage.require_approval:
                     continue
-                if sid in approved_gates:
+                if sid in approved_approval_gates:
                     continue
-                if sid in opened_gates:
-                    # Wait for this stage gate before opening any later stage gate.
+                if sid in opened_approval_gates:
                     break
                 nodes_in_stage = stage_nodes.get(sid, [])
                 if not all(node_statuses.get(n) == NodeStatus.SUCCESS for n in nodes_in_stage):
@@ -729,7 +768,7 @@ class Scheduler:
                         title=stage.title or sid,
                     ),
                 )
-                opened_gates.add(sid)
+                opened_approval_gates.add(sid)
                 waiting_gates.add(sid)
                 progressed = True
                 if not opts.non_interactive:
@@ -742,9 +781,12 @@ class Scheduler:
             for sid, gate in existing_state.stage_gates.items():
                 if sid not in workflow.stages:
                     continue
-                opened_gates.add(sid)
                 if gate.status == StageGateStatus.APPROVED:
                     approved_gates.add(sid)
+                    approved_input_gates.add(sid)
+                    nodes_in_stage = stage_nodes.get(sid, [])
+                    if all(node_statuses.get(n) == NodeStatus.SUCCESS for n in nodes_in_stage):
+                        approved_approval_gates.add(sid)
                     if sid not in emitted_gate_resolutions:
                         emitted_gate_resolutions.add(sid)
                         await asyncio.to_thread(
@@ -754,6 +796,11 @@ class Scheduler:
                         )
                 else:
                     waiting_gates.add(sid)
+                    nodes_in_stage = stage_nodes.get(sid, [])
+                    if all(node_statuses.get(n) == NodeStatus.SUCCESS for n in nodes_in_stage):
+                        opened_approval_gates.add(sid)
+                    else:
+                        opened_input_gates.add(sid)
                     if not opts.non_interactive:
                         gtask = asyncio.create_task(_wait_for_stage_gate(sid))
                         gate_tasks[gtask] = sid
@@ -848,6 +895,11 @@ class Scheduler:
                         if approved:
                             waiting_gates.discard(gate_sid)
                             approved_gates.add(gate_sid)
+                            if gate_sid in opened_input_gates:
+                                approved_input_gates.add(gate_sid)
+                            nodes_in_stage = stage_nodes.get(gate_sid, [])
+                            if all(node_statuses.get(n) == NodeStatus.SUCCESS for n in nodes_in_stage):
+                                approved_approval_gates.add(gate_sid)
         finally:
             if not cancel_poller_task.done():
                 cancel_poller_task.cancel()

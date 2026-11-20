@@ -423,6 +423,8 @@ export function RunDetail({ runId }: { runId: string }) {
                   runDiff={runDiff}
                   selectedNodeId={selectedNodeId}
                   onSelectNode={setSelectedNodeId}
+                  opsMap={opsMap}
+                  onApproved={() => setReloadSeq((s) => s + 1)}
                 />
               ) : (
                 <div className="flex flex-1 min-h-0 flex-col">
@@ -453,6 +455,10 @@ export function RunDetail({ runId }: { runId: string }) {
                               stageId
                             }
                             gateState={gate}
+                            workflow={workflowDoc?.workflow}
+                            runInputs={runState.run_inputs}
+                            opsMap={opsMap}
+                            onApproved={() => setReloadSeq((s) => s + 1)}
                           />
                         ))}
                     </div>

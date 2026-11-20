@@ -19,43 +19,15 @@ from plynx_sdk.protocol import ResultFileValue, ResultManifest
 from pydantic import ValidationError
 from ruamel.yaml import YAML
 
-from plynx.api_models import (
-    AnswerCheckpointRequest,
-    ApiErrorDetail,
-    ApiErrorResponse,
-    CleanRequest,
-    CleanResponse,
-    CreateRunRequest,
-    CreateRunResponse,
-    HealthResponse,
-    NodeLogData,
-    NodeLogEvent,
-    OpEntry,
-    RunListResponse,
-    RunState,
-    RunStatus,
-    RunStatusEvent,
-    StageGateStatus,
-    UploadResponse,
-    ValidateWorkflowRequest,
-    ValidateWorkflowResponse,
-    WorkflowDocument,
-    WorkflowInputSpec,
-    WorkflowLayout,
-    WorkflowListItem,
-)
+from plynx.api_models import (AnswerCheckpointRequest, ApiErrorDetail, ApiErrorResponse, CleanRequest, CleanResponse, CreateRunRequest, CreateRunResponse,
+                              HealthResponse, NodeLogData, NodeLogEvent, OpEntry, RunListResponse, RunState, RunStatus, RunStatusEvent, StageApproveRequest,
+                              StageGateStatus, StageInputsRequest, UploadResponse, ValidateWorkflowRequest, ValidateWorkflowResponse, WorkflowDocument,
+                              WorkflowInputSpec, WorkflowLayout, WorkflowListItem)
 from plynx.cas import BlobStore, clean
 from plynx.engine import Executor, Scheduler, SchedulerOptions, create_executor
 from plynx.engine.procgroup import is_pid_alive
 from plynx.registry import OpRegistry, Registry, find_workspace_root
-from plynx.store import (
-    AmbiguousRunIdError,
-    RunNotFoundError,
-    RunStore,
-    StoreError,
-    atomic_write_bytes,
-    atomic_write_text,
-)
+from plynx.store import AmbiguousRunIdError, RunNotFoundError, RunStore, StoreError, atomic_write_bytes, atomic_write_text
 from plynx.workflow.models import NodeRef, load_workflow
 from plynx.workflow.validator import get_unbound_run_inputs, validate_workflow
 
@@ -645,7 +617,11 @@ def create_app(
         return {"status": "ok", "checkpoint_id": checkpoint_id, "answer": body.answer}
 
     @router.post("/runs/{run_id}/stages/{stage_id}/approve")
-    async def approve_stage_endpoint(run_id: str, stage_id: str) -> Any:
+    async def approve_stage_endpoint(
+        run_id: str,
+        stage_id: str,
+        body: StageApproveRequest | None = None,
+    ) -> Any:
         """Approve a stage approval gate awaiting approval."""
         try:
             resolved_id = await asyncio.to_thread(store.resolve_run_id, run_id)
@@ -668,6 +644,9 @@ def create_app(
                 f"Stage gate '{stage_id}' has already been approved",
             )
 
+        if body is not None and body.inputs:
+            await asyncio.to_thread(store.update_run_inputs, resolved_id, body.inputs)
+
         applied = await asyncio.to_thread(store.approve_stage_gate, resolved_id, stage_id)
         if not applied:
             return _error_response(
@@ -675,6 +654,30 @@ def create_app(
                 "stage_gate_already_approved",
                 f"Stage gate '{stage_id}' has already been approved",
             )
+        await _auto_resume_if_unowned(resolved_id)
+        return {"status": "ok", "stage_id": stage_id}
+
+    @router.post("/runs/{run_id}/stages/{stage_id}/inputs")
+    async def stage_inputs_endpoint(
+        run_id: str,
+        stage_id: str,
+        body: StageInputsRequest,
+    ) -> Any:
+        """Submit inputs for a stage and approve its gate if waiting."""
+        try:
+            resolved_id = await asyncio.to_thread(store.resolve_run_id, run_id)
+        except RunNotFoundError as exc:
+            return _error_response(404, "run_not_found", str(exc))
+        except AmbiguousRunIdError as exc:
+            return _error_response(409, "ambiguous_run_id", str(exc))
+
+        if body.inputs:
+            await asyncio.to_thread(store.update_run_inputs, resolved_id, body.inputs)
+
+        gate = await asyncio.to_thread(store.get_stage_gate, resolved_id, stage_id)
+        if gate is not None and gate.status == StageGateStatus.WAITING:
+            await asyncio.to_thread(store.approve_stage_gate, resolved_id, stage_id)
+
         await _auto_resume_if_unowned(resolved_id)
         return {"status": "ok", "stage_id": stage_id}
 

@@ -181,18 +181,46 @@ export async function answerCheckpoint(
 export async function approveStage(
   runId: string,
   stageId: string,
+  inputs?: Record<string, unknown>,
 ): Promise<void> {
+  const options: RequestInit = {
+    method: "POST",
+  };
+  if (inputs && Object.keys(inputs).length > 0) {
+    options.headers = { "Content-Type": "application/json" };
+    options.body = JSON.stringify({ inputs });
+  }
   const response = await fetch(
     `/api/v1/runs/${encodeURIComponent(runId)}/stages/${encodeURIComponent(
       stageId,
     )}/approve`,
-    {
-      method: "POST",
-    },
+    options,
   );
   if (!response.ok) {
     throw new Error(
       `Failed to approve stage gate ${stageId} (${response.status})`,
+    );
+  }
+}
+
+export async function submitStageInputs(
+  runId: string,
+  stageId: string,
+  inputs: Record<string, unknown>,
+): Promise<void> {
+  const response = await fetch(
+    `/api/v1/runs/${encodeURIComponent(runId)}/stages/${encodeURIComponent(
+      stageId,
+    )}/inputs`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ inputs }),
+    },
+  );
+  if (!response.ok) {
+    throw new Error(
+      `Failed to submit stage inputs for ${stageId} (${response.status})`,
     );
   }
 }

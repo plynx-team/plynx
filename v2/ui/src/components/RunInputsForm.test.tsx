@@ -138,4 +138,68 @@ describe("RunInputsForm component", () => {
       });
     });
   });
+
+  it("allows starting run when stage 2 required input is left empty (deferred to stage 2 execution)", async () => {
+    const multiStageDoc: WorkflowDocument = {
+      workflow: {
+        version: 1,
+        name: "Multi-Stage Pipeline",
+        stages: {
+          stage1: { title: "Stage 1" },
+          stage2: { title: "Stage 2" },
+        },
+        nodes: {
+          step1: { op: "standard_io/demo:Echo", stage: "stage1" },
+          step2: { op: "standard_io/demo:Echo", stage: "stage2" },
+        },
+      },
+    };
+
+    const multiStageInputs: Array<WorkflowInputSpec> = [
+      {
+        node_id: "step1",
+        name: "text1",
+        type: "str",
+        required: true,
+        default: "ready",
+        stage_id: "stage1",
+      },
+      {
+        node_id: "step2",
+        name: "text2",
+        type: "str",
+        required: true,
+        default: null,
+        stage_id: "stage2",
+      },
+    ];
+
+    vi.spyOn(client, "fetchWorkflow").mockResolvedValue(multiStageDoc);
+    vi.spyOn(client, "fetchWorkflowInputs").mockResolvedValue(multiStageInputs);
+
+    render(
+      <RouterProvider>
+        <RunInputsForm workflowPath="workflows/multi.yaml" />
+      </RouterProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Multi-Stage Pipeline")).toBeDefined();
+      expect(screen.getByText("Deferred to Stage Execution")).toBeDefined();
+    });
+
+    // text2 is empty, but since it belongs to Stage 2, starting the run should not be blocked!
+    const submitBtn = screen.getByRole("button", { name: "Start Run" });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(client.createRun).toHaveBeenCalledWith({
+        workflow_path: "workflows/multi.yaml",
+        inputs: {
+          "step1.text1": "ready",
+        },
+        no_cache: false,
+      });
+    });
+  });
 });

@@ -373,6 +373,16 @@ export interface CleanResponse {
   reclaimed_bytes: number;
 }
 
+/** Request body for ``POST /runs/{id}/stages/{stage_id}/approve``. */
+export interface StageApproveRequest {
+  inputs?: Record<string, unknown>;
+}
+
+/** Request body for ``POST /runs/{id}/stages/{stage_id}/inputs``. */
+export interface StageInputsRequest {
+  inputs?: Record<string, unknown>;
+}
+
 /** Error payload inside ``ApiErrorResponse``. */
 export interface ApiErrorDetail {
   code: string;

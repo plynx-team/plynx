@@ -509,6 +509,22 @@ class AnswerCheckpointRequest(BaseModel):
     answer: str
 
 
+class StageApproveRequest(BaseModel):
+    """Request body for ``POST /runs/{id}/stages/{stage_id}/approve``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    inputs: dict[str, Any] = Field(default_factory=dict)
+
+
+class StageInputsRequest(BaseModel):
+    """Request body for ``POST /runs/{id}/stages/{stage_id}/inputs``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    inputs: dict[str, Any] = Field(default_factory=dict)
+
+
 class CleanRequest(BaseModel):
     """Request body for ``POST /clean``."""
 

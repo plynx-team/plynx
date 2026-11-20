@@ -9,6 +9,7 @@ import type {
   WorkflowDocument,
   WorkflowInputSpec,
 } from "../api/types.gen";
+import { getOrderedStageIds } from "../graph/layout";
 import { useRouter } from "../router/Router";
 import { ControlButton, ControlPanel, ControlSeparator } from "./ControlPanel";
 import { FeatherIcon } from "./FeatherIcon";
@@ -182,6 +183,20 @@ export function RunInputsForm({
     }
   };
 
+  const inputsByStage: Record<string, Array<WorkflowInputSpec>> = {};
+  for (const input of inputs) {
+    const stage = input.stage_id || "main";
+    if (!inputsByStage[stage]) {
+      inputsByStage[stage] = [];
+    }
+    inputsByStage[stage].push(input);
+  }
+
+  const orderedStageIds = workflowDoc
+    ? getOrderedStageIds(workflowDoc.workflow)
+    : Object.keys(inputsByStage);
+  const initialStageId = orderedStageIds[0] || "main";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errors: Record<string, string> = {};
@@ -191,8 +206,12 @@ export function RunInputsForm({
       const key = `${spec.node_id}.${spec.name}`;
       const state = formValues[key];
       const val = state ? state.value : undefined;
+      const stage = spec.stage_id || "main";
+      const isInitialStage =
+        stage === initialStageId || orderedStageIds.length <= 1;
 
-      if (spec.required) {
+      // Only require inputs for the initial stage at run launch time. Later stages prompt just-in-time.
+      if (spec.required && isInitialStage) {
         if (
           val === undefined ||
           val === null ||
@@ -232,15 +251,6 @@ export function RunInputsForm({
       setSubmitting(false);
     }
   };
-
-  const inputsByStage: Record<string, Array<WorkflowInputSpec>> = {};
-  for (const input of inputs) {
-    const stage = input.stage_id || "default";
-    if (!inputsByStage[stage]) {
-      inputsByStage[stage] = [];
-    }
-    inputsByStage[stage].push(input);
-  }
 
   const stageKeys = Object.keys(inputsByStage);
 
@@ -319,11 +329,42 @@ export function RunInputsForm({
                 const stageInputs = inputsByStage[stageKey];
                 const stageTitle =
                   workflowDoc?.workflow.stages?.[stageKey]?.title ||
-                  (stageKey !== "default" ? stageKey : "Workflow Inputs");
+                  (stageKey !== "default" && stageKey !== "main"
+                    ? stageKey
+                    : "Workflow Inputs");
+                const isInitialStage =
+                  stageKey === initialStageId || orderedStageIds.length <= 1;
 
                 return (
                   <div key={stageKey} className="PropertiesBox">
-                    <h2 className="PropertiesBoxHeader">{stageTitle}</h2>
+                    <div className="PropertiesBoxHeader flex items-center justify-between">
+                      <h2>{stageTitle}</h2>
+                      {!isInitialStage && (
+                        <span
+                          className="text-[11px] font-normal px-1.5 py-0.5 rounded"
+                          style={{
+                            backgroundColor: "var(--bg-panel-secondary)",
+                            color: "var(--text-secondary)",
+                            border: "1px solid var(--border-subtle)",
+                          }}
+                        >
+                          Deferred to Stage Execution
+                        </span>
+                      )}
+                    </div>
+                    {!isInitialStage && (
+                      <div
+                        className="px-3 py-1.5 text-[11px]"
+                        style={{
+                          backgroundColor: "rgba(33, 150, 243, 0.08)",
+                          color: "var(--color-info)",
+                          borderBottom: "1px solid var(--border-subtle)",
+                        }}
+                      >
+                        Inputs for this stage can be entered now, or deferred
+                        until Stage &ldquo;{stageTitle}&rdquo; executes.
+                      </div>
+                    )}
                     <div className="PropertiesBoxContent space-y-3">
                       {stageInputs.map((spec) => {
                         const key = `${spec.node_id}.${spec.name}`;
@@ -341,9 +382,17 @@ export function RunInputsForm({
                                 className="text-xs font-semibold flex items-center gap-1"
                               >
                                 <span>{spec.name}</span>
-                                {spec.required && (
+                                {spec.required && isInitialStage && (
                                   <span style={{ color: "var(--color-error)" }}>
                                     *
+                                  </span>
+                                )}
+                                {spec.required && !isInitialStage && (
+                                  <span
+                                    className="text-[10px] font-normal"
+                                    style={{ color: "var(--text-tertiary)" }}
+                                  >
+                                    (deferred)
                                   </span>
                                 )}
                               </label>

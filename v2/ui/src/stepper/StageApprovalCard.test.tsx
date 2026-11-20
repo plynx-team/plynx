@@ -98,4 +98,76 @@ describe("StageApprovalCard component (Task 6.6)", () => {
       );
     });
   });
+
+  it("renders stage inputs form when missing required inputs exist and submits them", async () => {
+    const mockWorkflow = {
+      version: 1 as const,
+      stages: {
+        stage2: { title: "2. Transform" },
+      },
+      nodes: {
+        processor: {
+          op: "standard_io/demo:Echo",
+          stage: "stage2",
+        },
+      },
+    };
+
+    const mockOpsMap = {
+      "standard_io/demo:Echo": {
+        id: "standard_io/demo:Echo",
+        title: "Echo",
+        pack: "standard_io",
+        valid: true,
+        inputs: [
+          {
+            name: "text",
+            type: "str" as const,
+            required: true,
+            default: null,
+          },
+        ],
+        outputs: [],
+      },
+    };
+
+    const onApproved = vi.fn();
+
+    render(
+      <StageApprovalCard
+        runId="run-999"
+        stageId="stage2"
+        stageTitle="2. Transform"
+        gateState={{ stage_id: "stage2", status: "WAITING", created_at: 100 }}
+        workflow={mockWorkflow}
+        runInputs={{}}
+        opsMap={mockOpsMap as any}
+        onApproved={onApproved}
+      />,
+    );
+
+    expect(screen.getByText("Stage Inputs: Input Required")).toBeDefined();
+    expect(screen.getByText(/requires inputs before running/)).toBeDefined();
+
+    const submitBtn = screen.getByRole("button", { name: "Submit Inputs & Continue" });
+
+    // Clicking submit with empty required input shows validation error
+    fireEvent.click(submitBtn);
+    expect(screen.getByText("text is required")).toBeDefined();
+    expect(client.approveStage).not.toHaveBeenCalled();
+
+    // Fill in the input
+    const inputEl = screen.getByPlaceholderText("Enter value...");
+    fireEvent.change(inputEl, { target: { value: "hello world" } });
+
+    // Submit now
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(client.approveStage).toHaveBeenCalledWith("run-999", "stage2", {
+        "processor.text": "hello world",
+      });
+      expect(onApproved).toHaveBeenCalledWith("stage2");
+    });
+  });
 });

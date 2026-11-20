@@ -15,18 +15,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Final
 
-from plynx.api_models import (
-    CheckpointState,
-    NodeRunState,
-    NodeStatus,
-    NodeStatusData,
-    RunState,
-    RunStatus,
-    RunStatusData,
-    RunSummary,
-    StageGateState,
-    StageGateStatus,
-)
+from plynx.api_models import (CheckpointState, NodeRunState, NodeStatus, NodeStatusData, RunState, RunStatus, RunStatusData, RunSummary, StageGateState,
+                              StageGateStatus)
 from plynx.store.event_log import EventLog
 
 USER_VERSION: Final[int] = 1
@@ -639,7 +629,7 @@ class RunStore:
                 """
                 INSERT INTO stage_gates (run_id, stage_id, status, created_at, decided_at)
                 VALUES (?, ?, 'WAITING', ?, NULL)
-                ON CONFLICT(run_id, stage_id) DO NOTHING
+                ON CONFLICT(run_id, stage_id) DO UPDATE SET status = 'WAITING', decided_at = NULL
                 """,
                 (run_id, stage_id, now),
             )
@@ -649,6 +639,39 @@ class RunStore:
             created_at=now,
             decided_at=None,
         )
+
+    def update_run_inputs(
+        self,
+        run_id: str,
+        new_inputs: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Merge ``new_inputs`` into the run's ``run_inputs_json`` and update the manifest."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT run_inputs_json FROM runs WHERE id = ?",
+                (run_id,),
+            ).fetchone()
+            if row is None:
+                raise RunNotFoundError(f"Run {run_id!r} not found")
+            existing: dict[str, Any] = json.loads(str(row["run_inputs_json"] or "{}"))
+            existing.update(new_inputs)
+            merged_json = json.dumps(existing, ensure_ascii=False, sort_keys=True)
+            conn.execute(
+                "UPDATE runs SET run_inputs_json = ? WHERE id = ?",
+                (merged_json, run_id),
+            )
+        manifest_path = self.run_dir(run_id) / "run_manifest.json"
+        if manifest_path.is_file():
+            try:
+                manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+                manifest_data["run_inputs"] = existing
+                atomic_write_text(
+                    manifest_path,
+                    json.dumps(manifest_data, indent=2, ensure_ascii=False) + "\n",
+                )
+            except Exception:
+                pass
+        return existing
 
     def approve_stage_gate(
         self,

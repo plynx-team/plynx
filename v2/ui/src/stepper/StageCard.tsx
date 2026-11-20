@@ -1,8 +1,10 @@
 import type {
   NodeRunState,
   NodeSpec,
+  OpEntry,
   Stage,
   StageGateState,
+  Workflow,
 } from "../api/types.gen";
 import type { WorkflowRunDiff } from "../graph/runDiff";
 import { FeatherIcon } from "../components/FeatherIcon";
@@ -23,6 +25,10 @@ export interface StageCardProps {
   }>;
   selectedNodeId?: string;
   onSelectNode?: (nodeId: string) => void;
+  workflow?: Workflow | null;
+  runInputs?: Record<string, unknown>;
+  opsMap?: Record<string, OpEntry>;
+  onApproved?: (stageId: string) => void;
 }
 
 export function StageCard({
@@ -35,6 +41,10 @@ export function StageCard({
   nodes,
   selectedNodeId,
   onSelectNode,
+  workflow,
+  runInputs,
+  opsMap,
+  onApproved,
 }: StageCardProps) {
   const title =
     stageDef?.title || (stageId !== "default" ? stageId : "Workflow Stage");
@@ -162,6 +172,10 @@ export function StageCard({
             stageId={stageId}
             stageTitle={title}
             gateState={gateState}
+            workflow={workflow}
+            runInputs={runInputs}
+            opsMap={opsMap}
+            onApproved={onApproved}
           />
         </div>
       )}

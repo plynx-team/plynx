@@ -1,6 +1,7 @@
 import type {
   NodeRunState,
   NodeSpec,
+  OpEntry,
   RunState,
   Stage,
   WorkflowDocument,
@@ -15,6 +16,8 @@ export interface StepperViewProps {
   runDiff?: WorkflowRunDiff | null;
   selectedNodeId?: string;
   onSelectNode?: (nodeId: string) => void;
+  opsMap?: Record<string, OpEntry>;
+  onApproved?: (stageId: string) => void;
 }
 
 export function StepperView({
@@ -23,6 +26,8 @@ export function StepperView({
   runDiff = null,
   selectedNodeId,
   onSelectNode,
+  opsMap,
+  onApproved,
 }: StepperViewProps) {
   const workflow = workflowDoc?.workflow;
   const stagesDef = {
@@ -152,6 +157,10 @@ export function StepperView({
               nodes={nodes}
               selectedNodeId={selectedNodeId}
               onSelectNode={onSelectNode}
+              workflow={workflow}
+              runInputs={runState.run_inputs}
+              opsMap={opsMap}
+              onApproved={onApproved}
             />
           );
         })}
