@@ -11,14 +11,34 @@ import type {
   NodePosition,
   NodeSpec,
   OpEntry,
+  OutputPortSpec,
   RunState,
+  RunSummary,
   Workflow,
   WorkflowLayout,
 } from "../api/types.gen";
+import {
+  ControlButton,
+  ControlPanel,
+  ControlSeparator,
+} from "../components/ControlPanel";
+import { FeatherIcon } from "../components/FeatherIcon";
+import { LogsPanel } from "../components/LogsPanel";
+import { RunInputsForm } from "../components/RunInputsForm";
+import {
+  formatDuration,
+  formatTimestamp,
+  runStatusBadgeClasses,
+} from "../components/RunList";
 import { ArtifactPreviewDialog } from "../previewers/ArtifactPreviewDialog";
-import { Link, useRouter } from "../router/Router";
+import { useRouter } from "../router/Router";
+import { StepperView } from "../stepper/StepperView";
 import { GraphView } from "./GraphView";
-import { computeDagrePositions, DEFAULT_STAGE_ID, getOrderedStageIds } from "./layout";
+import {
+  computeDagrePositions,
+  DEFAULT_STAGE_ID,
+  getOrderedStageIds,
+} from "./layout";
 import {
   addNodeToWorkflow,
   connectEdgeInWorkflow,
@@ -28,9 +48,15 @@ import {
   ensureLayout,
   prepareWorkflowForSave,
 } from "./mutations";
-import { NodeInspector, type ArtifactPreviewTarget } from "./NodeInspector";
+import {
+  buildOutputPreviewTarget,
+  NodeInspector,
+  type ArtifactPreviewTarget,
+} from "./NodeInspector";
 import { OpPalette } from "./OpPalette";
 import { validateConnection } from "./validation";
+
+export type EditorViewMode = "graph" | "stepper" | "runs";
 
 function serializeSnapshot(
   workflow: Workflow | null,
@@ -48,6 +74,7 @@ function isEditableElement(target: EventTarget | null): boolean {
 
 export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   const { navigate } = useRouter();
+  const [viewMode, setViewMode] = useState<EditorViewMode>("graph");
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
   const [layout, setLayout] = useState<WorkflowLayout | null>(null);
   const [savedSnapshot, setSavedSnapshot] = useState<string | null>(null);
@@ -57,7 +84,9 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   const [hasSavedViewport, setHasSavedViewport] = useState<boolean>(false);
   const [fitViewTrigger, setFitViewTrigger] = useState<number>(0);
   const [ops, setOps] = useState<Array<OpEntry>>([]);
+  const [workflowRuns, setWorkflowRuns] = useState<Array<RunSummary>>([]);
   const [latestRun, setLatestRun] = useState<RunState | null>(null);
+  const [showRunModal, setShowRunModal] = useState<boolean>(false);
   const [previewTarget, setPreviewTarget] =
     useState<ArtifactPreviewTarget | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(
@@ -107,24 +136,22 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         setTargetStage(stageIds[stageIds.length - 1] ?? DEFAULT_STAGE_ID);
         setLoading(false);
 
-        // Best-effort load latest run for this workflow to enable artifact previews
         if (typeof fetchRuns === "function") {
           fetchRuns()
             .then((list) => {
               if (!active) return;
-              const match = list.runs.find(
+              const matches = list.runs.filter(
                 (r) => r.workflow_path === workflowPath,
               );
-              if (match && typeof fetchRunState === "function") {
-                return fetchRunState(match.id).then((state) => {
+              setWorkflowRuns(matches);
+              if (matches.length > 0 && typeof fetchRunState === "function") {
+                return fetchRunState(matches[0].id).then((state) => {
                   if (active) setLatestRun(state);
                 });
               }
               return undefined;
             })
-            .catch(() => {
-              // Non-critical if no run exists yet
-            });
+            .catch(() => {});
         }
       })
       .catch((err: unknown) => {
@@ -143,7 +170,6 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     [workflow],
   );
 
-  // Sync targetStage when selecting a node
   const handleSelectNode = useCallback(
     (nodeId: string | undefined) => {
       setSelectedNodeId(nodeId);
@@ -263,6 +289,29 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     [],
   );
 
+  const handleInlineLiteralChange = useCallback(
+    (nodeId: string, portName: string, nextVal: unknown) => {
+      handleUpdateNodeSpec(nodeId, (prev) => {
+        const nextInputs = { ...(prev.inputs ?? {}) };
+        if (nextVal === undefined) {
+          delete nextInputs[portName];
+        } else {
+          nextInputs[portName] = nextVal;
+        }
+        return { ...prev, inputs: nextInputs };
+      });
+    },
+    [handleUpdateNodeSpec],
+  );
+
+  const handlePreviewNodeOutput = useCallback(
+    (nodeId: string, output: OutputPortSpec) => {
+      if (!latestRun) return;
+      setPreviewTarget(buildOutputPreviewTarget(latestRun.id, nodeId, output));
+    },
+    [latestRun],
+  );
+
   const handleBindReference = useCallback(
     (
       targetNodeId: string,
@@ -380,7 +429,6 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     [],
   );
 
-  // Warn before unloading when there are unsaved edits
   useEffect(() => {
     if (!isDirty) return;
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -393,7 +441,6 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     };
   }, [isDirty]);
 
-  // Keyboard shortcuts: Cmd/Ctrl+S to save, Delete/Backspace to delete selected node or edge, Cmd/Ctrl+D to duplicate
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
@@ -439,108 +486,166 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     handleDuplicateSelected,
   ]);
 
-  return (
-    <div data-testid="workflow-editor" className="space-y-4">
-      {/* Header Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-900/70 px-4 py-3">
-        <div className="min-w-0 space-y-0.5">
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            <Link to="/workflows" className="hover:text-slate-200">
-              &larr; Workflows
-            </Link>
-            <span>/</span>
-            <span className="truncate font-mono text-slate-300">
-              {workflowPath}
-            </span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-base font-bold text-white">
-              {workflow?.name || workflowPath}
-            </h1>
-            {isDirty ? (
-              <span
-                data-testid="dirty-indicator"
-                className="inline-flex items-center gap-1.5 rounded-full border border-amber-700/80 bg-amber-950/70 px-2.5 py-0.5 text-[11px] font-semibold text-amber-300"
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                Unsaved changes
-              </span>
-            ) : lastSavedAt ? (
-              <span
-                data-testid="save-status"
-                className="inline-flex items-center rounded-full border border-emerald-800/80 bg-emerald-950/60 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-300"
-              >
-                Saved
-              </span>
-            ) : null}
-          </div>
-        </div>
+  const syntheticRunState = useMemo<RunState>(() => {
+    if (latestRun) return latestRun;
+    const nodes: RunState["nodes"] = {};
+    for (const nodeId of Object.keys(workflow?.nodes ?? {})) {
+      nodes[nodeId] = {
+        node_id: nodeId,
+        status: "PENDING",
+        cache_hit: false,
+        attempt: 0,
+      };
+    }
+    return {
+      id: "preview",
+      workflow_path: workflowPath,
+      workflow_sha256: "",
+      status: "RUNNING",
+      run_inputs: {},
+      cancel_requested: false,
+      pinned: false,
+      created_at: Date.now() / 1000,
+      nodes,
+      checkpoints: [],
+      stage_gates: {},
+    };
+  }, [latestRun, workflow, workflowPath]);
 
-        <div className="flex flex-wrap items-center gap-2">
+  return (
+    <div
+      data-testid="workflow-editor"
+      className="flex flex-1 min-h-0 flex-col overflow-hidden"
+    >
+      {/* Top Control Panel Toolbar (Legacy v1 Editor style) */}
+      <ControlPanel>
+        <div className="control-toggle" role="tablist">
           <button
             type="button"
-            data-testid="btn-save-workflow"
-            disabled={!workflow || saving}
-            onClick={() => void handleSave()}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors disabled:opacity-40 ${
-              isDirty
-                ? "bg-amber-600 text-white hover:bg-amber-500"
-                : "border border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800"
+            role="tab"
+            aria-selected={viewMode === "graph"}
+            onClick={() => setViewMode("graph")}
+            className={`control-button first ${
+              viewMode === "graph" ? "selected" : ""
             }`}
           >
-            {saving ? "Saving..." : "Save"}
+            <FeatherIcon name="grid" size={14} />
+            <span className="control-button-text">Graph</span>
           </button>
           <button
             type="button"
-            data-testid="btn-duplicate-node"
-            disabled={!selectedNodeId}
-            onClick={handleDuplicateSelected}
-            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
+            role="tab"
+            aria-selected={viewMode === "stepper"}
+            onClick={() => setViewMode("stepper")}
+            className={`control-button ${
+              viewMode === "stepper" ? "selected" : ""
+            }`}
           >
-            Duplicate Node
+            <FeatherIcon name="sliders" size={14} />
+            <span className="control-button-text">Stepper</span>
           </button>
           <button
             type="button"
-            data-testid="btn-delete-node"
-            disabled={!selectedNodeId}
-            onClick={handleDeleteSelected}
-            className="rounded-md border border-rose-900 bg-rose-950/60 px-3 py-1.5 text-xs font-medium text-rose-300 hover:bg-rose-900/60 disabled:opacity-40 disabled:cursor-not-allowed"
+            role="tab"
+            aria-selected={viewMode === "runs"}
+            onClick={() => setViewMode("runs")}
+            className={`control-button last ${
+              viewMode === "runs" ? "selected" : ""
+            }`}
           >
-            Delete Node
-          </button>
-          {selectedEdgeId && (
-            <button
-              type="button"
-              data-testid="btn-delete-edge"
-              onClick={handleDeleteSelectedEdge}
-              className="rounded-md border border-amber-800 bg-amber-950/60 px-3 py-1.5 text-xs font-medium text-amber-300 hover:bg-amber-900/60"
-            >
-              Disconnect Edge
-            </button>
-          )}
-          <button
-            type="button"
-            data-testid="btn-auto-layout"
-            disabled={!workflow}
-            onClick={handleAutoLayout}
-            className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800 disabled:opacity-40"
-          >
-            Auto Layout
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate(`/workflows/${workflowPath}`)}
-            className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-500"
-          >
-            Run Workflow
+            <FeatherIcon name="list" size={14} />
+            <span className="control-button-text">
+              Runs ({workflowRuns.length})
+            </span>
           </button>
         </div>
-      </div>
+
+        <ControlSeparator />
+
+        <ControlButton
+          icon="save"
+          text={saving ? "Saving..." : "Save"}
+          data-testid="btn-save-workflow"
+          variant={isDirty ? "primary" : "default"}
+          disabled={!workflow || saving}
+          onClick={() => void handleSave()}
+        />
+
+        <ControlButton
+          icon="play"
+          text="Run Workflow"
+          variant="primary"
+          onClick={() => setShowRunModal(true)}
+        />
+
+        <ControlButton
+          icon="layout"
+          text="Auto Layout"
+          data-testid="btn-auto-layout"
+          disabled={!workflow}
+          onClick={handleAutoLayout}
+        />
+
+        <ControlSeparator />
+
+        <ControlButton
+          icon="copy"
+          text="Duplicate Node"
+          data-testid="btn-duplicate-node"
+          disabled={!selectedNodeId}
+          onClick={handleDuplicateSelected}
+        />
+
+        <ControlButton
+          icon="trash-2"
+          text="Delete Node"
+          data-testid="btn-delete-node"
+          variant="danger"
+          disabled={!selectedNodeId}
+          onClick={handleDeleteSelected}
+        />
+
+        {selectedEdgeId && (
+          <ControlButton
+            icon="scissors"
+            text="Disconnect Edge"
+            data-testid="btn-delete-edge"
+            onClick={handleDeleteSelectedEdge}
+          />
+        )}
+
+        <div className="ml-auto flex items-center gap-2.5 pr-2 text-xs">
+          <span
+            className="font-mono truncate max-w-[260px]"
+            style={{ color: "var(--text-secondary)" }}
+            title={workflowPath}
+          >
+            {workflow?.name || workflowPath}
+          </span>
+          {isDirty ? (
+            <span
+              data-testid="dirty-indicator"
+              className="status-badge WAITING"
+            >
+              Unsaved changes
+            </span>
+          ) : lastSavedAt ? (
+            <span data-testid="save-status" className="status-badge READY">
+              Saved
+            </span>
+          ) : null}
+        </div>
+      </ControlPanel>
 
       {error && (
         <div
           role="alert"
-          className="rounded-md border border-rose-900 bg-rose-950/60 p-3 text-sm text-rose-300"
+          className="px-3 py-1.5 text-xs"
+          style={{
+            borderBottom: "1px solid var(--color-error)",
+            backgroundColor: "rgba(244, 67, 54, 0.15)",
+            color: "#ff8a80",
+          }}
         >
           {error}
         </div>
@@ -550,17 +655,22 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         <div
           role="alert"
           data-testid="save-error-banner"
-          className="flex items-center justify-between gap-3 rounded-md border border-rose-900 bg-rose-950/70 px-4 py-2.5 text-xs text-rose-200"
+          className="flex items-center justify-between gap-3 px-3 py-1.5 text-xs"
+          style={{
+            borderBottom: "1px solid var(--color-error)",
+            backgroundColor: "rgba(244, 67, 54, 0.15)",
+            color: "#ff8a80",
+          }}
         >
           <div>
-            <span className="font-semibold text-rose-300">Save failed: </span>
+            <span className="font-semibold">Save failed: </span>
             <span>{saveError}</span>
           </div>
           <button
             type="button"
             aria-label="Dismiss save error"
             onClick={() => setSaveError(null)}
-            className="rounded px-1.5 py-0.5 text-rose-400 hover:bg-rose-900/50 hover:text-rose-200"
+            className="px-1"
           >
             &times;
           </button>
@@ -571,19 +681,22 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         <div
           role="alert"
           data-testid="wire-error-banner"
-          className="flex items-center justify-between gap-3 rounded-md border border-amber-800 bg-amber-950/70 px-4 py-2.5 text-xs text-amber-200"
+          className="flex items-center justify-between gap-3 px-3 py-1.5 text-xs"
+          style={{
+            borderBottom: "1px solid var(--color-warning)",
+            backgroundColor: "rgba(255, 167, 38, 0.15)",
+            color: "var(--color-warning)",
+          }}
         >
           <div>
-            <span className="font-semibold text-amber-300">
-              Connection rejected:{" "}
-            </span>
+            <span className="font-semibold">Connection rejected: </span>
             <span>{wireError}</span>
           </div>
           <button
             type="button"
             aria-label="Dismiss connection error"
             onClick={() => setWireError(null)}
-            className="rounded px-1.5 py-0.5 text-amber-400 hover:bg-amber-900/50 hover:text-amber-200"
+            className="px-1"
           >
             &times;
           </button>
@@ -591,42 +704,133 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
       )}
 
       {loading ? (
-        <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-10 text-center text-sm text-slate-400">
+        <div
+          className="p-10 text-center text-sm"
+          style={{ color: "var(--text-secondary)" }}
+        >
           Loading workflow graph editor...
         </div>
       ) : workflow ? (
-        <div className="flex gap-4 h-[calc(100vh-14rem)] min-h-[540px]">
-          {/* Left: Operation Palette */}
-          <OpPalette
-            ops={ops}
-            stages={stageIds}
-            targetStage={targetStage}
-            onTargetStageChange={setTargetStage}
-            onAddOp={(op) => handleAddOp(op)}
-          />
-
-          {/* Center: Graph Canvas */}
-          <div className="flex-1 min-w-0">
-            <GraphView
-              workflow={workflow}
-              layout={layout}
+        <div className="flex flex-1 min-h-0 flex-row overflow-hidden">
+          {/* Left Docked HubPanel (only in Graph view) */}
+          {viewMode === "graph" && (
+            <OpPalette
               ops={ops}
-              selectedNodeId={selectedNodeId}
-              onSelectNode={handleSelectNode}
-              selectedEdgeId={selectedEdgeId}
-              onSelectEdge={setSelectedEdgeId}
-              readOnly={false}
-              onConnect={handleConnect}
-              onNodeDragStop={handleNodeDragStop}
-              onDropOp={handleDropOp}
-              onViewportChange={handleViewportChange}
-              hasSavedViewport={hasSavedViewport}
-              fitViewTrigger={fitViewTrigger}
-              heightClassName="h-full"
+              stages={stageIds}
+              targetStage={targetStage}
+              onTargetStageChange={setTargetStage}
+              onAddOp={(op) => handleAddOp(op)}
             />
+          )}
+
+          {/* Center Workspace */}
+          <div
+            className="flex flex-1 min-w-0 flex-col overflow-hidden"
+            style={{ backgroundColor: "var(--bg-canvas)" }}
+          >
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              {viewMode === "graph" ? (
+                <GraphView
+                  workflow={workflow}
+                  layout={layout}
+                  runState={latestRun}
+                  ops={ops}
+                  selectedNodeId={selectedNodeId}
+                  onSelectNode={handleSelectNode}
+                  selectedEdgeId={selectedEdgeId}
+                  onSelectEdge={setSelectedEdgeId}
+                  readOnly={false}
+                  onConnect={handleConnect}
+                  onNodeDragStop={handleNodeDragStop}
+                  onDropOp={handleDropOp}
+                  onViewportChange={handleViewportChange}
+                  onLiteralChange={handleInlineLiteralChange}
+                  onPreviewOutput={handlePreviewNodeOutput}
+                  hasSavedViewport={hasSavedViewport}
+                  fitViewTrigger={fitViewTrigger}
+                  heightClassName="h-full"
+                />
+              ) : viewMode === "stepper" ? (
+                <StepperView
+                  runState={syntheticRunState}
+                  workflowDoc={{ workflow, layout }}
+                  selectedNodeId={selectedNodeId}
+                  onSelectNode={handleSelectNode}
+                />
+              ) : (
+                <div className="list h-full">
+                  <div
+                    className="list-header"
+                    style={{
+                      gridTemplateColumns:
+                        "minmax(200px, 1.5fr) 150px 120px 180px",
+                    }}
+                  >
+                    <div className="list-field">Run ID</div>
+                    <div className="list-field">Status</div>
+                    <div className="list-field">Duration</div>
+                    <div className="list-field">Created</div>
+                  </div>
+                  {workflowRuns.length === 0 ? (
+                    <div
+                      className="p-8 text-center text-xs"
+                      style={{ color: "var(--text-tertiary)" }}
+                    >
+                      No runs recorded for this workflow yet. Click{" "}
+                      <strong>Run Workflow</strong> to launch one.
+                    </div>
+                  ) : (
+                    workflowRuns.map((run) => (
+                      <div
+                        key={run.id}
+                        onClick={() => navigate(`/runs/${run.id}`)}
+                        className="list-item"
+                        style={{
+                          gridTemplateColumns:
+                            "minmax(200px, 1.5fr) 150px 120px 180px",
+                        }}
+                      >
+                        <div
+                          className="list-field font-mono text-xs font-semibold"
+                          style={{ color: "var(--color-primary)" }}
+                        >
+                          {run.id}
+                        </div>
+                        <div className="list-field">
+                          <span className={runStatusBadgeClasses(run.status)}>
+                            {run.status}
+                          </span>
+                        </div>
+                        <div
+                          className="list-field text-xs"
+                          style={{ color: "var(--text-secondary)" }}
+                        >
+                          {formatDuration(run.started_at, run.finished_at)}
+                        </div>
+                        <div
+                          className="list-field text-xs"
+                          style={{ color: "var(--text-secondary)" }}
+                        >
+                          {formatTimestamp(run.created_at)}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Docked Logs Drawer if a node from latestRun is selected */}
+            {selectedNodeId && latestRun && (
+              <LogsPanel
+                runId={latestRun.id}
+                nodeId={selectedNodeId}
+                onClose={() => setSelectedNodeId(undefined)}
+              />
+            )}
           </div>
 
-          {/* Right: Node Inspector */}
+          {/* Right Docked PropertiesBar */}
           <NodeInspector
             nodeId={selectedNodeId}
             workflow={workflow}
@@ -640,6 +844,18 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
           />
         </div>
       ) : null}
+
+      {showRunModal && (
+        <RunInputsForm
+          workflowPath={workflowPath}
+          asModal={true}
+          onClose={() => setShowRunModal(false)}
+          onRunStarted={(newRunId) => {
+            setShowRunModal(false);
+            navigate(`/runs/${newRunId}`);
+          }}
+        />
+      )}
 
       {previewTarget && (
         <ArtifactPreviewDialog

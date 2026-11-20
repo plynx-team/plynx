@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { answerCheckpoint } from "../api/client";
 import type { CheckpointState } from "../api/types.gen";
+import { ControlButton } from "../components/ControlPanel";
+import { FeatherIcon } from "../components/FeatherIcon";
 
 export interface CheckpointCardProps {
   runId: string;
@@ -17,7 +19,6 @@ export function CheckpointCard({
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // If already answered, disappear!
   if (checkpoint.answered_at !== null && checkpoint.answered_at !== undefined) {
     return null;
   }
@@ -45,63 +46,73 @@ export function CheckpointCard({
   return (
     <div
       data-testid={`checkpoint-card-${checkpoint.checkpoint_id}`}
-      className="rounded-lg border-2 border-amber-600/80 bg-amber-950/40 p-5 shadow-lg space-y-4 animate-in fade-in duration-200"
+      className="rounded p-3.5 space-y-3"
+      style={{
+        backgroundColor: "var(--bg-panel)",
+        border: "1px solid var(--border-strong)",
+        borderLeft: "4px solid var(--color-warning)",
+      }}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-900/60 pb-3">
+      <div
+        className="flex flex-wrap items-center justify-between gap-2 pb-2"
+        style={{ borderBottom: "1px solid var(--border-subtle)" }}
+      >
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-xs font-bold text-slate-950">
-            ?
-          </span>
-          <h3 className="text-sm font-bold text-amber-200">
+          <FeatherIcon
+            name="help-circle"
+            size={15}
+            style={{ color: "var(--color-warning)" }}
+          />
+          <h3 className="text-xs font-bold uppercase tracking-wide">
             User Input Required (Checkpoint)
           </h3>
         </div>
-        <div className="flex items-center gap-2 font-mono text-xs text-amber-400/80">
+        <div
+          className="flex items-center gap-2 font-mono text-xs"
+          style={{ color: "var(--text-secondary)" }}
+        >
           <span>node: {checkpoint.node_id}</span>
           <span>&bull;</span>
           <span>id: {checkpoint.checkpoint_id}</span>
         </div>
       </div>
 
-      <div className="space-y-1">
-        <p className="text-sm font-medium text-slate-100">
-          {checkpoint.question}
-        </p>
-      </div>
+      <p className="text-sm font-semibold">{checkpoint.question}</p>
 
       {error && (
         <div
           role="alert"
-          className="rounded border border-rose-800 bg-rose-950/80 p-2.5 text-xs text-rose-300"
+          className="rounded p-2 text-xs"
+          style={{
+            border: "1px solid var(--color-error)",
+            backgroundColor: "rgba(244, 67, 54, 0.15)",
+            color: "#ff8a80",
+          }}
         >
           {error}
         </div>
       )}
 
-      <div className="space-y-3 pt-1">
-        {/* Option buttons */}
+      <div className="space-y-2.5 pt-1">
         {options.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
             {options.map((opt) => (
-              <button
+              <ControlButton
                 key={opt}
-                type="button"
+                text={opt}
+                variant="primary"
                 disabled={submitting}
-                onClick={() => handleAnswer(opt)}
-                className="rounded-md border border-amber-600/60 bg-amber-900/60 px-4 py-2 text-xs font-semibold text-amber-100 shadow-sm hover:bg-amber-800 hover:border-amber-500 disabled:opacity-50 transition-colors"
-              >
-                {opt}
-              </button>
+                onClick={() => void handleAnswer(opt)}
+              />
             ))}
           </div>
         )}
 
-        {/* Freeform input field */}
         {checkpoint.allow_freeform && (
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              handleAnswer(freeformText);
+              void handleAnswer(freeformText);
             }}
             className="flex flex-col gap-2 sm:flex-row sm:items-center"
           >
@@ -112,14 +123,16 @@ export function CheckpointCard({
               value={freeformText}
               onChange={(e) => setFreeformText(e.target.value)}
               disabled={submitting}
-              className="flex-1 rounded-md border border-amber-900/80 bg-slate-950/80 px-3 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:border-amber-600 focus:outline-none"
+              className="flex-1 h-8 px-2.5 text-xs"
             />
             <button
               type="submit"
               disabled={submitting || !freeformText.trim()}
-              className="rounded-md bg-amber-600 px-3.5 py-1.5 text-xs font-semibold text-slate-950 shadow-sm hover:bg-amber-500 disabled:opacity-50 transition-colors"
+              className="control-button primary"
             >
-              {submitting ? "Submitting..." : "Submit Answer"}
+              <span className="control-button-text">
+                {submitting ? "Submitting..." : "Submit Answer"}
+              </span>
             </button>
           </form>
         )}

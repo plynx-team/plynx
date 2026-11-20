@@ -25,18 +25,15 @@ export function StepperView({
   const stagesDef = workflow?.stages || {};
   const nodesDef = workflow?.nodes || {};
 
-  // All node IDs present in either workflow spec or run state
   const allNodeIds = Array.from(
     new Set([...Object.keys(nodesDef), ...Object.keys(runState.nodes)]),
   );
 
-  // Group nodes by stage
   const stageGroups: Record<
     string,
     Array<{ id: string; spec?: NodeSpec; state?: NodeRunState }>
   > = {};
 
-  // Initialize stages defined in workflow
   for (const stageId of Object.keys(stagesDef)) {
     stageGroups[stageId] = [];
   }
@@ -52,7 +49,6 @@ export function StepperView({
     stageGroups[stageId].push({ id: nodeId, spec, state });
   }
 
-  // Remove empty stages that are not in workflow stages
   const stageIds = Object.keys(stageGroups).filter(
     (id) => stageGroups[id].length > 0 || stagesDef[id] !== undefined,
   );
@@ -70,38 +66,51 @@ export function StepperView({
     runState.status === "RUNNING" || runState.status === "WAITING_FOR_USER";
 
   return (
-    <div className="space-y-6">
+    <div className="p-3 space-y-3">
       {/* Overall Progress Header */}
-      <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-5 space-y-3">
+      <div
+        className="rounded p-3 space-y-2"
+        style={{
+          backgroundColor: "var(--bg-panel)",
+          border: "1px solid var(--border-subtle)",
+        }}
+      >
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-3">
-            <span className="font-semibold text-slate-200">Overall Progress</span>
-            <span className="font-mono text-slate-400">
-              {completedNodes} of {totalNodes} nodes completed ({overallPercent}%)
+            <span className="font-semibold">Overall Progress</span>
+            <span
+              className="font-mono"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              {completedNodes} of {totalNodes} nodes completed ({overallPercent}
+              %)
             </span>
           </div>
           {cacheHitCount > 0 && (
-            <span className="rounded bg-teal-950 border border-teal-800 px-2 py-0.5 text-xs font-semibold text-teal-300">
+            <span className="status-badge READY !text-xs">
               {cacheHitCount} {cacheHitCount === 1 ? "node" : "nodes"} cache hit
             </span>
           )}
         </div>
 
-        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+        <div
+          className="h-1.5 w-full overflow-hidden rounded-sm"
+          style={{ backgroundColor: "var(--bg-panel-secondary)" }}
+        >
           <div
-            className={`h-full transition-all duration-300 ${
-              runState.status === "FAILED"
-                ? "bg-rose-500"
-                : runState.status === "SUCCESS"
-                ? "bg-emerald-500"
-                : "bg-emerald-500"
-            }`}
-            style={{ width: `${overallPercent}%` }}
+            className="h-full transition-all duration-300"
+            style={{
+              width: `${overallPercent}%`,
+              backgroundColor:
+                runState.status === "FAILED"
+                  ? "var(--color-status-failed)"
+                  : "var(--color-status-success)",
+            }}
           />
         </div>
       </div>
 
-      {/* Active Checkpoints (only when run is active) */}
+      {/* Active Checkpoints */}
       {isRunActive &&
         runState.checkpoints
           .filter((cp) => !cp.answered_at)
@@ -114,7 +123,7 @@ export function StepperView({
           ))}
 
       {/* Stage Cards */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {stageIds.map((stageId) => {
           const stageDef: Stage | undefined = stagesDef[stageId];
           const gateState = runState.stage_gates[stageId];

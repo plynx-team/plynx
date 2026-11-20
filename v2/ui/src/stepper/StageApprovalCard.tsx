@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { approveStage } from "../api/client";
 import type { StageGateState } from "../api/types.gen";
+import { ControlButton } from "../components/ControlPanel";
+import { FeatherIcon } from "../components/FeatherIcon";
 
 export interface StageApprovalCardProps {
   runId: string;
@@ -20,7 +22,6 @@ export function StageApprovalCard({
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // If already approved, disappear!
   if (gateState.status === "APPROVED") {
     return null;
   }
@@ -42,49 +43,68 @@ export function StageApprovalCard({
   return (
     <div
       data-testid={`stage-approval-card-${stageId}`}
-      className="rounded-lg border-2 border-indigo-600/80 bg-indigo-950/40 p-5 shadow-lg space-y-4 animate-in fade-in duration-200"
+      className="rounded p-3.5 space-y-3"
+      style={{
+        backgroundColor: "var(--bg-panel)",
+        border: "1px solid var(--color-primary)",
+        borderLeft: "4px solid var(--color-primary)",
+      }}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-indigo-900/60 pb-3">
+      <div
+        className="flex flex-wrap items-center justify-between gap-2 pb-2"
+        style={{ borderBottom: "1px solid var(--border-subtle)" }}
+      >
         <div className="flex items-center gap-2">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-500 text-xs font-bold text-white">
-            &check;
-          </span>
-          <h3 className="text-sm font-bold text-indigo-200">
+          <FeatherIcon
+            name="check-circle"
+            size={15}
+            style={{ color: "var(--color-primary)" }}
+          />
+          <h3 className="text-xs font-bold uppercase tracking-wide">
             Stage Gate: Approval Required
           </h3>
         </div>
-        <span className="font-mono text-xs text-indigo-400/80">
+        <span
+          className="font-mono text-xs"
+          style={{ color: "var(--text-secondary)" }}
+        >
           stage: {stageId}
         </span>
       </div>
 
       <div className="space-y-1">
-        <p className="text-sm font-medium text-slate-100">
-          Stage <span className="font-bold text-white">&ldquo;{title}&rdquo;</span> has finished execution.
+        <p className="text-sm font-medium">
+          Stage <span className="font-bold">&ldquo;{title}&rdquo;</span> has
+          finished execution.
         </p>
-        <p className="text-xs text-slate-400">
-          Downstream stages are paused until you review the results and approve continuation.
+        <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+          Downstream stages are paused until you review the results and approve
+          continuation.
         </p>
       </div>
 
       {error && (
         <div
           role="alert"
-          className="rounded border border-rose-800 bg-rose-950/80 p-2.5 text-xs text-rose-300"
+          className="rounded p-2 text-xs"
+          style={{
+            border: "1px solid var(--color-error)",
+            backgroundColor: "rgba(244, 67, 54, 0.15)",
+            color: "#ff8a80",
+          }}
         >
           {error}
         </div>
       )}
 
-      <div className="flex items-center justify-end gap-3 pt-2">
-        <button
-          type="button"
+      <div className="flex items-center justify-end gap-2 pt-1">
+        <ControlButton
+          icon="check"
+          text={submitting ? "Approving..." : "Approve & Continue"}
+          variant="primary"
           disabled={submitting}
-          onClick={handleApprove}
-          className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50 transition-colors"
-        >
-          {submitting ? "Approving..." : "Approve & Continue"}
-        </button>
+          onClick={() => void handleApprove()}
+        />
       </div>
     </div>
   );

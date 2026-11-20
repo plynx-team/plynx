@@ -1009,3 +1009,66 @@ textarea:read-only {
   justify-content: space-between;
   gap: 8px;
 }
+
+/* Legacy PreviewDialog styles (.PreviewDialogWindow) */
+.PreviewDialogWindow {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65);
+  overflow: hidden;
+}
+
+.preview-note-banner {
+  background-color: var(--bg-card);
+  border-bottom: 1px solid var(--border-default);
+  border-left: 3px solid var(--color-primary);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+.preview-note-text {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.preview-download-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background-color: var(--bg-button);
+  border: 1px solid var(--border-default);
+  border-radius: 3px;
+  color: var(--color-primary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.1s ease-in;
+}
+
+.preview-download-button:hover {
+  background-color: var(--bg-button-hover);
+  border-color: var(--color-primary);
+  color: var(--color-primary-hover);
+}
+
+.preview-content-box {
+  background-color: var(--bg-canvas);
+  padding: 14px;
+  min-height: 80px;
+  max-height: 70vh;
+  overflow: auto;
+  box-sizing: border-box;
+}

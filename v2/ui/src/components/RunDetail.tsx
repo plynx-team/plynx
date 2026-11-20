@@ -10,18 +10,28 @@ import {
 import { applyRunEvent, createInitialRunState } from "../api/reducer";
 import type {
   OpEntry,
+  OutputPortSpec,
   RunState,
   WorkflowDocument,
 } from "../api/types.gen";
 import { GraphView } from "../graph/GraphView";
-import { NodeInspector } from "../graph/NodeInspector";
-import { Link, useRouter } from "../router/Router";
+import {
+  buildOutputPreviewTarget,
+  NodeInspector,
+} from "../graph/NodeInspector";
+import { useRouter } from "../router/Router";
 import { CheckpointCard } from "../stepper/CheckpointCard";
 import { StageApprovalCard } from "../stepper/StageApprovalCard";
 import { StepperView } from "../stepper/StepperView";
 import { ArtifactPreviewDialog } from "../previewers/ArtifactPreviewDialog";
+import { ControlButton, ControlPanel, ControlSeparator } from "./ControlPanel";
+import { FeatherIcon } from "./FeatherIcon";
 import { LogsPanel } from "./LogsPanel";
-import { formatDuration, formatTimestamp, runStatusBadgeClasses } from "./RunList";
+import {
+  formatDuration,
+  formatTimestamp,
+  runStatusBadgeClasses,
+} from "./RunList";
 
 export type RunViewMode = "stepper" | "graph";
 
@@ -54,7 +64,9 @@ export function RunDetail({ runId }: { runId: string }) {
     readSavedViewMode(runId),
   );
   const [reloadSeq, setReloadSeq] = useState<number>(0);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(
+    undefined,
+  );
   const [previewTarget, setPreviewTarget] = useState<{
     title: string;
     url: string;
@@ -96,27 +108,21 @@ export function RunDetail({ runId }: { runId: string }) {
         .then((entries) => {
           if (active) setOps(entries);
         })
-        .catch(() => {
-          // Non-critical: GraphView can fall back to inferred ports
-        });
+        .catch(() => {});
     }
 
-    // PROTOCOL.md section 9: load full ground truth from SQLite first, then connect SSE if non-terminal
     fetchRunState(runId)
       .then((initial) => {
         if (!active) return;
         setRunState(initial);
         setLoading(false);
 
-        // Fetch workflow document for stage definitions and graph topology
         if (initial.workflow_path) {
           fetchWorkflow(initial.workflow_path)
             .then((doc) => {
               if (active) setWorkflowDoc(doc);
             })
-            .catch(() => {
-              // Silently ignore workflow doc fetch error if not critical
-            });
+            .catch(() => {});
         }
 
         if (!TERMINAL_RUN_STATUSES.has(initial.status)) {
@@ -129,7 +135,6 @@ export function RunDetail({ runId }: { runId: string }) {
               );
             },
             () => {
-              // On SSE error (e.g. server restart), resync ground truth from SQLite
               if (!active || resyncPending) return;
               resyncPending = true;
               fetchRunState(runId)
@@ -141,9 +146,7 @@ export function RunDetail({ runId }: { runId: string }) {
                     unsubscribe = undefined;
                   }
                 })
-                .catch(() => {
-                  // Server may still be restarting; EventSource will retry
-                })
+                .catch(() => {})
                 .finally(() => {
                   resyncPending = false;
                 });
@@ -195,6 +198,11 @@ export function RunDetail({ runId }: { runId: string }) {
     }
   };
 
+  const handlePreviewNodeOutput = (nodeId: string, output: OutputPortSpec) => {
+    if (!runState) return;
+    setPreviewTarget(buildOutputPreviewTarget(runState.id, nodeId, output));
+  };
+
   const isTerminal =
     runState?.status === "SUCCESS" ||
     runState?.status === "FAILED" ||
@@ -204,270 +212,286 @@ export function RunDetail({ runId }: { runId: string }) {
     runState && (runState.status === "FAILED" || runState.status === "CANCELED");
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3 text-xs text-slate-400">
-        <Link to="/runs" className="hover:text-slate-200">
-          &larr; All Runs
-        </Link>
-        <span>/</span>
-        <span className="font-mono text-slate-300">{runId}</span>
-      </div>
+    <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
+      {/* Sub-header Control Panel Toolbar */}
+      <ControlPanel>
+        <div
+          role="tablist"
+          aria-label="Run view mode"
+          className="control-toggle"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={viewMode === "stepper"}
+            data-testid="view-toggle-stepper"
+            onClick={() => setViewMode("stepper")}
+            className={`control-button first ${
+              viewMode === "stepper" ? "selected" : ""
+            }`}
+          >
+            <FeatherIcon name="sliders" size={14} />
+            <span className="control-button-text">Stepper</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={viewMode === "graph"}
+            data-testid="view-toggle-graph"
+            onClick={() => setViewMode("graph")}
+            className={`control-button last ${
+              viewMode === "graph" ? "selected" : ""
+            }`}
+          >
+            <FeatherIcon name="grid" size={14} />
+            <span className="control-button-text">Graph</span>
+          </button>
+        </div>
+
+        <ControlSeparator />
+
+        <ControlButton
+          icon="list"
+          text="All Runs"
+          onClick={() => navigate("/runs")}
+        />
+
+        {runState?.workflow_path && (
+          <ControlButton
+            icon="edit-3"
+            text="Edit Workflow"
+            onClick={() => navigate(`/editor/${runState.workflow_path}`)}
+          />
+        )}
+
+        {canCancel && (
+          <ControlButton
+            icon="x"
+            text={actionInProgress ? "Cancelling..." : "Cancel Run"}
+            variant="danger"
+            disabled={actionInProgress}
+            onClick={() => void handleCancel()}
+          />
+        )}
+
+        {canResume && (
+          <ControlButton
+            icon="rotate-ccw"
+            text={actionInProgress ? "Resuming..." : "Resume Run"}
+            variant="primary"
+            disabled={actionInProgress}
+            onClick={() => void handleResume()}
+          />
+        )}
+
+        {runState && (
+          <div className="ml-auto flex items-center gap-3 pr-2 text-xs">
+            <span className="font-mono font-semibold">{runState.id}</span>
+            <span
+              data-testid="run-status-badge"
+              className={runStatusBadgeClasses(runState.status)}
+            >
+              {runState.status}
+            </span>
+            <span
+              className="font-mono hidden md:inline"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              {formatDuration(runState.started_at, runState.finished_at)}
+            </span>
+            <span
+              className="font-mono hidden lg:inline"
+              style={{ color: "var(--text-tertiary)" }}
+            >
+              {formatTimestamp(runState.created_at)}
+            </span>
+          </div>
+        )}
+      </ControlPanel>
 
       {actionError && (
         <div
           role="alert"
-          className="rounded-md border border-rose-900 bg-rose-950/60 p-3 text-sm text-rose-300"
+          className="px-3 py-1.5 text-xs"
+          style={{
+            borderBottom: "1px solid var(--color-error)",
+            backgroundColor: "rgba(244, 67, 54, 0.15)",
+            color: "#ff8a80",
+          }}
         >
           {actionError}
+        </div>
+      )}
+
+      {runState?.error && (
+        <div
+          data-testid="run-error-banner"
+          className="px-3 py-1.5 text-xs"
+          style={{
+            borderBottom: "1px solid var(--color-error)",
+            backgroundColor: "rgba(244, 67, 54, 0.15)",
+            color: "#ff8a80",
+          }}
+        >
+          <span className="font-semibold">Error:</span> {runState.error}
         </div>
       )}
 
       {error ? (
         <div
           role="alert"
-          className="rounded-md border border-rose-900 bg-rose-950/60 p-4 text-sm text-rose-300"
+          className="m-3 rounded p-3 text-xs"
+          style={{
+            border: "1px solid var(--color-error)",
+            backgroundColor: "rgba(244, 67, 54, 0.15)",
+            color: "#ff8a80",
+          }}
         >
           {error}
         </div>
       ) : loading && !runState ? (
-        <div className="rounded-md border border-slate-800 bg-slate-900/40 p-8 text-center text-sm text-slate-400">
+        <div
+          className="p-8 text-center text-sm"
+          style={{ color: "var(--text-secondary)" }}
+        >
           Loading run details...
         </div>
       ) : runState ? (
-        <div className="space-y-6">
-          <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-1">
-                <div className="flex items-center gap-3">
-                  <h1 className="font-mono text-lg font-bold text-white">
-                    {runState.id}
-                  </h1>
-                  <span
-                    data-testid="run-status-badge"
-                    className={`rounded border px-2.5 py-0.5 text-xs font-semibold ${runStatusBadgeClasses(
-                      runState.status,
-                    )}`}
-                  >
-                    {runState.status}
-                  </span>
-                </div>
-                <p className="font-mono text-xs text-slate-400">
-                  Workflow: {runState.workflow_path}
-                </p>
-              </div>
+        <div className="flex flex-1 min-h-0 flex-row overflow-hidden">
+          {/* Center Workspace + Bottom Docked Logs Drawer */}
+          <div
+            className="flex flex-1 min-w-0 flex-col overflow-hidden"
+            style={{ backgroundColor: "var(--bg-canvas)" }}
+          >
+            {/* Visually present view mode title for accessibility and tests */}
+            <h2 className="sr-only">
+              {viewMode === "stepper"
+                ? "Workflow Stages (Stepper)"
+                : "Workflow DAG (Graph)"}
+            </h2>
 
-              <div className="flex items-center gap-2">
-                {canCancel && (
-                  <button
-                    type="button"
-                    disabled={actionInProgress}
-                    onClick={handleCancel}
-                    className="rounded-md border border-rose-800 bg-rose-950/50 px-3 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-900/60 disabled:opacity-50"
-                  >
-                    {actionInProgress ? "Cancelling..." : "Cancel Run"}
-                  </button>
-                )}
-                {canResume && (
-                  <button
-                    type="button"
-                    disabled={actionInProgress}
-                    onClick={handleResume}
-                    className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow hover:bg-emerald-500 disabled:opacity-50"
-                  >
-                    {actionInProgress ? "Resuming..." : "Resume Run"}
-                  </button>
-                )}
-              </div>
-            </div>
+            <div className="flex-1 min-h-0 flex flex-col overflow-y-auto">
+              {viewMode === "stepper" ? (
+                <StepperView
+                  runState={runState}
+                  workflowDoc={workflowDoc}
+                  selectedNodeId={selectedNodeId}
+                  onSelectNode={setSelectedNodeId}
+                />
+              ) : (
+                <div className="flex flex-1 min-h-0 flex-col">
+                  {(!isTerminal &&
+                    (runState.checkpoints.some((cp) => !cp.answered_at) ||
+                      Object.values(runState.stage_gates).some(
+                        (g) => g.status === "WAITING",
+                      ))) && (
+                    <div className="p-2.5 space-y-2 shrink-0">
+                      {runState.checkpoints
+                        .filter((cp) => !cp.answered_at)
+                        .map((cp) => (
+                          <CheckpointCard
+                            key={`${cp.node_id}-${cp.checkpoint_id}`}
+                            runId={runState.id}
+                            checkpoint={cp}
+                          />
+                        ))}
+                      {Object.entries(runState.stage_gates)
+                        .filter(([, gate]) => gate.status === "WAITING")
+                        .map(([stageId, gate]) => (
+                          <StageApprovalCard
+                            key={stageId}
+                            runId={runState.id}
+                            stageId={stageId}
+                            stageTitle={
+                              workflowDoc?.workflow.stages?.[stageId]?.title ||
+                              stageId
+                            }
+                            gateState={gate}
+                          />
+                        ))}
+                    </div>
+                  )}
 
-            <div className="mt-6 grid grid-cols-2 gap-4 border-t border-slate-800/80 pt-4 sm:grid-cols-4 text-xs">
-              <div>
-                <span className="text-slate-500">Created</span>
-                <p className="mt-0.5 text-slate-300">
-                  {formatTimestamp(runState.created_at)}
-                </p>
-              </div>
-              <div>
-                <span className="text-slate-500">Duration</span>
-                <p className="mt-0.5 text-slate-300">
-                  {formatDuration(runState.started_at, runState.finished_at)}
-                </p>
-              </div>
-              <div>
-                <span className="text-slate-500">Owner PID</span>
-                <p className="mt-0.5 font-mono text-slate-300">
-                  {runState.owner_pid ?? "—"}
-                </p>
-              </div>
-              <div>
-                <span className="text-slate-500">Total Nodes</span>
-                <p className="mt-0.5 text-slate-300">
-                  {Object.keys(runState.nodes).length}
-                </p>
-              </div>
-            </div>
-
-            {runState.error && (
-              <div
-                data-testid="run-error-banner"
-                className="mt-4 rounded border border-rose-900 bg-rose-950/50 p-3 text-xs text-rose-300"
-              >
-                <span className="font-semibold">Error:</span> {runState.error}
-              </div>
-            )}
-          </div>
-
-          {/* Dual View: Stepper | Graph */}
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-sm font-bold tracking-wide text-white">
-                {viewMode === "stepper"
-                  ? "Workflow Stages (Stepper)"
-                  : "Workflow DAG (Graph)"}
-              </h2>
-
-              <div
-                role="tablist"
-                aria-label="Run view mode"
-                className="inline-flex rounded-md border border-slate-800 bg-slate-900 p-0.5 text-xs"
-              >
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={viewMode === "stepper"}
-                  data-testid="view-toggle-stepper"
-                  onClick={() => setViewMode("stepper")}
-                  className={`rounded px-3 py-1 font-semibold transition-colors ${
-                    viewMode === "stepper"
-                      ? "bg-emerald-600 text-white shadow-sm"
-                      : "text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  Stepper
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={viewMode === "graph"}
-                  data-testid="view-toggle-graph"
-                  onClick={() => setViewMode("graph")}
-                  className={`rounded px-3 py-1 font-semibold transition-colors ${
-                    viewMode === "graph"
-                      ? "bg-emerald-600 text-white shadow-sm"
-                      : "text-slate-400 hover:text-slate-200"
-                  }`}
-                >
-                  Graph
-                </button>
-              </div>
-            </div>
-
-            {viewMode === "stepper" ? (
-              <StepperView
-                runState={runState}
-                workflowDoc={workflowDoc}
-                selectedNodeId={selectedNodeId}
-                onSelectNode={setSelectedNodeId}
-              />
-            ) : (
-              <div className="space-y-4">
-                {!isTerminal &&
-                  runState.checkpoints
-                    .filter((cp) => !cp.answered_at)
-                    .map((cp) => (
-                      <CheckpointCard
-                        key={`${cp.node_id}-${cp.checkpoint_id}`}
-                        runId={runState.id}
-                        checkpoint={cp}
-                      />
-                    ))}
-                {!isTerminal &&
-                  Object.entries(runState.stage_gates)
-                    .filter(([, gate]) => gate.status === "WAITING")
-                    .map(([stageId, gate]) => (
-                      <StageApprovalCard
-                        key={stageId}
-                        runId={runState.id}
-                        stageId={stageId}
-                        stageTitle={
-                          workflowDoc?.workflow.stages?.[stageId]?.title || stageId
-                        }
-                        gateState={gate}
-                      />
-                    ))}
-                <div className="flex gap-4">
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-h-0">
                     <GraphView
                       workflowDoc={workflowDoc}
                       runState={runState}
                       ops={ops}
                       selectedNodeId={selectedNodeId}
                       onSelectNode={setSelectedNodeId}
+                      onPreviewOutput={handlePreviewNodeOutput}
                       readOnly={true}
+                      heightClassName="h-full"
                     />
                   </div>
-                  {selectedNodeId && workflowDoc?.workflow && (
-                    <div className="h-[540px]">
-                      <NodeInspector
-                        nodeId={selectedNodeId}
-                        workflow={workflowDoc.workflow}
-                        opsMap={opsMap}
-                        runState={runState}
-                        readOnly={true}
-                        onPreviewArtifact={setPreviewTarget}
-                      />
-                    </div>
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Docked Logs Drawer when a node is selected */}
+            {selectedNodeId && (
+              <div>
+                <div
+                  className="flex items-center justify-between px-3 py-1 text-xs"
+                  style={{
+                    backgroundColor: "var(--bg-panel)",
+                    borderTop: "1px solid var(--border-subtle)",
+                  }}
+                >
+                  <span className="font-mono">
+                    Selected Node: <strong>{selectedNodeId}</strong> (
+                    {runState.nodes[selectedNodeId]?.status ?? "PENDING"})
+                  </span>
+                  {runState.nodes[selectedNodeId]?.status === "SUCCESS" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPreviewTarget({
+                          title: `${selectedNodeId} output`,
+                          url: `/api/v1/runs/${runState.id}/nodes/${selectedNodeId}/outputs/text`,
+                          filename: `${selectedNodeId}-output.txt`,
+                        });
+                      }}
+                      className="OutputItemPreview"
+                    >
+                      <FeatherIcon name="eye" size={12} />
+                      <span>Preview Output</span>
+                    </button>
                   )}
                 </div>
+                <LogsPanel
+                  runId={runState.id}
+                  nodeId={selectedNodeId}
+                  onClose={() => setSelectedNodeId(undefined)}
+                />
               </div>
             )}
           </div>
 
-          {/* Logs Panel & Output Actions for Selected Node */}
-          {selectedNodeId && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between rounded-md border border-slate-800 bg-slate-900/60 px-4 py-2 text-xs">
-                <span className="font-mono text-slate-300">
-                  Selected Node: <strong className="text-white">{selectedNodeId}</strong> (
-                  {runState.nodes[selectedNodeId]?.status ?? "PENDING"})
-                </span>
-                {runState.nodes[selectedNodeId]?.status === "SUCCESS" && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPreviewTarget({
-                        title: `${selectedNodeId} output`,
-                        url: `/api/v1/runs/${runState.id}/nodes/${selectedNodeId}/outputs/text`,
-                        filename: `${selectedNodeId}-output.txt`,
-                      });
-                    }}
-                    className="rounded bg-slate-800 px-2.5 py-1 text-xs font-semibold text-emerald-400 hover:bg-slate-700"
-                  >
-                    Preview Output
-                  </button>
-                )}
-              </div>
-              <LogsPanel
-                runId={runState.id}
-                nodeId={selectedNodeId}
-                onClose={() => setSelectedNodeId(undefined)}
-              />
-            </div>
-          )}
-
-          {/* Artifact Preview Dialog */}
-          {previewTarget && (
-            <ArtifactPreviewDialog
-              title={previewTarget.title}
-              url={previewTarget.url}
-              filename={previewTarget.filename}
-              mediaType={previewTarget.mediaType}
-              initialContent={previewTarget.content}
-              onClose={() => setPreviewTarget(null)}
+          {/* Right Docked PropertiesBar */}
+          {workflowDoc?.workflow && (
+            <NodeInspector
+              nodeId={selectedNodeId}
+              workflow={workflowDoc.workflow}
+              opsMap={opsMap}
+              runState={runState}
+              readOnly={true}
+              onPreviewArtifact={setPreviewTarget}
             />
           )}
         </div>
       ) : null}
+
+      {previewTarget && (
+        <ArtifactPreviewDialog
+          title={previewTarget.title}
+          url={previewTarget.url}
+          filename={previewTarget.filename}
+          mediaType={previewTarget.mediaType}
+          initialContent={previewTarget.content}
+          onClose={() => setPreviewTarget(null)}
+        />
+      )}
     </div>
   );
 }
