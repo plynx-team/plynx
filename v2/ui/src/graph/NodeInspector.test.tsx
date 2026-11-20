@@ -391,4 +391,22 @@ describe("NodeInspector component (Task 6.11)", () => {
       { requireApproval: false },
     );
   });
+
+  it("allows reordering stages directly from Workflow Properties", () => {
+    const handleReorderStages = vi.fn().mockReturnValue({ success: true });
+
+    render(
+      <NodeInspector
+        nodeId={undefined}
+        selectedStageId={undefined}
+        workflow={WORKFLOW}
+        opsMap={OPS_MAP}
+        onReorderStages={handleReorderStages}
+      />,
+    );
+
+    const moveDownBtn = screen.getByTestId("btn-workflow-stage-move-down-s1");
+    fireEvent.click(moveDownBtn);
+    expect(handleReorderStages).toHaveBeenCalledWith(["s2", "s1"]);
+  });
 });

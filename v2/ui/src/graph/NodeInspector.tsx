@@ -643,6 +643,54 @@ export function NodeInspector({
 
                       {!readOnly && (
                         <div className="flex items-center gap-0.5 shrink-0">
+                          {onReorderStages && (
+                            <>
+                              <button
+                                type="button"
+                                data-testid={`btn-workflow-stage-move-up-${sid}`}
+                                disabled={idx === 0}
+                                title="Move stage earlier"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const next = [...stageIds];
+                                  const temp = next[idx];
+                                  next[idx] = next[idx - 1];
+                                  next[idx - 1] = temp;
+                                  const res = onReorderStages(next);
+                                  if (!res.success && res.reason) {
+                                    setStageError(res.reason);
+                                  } else {
+                                    setStageError(null);
+                                  }
+                                }}
+                                className="p-1 rounded hover:bg-[#3c3c3c] text-[var(--text-secondary)] disabled:opacity-20 disabled:hover:bg-transparent"
+                              >
+                                <FeatherIcon name="chevron-up" size={11} />
+                              </button>
+                              <button
+                                type="button"
+                                data-testid={`btn-workflow-stage-move-down-${sid}`}
+                                disabled={idx === stageIds.length - 1}
+                                title="Move stage later"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const next = [...stageIds];
+                                  const temp = next[idx];
+                                  next[idx] = next[idx + 1];
+                                  next[idx + 1] = temp;
+                                  const res = onReorderStages(next);
+                                  if (!res.success && res.reason) {
+                                    setStageError(res.reason);
+                                  } else {
+                                    setStageError(null);
+                                  }
+                                }}
+                                className="p-1 rounded hover:bg-[#3c3c3c] text-[var(--text-secondary)] disabled:opacity-20 disabled:hover:bg-transparent"
+                              >
+                                <FeatherIcon name="chevron-down" size={11} />
+                              </button>
+                            </>
+                          )}
                           <button
                             type="button"
                             title="Edit stage"
@@ -667,6 +715,17 @@ export function NodeInspector({
                   );
                 })}
               </div>
+
+              {stageError && (
+                <p
+                  role="alert"
+                  data-testid="workflow-stage-reorder-error"
+                  className="mt-1.5 text-[11px]"
+                  style={{ color: "var(--color-error)" }}
+                >
+                  {stageError}
+                </p>
+              )}
             </div>
           </div>
 
