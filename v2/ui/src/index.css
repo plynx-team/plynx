@@ -900,7 +900,119 @@ textarea:read-only {
   background-color: var(--color-primary);
 }
 
-/* Left Docked Operations Hub (.hub-panel) */
+/* Left Docked Accordion Container & Operations Hub (.left-dock & .hub-panel) */
+.left-dock {
+  width: 250px;
+  min-width: 250px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-panel-secondary);
+  border-right: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  overflow: hidden;
+  user-select: none;
+}
+
+.dock-accordion-section {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--border-subtle);
+  background-color: var(--bg-panel-secondary);
+  transition: flex-grow 180ms ease-out, max-height 180ms ease-out;
+  overflow: hidden;
+}
+
+.dock-accordion-section.is-collapsed {
+  flex: 0 0 auto;
+}
+
+.dock-accordion-section.is-compact {
+  flex: 0 0 auto;
+  max-height: 245px;
+}
+
+.dock-accordion-section.is-expanded-full {
+  flex: 1 1 auto;
+  min-height: 160px;
+}
+
+.dock-accordion-header {
+  width: 100%;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--bg-header);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background-color 120ms ease-in;
+}
+
+.dock-accordion-header:hover {
+  background-color: var(--bg-card-hover);
+}
+
+.dock-accordion-body {
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
+.run-history-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 140ms ease-out, border-color 140ms ease-out,
+    transform 100ms ease-out;
+}
+
+.run-history-item:hover {
+  background-color: var(--bg-card-hover);
+  border-color: var(--border-strong);
+}
+
+.run-history-item.selected {
+  background-color: var(--color-primary-selected);
+  border-color: var(--color-primary);
+  border-left: 3px solid var(--color-primary);
+}
+
+.run-history-item.is-running {
+  border-left: 3px solid #00d8ff;
+  animation: runPulseGlow 2s ease-in-out infinite;
+}
+
+@keyframes runPulseGlow {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 rgba(0, 216, 255, 0);
+  }
+  50% {
+    box-shadow: inset 0 0 10px rgba(0, 216, 255, 0.14);
+  }
+}
+
 .hub-panel {
   width: 250px;
   min-width: 250px;
@@ -914,6 +1026,79 @@ textarea:read-only {
   font-size: var(--font-size-base);
   user-select: none;
   flex-shrink: 0;
+  transition: flex-grow 180ms ease-out, max-height 180ms ease-out;
+  overflow: hidden;
+}
+
+.left-dock .hub-panel {
+  width: 100%;
+  min-width: 0;
+  border-right: none;
+}
+
+.hub-panel.is-expanded {
+  flex: 1 1 0%;
+  min-height: 0;
+}
+
+.hub-panel.is-collapsed {
+  flex: 0 0 auto;
+  height: auto;
+}
+
+/* Workspace Center Run Inspection Mode & Node Diff Badges */
+.workspace-center {
+  background-color: var(--bg-canvas);
+  transition: background-color 180ms ease-out, box-shadow 180ms ease-out;
+}
+
+.workspace-center.is-inspecting-run {
+  background-color: #0d0f13;
+  box-shadow: inset 0 0 0 2px rgba(38, 128, 235, 0.45);
+}
+
+.workspace-center.is-inspecting-run .react-flow {
+  background-color: #0d0f13;
+}
+
+.run-mode-hud {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 10px;
+  background-color: #131820;
+  border-bottom: 1px solid rgba(38, 128, 235, 0.45);
+  font-size: 12px;
+  color: var(--text-primary);
+  transition: background-color 180ms ease-out;
+}
+
+.node-diff-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background-color: rgba(255, 167, 38, 0.22);
+  border: 1px solid rgba(255, 167, 38, 0.65);
+  color: #ffcc80;
+}
+
+.comfy-widget-pill.is-diff,
+.comfy-widget-multiline.is-diff {
+  border-color: rgba(255, 167, 38, 0.75);
+  background-color: rgba(255, 167, 38, 0.08);
+}
+
+.flow-node.is-added-in-editor {
+  border-style: dashed;
+  border-color: rgba(255, 167, 38, 0.7);
 }
 
 .hub-list-header {

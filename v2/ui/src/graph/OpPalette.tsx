@@ -8,6 +8,9 @@ export interface OpPaletteProps {
   targetStage: string;
   onTargetStageChange: (stageId: string) => void;
   onAddOp: (op: OpEntry) => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+  readOnly?: boolean;
 }
 
 export const OP_DRAG_MIME = "application/x-plynx-op-id";
@@ -25,6 +28,9 @@ export function OpPalette({
   targetStage,
   onTargetStageChange,
   onAddOp,
+  collapsed = false,
+  onToggleCollapse,
+  readOnly = false,
 }: OpPaletteProps) {
   const [query, setQuery] = useState<string>("");
   const [collapsedCategories, setCollapsedCategories] = useState<
@@ -92,8 +98,40 @@ export function OpPalette({
   };
 
   return (
-    <aside data-testid="op-palette" className="hub-panel">
-      <div className="hub-list-header space-y-1.5">
+    <aside
+      data-testid="op-palette"
+      className={`hub-panel ${collapsed ? "is-collapsed" : "is-expanded"}`}
+    >
+      {onToggleCollapse && (
+        <button
+          type="button"
+          data-testid="ops-accordion-toggle"
+          onClick={onToggleCollapse}
+          className="dock-accordion-header"
+        >
+          <span className="flex items-center gap-1.5 truncate">
+            <FeatherIcon
+              name={collapsed ? "chevron-right" : "chevron-down"}
+              size={13}
+            />
+            <FeatherIcon
+              name="cpu"
+              size={13}
+              style={{ color: "var(--color-primary)" }}
+            />
+            <span className="truncate">Operations</span>
+          </span>
+          <span
+            className="font-mono text-[11px]"
+            style={{ color: "var(--text-tertiary)" }}
+          >
+            {ops.length}
+          </span>
+        </button>
+      )}
+      {!collapsed && (
+        <>
+          <div className="hub-list-header space-y-1.5">
         <div className="SearchBar w-full">
           <FeatherIcon
             name="search"
@@ -198,17 +236,20 @@ export function OpPalette({
                         key={op.id}
                         type="button"
                         data-testid={`palette-op-${op.id}`}
-                        disabled={!op.valid}
-                        draggable={op.valid}
+                        disabled={!op.valid || readOnly}
+                        draggable={op.valid && !readOnly}
                         onDragStart={(e) => {
+                          if (readOnly) return;
                           e.dataTransfer.setData(OP_DRAG_MIME, op.id);
                           e.dataTransfer.effectAllowed = "copy";
                         }}
                         onClick={() => {
-                          if (op.valid) onAddOp(op);
+                          if (op.valid && !readOnly) onAddOp(op);
                         }}
                         title={
-                          op.valid
+                          readOnly
+                            ? "Return to Working Draft (Editor) to add operations"
+                            : op.valid
                             ? `${op.description || op.title} (${op.id})`
                             : `Invalid op: ${op.error ?? "unknown error"}`
                         }
@@ -237,7 +278,9 @@ export function OpPalette({
             );
           })
         )}
-      </div>
+          </div>
+        </>
+      )}
     </aside>
   );
 }
