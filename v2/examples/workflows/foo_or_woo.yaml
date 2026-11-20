@@ -4,6 +4,9 @@ concurrency: 4
 stages:
   ask:
     title: 1. Ask
+  review:
+    title: Review
+    require_approval: true
   print: {}
 nodes:
   pick:
@@ -16,11 +19,11 @@ nodes:
     op: standard_io/demo:Echo
     stage: print
     inputs:
-      text: $pick.choice
+      text: $concat.text
   concat:
     op: standard_io/demo:Concat
     title: Concat text
-    stage: ask
+    stage: review
     inputs:
       b: $pick.choice
       a: 'Hello, '
