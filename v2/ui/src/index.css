@@ -229,7 +229,6 @@ textarea:read-only {
 
 .Header .NavigationItems .Item.active {
   color: var(--color-primary);
-  font-weight: var(--font-weight-semibold);
   border-bottom: 3px solid var(--color-primary);
 }
 

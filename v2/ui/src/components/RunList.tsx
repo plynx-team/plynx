@@ -185,10 +185,10 @@ export function RunList() {
                   "minmax(180px, 1.5fr) 150px minmax(200px, 1.5fr) 110px 180px",
               }}
             >
-              <div className="list-field flex items-center gap-2 font-mono text-xs">
+              <div className="list-field flex items-center gap-2 font-semibold">
                 <FeatherIcon
                   name="play-circle"
-                  size={14}
+                  size={15}
                   style={{ color: "var(--color-primary)" }}
                 />
                 <span>{run.workflow_path}</span>

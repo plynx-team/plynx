@@ -91,7 +91,7 @@ Full-viewport desktop IDE layout (`display: flex; flex-direction: column; height
   - Left logo (`/logo.png`, `height: 28px`) + navigation links (`Workflows`, `Runs`) separated by `18px` vertical `1px solid var(--border-default)` dividers (`.separator`).
   - Navigation items (`.Item`): full `40px` height, `padding: 0 14px`, `border-bottom: 3px solid transparent`.
     - Hover: `color: var(--text-primary); border-bottom-color: var(--border-strong);`
-    - Active: `color: var(--color-primary); font-weight: 600; border-bottom-color: var(--color-primary);`
+    - Active: `color: var(--color-primary); border-bottom-color: var(--color-primary);` (regular font-weight 400 to prevent tab width changes and layout shifting).
 
 ---
 
@@ -203,5 +203,15 @@ Clicking a workflow in `/workflows` opens the unified workspace directly:
     - Hover: `background-color: var(--bg-card-hover); border-color: var(--border-strong);`
     - Active: `background-color: var(--color-primary-selected); border-color: var(--color-primary);`
   - Status column uses `.status-badge.<STATUS>` (`border: 1px solid var(--border-default); border-radius: 5px; background-color: var(--bg-card); padding: 1px 6px; font-weight: 600;`).
+  - **Column Typography Standards (Uniform across `/workflows`, `/runs`, and Workflow Runs tab)**:
+    - Base grid row & header: `font-family: var(--font-sans); font-size: var(--font-size-base);` (14px).
+    - **Primary Title / Entity Column** (Workflow name in `/workflows`, Workflow in `/runs`):
+      `font-family: var(--font-sans); font-size: var(--font-size-base); font-weight: 600;` accompanied by a `15px` Feather icon tinted with `var(--color-primary)`.
+    - **Status Badges**:
+      Uses `.status-badge.<STATUS>` (`font-family: var(--font-sans); font-size: var(--font-size-sm); font-weight: 600;`).
+    - **Technical Identifiers & Paths** (Run ID in `/runs`, file Path in `/workflows`):
+      `font-family: var(--font-mono); font-size: var(--font-size-sm);` (12px IBM Plex Mono) with `color: var(--text-secondary)` (or primary blue link for Run ID).
+    - **Secondary Data Columns** (Duration, Created timestamps):
+      `font-family: var(--font-sans); font-size: var(--font-size-sm); color: var(--text-secondary);`.
 - **Preview Modal (`ArtifactPreviewDialog`)**:
   - Matches legacy `PreviewDialog.css`: dark panel window (`background-color: var(--bg-panel); border: 1px solid var(--border-strong)`), `.preview-note-banner` (`background-color: var(--bg-card); border-left: 3px solid var(--color-primary)`), `.preview-download-button`, and `.preview-content-box` (`background-color: var(--bg-canvas); font-family: var(--font-mono)`).
