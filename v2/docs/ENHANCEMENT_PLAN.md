@@ -92,11 +92,11 @@ This document tracks the design decisions, architectural models, and implementat
 - [x] Add unit test verifying that single-stage `main` produces 0 `stageGroup` nodes, and multi-stage produces `N` `stageGroup` nodes.
 
 ### Phase 3: Stage Drop Auto-Detection & Palette Simplification
-- [ ] Remove `Target Stage` dropdown selector from `v2/ui/src/graph/OpPalette.tsx`.
-- [ ] In `v2/ui/src/graph/GraphView.tsx`, implement stage AABB detection during `onDragOver` and set `hoveredStageId`.
-- [ ] Update `StageGroupNode.tsx` to display active dropzone styling when hovered (`border-color: var(--color-primary)`, soft glow).
-- [ ] In `v2/ui/src/graph/WorkflowEditor.tsx`, update `handleDropOp` to resolve stage ID from canvas coordinates.
-- [ ] Add unit tests for stage drop detection and palette rendering.
+- [x] Remove `Target Stage` dropdown selector from `v2/ui/src/graph/OpPalette.tsx`.
+- [x] In `v2/ui/src/graph/GraphView.tsx`, implement stage AABB detection during `onDragOver` and set `hoveredStageId`.
+- [x] Update `StageGroupNode.tsx` to display active dropzone styling when hovered (`border-color: var(--color-primary)`, soft glow).
+- [x] In `v2/ui/src/graph/WorkflowEditor.tsx`, update `handleDropOp` to resolve stage ID from canvas coordinates.
+- [x] Add unit tests for stage drop detection and palette rendering.
 
 ### Phase 4: "New Workflow" Button & Creation Modal
 - [ ] Add `+ New Workflow` button to `WorkflowPicker.tsx` toolbar.

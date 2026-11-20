@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { OpEntry, RunState, Workflow, WorkflowLayout } from "../api/types.gen";
-import { buildGraphElements, computeDagrePositions, getOrderedStageIds } from "./layout";
-import { stageGroupId } from "./types";
+import {
+  buildGraphElements,
+  computeDagrePositions,
+  findClosestStage,
+  findStageAtPosition,
+  getOrderedStageIds,
+} from "./layout";
+import { stageGroupId, type StageGroupGraphNode } from "./types";
 
 const SAMPLE_OPS: Record<string, OpEntry> = {
   "standard_io/demo:AskFooOrWoo": {
@@ -404,5 +410,52 @@ describe("graph layout utilities (Task 6.8)", () => {
 
     const echoNode = elements.nodes.find((n) => n.id === "echo");
     expect(echoNode?.parentId).toBe(stageGroupId("etl"));
+  });
+
+  describe("stage containment and proximity detection (Task 6.13)", () => {
+    const mockStageNodes: Array<StageGroupGraphNode> = [
+      {
+        id: stageGroupId("stage_a"),
+        type: "stageGroup",
+        position: { x: 0, y: 0 },
+        style: { width: 300, height: 400 },
+        data: {
+          stageId: "stage_a",
+          title: "Stage A",
+          requireApproval: false,
+          nodeCount: 1,
+        },
+      },
+      {
+        id: stageGroupId("stage_b"),
+        type: "stageGroup",
+        position: { x: 400, y: 0 },
+        style: { width: 300, height: 400 },
+        data: {
+          stageId: "stage_b",
+          title: "Stage B",
+          requireApproval: false,
+          nodeCount: 1,
+        },
+      },
+    ];
+
+    it("finds stage ID when coordinates fall within stage bounding box", () => {
+      // Inside stage_a
+      expect(findStageAtPosition({ x: 150, y: 200 }, mockStageNodes)).toBe("stage_a");
+      // Inside stage_b
+      expect(findStageAtPosition({ x: 450, y: 50 }, mockStageNodes)).toBe("stage_b");
+      // In the gap between stages
+      expect(findStageAtPosition({ x: 350, y: 200 }, mockStageNodes)).toBeUndefined();
+    });
+
+    it("finds closest stage when coordinates are outside all stages", () => {
+      // Closer to stage_a (center: 150, 200)
+      expect(findClosestStage({ x: 310, y: 200 }, mockStageNodes)).toBe("stage_a");
+      // Closer to stage_b (center: 550, 200)
+      expect(findClosestStage({ x: 390, y: 200 }, mockStageNodes)).toBe("stage_b");
+      // Empty stages array falls back to default stage ID
+      expect(findClosestStage({ x: 100, y: 100 }, [], "fallback_stage")).toBe("fallback_stage");
+    });
   });
 });

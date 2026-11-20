@@ -451,24 +451,27 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   );
 
   const handleAddOp = useCallback(
-    (op: OpEntry, position?: NodePosition) => {
-      if (!workflow) return;
-      const result = addNodeToWorkflow(workflow, layout, op, {
-        stageId: targetStage,
+    (op: OpEntry, position?: NodePosition, stageId?: string) => {
+      const currentWf = workflowRef.current;
+      const currentLayout = layoutRef.current;
+      if (!currentWf) return;
+      const effectiveStage = stageId || selectedStageId || targetStage;
+      const result = addNodeToWorkflow(currentWf, currentLayout, op, {
+        stageId: effectiveStage,
         position,
         opsMap,
       });
       commitStateChange(result.workflow, result.layout);
       setSelectedNodeId(result.nodeId);
     },
-    [workflow, layout, targetStage, opsMap, commitStateChange],
+    [selectedStageId, targetStage, opsMap, commitStateChange],
   );
 
   const handleDropOp = useCallback(
-    (opId: string, position: { x: number; y: number }) => {
+    (opId: string, position: { x: number; y: number }, stageId?: string) => {
       const op = opsMap[opId];
       if (!op || !op.valid) return;
-      handleAddOp(op, position);
+      handleAddOp(op, position, stageId);
     },
     [opsMap, handleAddOp],
   );
@@ -1274,15 +1277,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
             />
             <OpPalette
               ops={ops}
-              stages={stageIds}
-              targetStage={targetStage}
-              onTargetStageChange={setTargetStage}
               onAddOp={(op) => handleAddOp(op)}
-              onAddStage={() => {
-                setShowAddStageModal(true);
-                setNewStageModalTitle("");
-                setNewStageModalRequireApproval(false);
-              }}
               collapsed={opsCollapsed}
               onToggleCollapse={() => setOpsCollapsed((v) => !v)}
               readOnly={isInspectingRun}

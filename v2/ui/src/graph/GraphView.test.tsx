@@ -5,6 +5,7 @@ import type { OpEntry, RunState, WorkflowDocument } from "../api/types.gen";
 import { RunDetail } from "../components/RunDetail";
 import { RouterProvider } from "../router/Router";
 import { GraphView } from "./GraphView";
+import { OP_DRAG_MIME } from "./OpPalette";
 
 vi.mock("../api/client", () => ({
   fetchOps: vi.fn(),
@@ -365,5 +366,49 @@ describe("GraphView component (Task 6.8)", () => {
 
     const askBadge = screen.getByTestId("stage-badge-ask");
     expect(askBadge).toHaveClass("stage-drag-handle");
+  });
+
+  it("detects stage under cursor during dragover and calls onDropOp with detected stage", () => {
+    const onDropOp = vi.fn();
+    render(
+      <GraphView
+        workflowDoc={MOCK_WORKFLOW_DOC}
+        ops={MOCK_OPS}
+        readOnly={false}
+        onDropOp={onDropOp}
+      />,
+    );
+
+    const graphView = screen.getByTestId("graph-view");
+    const askStage = screen.getByTestId("stage-group-ask");
+    expect(askStage).not.toHaveClass("is-drop-target");
+
+    // Drag over within the bounding box of stage "ask" (position.x = 8, width = 324, position.y = 12)
+    fireEvent.dragOver(graphView, {
+      clientX: 50,
+      clientY: 50,
+      dataTransfer: {
+        types: [OP_DRAG_MIME],
+      },
+    });
+
+    // Wait for the re-render with is-drop-target
+    expect(screen.getByTestId("stage-group-ask")).toHaveClass("is-drop-target");
+
+    // Drop op into stage "ask"
+    fireEvent.drop(graphView, {
+      clientX: 50,
+      clientY: 50,
+      dataTransfer: {
+        getData: (type: string) =>
+          type === OP_DRAG_MIME ? "standard_io/text:Concat" : "",
+      },
+    });
+
+    expect(onDropOp).toHaveBeenCalledWith(
+      "standard_io/text:Concat",
+      expect.any(Object),
+      "ask",
+    );
   });
 });

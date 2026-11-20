@@ -76,6 +76,7 @@ export interface StageGroupNodeData extends Record<string, unknown> {
   gateState?: StageGateState;
   nodeCount: number;
   isSelected?: boolean;
+  isDropTarget?: boolean;
   onSelectStage?: (stageId: string) => void;
   onDeleteStage?: (stageId: string) => void;
 }

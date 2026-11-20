@@ -559,3 +559,66 @@ export function buildGraphElements(
     stageGroupPositions,
   };
 }
+
+export function findStageAtPosition(
+  flowPos: { x: number; y: number },
+  stageNodes: ReadonlyArray<StageGroupGraphNode>,
+): string | undefined {
+  for (const stageNode of stageNodes) {
+    const x = stageNode.position.x;
+    const y = stageNode.position.y;
+    const width =
+      typeof stageNode.style?.width === "number" ? stageNode.style.width : 0;
+    const height =
+      typeof stageNode.style?.height === "number" ? stageNode.style.height : 0;
+    if (
+      flowPos.x >= x &&
+      flowPos.x <= x + width &&
+      flowPos.y >= y &&
+      flowPos.y <= y + height
+    ) {
+      return stageNode.data.stageId;
+    }
+  }
+  return undefined;
+}
+
+export function findClosestStage(
+  flowPos: { x: number; y: number },
+  stageNodes: ReadonlyArray<StageGroupGraphNode>,
+  defaultStageId: string = DEFAULT_STAGE_ID,
+): string {
+  if (stageNodes.length === 0) return defaultStageId;
+  let closestStageId = stageNodes[0].data.stageId;
+  let minDistanceSq = Infinity;
+
+  for (const stageNode of stageNodes) {
+    const x = stageNode.position.x;
+    const y = stageNode.position.y;
+    const width =
+      typeof stageNode.style?.width === "number" ? stageNode.style.width : 0;
+    const height =
+      typeof stageNode.style?.height === "number" ? stageNode.style.height : 0;
+
+    // If directly inside, return immediately
+    if (
+      flowPos.x >= x &&
+      flowPos.x <= x + width &&
+      flowPos.y >= y &&
+      flowPos.y <= y + height
+    ) {
+      return stageNode.data.stageId;
+    }
+
+    // Measure distance from cursor to stage box center
+    const centerX = x + width / 2;
+    const centerY = y + height / 2;
+    const distSq = (flowPos.x - centerX) ** 2 + (flowPos.y - centerY) ** 2;
+    if (distSq < minDistanceSq) {
+      minDistanceSq = distSq;
+      closestStageId = stageNode.data.stageId;
+    }
+  }
+
+  return closestStageId;
+}

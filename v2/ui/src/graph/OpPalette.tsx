@@ -4,9 +4,9 @@ import { FeatherIcon } from "../components/FeatherIcon";
 
 export interface OpPaletteProps {
   ops: ReadonlyArray<OpEntry>;
-  stages: ReadonlyArray<string>;
-  targetStage: string;
-  onTargetStageChange: (stageId: string) => void;
+  stages?: ReadonlyArray<string>;
+  targetStage?: string;
+  onTargetStageChange?: (stageId: string) => void;
   onAddOp: (op: OpEntry) => void;
   onAddStage?: () => void;
   collapsed?: boolean;
@@ -25,11 +25,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 
 export function OpPalette({
   ops,
-  stages,
-  targetStage,
-  onTargetStageChange,
   onAddOp,
-  onAddStage,
   collapsed = false,
   onToggleCollapse,
   readOnly = false,
@@ -166,43 +162,6 @@ export function OpPalette({
             </button>
           )}
         </div>
-
-        {stages.length > 0 && (
-          <div className="flex items-center gap-1.5 text-xs">
-            <label
-              htmlFor="palette-target-stage"
-              className="shrink-0"
-              style={{ color: "var(--text-secondary)" }}
-            >
-              Stage:
-            </label>
-            <select
-              id="palette-target-stage"
-              data-testid="palette-target-stage"
-              value={targetStage}
-              onChange={(e) => onTargetStageChange(e.target.value)}
-              className="min-w-0 flex-1 px-1.5 py-0.5 text-xs"
-            >
-              {stages.map((stageId) => (
-                <option key={stageId} value={stageId}>
-                  {stageId === "main" ? "Workflow (main - Default)" : stageId}
-                </option>
-              ))}
-            </select>
-            {!readOnly && onAddStage && (
-              <button
-                type="button"
-                aria-label="Add new stage"
-                title="Add new stage"
-                data-testid="palette-btn-add-stage"
-                onClick={onAddStage}
-                className="p-1 rounded hover:bg-[#3c3c3c] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-              >
-                <FeatherIcon name="plus" size={12} />
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
       <div className="hub-entry-list space-y-1">

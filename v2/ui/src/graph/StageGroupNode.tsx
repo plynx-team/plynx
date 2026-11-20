@@ -5,17 +5,30 @@ import type { StageGroupGraphNode } from "./types";
 export function StageGroupNode({ data }: NodeProps<StageGroupGraphNode>) {
   const gateStatus = data.gateState?.status;
   const isSelected = Boolean(data.isSelected);
+  const isDropTarget = Boolean(data.isDropTarget);
   const isEmpty = data.nodeCount === 0;
 
   return (
     <div
       data-testid={`stage-group-${data.stageId}`}
-      className="h-full w-full rounded-lg pointer-events-none relative transition-colors duration-150"
+      data-is-drop-target={isDropTarget ? "true" : undefined}
+      className={`h-full w-full rounded-lg pointer-events-none relative transition-all duration-150 ${
+        isDropTarget ? "is-drop-target ring-2 ring-[var(--color-primary)] ring-opacity-50" : ""
+      }`}
       style={{
-        border: isSelected ? "2px solid var(--color-primary)" : "1px dashed #3c3c3c",
-        backgroundColor: isSelected
+        border: isDropTarget
+          ? "2px solid var(--color-primary)"
+          : isSelected
+          ? "2px solid var(--color-primary)"
+          : "1px dashed #3c3c3c",
+        backgroundColor: isDropTarget
+          ? "rgba(38, 128, 235, 0.16)"
+          : isSelected
           ? "rgba(38, 128, 235, 0.08)"
           : "rgba(38, 38, 38, 0.28)",
+        boxShadow: isDropTarget
+          ? "0 0 20px rgba(38, 128, 235, 0.35), inset 0 0 16px rgba(38, 128, 235, 0.12)"
+          : undefined,
       }}
     >
       {/* Top drag area / header bar: gives a generous draggable zone across the top of the stage */}
@@ -42,7 +55,7 @@ export function StageGroupNode({ data }: NodeProps<StageGroupGraphNode>) {
               ? "stage-drag-handle cursor-grab active:cursor-grabbing"
               : "cursor-pointer"
           } ${
-            isSelected
+            isDropTarget || isSelected
               ? "border border-[var(--color-primary)] text-[var(--color-primary)]"
               : "border border-[#3c3c3c] hover:border-[var(--color-primary)]"
           }`}
@@ -56,17 +69,19 @@ export function StageGroupNode({ data }: NodeProps<StageGroupGraphNode>) {
             name="layers"
             size={11}
             style={{
-              color: isSelected
-                ? "var(--color-primary)"
-                : "var(--text-secondary)",
+              color:
+                isDropTarget || isSelected
+                  ? "var(--color-primary)"
+                  : "var(--text-secondary)",
             }}
           />
           <span
             className="truncate font-semibold text-xs"
             style={{
-              color: isSelected
-                ? "var(--color-primary)"
-                : "var(--text-primary)",
+              color:
+                isDropTarget || isSelected
+                  ? "var(--color-primary)"
+                  : "var(--text-primary)",
             }}
           >
             {data.title}

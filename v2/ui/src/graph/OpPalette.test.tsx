@@ -78,6 +78,9 @@ describe("OpPalette component (Task 6.9)", () => {
       screen.getByTestId("palette-category-Text / Basic"),
     ).toBeInTheDocument();
 
+    // Stage dropdown is removed from the left pane
+    expect(screen.queryByTestId("palette-target-stage")).not.toBeInTheDocument();
+
     fireEvent.click(screen.getByTestId("palette-op-standard_io/text:Concat"));
     expect(onAddOp).toHaveBeenCalledWith(OPS[1]);
   });

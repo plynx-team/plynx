@@ -21,11 +21,21 @@ import type {
   WorkflowDocument,
   WorkflowLayout,
 } from "../api/types.gen";
-import { buildGraphElements } from "./layout";
+import {
+  buildGraphElements,
+  DEFAULT_STAGE_ID,
+  findClosestStage,
+  findStageAtPosition,
+} from "./layout";
 import { OP_DRAG_MIME } from "./OpPalette";
 import type { WorkflowRunDiff } from "./runDiff";
 import { StageGroupNode } from "./StageGroupNode";
-import { extractStageId, isStageGroupId, type GraphNode } from "./types";
+import {
+  extractStageId,
+  isStageGroupId,
+  type GraphNode,
+  type StageGroupGraphNode,
+} from "./types";
 import { WorkflowNode } from "./WorkflowNode";
 
 const NODE_TYPES: NodeTypes = {
@@ -53,7 +63,11 @@ export interface GraphViewProps {
   onConnect?: (connection: Connection) => void;
   onNodeDragStop?: (nodeId: string, absX: number, absY: number) => void;
   onStageDragStop?: (stageId: string, dx: number, dy: number) => void;
-  onDropOp?: (opId: string, position: { x: number; y: number }) => void;
+  onDropOp?: (
+    opId: string,
+    position: { x: number; y: number },
+    stageId?: string,
+  ) => void;
   onViewportChange?: (viewport: { x: number; y: number; zoom: number }) => void;
   onLiteralChange?: (nodeId: string, portName: string, value: unknown) => void;
   onPreviewOutput?: (nodeId: string, output: OutputPortSpec) => void;
@@ -171,11 +185,40 @@ function GraphCanvasInner({
     measuredDims,
   ]);
 
+  const [hoveredStageId, setHoveredStageId] = useState<string | undefined>(
+    undefined,
+  );
+
+  const stageNodes = useMemo(() => {
+    return built.nodes.filter((n): n is StageGroupGraphNode =>
+      isStageGroupId(n.id),
+    );
+  }, [built.nodes]);
+
   const [rfNodes, setRfNodes] = useState<Array<GraphNode>>(built.nodes);
 
   useEffect(() => {
-    setRfNodes(built.nodes);
-  }, [built.nodes]);
+    if (!hoveredStageId) {
+      setRfNodes(built.nodes);
+    } else {
+      setRfNodes(
+        built.nodes.map((node): GraphNode => {
+          if (node.type === "stageGroup") {
+            const sid = extractStageId(node.id);
+            const isTarget = sid === hoveredStageId;
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                isDropTarget: isTarget,
+              },
+            };
+          }
+          return node;
+        }),
+      );
+    }
+  }, [built.nodes, hoveredStageId]);
 
   useEffect(() => {
     if (fitViewTrigger > 0) {
@@ -273,21 +316,76 @@ function GraphCanvasInner({
       style={{ backgroundColor: "var(--bg-canvas)" }}
       onDragOver={(e) => {
         if (readOnly || !onDropOp) return;
-        if (e.dataTransfer.types.includes(OP_DRAG_MIME)) {
+        const types = e.dataTransfer?.types;
+        const hasOpMime = types ? Array.from(types).includes(OP_DRAG_MIME) : false;
+        if (hasOpMime) {
           e.preventDefault();
-          e.dataTransfer.dropEffect = "copy";
+          if (e.dataTransfer) {
+            e.dataTransfer.dropEffect = "copy";
+          }
+          let flowPos = reactFlow.screenToFlowPosition({
+            x: e.clientX,
+            y: e.clientY,
+          });
+          if (!Number.isFinite(flowPos.x) || !Number.isFinite(flowPos.y)) {
+            const vp = reactFlow.getViewport?.() ?? { x: 0, y: 0, zoom: 1 };
+            const zoom = Number.isFinite(vp.zoom) && vp.zoom > 0 ? vp.zoom : 1;
+            const vpX = Number.isFinite(vp.x) ? vp.x : 0;
+            const vpY = Number.isFinite(vp.y) ? vp.y : 0;
+            const containerRect = e.currentTarget.getBoundingClientRect();
+            const clientX = Number.isFinite(e.clientX) ? e.clientX : 0;
+            const clientY = Number.isFinite(e.clientY) ? e.clientY : 0;
+            const left = Number.isFinite(containerRect?.left) ? containerRect.left : 0;
+            const top = Number.isFinite(containerRect?.top) ? containerRect.top : 0;
+            flowPos = {
+              x: (clientX - left - vpX) / zoom,
+              y: (clientY - top - vpY) / zoom,
+            };
+          }
+          const hit = findStageAtPosition(flowPos, stageNodes);
+          if (hit !== hoveredStageId) {
+            setHoveredStageId(hit);
+          }
         }
+      }}
+      onDragLeave={(e) => {
+        if (
+          e.relatedTarget instanceof Node &&
+          e.currentTarget.contains(e.relatedTarget)
+        ) {
+          return;
+        }
+        setHoveredStageId(undefined);
       }}
       onDrop={(e) => {
         if (readOnly || !onDropOp) return;
+        setHoveredStageId(undefined);
         const opId = e.dataTransfer.getData(OP_DRAG_MIME);
         if (!opId) return;
         e.preventDefault();
-        const flowPos = reactFlow.screenToFlowPosition({
+        let flowPos = reactFlow.screenToFlowPosition({
           x: e.clientX,
           y: e.clientY,
         });
-        onDropOp(opId, flowPos);
+        if (!Number.isFinite(flowPos.x) || !Number.isFinite(flowPos.y)) {
+          const vp = reactFlow.getViewport?.() ?? { x: 0, y: 0, zoom: 1 };
+          const zoom = Number.isFinite(vp.zoom) && vp.zoom > 0 ? vp.zoom : 1;
+          const vpX = Number.isFinite(vp.x) ? vp.x : 0;
+          const vpY = Number.isFinite(vp.y) ? vp.y : 0;
+          const containerRect = e.currentTarget.getBoundingClientRect();
+          const clientX = Number.isFinite(e.clientX) ? e.clientX : 0;
+          const clientY = Number.isFinite(e.clientY) ? e.clientY : 0;
+          const left = Number.isFinite(containerRect?.left) ? containerRect.left : 0;
+          const top = Number.isFinite(containerRect?.top) ? containerRect.top : 0;
+          flowPos = {
+            x: (clientX - left - vpX) / zoom,
+            y: (clientY - top - vpY) / zoom,
+          };
+        }
+        const detectedStageId =
+          findStageAtPosition(flowPos, stageNodes) ??
+          findClosestStage(flowPos, stageNodes, DEFAULT_STAGE_ID);
+        onDropOp(opId, flowPos, detectedStageId);
       }}
     >
       {/* Legacy v1 bottom-left workflow title watermark */}
