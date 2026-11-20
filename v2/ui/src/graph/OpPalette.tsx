@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { OpEntry } from "../api/types.gen";
+import { FeatherIcon } from "../components/FeatherIcon";
 
 export interface OpPaletteProps {
   ops: ReadonlyArray<OpEntry>;
@@ -91,26 +92,19 @@ export function OpPalette({
   };
 
   return (
-    <aside
-      data-testid="op-palette"
-      className="flex h-full w-64 shrink-0 flex-col rounded-lg border border-slate-800 bg-slate-900/60 overflow-hidden"
-    >
-      <div className="border-b border-slate-800 p-3 space-y-2.5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-            Operations
-          </h2>
-          <span className="font-mono text-[10px] text-slate-500">
-            / or ⌘K
-          </span>
-        </div>
-
-        <div className="relative">
+    <aside data-testid="op-palette" className="hub-panel">
+      <div className="hub-list-header space-y-1.5">
+        <div className="SearchBar w-full">
+          <FeatherIcon
+            name="search"
+            size={13}
+            style={{ color: "var(--text-tertiary)" }}
+          />
           <input
             ref={searchInputRef}
             data-testid="palette-search"
             type="text"
-            placeholder="Search operations..."
+            placeholder="Search operations (/ or ⌘K)..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
@@ -119,31 +113,35 @@ export function OpPalette({
                 searchInputRef.current?.blur();
               }
             }}
-            className="w-full rounded-md border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
           />
           {query && (
             <button
               type="button"
               aria-label="Clear search"
               onClick={() => setQuery("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-500 hover:text-slate-300"
+              className="text-xs px-1"
+              style={{ color: "var(--text-secondary)" }}
             >
-              &times;
+              <FeatherIcon name="x" size={12} />
             </button>
           )}
         </div>
 
         {stages.length > 0 && (
-          <div className="flex items-center gap-2 text-[11px]">
-            <label htmlFor="palette-target-stage" className="text-slate-400 shrink-0">
-              Add to stage:
+          <div className="flex items-center gap-1.5 text-xs">
+            <label
+              htmlFor="palette-target-stage"
+              className="shrink-0"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              Stage:
             </label>
             <select
               id="palette-target-stage"
               data-testid="palette-target-stage"
               value={targetStage}
               onChange={(e) => onTargetStageChange(e.target.value)}
-              className="min-w-0 flex-1 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px] text-slate-200 focus:border-emerald-500 focus:outline-none"
+              className="min-w-0 flex-1 px-1.5 py-0.5 text-xs"
             >
               {stages.map((stageId) => (
                 <option key={stageId} value={stageId}>
@@ -155,33 +153,46 @@ export function OpPalette({
         )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-2 space-y-2">
+      <div className="hub-entry-list space-y-1">
         {groupedOps.length === 0 ? (
-          <div className="p-4 text-center text-xs text-slate-500">
+          <div
+            className="p-4 text-center text-xs"
+            style={{ color: "var(--text-tertiary)" }}
+          >
             No operations match &ldquo;{query}&rdquo;.
           </div>
         ) : (
           groupedOps.map(({ category, items }) => {
-            const isCollapsed = Boolean(collapsedCategories[category]) && !query.trim();
+            const isCollapsed =
+              Boolean(collapsedCategories[category]) && !query.trim();
             return (
               <div
                 key={category}
                 data-testid={`palette-category-${category}`}
-                className="space-y-1"
+                className="hub-box"
               >
                 <button
                   type="button"
                   onClick={() => toggleCategory(category)}
-                  className="flex w-full items-center justify-between rounded px-2 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                  className="hub-entry-group-title w-full"
                 >
-                  <span className="truncate">{category}</span>
-                  <span className="font-mono text-[10px] text-slate-500">
-                    {isCollapsed ? "+" : "−"} {items.length}
+                  <span className="flex items-center gap-1.5 truncate">
+                    <FeatherIcon
+                      name={isCollapsed ? "chevron-right" : "chevron-down"}
+                      size={13}
+                    />
+                    <span className="truncate">{category}</span>
+                  </span>
+                  <span
+                    className="font-mono text-[11px]"
+                    style={{ color: "var(--text-tertiary)" }}
+                  >
+                    {items.length}
                   </span>
                 </button>
 
                 {!isCollapsed && (
-                  <div className="space-y-1 pl-1">
+                  <div className="pl-2 pr-0.5 py-0.5 space-y-1">
                     {items.map((op) => (
                       <button
                         key={op.id}
@@ -198,31 +209,26 @@ export function OpPalette({
                         }}
                         title={
                           op.valid
-                            ? `${op.description || op.title} — click or drag to add`
+                            ? `${op.description || op.title} (${op.id})`
                             : `Invalid op: ${op.error ?? "unknown error"}`
                         }
-                        className={`group flex w-full flex-col rounded-md border px-2.5 py-2 text-left transition-colors ${
-                          op.valid
-                            ? "border-slate-800 bg-slate-950/70 hover:border-emerald-600/70 hover:bg-slate-900 cursor-pointer"
-                            : "border-rose-900/50 bg-rose-950/20 opacity-60 cursor-not-allowed"
-                        }`}
+                        className="hub-item-node"
                       >
-                        <div className="flex items-center justify-between gap-1.5">
-                          <span className="truncate text-xs font-medium text-slate-200 group-hover:text-white">
-                            {op.title}
-                          </span>
-                          <span className="shrink-0 text-[10px] text-emerald-400 opacity-0 group-hover:opacity-100">
-                            + Add
-                          </span>
-                        </div>
-                        <span className="truncate font-mono text-[10px] text-slate-500">
-                          {op.id}
-                        </span>
-                        {op.description && (
-                          <span className="mt-0.5 line-clamp-1 text-[10px] text-slate-400">
-                            {op.description}
-                          </span>
-                        )}
+                        <FeatherIcon
+                          name="cpu"
+                          size={13}
+                          style={{
+                            color: op.valid
+                              ? "var(--color-primary)"
+                              : "var(--color-error)",
+                          }}
+                        />
+                        <span className="hub-item-node-text">{op.title}</span>
+                        <FeatherIcon
+                          name="help-circle"
+                          size={12}
+                          style={{ color: "var(--text-tertiary)" }}
+                        />
                       </button>
                     ))}
                   </div>

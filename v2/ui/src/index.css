@@ -787,3 +787,225 @@ textarea:read-only {
   border-color: var(--color-primary-active);
   background-color: var(--color-primary);
 }
+
+/* Left Docked Operations Hub (.hub-panel) */
+.hub-panel {
+  width: 250px;
+  min-width: 250px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-panel-secondary);
+  border-right: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.hub-list-header {
+  padding: 6px;
+  background-color: var(--bg-panel);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.hub-entry-list {
+  flex: 1;
+  overflow-y: auto;
+  background-color: var(--bg-panel-secondary);
+  padding: 4px;
+}
+
+.hub-entry-group-title {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px;
+  border-radius: 3px;
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-base);
+}
+
+.hub-entry-group-title:hover {
+  background-color: var(--bg-card-hover);
+}
+
+.hub-item-node {
+  width: 100%;
+  padding: 5px 6px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  margin: 2px 0;
+  display: grid;
+  grid-template-columns: 20px 1fr 16px;
+  align-items: center;
+  text-align: left;
+  color: var(--text-primary);
+  cursor: grab;
+  transition: all 0.1s ease-in;
+}
+
+.hub-item-node:hover:not(:disabled) {
+  background-color: var(--bg-card-hover);
+  border-color: var(--border-strong);
+}
+
+.hub-item-node:active:not(:disabled) {
+  background-color: var(--color-primary-selected);
+  border-color: var(--color-primary);
+}
+
+.hub-item-node-text {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-regular);
+}
+
+/* Right Docked Properties Sidebar (.PropertiesBar) */
+.PropertiesBar {
+  background-color: var(--bg-panel);
+  width: 300px;
+  min-width: 300px;
+  height: 100%;
+  padding: 6px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-left: 1px solid var(--border-subtle);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.PropertiesHeader {
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 15px;
+  padding: 4px 4px 6px 4px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.PropertiesBoxRoot {
+  padding-top: 6px;
+}
+
+.PropertiesBox {
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.PropertiesBoxHeader {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 5px 0 3px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.PropertiesBoxContent {
+  color: var(--text-primary);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  padding: 5px 6px;
+}
+
+.ParameterItem {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 38% 1fr;
+  margin: 5px 0;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+}
+
+.ParameterNameCell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ParameterValueCell {
+  min-width: 0;
+  color: var(--text-primary);
+}
+
+.OutputItem {
+  display: grid;
+  grid-template-columns: 42% 58%;
+  align-items: center;
+  padding: 3px 0;
+  font-size: var(--font-size-sm);
+}
+
+.OutputNameCell {
+  padding-left: 2px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.OutputValueCell {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  text-align: right;
+  padding-right: 2px;
+}
+
+.OutputItemPreview {
+  color: var(--color-primary);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  font-size: var(--font-size-sm);
+  font-family: var(--font-sans);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 4px;
+}
+
+.OutputItemPreview:hover {
+  text-decoration: underline;
+  color: var(--color-primary-hover);
+}
+
+/* Bottom Docked Logs Drawer (.logs-drawer) */
+.logs-drawer {
+  border-top: 1px solid var(--border-subtle);
+  background-color: var(--bg-app);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.logs-drawer-header {
+  background-color: var(--bg-header);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 4px 10px;
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}

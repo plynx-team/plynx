@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { uploadFile } from "../api/client";
 import type { InputPortSpec } from "../api/types.gen";
+import { FeatherIcon } from "../components/FeatherIcon";
 
 export interface LiteralWidgetProps {
   port: InputPortSpec;
@@ -57,12 +58,12 @@ export function LiteralWidget({
           const matched = port.options?.find((opt) => String(opt) === raw);
           onChange(matched !== undefined ? matched : raw);
         }}
-        className="w-full rounded border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none disabled:opacity-60"
+        className="w-full px-1.5 py-1 text-xs"
       >
         <option value="">
           {port.default !== null && port.default !== undefined
             ? `(default: ${String(port.default)})`
-            : "-- select option --"}
+            : "-- select --"}
         </option>
         {port.options.map((opt) => (
           <option key={String(opt)} value={String(opt)}>
@@ -82,16 +83,16 @@ export function LiteralWidget({
         ? Boolean(port.default)
         : false;
     return (
-      <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+      <label className="flex items-center gap-1.5 text-xs cursor-pointer">
         <input
           data-testid={testId}
           type="checkbox"
           disabled={readOnly}
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
-          className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-500 disabled:opacity-60"
+          className="h-3.5 w-3.5"
         />
-        <span className="font-mono">{checked ? "true" : "false"}</span>
+        <span className="font-mono text-xs">{checked ? "true" : "false"}</span>
       </label>
     );
   }
@@ -103,8 +104,7 @@ export function LiteralWidget({
       typeof port.min === "number" && typeof port.max === "number";
     const step =
       typeof port.step === "number" ? port.step : isInt ? 1 : 0.1;
-    const displayVal =
-      typeof value === "number" ? String(value) : "";
+    const displayVal = typeof value === "number" ? String(value) : "";
     const sliderVal =
       typeof value === "number"
         ? value
@@ -124,9 +124,9 @@ export function LiteralWidget({
     };
 
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         {hasBounds && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <input
               data-testid={`${testId}-slider`}
               type="range"
@@ -136,9 +136,13 @@ export function LiteralWidget({
               step={step}
               value={sliderVal}
               onChange={(e) => handleNumericInput(e.target.value)}
-              className="flex-1 accent-emerald-500"
+              className="flex-1"
+              style={{ accentColor: "var(--color-primary)" }}
             />
-            <span className="w-12 text-right font-mono text-[11px] text-slate-400">
+            <span
+              className="w-8 text-right font-mono text-[11px]"
+              style={{ color: "var(--text-secondary)" }}
+            >
               {sliderVal}
             </span>
           </div>
@@ -152,14 +156,14 @@ export function LiteralWidget({
           step={typeof port.step === "number" ? port.step : isInt ? "1" : "any"}
           placeholder={
             port.default !== null && port.default !== undefined
-              ? `Default: ${String(port.default)}`
+              ? String(port.default)
               : isInt
-              ? "Enter integer..."
-              : "Enter number..."
+              ? "int"
+              : "float"
           }
           value={displayVal}
           onChange={(e) => handleNumericInput(e.target.value)}
-          className="w-full rounded border border-slate-700 bg-slate-950 px-2.5 py-1.5 font-mono text-xs text-slate-200 placeholder-slate-600 focus:border-emerald-500 focus:outline-none disabled:opacity-60"
+          className="w-full px-1.5 py-1 font-mono text-xs"
         />
       </div>
     );
@@ -171,9 +175,9 @@ export function LiteralWidget({
       <div className="space-y-1">
         <textarea
           data-testid={testId}
-          rows={3}
+          rows={2}
           disabled={readOnly}
-          placeholder='{"key": "value"} or ["a", "b"]'
+          placeholder='{"key": "value"}'
           value={jsonDraft}
           onChange={(e) => {
             const raw = e.target.value;
@@ -185,10 +189,7 @@ export function LiteralWidget({
             }
             try {
               const parsed: unknown = JSON.parse(raw);
-              if (
-                typeof parsed !== "object" ||
-                parsed === null
-              ) {
+              if (typeof parsed !== "object" || parsed === null) {
                 setJsonError("JSON port expects an object or array");
                 return;
               }
@@ -198,10 +199,12 @@ export function LiteralWidget({
               setJsonError("Invalid JSON syntax");
             }
           }}
-          className="w-full rounded border border-slate-700 bg-slate-950 p-2 font-mono text-xs text-slate-200 placeholder-slate-600 focus:border-emerald-500 focus:outline-none disabled:opacity-60"
+          className="w-full p-1.5 font-mono text-xs"
         />
         {jsonError && (
-          <p className="text-[10px] text-rose-400">{jsonError}</p>
+          <p className="text-[10px]" style={{ color: "var(--color-error)" }}>
+            {jsonError}
+          </p>
         )}
       </div>
     );
@@ -211,26 +214,30 @@ export function LiteralWidget({
   if (port.type === "file" || port.type === "directory") {
     const strVal = typeof value === "string" ? value : "";
     return (
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-1.5">
+      <div className="space-y-1">
+        <div className="flex items-center gap-1">
           <input
             data-testid={testId}
             type="text"
             disabled={readOnly}
             placeholder={
               port.default !== null && port.default !== undefined
-                ? `Default: ${String(port.default)}`
-                : `Workspace-relative ${port.type} path...`
+                ? String(port.default)
+                : `${port.type} path...`
             }
             value={strVal}
             onChange={(e) =>
               onChange(e.target.value === "" ? undefined : e.target.value)
             }
-            className="min-w-0 flex-1 rounded border border-slate-700 bg-slate-950 px-2.5 py-1.5 font-mono text-xs text-slate-200 placeholder-slate-600 focus:border-emerald-500 focus:outline-none disabled:opacity-60"
+            className="min-w-0 flex-1 px-1.5 py-1 font-mono text-xs"
           />
           {!readOnly && port.type === "file" && (
-            <label className="shrink-0 cursor-pointer rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-[11px] font-medium text-slate-300 hover:bg-slate-800">
-              {uploading ? "..." : "Upload"}
+            <label
+              className="control-button !h-6 !min-h-6 !px-1.5 !text-[11px]"
+              title="Upload file"
+            >
+              <FeatherIcon name="upload" size={11} />
+              <span>{uploading ? "..." : "Upload"}</span>
               <input
                 type="file"
                 className="hidden"
@@ -255,7 +262,9 @@ export function LiteralWidget({
           )}
         </div>
         {uploadError && (
-          <p className="text-[10px] text-rose-400">{uploadError}</p>
+          <p className="text-[10px]" style={{ color: "var(--color-error)" }}>
+            {uploadError}
+          </p>
         )}
       </div>
     );
@@ -272,14 +281,14 @@ export function LiteralWidget({
           disabled={readOnly}
           placeholder={
             port.default !== null && port.default !== undefined
-              ? `Default: ${String(port.default)}`
-              : "Enter string..."
+              ? String(port.default)
+              : ""
           }
           value={strVal}
           onChange={(e) =>
             onChange(e.target.value === "" ? undefined : e.target.value)
           }
-          className="w-full rounded border border-slate-700 bg-slate-950 p-2 font-mono text-xs text-slate-200 placeholder-slate-600 focus:border-emerald-500 focus:outline-none disabled:opacity-60"
+          className="w-full p-1.5 font-mono text-xs"
         />
       ) : (
         <input
@@ -288,14 +297,14 @@ export function LiteralWidget({
           disabled={readOnly}
           placeholder={
             port.default !== null && port.default !== undefined
-              ? `Default: ${String(port.default)}`
-              : "Enter string..."
+              ? String(port.default)
+              : ""
           }
           value={strVal}
           onChange={(e) =>
             onChange(e.target.value === "" ? undefined : e.target.value)
           }
-          className="w-full rounded border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-slate-200 placeholder-slate-600 focus:border-emerald-500 focus:outline-none disabled:opacity-60"
+          className="w-full px-1.5 py-1 text-xs"
         />
       )}
       {!readOnly && (
@@ -303,9 +312,10 @@ export function LiteralWidget({
           <button
             type="button"
             onClick={() => setMultiline((m) => !m)}
-            className="text-[10px] text-slate-500 hover:text-slate-300"
+            className="text-[10px] hover:underline"
+            style={{ color: "var(--text-tertiary)" }}
           >
-            {multiline ? "Single line" : "Multiline / code"}
+            {multiline ? "Single line" : "Code / Multiline"}
           </button>
         </div>
       )}

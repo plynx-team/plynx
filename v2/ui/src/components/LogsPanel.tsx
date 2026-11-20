@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { fetchNodeLogs, subscribeRunEvents } from "../api/client";
 import type { NodeLogEvent } from "../api/types.gen";
 import { parseAnsi, stripAnsi } from "../utils/ansi";
+import { ControlButton } from "./ControlPanel";
+import { FeatherIcon } from "./FeatherIcon";
 
 export interface LogsPanelProps {
   runId: string;
@@ -14,11 +16,11 @@ export function LogsPanel({ runId, nodeId, onClose }: LogsPanelProps) {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [autoScroll, setAutoScroll] = useState<boolean>(true);
+  const [collapsed, setCollapsed] = useState<boolean>(false);
   const [filterQuery, setFilterQuery] = useState<string>("");
   const [copied, setCopied] = useState<boolean>(false);
   const logContainerRef = useRef<HTMLDivElement>(null);
 
-  // Load history from REST first, then attach live SSE from the returned offset
   useEffect(() => {
     let active = true;
     let unsubscribe: (() => void) | undefined;
@@ -59,16 +61,17 @@ export function LogsPanel({ runId, nodeId, onClose }: LogsPanelProps) {
     };
   }, [runId, nodeId]);
 
-  // Auto-scroll to bottom as new lines arrive
   useEffect(() => {
-    if (autoScroll && logContainerRef.current) {
+    if (autoScroll && !collapsed && logContainerRef.current) {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
     }
-  }, [lines, autoScroll]);
+  }, [lines, autoScroll, collapsed]);
 
   const handleDownload = () => {
     const rawContent = lines.join("\n");
-    const blob = new Blob([stripAnsi(rawContent)], { type: "text/plain;charset=utf-8" });
+    const blob = new Blob([stripAnsi(rawContent)], {
+      type: "text/plain;charset=utf-8",
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -97,18 +100,34 @@ export function LogsPanel({ runId, nodeId, onClose }: LogsPanelProps) {
     : lines;
 
   return (
-    <div
-      data-testid="logs-panel"
-      className="flex flex-col rounded-lg border border-slate-800 bg-slate-950 shadow-xl overflow-hidden"
-    >
-      {/* Panel Header */}
-      <div className="flex flex-wrap items-center justify-between border-b border-slate-800 bg-slate-900/80 px-4 py-3 gap-3">
-        <div className="flex items-center gap-3">
-          <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-          <h3 className="font-mono text-xs font-bold text-white">
-            Logs: <span className="text-emerald-400">{nodeId}</span>
-          </h3>
-          <span className="text-[11px] text-slate-500 font-mono">
+    <div data-testid="logs-panel" className="logs-drawer">
+      {/* Drawer Header */}
+      <div className="logs-drawer-header">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setCollapsed((c) => !c)}
+            className="flex items-center gap-1.5 text-xs font-semibold"
+            style={{ color: "var(--text-primary)" }}
+          >
+            <FeatherIcon
+              name={collapsed ? "chevron-up" : "chevron-down"}
+              size={14}
+            />
+            <FeatherIcon
+              name="terminal"
+              size={13}
+              style={{ color: "var(--color-primary)" }}
+            />
+            <span className="font-mono">
+              Logs:{" "}
+              <span style={{ color: "var(--color-primary)" }}>{nodeId}</span>
+            </span>
+          </button>
+          <span
+            className="text-[11px] font-mono"
+            style={{ color: "var(--text-tertiary)" }}
+          >
             ({lines.length} lines)
           </span>
         </div>
@@ -119,43 +138,45 @@ export function LogsPanel({ runId, nodeId, onClose }: LogsPanelProps) {
             placeholder="Filter logs..."
             value={filterQuery}
             onChange={(e) => setFilterQuery(e.target.value)}
-            className="rounded border border-slate-800 bg-slate-950 px-2 py-1 text-xs text-slate-300 placeholder-slate-600 focus:border-slate-700 focus:outline-none"
+            className="h-6 px-2 text-xs"
           />
 
-          <label className="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer">
+          <label
+            className="flex items-center gap-1 text-xs cursor-pointer"
+            style={{ color: "var(--text-secondary)" }}
+          >
             <input
               type="checkbox"
               checked={autoScroll}
               onChange={(e) => setAutoScroll(e.target.checked)}
-              className="h-3.5 w-3.5 rounded border-slate-700 bg-slate-900 text-emerald-600"
+              className="h-3.5 w-3.5"
             />
             <span>Auto-scroll</span>
           </label>
 
-          <button
-            type="button"
+          <ControlButton
+            icon="copy"
+            text={copied ? "Copied!" : "Copy"}
             onClick={handleCopy}
-            className="rounded border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs font-medium text-slate-300 hover:bg-slate-800"
-          >
-            {copied ? "Copied!" : "Copy"}
-          </button>
+            className="!h-6 !min-h-6 !px-2 !text-xs"
+          />
 
-          <button
-            type="button"
+          <ControlButton
+            icon="download"
+            text="Download"
             onClick={handleDownload}
-            className="rounded border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs font-medium text-slate-300 hover:bg-slate-800"
-          >
-            Download
-          </button>
+            className="!h-6 !min-h-6 !px-2 !text-xs"
+          />
 
           {onClose && (
             <button
               type="button"
               onClick={onClose}
               aria-label="Close logs"
-              className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              className="p-1"
+              style={{ color: "var(--text-secondary)" }}
             >
-              &times;
+              <FeatherIcon name="x" size={14} />
             </button>
           )}
         </div>
@@ -165,52 +186,73 @@ export function LogsPanel({ runId, nodeId, onClose }: LogsPanelProps) {
       {error && (
         <div
           role="alert"
-          className="border-b border-rose-900 bg-rose-950/60 p-2.5 text-xs text-rose-300"
+          className="px-3 py-1.5 text-xs"
+          style={{
+            borderBottom: "1px solid var(--color-error)",
+            backgroundColor: "rgba(244, 67, 54, 0.15)",
+            color: "#ff8a80",
+          }}
         >
           {error}
         </div>
       )}
 
       {/* Log Content Area */}
-      <div
-        ref={logContainerRef}
-        className="h-72 overflow-y-auto p-4 font-mono text-xs leading-relaxed text-slate-300 selection:bg-emerald-900 selection:text-emerald-100"
-      >
-        {loading ? (
-          <p className="text-slate-500">Loading log output...</p>
-        ) : filteredLines.length === 0 ? (
-          <p className="text-slate-600">
-            {lines.length === 0
-              ? "No logs recorded for this node yet."
-              : "No lines match the current filter."}
-          </p>
-        ) : (
-          <div className="space-y-0.5">
-            {filteredLines.map((line, idx) => {
-              const segments = parseAnsi(line);
-              return (
-                <div key={idx} className="flex items-start gap-3 hover:bg-slate-900/40">
-                  <span className="w-8 shrink-0 text-right text-[10px] select-none text-slate-600">
-                    {idx + 1}
-                  </span>
-                  <div className="flex-1 whitespace-pre-wrap break-all">
-                    {segments.map((seg, sIdx) => (
-                      <span
-                        key={sIdx}
-                        className={`${seg.color ?? ""} ${seg.bold ? "font-bold" : ""} ${
-                          seg.dim ? "opacity-60" : ""
-                        } ${seg.underline ? "underline" : ""}`}
-                      >
-                        {seg.text}
-                      </span>
-                    ))}
+      {!collapsed && (
+        <div
+          ref={logContainerRef}
+          className="h-48 overflow-y-auto p-2.5 font-mono text-xs leading-relaxed"
+          style={{
+            backgroundColor: "var(--bg-app)",
+            color: "var(--text-primary)",
+          }}
+        >
+          {loading ? (
+            <p style={{ color: "var(--text-tertiary)" }}>
+              Loading log output...
+            </p>
+          ) : filteredLines.length === 0 ? (
+            <p style={{ color: "var(--text-tertiary)" }}>
+              {lines.length === 0
+                ? "No logs recorded for this node yet."
+                : "No lines match the current filter."}
+            </p>
+          ) : (
+            <div className="space-y-0.5">
+              {filteredLines.map((line, idx) => {
+                const segments = parseAnsi(line);
+                return (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-2.5 px-1 hover:bg-[#262626]"
+                  >
+                    <span
+                      className="w-7 shrink-0 text-right text-[10px] select-none"
+                      style={{ color: "var(--text-tertiary)" }}
+                    >
+                      {idx + 1}
+                    </span>
+                    <div className="flex-1 whitespace-pre-wrap break-all">
+                      {segments.map((seg, sIdx) => (
+                        <span
+                          key={sIdx}
+                          className={`${seg.color ?? ""} ${
+                            seg.bold ? "font-bold" : ""
+                          } ${seg.dim ? "opacity-60" : ""} ${
+                            seg.underline ? "underline" : ""
+                          }`}
+                        >
+                          {seg.text}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
