@@ -50,7 +50,7 @@ def _two_stage_gated_workflow() -> Workflow:
                     "inputs": {"text": "slow"},
                 },
                 "s2_dep": {
-                    "op": "standard_io/demo:Concat",
+                    "op": "standard_io/text:Concat",
                     "stage": "publish",
                     "inputs": {"a": "$s1_fast.text", "b": "$s1_slow.text"},
                 },

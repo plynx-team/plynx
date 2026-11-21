@@ -39,7 +39,7 @@ nodes:
       lead_in_sec: 1.0
       tail_sec: 2.0
   waveform_visualizer:
-    op: podcast_studio/visuals:WaveformVisualizer
+    op: media_studio/inspect:AudioWaveformVisualizer
     title: "Podcast Waveform Visualizer"
     stage: publishing
     inputs:

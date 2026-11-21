@@ -432,15 +432,15 @@ def test_validate_diamond_against_real_registry() -> None:
                     "inputs": {"text": "seed"},
                 },
                 "left": {
-                    "op": "standard_io/demo:Concat",
+                    "op": "standard_io/text:Concat",
                     "inputs": {"a": "$root.text", "b": "_L"},
                 },
                 "right": {
-                    "op": "standard_io/demo:Concat",
+                    "op": "standard_io/text:Concat",
                     "inputs": {"a": "$root.text", "b": "_R"},
                 },
                 "join": {
-                    "op": "standard_io/demo:Concat",
+                    "op": "standard_io/text:Concat",
                     "inputs": {"a": "$left.text", "b": "$right.text"},
                 },
             },

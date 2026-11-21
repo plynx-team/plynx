@@ -59,7 +59,7 @@ def test_all_standard_io_demo_ops_pipeline(tmp_path: Path) -> None:
                     "inputs": {"prompt": "Choose one"},
                 },
                 "join": {
-                    "op": "standard_io/demo:Concat",
+                    "op": "standard_io/text:Concat",
                     "inputs": {"a": "$ask.choice", "b": "_suffix"},
                 },
                 "write": {

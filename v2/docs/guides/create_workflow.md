@@ -19,7 +19,7 @@ nodes:
       text: "Hello from PLynx!"
 
   shout:
-    op: "standard_io/demo:Concat"
+    op: "standard_io/text:Concat"
     inputs:
       a: "$generate.text"
       b: " Welcome aboard."
@@ -78,7 +78,7 @@ stages:
     require_approval: true
     nodes:
       step2:
-        op: "standard_io/demo:Concat"
+        op: "standard_io/text:Concat"
         inputs:
           a: "$step1.text"
           b: " published"

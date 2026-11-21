@@ -29,7 +29,7 @@ def _two_stage_input_workflow() -> Workflow:
                     "inputs": {"text": "hello_"},
                 },
                 "s2_concat": {
-                    "op": "standard_io/demo:Concat",
+                    "op": "standard_io/text:Concat",
                     "stage": "process",
                     "inputs": {"b": "world"},
                 },
@@ -115,7 +115,7 @@ nodes:
     inputs:
       text: hello_
   n2:
-    op: standard_io/demo:Concat
+    op: standard_io/text:Concat
     stage: stage2
     inputs:
       b: world

@@ -44,11 +44,11 @@ def _diamond_with_checkpoint_workflow() -> Workflow:
                     "inputs": {"prompt": "$root.text"},
                 },
                 "right": {
-                    "op": "standard_io/demo:Concat",
+                    "op": "standard_io/text:Concat",
                     "inputs": {"a": "$root.text", "b": "_right"},
                 },
                 "join": {
-                    "op": "standard_io/demo:Concat",
+                    "op": "standard_io/text:Concat",
                     "inputs": {"a": "$left.choice", "b": "$right.text"},
                 },
             },

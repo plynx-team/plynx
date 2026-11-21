@@ -45,7 +45,7 @@ def test_example_workflow_parses() -> None:
     assert wf.stages["ask"] == Stage(title="1. Ask", require_approval=False)
     assert wf.stages["print"] == Stage(title="print", require_approval=False)
 
-    assert set(wf.nodes.keys()) == {"pick", "echo"}
+    assert set(wf.nodes.keys()) == {"pick", "echo", "concat"}
     assert wf.nodes["pick"].op == "standard_io/demo:AskFooOrWoo"
     assert wf.nodes["pick"].title == "Pick one"
     assert wf.nodes["pick"].stage == "ask"
@@ -54,6 +54,8 @@ def test_example_workflow_parses() -> None:
     assert wf.nodes["echo"].op == "standard_io/demo:Echo"
     assert wf.nodes["echo"].stage == "print"
     assert wf.nodes["echo"].inputs == {"text": NodeRef(from_node="pick", output="choice")}
+
+    assert wf.nodes["concat"].op == "standard_io/text:Concat"
 
 
 def test_escaped_dollar_and_mapping_reference_fixture() -> None:

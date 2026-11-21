@@ -11,7 +11,7 @@ class Concat(Op):
     """Join two strings."""
 
     TITLE = "Concat text"
-    CATEGORY = "Text / Basic"
+    CATEGORY = "Core / Text & Data"
     CACHEABLE = True
 
     class Outputs(TypedDict):

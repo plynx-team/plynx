@@ -67,7 +67,7 @@ nodes:
       gain_db: 2.0
       limiter_threshold_db: -0.3
   waveform_visualizer:
-    op: pedalboard_studio/inspect:AudioWaveformVisualizer
+    op: media_studio/inspect:AudioWaveformVisualizer
     title: "Master Waveform Visualizer"
     stage: mastering
     inputs:

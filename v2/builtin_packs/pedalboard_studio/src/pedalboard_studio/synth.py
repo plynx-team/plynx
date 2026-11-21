@@ -158,7 +158,7 @@ class AcousticPianoSynth(Op):
     """Synthesize note events into an expressive stereo acoustic piano audio track."""
 
     TITLE = "Acoustic Piano Synthesizer"
-    CATEGORY = "Audio / Synth"
+    CATEGORY = "Audio / Synth & Voice"
     CACHEABLE = True
 
     class Outputs(TypedDict):

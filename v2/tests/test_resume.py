@@ -136,7 +136,7 @@ nodes:
     inputs:
       text: $upstream.value
   downstream:
-    op: standard_io/demo:Concat
+    op: standard_io/text:Concat
     inputs:
       a: $flaky.out
       b: $side.value
@@ -268,7 +268,7 @@ nodes:
     inputs:
       text: stage1_done
   second:
-    op: standard_io/demo:Concat
+    op: standard_io/text:Concat
     stage: s2
     inputs:
       a: $first.text

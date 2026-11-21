@@ -55,7 +55,7 @@ def test_each_component_change_alters_the_key() -> None:
     base_key = compute_cache_key_raw(**base_kwargs)
 
     # 1. Change op_entrypoint
-    k1 = compute_cache_key_raw(**{**base_kwargs, "op_entrypoint": "standard_io/demo:Concat"})
+    k1 = compute_cache_key_raw(**{**base_kwargs, "op_entrypoint": "standard_io/text:Concat"})
     assert k1 != base_key
 
     # 2. Change file_sha256 (source file of op)

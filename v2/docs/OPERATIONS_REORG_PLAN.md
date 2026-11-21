@@ -102,22 +102,22 @@ Consolidate from 16 fragmented categories down to **8 cohesive categories** (3â€
 ### Stage 0: Cleanup, Deduplication & Category Reorganization
 *Effort: **Low** | Recommended Model: **Fast (Gemini Flash Low / Haiku)***
 
-- [ ] **0.1 Remove duplicate `Concat` operation**
+- [x] **0.1 Remove duplicate `Concat` operation**
   - **Files:** `builtin_packs/standard_io/src/standard_io/demo.py`, `builtin_packs/standard_io/src/standard_io/__init__.py`, `packages/plynx/src/plynx/registry/__init__.py`, `packages/plynx/src/plynx/engine/fake_executor.py`, and tests referencing `standard_io/demo:Concat`.
   - **Changes:** Delete `Concat` from `standard_io/demo.py`; keep `standard_io/text:Concat` as the single canonical `Concat` op. Remove `standard_io/demo:Concat` from `default_fake_ops()` and update `tests/` and `examples/workflows/foo_or_woo.yaml` references to `standard_io/text:Concat`.
   - **Accept:** `plynx ops --json` lists exactly one `Concat text` op (`standard_io/text:Concat`); all existing tests pass.
 
-- [ ] **0.2 Remove duplicate `Audio Waveform Visualizer`**
+- [x] **0.2 Remove duplicate `Audio Waveform Visualizer`**
   - **Files:** `builtin_packs/media_studio/src/media_studio/inspect.py`, `builtin_packs/pedalboard_studio/src/pedalboard_studio/inspect.py`, `builtin_packs/podcast_studio/src/podcast_studio/visuals.py`, `examples/workflows/bach_prelude_c_major.yaml`, `examples/workflows/podcast_producer_macos.yaml`.
   - **Changes:** Consolidate `AudioWaveformVisualizer` into a single implementation in `media_studio/inspect.py` (using Pillow + stdlib `wave`, supporting mono/stereo and color themes, so no heavy DSP dependency is needed to plot waveforms). Remove duplicates from `pedalboard_studio` and `podcast_studio`; point showcase workflows to the unified op.
   - **Accept:** `plynx ops --json` shows exactly one `"Audio Waveform Visualizer"`; both workflows render waveform PNGs cleanly.
 
-- [ ] **0.3 Reorganize `CATEGORY` metadata across all packs**
+- [x] **0.3 Reorganize `CATEGORY` metadata across all packs**
   - **Files:** All `*.py` op files in `builtin_packs/{standard_io,media_studio,pedalboard_studio,podcast_studio}` and `packages/plynx/src/plynx/registry/__init__.py`.
   - **Changes:** Update `CATEGORY` literals to match the 8 target categories (`Core / Text & Data`, `Core / Files`, `Core / Interactive`, `Audio / Score`, `Audio / Synth & Voice`, `Audio / Effects & Mixing`, `Image`, `Inspect & Visualize`). Ensure zero singleton categories remain.
   - **Accept:** `uv run python -m plynx.cli ops --json` reports <= 8 categories and every category contains >= 2 ops.
 
-- [ ] **0.4 Standardize stereo-safe `AudioWav` contract across packs**
+- [x] **0.4 Standardize stereo-safe `AudioWav` contract across packs**
   - **Files:** `builtin_packs/media_studio/src/media_studio/audio.py`, `builtin_packs/podcast_studio/src/podcast_studio/mixer.py`, `builtin_packs/pedalboard_studio/src/pedalboard_studio/effects.py`, `tests/`.
   - **Changes:** Fix WAV readers so both mono (1 ch) and stereo (2 ch) 16-bit/24-bit/32-bit PCM files decode properly without collapsing stereo tracks to mono; ensure `AudioMixer` outputs 2-channel stereo whenever either input is stereo. Add cross-pack round-trip test (`media_studio` / `podcast_studio` -> `pedalboard_studio` -> `AudioWaveformVisualizer`).
   - **Accept:** Feeding stereo audio from `pedalboard_studio` through `AudioMixer` preserves 2 stereo channels without clipping or distortion.

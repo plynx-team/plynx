@@ -7,21 +7,21 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from media_studio.inspect import AudioWaveformVisualizer
 from pedalboard.io import AudioFile
-from PIL import Image
-from plynx.registry.pack_registry import PackRegistry
-from plynx.workflow.models import load_workflow
-from plynx.workflow.validator import validate_workflow
-
 from pedalboard_studio.effects import (
     PedalboardChorus,
     PedalboardDelay,
     PedalboardReverb,
     PedalboardToneFilter,
 )
-from pedalboard_studio.inspect import AudioStats, AudioWaveformVisualizer
+from pedalboard_studio.inspect import AudioStats
 from pedalboard_studio.mastering import PedalboardMastering
 from pedalboard_studio.synth import AcousticPianoSynth, BachPreludeScore
+from PIL import Image
+from plynx.registry.pack_registry import PackRegistry
+from plynx.workflow.models import load_workflow
+from plynx.workflow.validator import validate_workflow
 
 
 def test_bach_prelude_score_generation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -92,7 +92,12 @@ def test_pedalboard_studio_full_pipeline(tmp_path: Path, monkeypatch: pytest.Mon
 
     # 7. Mastering
     master_op = PedalboardMastering()
-    master_res = master_op.run(audio=reverb_wav, compressor_threshold_db=-18.0, gain_db=1.5, limiter_threshold_db=-0.5)
+    master_res = master_op.run(
+        audio=reverb_wav,
+        compressor_threshold_db=-18.0,
+        gain_db=1.5,
+        limiter_threshold_db=-0.5,
+    )
     master_wav = master_res["mastered_audio"]
     assert master_wav.is_file()
     with AudioFile(str(master_wav)) as f:

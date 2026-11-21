@@ -27,7 +27,7 @@ class BGMTrackGenerator(Op):
     """Synthesize a musical background track or ambient loop for podcasts."""
 
     TITLE = "BGM Track Generator"
-    CATEGORY = "Podcast / Music"
+    CATEGORY = "Audio / Synth & Voice"
     CACHEABLE = True
 
     class Outputs(TypedDict):

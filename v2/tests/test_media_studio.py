@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from media_studio.audio import AudioEchoFilter, ChordProgression, ToneSynth
 from media_studio.image import CardOrPoster, GeometricPattern, ImageFilterOp, MandelbrotFractal
-from media_studio.inspect import MediaMetadataInspector
+from media_studio.inspect import AudioWaveformVisualizer, MediaMetadataInspector
 from PIL import Image
 
 
@@ -58,7 +58,9 @@ def test_mandelbrot_and_filter_and_poster(tmp_path: Path, monkeypatch: pytest.Mo
     assert filtered_path.is_file()
 
     poster_op = CardOrPoster()
-    poster_res = poster_op.run(image=filtered_path, title="Test Art", subtitle="Sample Card", badge="VIP")
+    poster_res = poster_op.run(
+        image=filtered_path, title="Test Art", subtitle="Sample Card", badge="VIP"
+    )
     poster_path = Path(poster_res["card"])
     assert poster_path.is_file()
 
@@ -99,3 +101,34 @@ def test_media_inspector(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
     assert "# Media Studio Inspection Report" in summary_text
     assert "Image Dimensions" in summary_text
     assert "Audio Duration" in summary_text
+
+
+def test_audio_waveform_visualizer_mono_and_stereo(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    # 1. Mono WAV
+    synth = ToneSynth()
+    mono_wav = synth.run(frequency=440, duration_sec=0.5)["audio"]
+    vis = AudioWaveformVisualizer()
+    res_mono = vis.run(audio=mono_wav, width=400, height=150, theme="cyan")
+    assert Path(res_mono["waveform"]).is_file()
+
+    # 2. Stereo WAV (2-channel)
+    stereo_path = tmp_path / "stereo_test.wav"
+    with wave.open(str(stereo_path), "wb") as wf:
+        wf.setnchannels(2)
+        wf.setsampwidth(2)
+        wf.setframerate(44100)
+        # 1000 frames of stereo
+        payload = bytearray()
+        for _ in range(1000):
+            payload.extend(b"\x00\x10\x00\x20")
+        wf.writeframes(bytes(payload))
+
+    res_stereo = vis.run(audio=stereo_path, width=400, height=200, theme="violet")
+    assert Path(res_stereo["waveform"]).is_file()
+    with Image.open(res_stereo["waveform"]) as im:
+        assert im.size == (400, 200)

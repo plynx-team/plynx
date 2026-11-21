@@ -52,7 +52,7 @@ class MandelbrotFractal(Op):
     """Generate a high-resolution Mandelbrot fractal art image."""
 
     TITLE = "Mandelbrot Fractal Art"
-    CATEGORY = "Image / Generative"
+    CATEGORY = "Image"
     CACHEABLE = True
 
     class Outputs(TypedDict):
@@ -104,7 +104,7 @@ class GeometricPattern(Op):
     """Generate procedural geometric art with configurable palette."""
 
     TITLE = "Geometric Pattern"
-    CATEGORY = "Image / Generative"
+    CATEGORY = "Image"
     CACHEABLE = True
 
     class Outputs(TypedDict):
@@ -178,7 +178,7 @@ class ImageFilterOp(Op):
     """Apply styling, convolution, or color filters to an image."""
 
     TITLE = "Image Filters & Effects"
-    CATEGORY = "Image / Transform"
+    CATEGORY = "Image"
     CACHEABLE = True
 
     class Outputs(TypedDict):
@@ -217,7 +217,7 @@ class CardOrPoster(Op):
     """Compose an image into a framed studio card with badge, title, and subtitle."""
 
     TITLE = "Card & Poster Studio"
-    CATEGORY = "Image / Transform"
+    CATEGORY = "Image"
     CACHEABLE = True
 
     class Outputs(TypedDict):

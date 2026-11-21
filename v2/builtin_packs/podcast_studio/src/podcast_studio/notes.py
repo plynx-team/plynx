@@ -12,7 +12,7 @@ class ShowNotesGenerator(Op):
     """Compile episode metadata, chapter markers, and transcript into formatted show notes."""
 
     TITLE = "Podcast Show Notes Generator"
-    CATEGORY = "Podcast / Publishing"
+    CATEGORY = "Inspect & Visualize"
     CACHEABLE = True
 
     class Outputs(TypedDict):

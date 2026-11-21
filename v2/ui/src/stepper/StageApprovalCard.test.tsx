@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import { StageApprovalCard } from "./StageApprovalCard";
 import * as client from "../api/client";
-import type { StageGateState } from "../api/types.gen";
+import type { OpEntry, StageGateState } from "../api/types.gen";
 
 afterEach(() => {
   cleanup();
@@ -141,7 +141,7 @@ describe("StageApprovalCard component (Task 6.6)", () => {
         gateState={{ stage_id: "stage2", status: "WAITING", created_at: 100 }}
         workflow={mockWorkflow}
         runInputs={{}}
-        opsMap={mockOpsMap as any}
+        opsMap={mockOpsMap as unknown as Record<string, OpEntry>}
         onApproved={onApproved}
       />,
     );

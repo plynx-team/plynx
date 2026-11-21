@@ -24,7 +24,7 @@ const mockDoc: WorkflowDocument = {
         stage: "s1",
       },
       processor: {
-        op: "standard_io/demo:Concat",
+        op: "standard_io/text:Concat",
         stage: "s1",
       },
     },

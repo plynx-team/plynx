@@ -54,7 +54,7 @@ def _default_outputs_for_op(op: str, inputs: InputsManifest) -> dict[str, Output
         text_in = inputs.inputs.get("text")
         val = text_in.value if isinstance(text_in, ScalarValue) else ""
         return {"text": ScalarValue(value=val)}
-    if op in ("standard_io/demo:Concat", "standard_io/text:Concat"):
+    if op == "standard_io/text:Concat":
         a_in = inputs.inputs.get("a")
         b_in = inputs.inputs.get("b")
         a_str = str(a_in.value) if isinstance(a_in, ScalarValue) and a_in.value is not None else ""

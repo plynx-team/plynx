@@ -6,15 +6,14 @@ import wave
 from pathlib import Path
 
 import pytest
+from media_studio.inspect import AudioWaveformVisualizer
 from PIL import Image
 from plynx.registry.pack_registry import PackRegistry
 from plynx.workflow.models import load_workflow
 from plynx.workflow.validator import validate_workflow
-
 from podcast_studio.mixer import AudioMixer
 from podcast_studio.music import BGMTrackGenerator
 from podcast_studio.notes import ShowNotesGenerator
-from podcast_studio.visuals import WaveformVisualizer
 from podcast_studio.voice import TextToSpeech
 
 
@@ -92,7 +91,7 @@ def test_podcast_full_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
         assert wf.getnchannels() == 1
 
     # 4. Waveform Visualization
-    vis_op = WaveformVisualizer()
+    vis_op = AudioWaveformVisualizer()
     vis_res = vis_op.run(audio=mixed_wav, width=600, height=200, theme="emerald")
     wave_png = vis_res["waveform"]
     assert wave_png.is_file()
@@ -128,8 +127,7 @@ def test_podcast_pack_discovery_and_workflow() -> None:
         "podcast_studio/voice:TextToSpeech",
         "podcast_studio/music:BGMTrackGenerator",
         "podcast_studio/mixer:AudioMixer",
-        "podcast_studio/visuals:WaveformVisualizer",
-        "podcast_studio/notes:ShowNotesGenerator",
+                "podcast_studio/notes:ShowNotesGenerator",
     ]
     for op_id in expected_ops:
         entry = registry.get(op_id)
@@ -141,3 +139,34 @@ def test_podcast_pack_discovery_and_workflow() -> None:
     issues = validate_workflow(doc, registry=registry)
     errors = [issue for issue in issues if issue.severity == "error"]
     assert not errors, f"Workflow validation errors: {errors}"
+
+
+def test_audio_mixer_stereo_preservation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify AudioMixer preserves stereo when inputs contain stereo audio."""
+    monkeypatch.chdir(tmp_path)
+    import numpy as np
+
+    # Create mono voice
+    voice_path = tmp_path / "voice.wav"
+    with wave.open(str(voice_path), "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(44100)
+        wf.writeframes((np.sin(np.linspace(0, 100, 44100)) * 10000).astype(np.int16).tobytes())
+
+    # Create stereo bgm
+    bgm_path = tmp_path / "bgm_stereo.wav"
+    with wave.open(str(bgm_path), "wb") as wf:
+        wf.setnchannels(2)
+        wf.setsampwidth(2)
+        wf.setframerate(44100)
+        stereo_data = np.zeros((44100, 2), dtype=np.int16)
+        stereo_data[:, 0] = (np.sin(np.linspace(0, 50, 44100)) * 8000).astype(np.int16)
+        stereo_data[:, 1] = (np.cos(np.linspace(0, 50, 44100)) * 8000).astype(np.int16)
+        wf.writeframes(stereo_data.tobytes())
+
+    mixer = AudioMixer()
+    res = mixer.run(voiceover=voice_path, bgm=bgm_path)
+    mixed_path = res["mixed_audio"]
+    with wave.open(str(mixed_path), "rb") as wf:
+        assert wf.getnchannels() == 2, f"Expected 2 channels, got {wf.getnchannels()}"

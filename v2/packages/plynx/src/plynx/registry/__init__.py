@@ -39,7 +39,7 @@ def default_fake_ops() -> list[OpEntry]:
             name="AskFooOrWoo",
             kind="class",
             title="Ask foo or woo",
-            category="Demo",
+            category="Core / Interactive",
             cacheable=False,
             description="Ask the user to pick foo or woo.",
             inputs=[
@@ -62,7 +62,7 @@ def default_fake_ops() -> list[OpEntry]:
             name="SecretCodeChallenge",
             kind="class",
             title="Secret Code Challenge",
-            category="Demo",
+            category="Core / Interactive",
             cacheable=False,
             description="Challenge the user to enter the secret clearance code with interactive checkpoints.",
             inputs=[
@@ -86,30 +86,11 @@ def default_fake_ops() -> list[OpEntry]:
             name="Echo",
             kind="class",
             title="Echo text",
-            category="Demo",
+            category="Core / Text & Data",
             cacheable=True,
             description="Echo an input string to its output.",
             inputs=[
                 InputPortSpec(name="text", type="str", required=True),
-            ],
-            outputs=[
-                OutputPortSpec(name="text", type="str"),
-            ],
-            source="builtin_packs/standard_io/src/standard_io/demo.py",
-        ),
-        OpEntry(
-            id="standard_io/demo:Concat",
-            pack="standard_io",
-            module="demo",
-            name="Concat",
-            kind="class",
-            title="Concat text",
-            category="Text / Basic",
-            cacheable=True,
-            description="Join two strings.",
-            inputs=[
-                InputPortSpec(name="a", type="str", required=True),
-                InputPortSpec(name="b", type="str", required=False, default=" "),
             ],
             outputs=[
                 OutputPortSpec(name="text", type="str"),
@@ -123,7 +104,7 @@ def default_fake_ops() -> list[OpEntry]:
             name="Concat",
             kind="class",
             title="Concat text",
-            category="Text / Basic",
+            category="Core / Text & Data",
             cacheable=True,
             description="Join two strings.",
             inputs=[
@@ -142,7 +123,7 @@ def default_fake_ops() -> list[OpEntry]:
             name="ReadText",
             kind="class",
             title="Read text file",
-            category="Files",
+            category="Core / Files",
             cacheable=True,
             description="Read UTF-8 text from a file.",
             inputs=[
@@ -160,7 +141,7 @@ def default_fake_ops() -> list[OpEntry]:
             name="WriteText",
             kind="class",
             title="Write text file",
-            category="Files",
+            category="Core / Files",
             cacheable=True,
             description="Write UTF-8 text to a file.",
             inputs=[

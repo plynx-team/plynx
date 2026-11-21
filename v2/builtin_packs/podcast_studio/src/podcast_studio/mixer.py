@@ -11,7 +11,10 @@ from plynx_sdk import AudioWav, Op, Range
 
 
 def _read_wav_to_float(path: Path) -> tuple[int, np.ndarray]:
-    """Read a mono or stereo WAV file into normalized float32 mono ndarray."""
+    """Read a mono or stereo WAV file into normalized float32 ndarray of shape (channels, samples).
+
+    Supports 16-bit, 24-bit, and 32-bit PCM/float WAV files.
+    """
     with wave.open(str(path), "rb") as wf:
         channels = wf.getnchannels()
         sampwidth = wf.getsampwidth()
@@ -21,39 +24,62 @@ def _read_wav_to_float(path: Path) -> tuple[int, np.ndarray]:
 
     if sampwidth == 2:
         shorts = np.frombuffer(raw_bytes, dtype=np.int16).astype(np.float32) / 32768.0
-        if channels == 1:
-            samples = shorts
-        else:
-            samples = shorts.reshape(-1, channels).mean(axis=1)
+        samples = shorts.reshape(-1, channels).T
+    elif sampwidth == 3:
+        # 24-bit PCM
+        total_samples = len(raw_bytes) // 3
+        # Fast decode 24-bit
+        int_array = np.zeros(total_samples, dtype=np.int32)
+        raw_np = np.frombuffer(raw_bytes, dtype=np.uint8)
+        int_array = (
+            raw_np[0::3].astype(np.int32)
+            | (raw_np[1::3].astype(np.int32) << 8)
+            | (raw_np[2::3].astype(np.int32) << 16)
+        )
+        # Sign extend 24-bit to 32-bit
+        int_array[int_array >= 0x800000] -= 0x1000000
+        samples = (int_array.astype(np.float32) / 8388608.0).reshape(-1, channels).T
     elif sampwidth == 4:
+        # Try float32 first
         floats = np.frombuffer(raw_bytes, dtype=np.float32)
-        if channels == 1:
-            samples = floats
+        if len(floats) > 0 and np.max(np.abs(floats[:1000])) <= 1.5:
+            samples = floats.reshape(-1, channels).T
         else:
-            samples = floats.reshape(-1, channels).mean(axis=1)
+            ints = np.frombuffer(raw_bytes, dtype=np.int32).astype(np.float32) / 2147483648.0
+            samples = ints.reshape(-1, channels).T
     else:
-        samples = np.zeros(frames, dtype=np.float32)
+        samples = np.zeros((channels, frames), dtype=np.float32)
 
     return sample_rate, samples
 
 
 def _write_pcm16_wav(path: Path, samples: np.ndarray, sample_rate: int = 44100) -> None:
-    """Write float ndarray (-1.0 to 1.0) as 16-bit mono PCM WAV."""
+    """Write float ndarray of shape (samples,) or (channels, samples) as 16-bit PCM WAV."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    clamped = np.clip(samples, -1.0, 1.0)
-    int_samples = (clamped * 32767.0).astype(np.int16)
+    if samples.ndim == 1:
+        channels = 1
+        clamped = np.clip(samples, -1.0, 1.0)
+        int_samples = (clamped * 32767.0).astype(np.int16)
+        payload = int_samples.tobytes()
+    else:
+        channels = samples.shape[0]
+        clamped = np.clip(samples, -1.0, 1.0)
+        int_samples = (clamped * 32767.0).astype(np.int16)
+        # Interleave channels: shape (samples, channels)
+        payload = int_samples.T.tobytes()
+
     with wave.open(str(path), "wb") as wf:
-        wf.setnchannels(1)
+        wf.setnchannels(channels)
         wf.setsampwidth(2)
         wf.setframerate(sample_rate)
-        wf.writeframes(int_samples.tobytes())
+        wf.writeframes(payload)
 
 
 class AudioMixer(Op):
     """Overlay speech over background music with automatic dynamic ducking."""
 
     TITLE = "Podcast Audio Mixer & Ducker"
-    CATEGORY = "Podcast / Mixing"
+    CATEGORY = "Audio / Effects & Mixing"
     CACHEABLE = True
 
     class Outputs(TypedDict):
@@ -89,30 +115,41 @@ class AudioMixer(Op):
         sr_bgm, bgm_samples = _read_wav_to_float(Path(bgm))
         sample_rate = sr_voice
 
-        # Resample BGM length if sample rates differ (simple interpolation if needed)
-        if sr_bgm != sr_voice and len(bgm_samples) > 0:
-            target_len = int(len(bgm_samples) * (sr_voice / float(sr_bgm)))
-            indices = np.linspace(0, len(bgm_samples) - 1, target_len)
-            bgm_samples = np.interp(indices, np.arange(len(bgm_samples)), bgm_samples)
+        # Check stereo status: if either input is 2-channel stereo, produce 2-channel stereo
+        out_channels = max(voice_samples.shape[0], bgm_samples.shape[0])
+        if voice_samples.shape[0] < out_channels:
+            voice_samples = np.repeat(voice_samples, out_channels, axis=0)
+        if bgm_samples.shape[0] < out_channels:
+            bgm_samples = np.repeat(bgm_samples, out_channels, axis=0)
 
-        speech_duration = float(len(voice_samples)) / sample_rate
+        # Resample BGM length if sample rates differ (simple interpolation if needed)
+        if sr_bgm != sr_voice and bgm_samples.shape[1] > 0:
+            target_len = int(bgm_samples.shape[1] * (sr_voice / float(sr_bgm)))
+            indices = np.linspace(0, bgm_samples.shape[1] - 1, target_len)
+            resampled_bgm = np.zeros((out_channels, target_len), dtype=np.float32)
+            for ch in range(out_channels):
+                resampled_bgm[ch] = np.interp(indices, np.arange(bgm_samples.shape[1]), bgm_samples[ch])
+            bgm_samples = resampled_bgm
+
+        n_voice_frames = voice_samples.shape[1]
+        speech_duration = float(n_voice_frames) / sample_rate
         lead_in_samples = int(lead_in_sec * sample_rate)
         tail_samples = int(tail_sec * sample_rate)
-        total_samples = lead_in_samples + len(voice_samples) + tail_samples
+        total_samples = lead_in_samples + n_voice_frames + tail_samples
 
         # Prepare BGM layer (loop or tile BGM if it is shorter than total_samples)
-        if len(bgm_samples) == 0:
-            bgm_track = np.zeros(total_samples, dtype=np.float32)
+        if bgm_samples.shape[1] == 0:
+            bgm_track = np.zeros((out_channels, total_samples), dtype=np.float32)
         else:
-            repeats = int(np.ceil(total_samples / float(len(bgm_samples))))
-            bgm_track = np.tile(bgm_samples, repeats)[:total_samples]
+            repeats = int(np.ceil(total_samples / float(bgm_samples.shape[1])))
+            bgm_track = np.tile(bgm_samples, (1, repeats))[:, :total_samples]
 
         # Prepare speech layer positioned after lead_in
-        speech_track = np.zeros(total_samples, dtype=np.float32)
-        speech_track[lead_in_samples:lead_in_samples + len(voice_samples)] = voice_samples * speech_volume
+        speech_track = np.zeros((out_channels, total_samples), dtype=np.float32)
+        speech_track[:, lead_in_samples:lead_in_samples + n_voice_frames] = voice_samples * speech_volume
 
-        # Compute speech activity envelope for ducking
-        speech_abs = np.abs(speech_track)
+        # Compute speech activity envelope across channels for ducking
+        speech_abs = np.max(np.abs(speech_track), axis=0)
         threshold = 0.015  # Speech presence energy threshold
 
         duck_gain = 10.0 ** (-ducking_amount_db / 20.0)
@@ -150,7 +187,8 @@ class AudioMixer(Op):
         # Outro fade (last 1.5 seconds)
         fade_out_samples = min(total_samples, int(1.5 * sample_rate))
         if fade_out_samples > 0:
-            mixed[-fade_out_samples:] *= np.linspace(1.0, 0.0, fade_out_samples)
+            fade_curve = np.linspace(1.0, 0.0, fade_out_samples, dtype=np.float32)
+            mixed[:, -fade_out_samples:] *= fade_curve
 
         # Master brickwall limiter / normalization
         peak = float(np.max(np.abs(mixed)))

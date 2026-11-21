@@ -53,7 +53,7 @@ class TextToSpeech(Op):
     """
 
     TITLE = "Text to Speech (macOS only)"
-    CATEGORY = "Podcast / Voice (macOS only)"
+    CATEGORY = "Audio / Synth & Voice"
     CACHEABLE = True
 
     class Outputs(TypedDict):

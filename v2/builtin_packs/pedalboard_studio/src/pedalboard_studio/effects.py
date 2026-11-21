@@ -33,7 +33,7 @@ class PedalboardToneFilter(Op):
     """Shape audio frequency response with studio high-pass and low-pass filters."""
 
     TITLE = "Pedalboard Tone Filter"
-    CATEGORY = "Audio / Effects"
+    CATEGORY = "Audio / Effects & Mixing"
     CACHEABLE = True
 
     class Outputs(TypedDict):
@@ -64,7 +64,7 @@ class PedalboardChorus(Op):
     """Add warm multi-voice stereo chorus modulation and width."""
 
     TITLE = "Pedalboard Chorus"
-    CATEGORY = "Audio / Effects"
+    CATEGORY = "Audio / Effects & Mixing"
     CACHEABLE = True
 
     class Outputs(TypedDict):
@@ -103,7 +103,7 @@ class PedalboardDelay(Op):
     """Apply spatial delay and rhythmic echoes to the audio signal."""
 
     TITLE = "Pedalboard Delay"
-    CATEGORY = "Audio / Effects"
+    CATEGORY = "Audio / Effects & Mixing"
     CACHEABLE = True
 
     class Outputs(TypedDict):
@@ -138,7 +138,7 @@ class PedalboardReverb(Op):
     """Simulate lush acoustic concert hall and cathedral reverberation."""
 
     TITLE = "Pedalboard Reverb"
-    CATEGORY = "Audio / Effects"
+    CATEGORY = "Audio / Effects & Mixing"
     CACHEABLE = True
 
     class Outputs(TypedDict):

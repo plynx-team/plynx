@@ -15,7 +15,7 @@ class PedalboardMastering(Op):
     """Apply studio dynamic compression, EQ sweetening, and brickwall limiting."""
 
     TITLE = "Pedalboard Studio Mastering"
-    CATEGORY = "Audio / Mastering"
+    CATEGORY = "Audio / Effects & Mixing"
     CACHEABLE = True
 
     class Outputs(TypedDict):

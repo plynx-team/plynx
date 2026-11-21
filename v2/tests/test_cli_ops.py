@@ -10,7 +10,6 @@ from plynx.cli import main as cli_main
 
 EXPECTED_STANDARD_IO_OPS = {
     "standard_io/demo:AskFooOrWoo",
-    "standard_io/demo:Concat",
     "standard_io/demo:Echo",
     "standard_io/demo:ReadText",
     "standard_io/demo:WriteText",

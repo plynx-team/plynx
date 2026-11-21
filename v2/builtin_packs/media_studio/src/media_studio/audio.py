@@ -11,23 +11,46 @@ from typing import Annotated, Literal, TypedDict
 from plynx_sdk import AudioWav, Op, Range
 
 
-def _write_pcm16_wav(path: Path, samples: list[float], sample_rate: int = 44100) -> None:
-    """Write normalized float samples (-1.0 to 1.0) as 16-bit mono PCM WAV."""
+def _write_pcm16_wav(
+    path: Path,
+    samples: list[float] | list[list[float]],
+    sample_rate: int = 44100,
+) -> None:
+    """Write normalized float samples (-1.0 to 1.0) as 16-bit PCM WAV (mono or stereo)."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    with wave.open(str(path), "wb") as wf:
-        wf.setnchannels(1)
-        wf.setsampwidth(2)
-        wf.setframerate(sample_rate)
-        raw_bytes = bytearray()
-        for s in samples:
-            clamped = max(-1.0, min(1.0, s))
-            int_sample = int(clamped * 32767.0)
-            raw_bytes.extend(struct.pack("<h", int_sample))
-        wf.writeframes(bytes(raw_bytes))
+    if samples and isinstance(samples[0], list):
+        # Stereo / multi-channel list: [ch0, ch1]
+        ch_list: list[list[float]] = samples
+        channels = len(ch_list)
+        n_frames = min(len(ch) for ch in ch_list)
+        with wave.open(str(path), "wb") as wf:
+            wf.setnchannels(channels)
+            wf.setsampwidth(2)
+            wf.setframerate(sample_rate)
+            raw_bytes = bytearray()
+            for i in range(n_frames):
+                for ch in range(channels):
+                    clamped = max(-1.0, min(1.0, ch_list[ch][i]))
+                    int_sample = int(clamped * 32767.0)
+                    raw_bytes.extend(struct.pack("<h", int_sample))
+            wf.writeframes(bytes(raw_bytes))
+    else:
+        # Mono list of float
+        mono_samples: list[float] = samples  # type: ignore[assignment]
+        with wave.open(str(path), "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(sample_rate)
+            raw_bytes = bytearray()
+            for s in mono_samples:
+                clamped = max(-1.0, min(1.0, s))
+                int_sample = int(clamped * 32767.0)
+                raw_bytes.extend(struct.pack("<h", int_sample))
+            wf.writeframes(bytes(raw_bytes))
 
 
-def _read_pcm16_wav(path: Path) -> tuple[int, list[float]]:
-    """Read a 16-bit mono or stereo WAV file into normalized float samples."""
+def _read_pcm16_wav(path: Path) -> tuple[int, list[list[float]]]:
+    """Read a 16-bit, 24-bit, or 32-bit mono or stereo WAV file into per-channel float samples."""
     with wave.open(str(path), "rb") as wf:
         channels = wf.getnchannels()
         sampwidth = wf.getsampwidth()
@@ -35,26 +58,45 @@ def _read_pcm16_wav(path: Path) -> tuple[int, list[float]]:
         frames_count = wf.getnframes()
         raw_data = wf.readframes(frames_count)
 
-    samples: list[float] = []
+    ch_data: list[list[float]] = [[] for _ in range(channels)]
     if sampwidth == 2:
         count = len(raw_data) // 2
         shorts = struct.unpack(f"<{count}h", raw_data)
-        if channels == 1:
-            samples = [s / 32767.0 for s in shorts]
-        else:
-            # Average stereo channels to mono
-            samples = [(shorts[i] + shorts[i + 1]) / (2.0 * 32767.0) for i in range(0, len(shorts) - 1, channels)]
+        for i, val in enumerate(shorts):
+            ch_data[i % channels].append(val / 32768.0)
+    elif sampwidth == 3:
+        for i in range(0, len(raw_data) - 2, 3):
+            val = int.from_bytes(raw_data[i:i + 3], byteorder="little", signed=True)
+            ch_data[(i // 3) % channels].append(val / 8388608.0)
+    elif sampwidth == 4:
+        count = len(raw_data) // 4
+        try:
+            floats = struct.unpack(f"<{count}f", raw_data)
+            max_v = max(abs(f) for f in floats[:1000]) if floats else 0.0
+            if max_v <= 1.5:
+                for i, val in enumerate(floats):
+                    ch_data[i % channels].append(float(val))
+            else:
+                ints = struct.unpack(f"<{count}i", raw_data)
+                for i, val in enumerate(ints):
+                    ch_data[i % channels].append(val / 2147483648.0)
+        except Exception:
+            count = len(raw_data) // 4
+            ints = struct.unpack(f"<{count}i", raw_data)
+            for i, val in enumerate(ints):
+                ch_data[i % channels].append(val / 2147483648.0)
     else:
-        # Fallback for 8-bit or unhandled: zero pad
-        samples = [0.0] * frames_count
-    return rate, samples
+        for ch in range(channels):
+            ch_data[ch] = [0.0] * frames_count
+
+    return rate, ch_data
 
 
 class ToneSynth(Op):
     """Synthesize a musical tone with selectable waveform and frequency."""
 
     TITLE = "Synthesize Tone"
-    CATEGORY = "Audio / Synth"
+    CATEGORY = "Audio / Synth & Voice"
     CACHEABLE = True
 
     class Outputs(TypedDict):
@@ -105,7 +147,7 @@ class ChordProgression(Op):
     """Synthesize a musical chord progression or ambient harmonic drone."""
 
     TITLE = "Chords & Melodies"
-    CATEGORY = "Audio / Synth"
+    CATEGORY = "Audio / Score"
     CACHEABLE = True
 
     class Outputs(TypedDict):
@@ -194,7 +236,7 @@ class AudioEchoFilter(Op):
     """Apply delay, echo, and decay reverberation to an input audio track."""
 
     TITLE = "Audio Echo & Reverb"
-    CATEGORY = "Audio / Effects"
+    CATEGORY = "Audio / Effects & Mixing"
     CACHEABLE = True
 
     class Outputs(TypedDict):
@@ -207,24 +249,28 @@ class AudioEchoFilter(Op):
         decay: Annotated[float, Range(0.1, 0.9)] = 0.4,
         repeats: Annotated[int, Range(1, 6)] = 3,
     ) -> Outputs:
-        sample_rate, samples = _read_pcm16_wav(audio)
+        sample_rate, ch_samples = _read_pcm16_wav(audio)
         delay_samples = int(sample_rate * (delay_ms / 1000.0))
         extra_len = delay_samples * repeats
-        out_samples = list(samples) + [0.0] * extra_len
 
-        for r in range(1, repeats + 1):
-            offset = delay_samples * r
-            gain = decay**r
-            for i in range(len(samples)):
-                out_samples[i + offset] += samples[i] * gain
+        out_channels: list[list[float]] = []
+        for samples in ch_samples:
+            out = list(samples) + [0.0] * extra_len
+            for r in range(1, repeats + 1):
+                offset = delay_samples * r
+                gain = decay**r
+                for i in range(len(samples)):
+                    out[i + offset] += samples[i] * gain
+            out_channels.append(out)
 
-        # Normalize to prevent clipping
-        peak = max(abs(s) for s in out_samples) if out_samples else 1.0
+        # Normalize across all channels to prevent clipping
+        peak = max((max(abs(s) for s in out) for out in out_channels if out), default=1.0)
         if peak > 1.0:
-            out_samples = [s / peak for s in out_samples]
+            for ch_idx in range(len(out_channels)):
+                out_channels[ch_idx] = [s / peak for s in out_channels[ch_idx]]
 
         out_path = Path("echo.wav")
-        _write_pcm16_wav(out_path, out_samples, sample_rate)
+        _write_pcm16_wav(out_path, out_channels, sample_rate)
         return {"filtered_audio": out_path}
 
 

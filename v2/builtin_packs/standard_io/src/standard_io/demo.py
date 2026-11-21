@@ -13,7 +13,7 @@ class AskFooOrWoo(Op):
     """Ask the user to pick foo or woo."""
 
     TITLE = "Ask foo or woo"
-    CATEGORY = "Demo"
+    CATEGORY = "Core / Interactive"
     CACHEABLE = False
 
     class Outputs(TypedDict):
@@ -32,7 +32,7 @@ class SecretCodeChallenge(Op):
     """Challenge the user to enter the secret clearance code with interactive checkpoints."""
 
     TITLE = "Secret Code Challenge"
-    CATEGORY = "Demo"
+    CATEGORY = "Core / Interactive"
     CACHEABLE = False
 
     class Outputs(TypedDict):
@@ -80,7 +80,7 @@ class Echo(Op):
     """Echo an input string to its output."""
 
     TITLE = "Echo text"
-    CATEGORY = "Demo"
+    CATEGORY = "Core / Text & Data"
     CACHEABLE = True
 
     class Outputs(TypedDict):
@@ -90,25 +90,11 @@ class Echo(Op):
         return {"text": text}
 
 
-class Concat(Op):
-    """Join two strings."""
-
-    TITLE = "Concat text"
-    CATEGORY = "Text / Basic"
-    CACHEABLE = True
-
-    class Outputs(TypedDict):
-        text: str
-
-    def run(self, a: str, b: str = " ") -> Outputs:
-        return {"text": a + b}
-
-
 class ReadText(Op):
     """Read UTF-8 text from a file."""
 
     TITLE = "Read text file"
-    CATEGORY = "Files"
+    CATEGORY = "Core / Files"
     CACHEABLE = True
 
     class Outputs(TypedDict):
@@ -122,7 +108,7 @@ class WriteText(Op):
     """Write UTF-8 text to a file."""
 
     TITLE = "Write text file"
-    CATEGORY = "Files"
+    CATEGORY = "Core / Files"
     CACHEABLE = True
 
     class Outputs(TypedDict):
@@ -138,7 +124,6 @@ class WriteText(Op):
 
 __all__ = [
     "AskFooOrWoo",
-    "Concat",
     "Echo",
     "ReadText",
     "SecretCodeChallenge",
