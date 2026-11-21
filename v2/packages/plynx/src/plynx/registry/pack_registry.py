@@ -17,6 +17,8 @@ from plynx.api_models import OpEntry
 from plynx.registry.extractor import extract_ops_from_file
 from plynx.store.run_store import atomic_write_text
 
+CACHE_SCHEMA_VERSION = 2
+
 
 def find_workspace_root(start: Path | None = None) -> Path:
     """Return the nearest ancestor containing ``.plynx/`` or ``pyproject.toml``, or ``start``."""
@@ -188,13 +190,15 @@ class PackRegistry:
         cache_data: dict[str, Any] = {}
         if not force and self.cache_path.is_file():
             try:
-                cache_data = json.loads(self.cache_path.read_text(encoding="utf-8"))
+                loaded = json.loads(self.cache_path.read_text(encoding="utf-8"))
+                if isinstance(loaded, dict) and loaded.get("schema") == CACHE_SCHEMA_VERSION:
+                    cache_data = loaded
             except Exception:
                 cache_data = {}
 
-        raw_files = cache_data.get("files", cache_data)
+        raw_files = cache_data.get("files", {})
         cached_files: dict[str, Any] = raw_files if isinstance(raw_files, dict) else {}
-        cache_dirty = force or not self.cache_path.is_file()
+        cache_dirty = force or not cache_data
 
         self._discovered_packs = discover_packs(
             self.workspace_root,
@@ -277,7 +281,7 @@ class PackRegistry:
 
         if cache_dirty:
             manifest = {
-                "schema": 1,
+                "schema": CACHE_SCHEMA_VERSION,
                 "files": cached_files,
             }
             atomic_write_text(self.cache_path, json.dumps(manifest, indent=2) + "\n")

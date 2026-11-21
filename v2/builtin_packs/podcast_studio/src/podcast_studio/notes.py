@@ -101,7 +101,7 @@ class ShowNotesGenerator(Op):
                 "",
                 "### 🎙️ Spoken Transcript",
                 "",
-                f"\"{full_transcript}\"" if full_transcript else "*[No transcript provided]*",
+                f'"{full_transcript}"' if full_transcript else "*[No transcript provided]*",
                 "",
                 "---",
                 "",

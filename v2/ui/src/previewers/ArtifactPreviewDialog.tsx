@@ -36,11 +36,13 @@ export function detectPreviewKind(
     return "image";
   }
   if (
-    mt.startsWith("audio/") ||
-    fn.endsWith(".wav") ||
-    fn.endsWith(".mp3") ||
-    fn.endsWith(".ogg") ||
-    fn.endsWith(".m4a")
+    mt !== "audio/midi" &&
+    mt !== "audio/x-midi" &&
+    (mt.startsWith("audio/") ||
+      fn.endsWith(".wav") ||
+      fn.endsWith(".mp3") ||
+      fn.endsWith(".ogg") ||
+      fn.endsWith(".m4a"))
   ) {
     return "audio";
   }

@@ -1,6 +1,6 @@
 version: 1
 name: podcast_producer_macos
-description: "🎙️ Automated podcast producer with macOS native voiceover (say), lo-fi BGM loop, automatic audio ducking mixer, waveform visualizer, and Markdown show notes. (macOS only: requires native 'say' command)"
+description: "Automated podcast producer composing macOS native voiceover (say), MIDI chord progression + Rhodes PolySynth BGM, automatic audio ducking mixer, waveform visualizer, and Markdown show notes. (macOS only: requires native 'say' command)"
 stages:
   voiceover_bgm:
     title: "1. Voiceover & BGM (macOS only)"
@@ -17,27 +17,39 @@ nodes:
       text: "Welcome to Plynx Studio! In today's episode, we explore reproducible graph automation, macOS native voice synthesis, and dynamic audio ducking with zero cloud API keys. Pure local magic."
       voice: "Samantha"
       rate: 175
-  bgm:
-    op: podcast_studio/music:BGMTrackGenerator
-    title: "Lo-Fi BGM Generator"
+  bgm_score:
+    op: pedalboard_studio/score:ChordProgressionScore
+    title: "Lo-Fi Chord Progression (MIDI)"
     stage: voiceover_bgm
     inputs:
-      mood: "lofi_chill"
-      duration_sec: 18.0
-      tempo_bpm: 85
-      volume: 0.35
+      progression: "ii7 - V7 - Imaj7 - vi7"
+      key: "C"
+      bpm: 84
+      bars: 8
+      voicing_style: "arpeggio"
+  bgm_synth:
+    op: pedalboard_studio/synth:PolySynth
+    title: "Warm Rhodes BGM Synth"
+    stage: voiceover_bgm
+    inputs:
+      midi: $bgm_score.midi
+      waveform: "rhodes"
+      cutoff_hz: 2400.0
+      stereo_width: 0.65
   mixer:
-    op: podcast_studio/mixer:AudioMixer
+    op: pedalboard_studio/effects:AudioMixer
     title: "Audio Mixer & Ducker"
     stage: mixing
     inputs:
-      voiceover: $voiceover.voiceover
-      bgm: $bgm.bgm
-      speech_volume: 1.0
-      bgm_volume: 0.35
+      track_1: $voiceover.voiceover
+      track_2: $bgm_synth.audio
+      track_1_gain: 1.0
+      track_2_gain: 0.35
+      ducking_enabled: true
       ducking_amount_db: 14.0
       lead_in_sec: 1.0
       tail_sec: 2.0
+      loop_background: true
   waveform_visualizer:
     op: media_studio/inspect:AudioWaveformVisualizer
     title: "Podcast Waveform Visualizer"

@@ -128,7 +128,9 @@ class TextToSpeech(Op):
         say_bin = shutil.which("say")
 
         if is_macos and say_bin:
-            with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".txt", delete=False) as tf:
+            with tempfile.NamedTemporaryFile(
+                "w", encoding="utf-8", suffix=".txt", delete=False
+            ) as tf:
                 tf.write(content)
                 temp_text_path = Path(tf.name)
 
@@ -157,7 +159,9 @@ class TextToSpeech(Op):
             finally:
                 temp_text_path.unlink(missing_ok=True)
         else:
-            logger.info("Non-macOS platform or 'say' command not available. Using synthetic audio fallback.")
+            logger.info(
+                "Non-macOS platform or 'say' command not available. Using synthetic audio fallback."
+            )
             self._generate_synthetic_fallback(out_path, content, rate)
 
         return {

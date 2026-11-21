@@ -55,6 +55,7 @@ Directory = Annotated[Path, DirectoryMarker()]
 
 PdfFile = Annotated[Path, Media("application/pdf")]
 AudioWav = Annotated[Path, Media("audio/wav")]
+MidiFile = Annotated[Path, Media("audio/midi")]
 MarkdownFile = Annotated[Path, Media("text/markdown")]
 JsonFile = Annotated[Path, Media("application/json")]
 ImageFile = Annotated[Path, Media("image/png")]
@@ -64,6 +65,7 @@ TextFile = Annotated[Path, Media("text/plain")]
 SEMANTIC_MEDIA_ALIASES: Final[dict[str, str]] = {
     "PdfFile": "application/pdf",
     "AudioWav": "audio/wav",
+    "MidiFile": "audio/midi",
     "MarkdownFile": "text/markdown",
     "JsonFile": "application/json",
     "ImageFile": "image/png",
@@ -81,6 +83,7 @@ __all__ = [
     "JsonFile",
     "MarkdownFile",
     "Media",
+    "MidiFile",
     "PdfFile",
     "Range",
     "TextFile",

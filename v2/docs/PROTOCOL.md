@@ -106,7 +106,7 @@ def concat(a: str, b: str = " ") -> ConcatOut:
   - Primitives: `str`, `int`, `float`, `bool`, `dict`, `list`, `Path`, `Directory`.
   - Choices: `Literal["val1", "val2", ...]` (from `typing`; values must be str or int literals; yields `options` in registry).
   - Bounded numbers: `Annotated[int, Range(min, max, step=1)]` and `Annotated[float, Range(min, max, step=...)]` (from `plynx_sdk`; arguments are numeric literals, `step` optional; yields `min`, `max`, `step` in registry).
-  - Media files: `Annotated[Path, Media("<mime>")]`, aliases from `plynx_sdk.types` (`PdfFile`, `AudioWav`, `MarkdownFile`, `JsonFile`, `ImageFile`, `CsvFile`, `TextFile`), module-level aliases defined in the same file as `Name = Annotated[Path, Media("<mime>")]`, `Name = Literal[...]`, or `Name = Annotated[int | float, Range(...)]`.
+  - Media files: `Annotated[Path, Media("<mime>")]`, aliases from `plynx_sdk.types` (`PdfFile`, `AudioWav`, `MidiFile`, `MarkdownFile`, `JsonFile`, `ImageFile`, `CsvFile`, `TextFile`), module-level aliases defined in the same file as `Name = Annotated[Path, Media("<mime>")]`, `Name = Literal[...]`, or `Name = Annotated[int | float, Range(...)]`.
   - Optionals: `X | None` / `Optional[X]` of any of the above.
 - Defaults are literals. Port names are `snake_case`.
 - Variadic operations: An op can declare `ALLOW_EXTRA_INPUTS = True` (class form) or `@op(..., allow_extra_inputs=True)` (function form). Variadic inputs are declared via typed keyword arguments `**extra: <Type>` (e.g. `**tracks: AudioWav`). When enabled, the workflow engine accepts arbitrary named input ports matching `<Type>`.

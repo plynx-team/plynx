@@ -19,12 +19,18 @@ nodes:
       tempo_bpm: 84
       bars_count: 35
       dynamics: expressive
+  piano_roll:
+    op: pedalboard_studio/inspect:MidiPianoRoll
+    title: "MIDI Piano Roll Preview"
+    stage: composition
+    inputs:
+      midi: $score.midi
   piano_synth:
     op: pedalboard_studio/synth:AcousticPianoSynth
     title: "Concert Grand Synthesis"
     stage: synthesis
     inputs:
-      score: $score.score
+      midi: $score.midi
       brightness: 1.05
       sustain_resonance: 0.75
       stereo_width: 0.65

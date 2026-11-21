@@ -587,15 +587,16 @@ def test_builtin_pack_ops_parameter_descriptions() -> None:
     from plynx.registry.pack_registry import PackRegistry
 
     reg = PackRegistry(ROOT)
-    mixer_op = reg.get("podcast_studio/mixer:AudioMixer")
+    mixer_op = reg.get("pedalboard_studio/effects:AudioMixer")
     assert mixer_op is not None
     mixer_inputs = {inp.name: inp for inp in mixer_op.inputs}
-    assert mixer_inputs["voiceover"].description == "Spoken voiceover WAV audio track."
-    assert mixer_inputs["bgm"].description == "Background music WAV audio track."
+    assert mixer_inputs["track_1"].description is not None
+    assert "Primary audio track" in mixer_inputs["track_1"].description
+    assert mixer_inputs["track_2"].description is not None
+    assert "second audio track" in mixer_inputs["track_2"].description
     ducking_val = mixer_inputs["ducking_amount_db"].description
     assert ducking_val is not None
-    ducking_desc = ducking_val.lower()
-    assert "attenuate" in ducking_desc or "decibels" in ducking_desc
+    assert "db" in ducking_val.lower() or "attenuation" in ducking_val.lower()
 
     tts_op = reg.get("podcast_studio/voice:TextToSpeech")
     assert tts_op is not None
@@ -605,3 +606,21 @@ def test_builtin_pack_ops_parameter_descriptions() -> None:
     assert text_desc is not None and "Inline speech text" in text_desc
     rate_desc = tts_inputs["rate"].description
     assert rate_desc is not None and "words per minute" in rate_desc
+
+
+def test_midi_file_semantic_alias_extraction() -> None:
+    """Verify MidiFile extracts as file port with media='audio/midi'."""
+    from plynx.registry.pack_registry import PackRegistry
+
+    reg = PackRegistry(ROOT)
+    chord_op = reg.get("pedalboard_studio/score:ChordProgressionScore")
+    assert chord_op is not None
+    midi_out = next(out for out in chord_op.outputs if out.name == "midi")
+    assert midi_out.type == "file"
+    assert midi_out.media == "audio/midi"
+
+    piano_op = reg.get("pedalboard_studio/synth:AcousticPianoSynth")
+    assert piano_op is not None
+    midi_in = next(inp for inp in piano_op.inputs if inp.name == "midi")
+    assert midi_in.type == "file"
+    assert midi_in.media == "audio/midi"

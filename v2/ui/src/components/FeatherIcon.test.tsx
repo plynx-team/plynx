@@ -26,6 +26,7 @@ describe("FeatherIcon component", () => {
     expect(getPortIconName("str")).toBe("type");
     expect(getPortIconName("int")).toBe("hash");
     expect(getPortIconName("file", "image/png")).toBe("image");
+    expect(getPortIconName("file", "audio/midi")).toBe("sliders");
     expect(getPortIconName("file", "audio/wav")).toBe("music");
     expect(getPortIconName("directory")).toBe("folder");
     expect(getPortIconColor("file")).toBe("#2680eb");

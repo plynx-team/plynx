@@ -207,12 +207,12 @@ All operations in `standard_io` must use **Python Standard Library only** (`depe
 ### Stage 4: Universal MIDI Score Ecosystem & Creative Audio Ops
 *Effort: **Medium–High** | Recommended Model: **Balanced/Strong (Gemini Flash High / Pro)***
 
-- [ ] **4.1 Add `MidiFile` semantic type (`audio/midi`)**
+- [x] **4.1 Add `MidiFile` semantic type (`audio/midi`)**
   - **Files:** `v2/docs/PROTOCOL.md`, `packages/plynx-sdk/src/plynx_sdk/types.py`, `packages/plynx/src/plynx/registry/extractor.py`, `ui/src/components/FeatherIcon.tsx`, `tests/`.
   - **Changes:** Add `MidiFile = Annotated[Path, Media("audio/midi")]` and register `"MidiFile": "audio/midi"` in `SEMANTIC_MEDIA_ALIASES`. Map `audio/midi` to a music/sliders icon in UI.
   - **Accept:** `MidiFile` ports reject `AudioWav` wires and accept `MidiFile` wires cleanly during validation.
 
-- [ ] **4.2 Implement stdlib Standard MIDI File (SMF) helper + `Audio / Score` ops**
+- [x] **4.2 Implement stdlib Standard MIDI File (SMF) helper + `Audio / Score` ops**
   - **Files:** `builtin_packs/pedalboard_studio/src/pedalboard_studio/midi_io.py`, `builtin_packs/pedalboard_studio/src/pedalboard_studio/score.py` (or `synth.py`).
   - **Changes:** Implement pure-Python SMF reader/writer helper and build/update ops outputting `MidiFile`:
     - `BachPreludeScore`: Outputs authentic BWV 846 as `MidiFile` (keep JSON metadata summary as secondary output if helpful).
@@ -221,7 +221,7 @@ All operations in `standard_io` must use **Python Standard Library only** (`depe
     - `MidiMerge`: Merges multiple `MidiFile` inputs (2 base tracks or N via `ALLOW_EXTRA_INPUTS`) onto separate MIDI channels cleanly.
   - **Accept:** Every score op produces valid Type 0/1 `.mid` files readable by standard MIDI parsers; custom user patterns parse reliably.
 
-- [ ] **4.3 Upgrade synths & mixers for universal MIDI -> WAV -> Mastering composition**
+- [x] **4.3 Upgrade synths & mixers for universal MIDI -> WAV -> Mastering composition**
   - **Files:** `builtin_packs/pedalboard_studio/src/pedalboard_studio/synth.py`, `builtin_packs/pedalboard_studio/src/pedalboard_studio/effects.py`, `builtin_packs/pedalboard_studio/src/pedalboard_studio/mastering.py`.
   - **Changes:**
     - Update `AcousticPianoSynth` to consume `MidiFile` (ignoring drum channel 9 or rendering melodic channels cleanly).
@@ -229,12 +229,12 @@ All operations in `standard_io` must use **Python Standard Library only** (`depe
     - Add/move stereo-preserving multi-track `AudioMixer` (supporting N tracks via Stage 3 `ALLOW_EXTRA_INPUTS` plus optional sidechain/ducking mode for voiceover over music).
   - **Accept:** Any score op (`BachPreludeScore`, `ChordProgressionScore`, `StepSequencer`, `MidiMerge`) wires interchangeably into any synthesizer (`AcousticPianoSynth`, `PolySynth`, `DrumSynth`), and any synth/TTS output wires into `Pedalboard*` effects and `AudioMixer`.
 
-- [ ] **4.4 Add `MidiPianoRoll` visualizer (`Inspect & Visualize`)**
+- [x] **4.4 Add `MidiPianoRoll` visualizer (`Inspect & Visualize`)**
   - **Files:** `builtin_packs/media_studio/src/media_studio/inspect.py` (or `pedalboard_studio/inspect.py`).
   - **Changes:** Implement `MidiPianoRoll`: converts `MidiFile -> ImageFile` by rendering pitch-vs-time note rectangles colored by MIDI channel/velocity with dark studio piano-roll styling.
   - **Accept:** Users can preview generated MIDI sequences directly inside Plynx's UI before/alongside audio rendering.
 
-- [ ] **4.5 Slim down `podcast_studio` to macOS voice & publishing (`macOS only`)**
+- [x] **4.5 Slim down `podcast_studio` to macOS voice & publishing (`macOS only`)**
   - **Files:** `builtin_packs/podcast_studio/`.
   - **Changes:** Keep `TextToSpeech` *(note `(macOS only)` in title & Markdown docstring)* and `ShowNotesGenerator`; retire redundant `BGMTrackGenerator` and `WaveformVisualizer`; point `podcast_producer_macos.yaml` to compose `ChordProgressionScore -> PolySynth` (or `ToneSynth`), `TextToSpeech`, shared `AudioMixer` (with ducking enabled), `AudioWaveformVisualizer`, and `ShowNotesGenerator`.
   - **Accept:** `podcast_studio` has near-zero dependencies, clearly notes macOS requirement on `TextToSpeech`, and demonstrates true cross-pack composition.
