@@ -9,7 +9,7 @@ from click.testing import CliRunner
 from plynx.api_models import InputPortSpec, OpEntry, OutputPortSpec
 from plynx.cli import main as cli_main
 from plynx.registry import FakeRegistry, OpRegistry
-from plynx.workflow.models import Workflow
+from plynx.workflow.models import Workflow, load_workflow
 from plynx.workflow.validator import validate_workflow, validate_workflow_file
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -484,3 +484,30 @@ nodes:
             assert inputs[0]["required"] is True
 
     asyncio.run(_check())
+
+
+def test_all_curated_showcase_workflows_validate() -> None:
+    """Verify all workflows in examples/workflows/ validate with zero errors."""
+    from plynx.registry.pack_registry import PackRegistry
+
+    reg = PackRegistry(ROOT)
+    workflows_dir = ROOT / "examples" / "workflows"
+    assert workflows_dir.is_dir()
+
+    curated = [
+        "bach_prelude_c_major.yaml",
+        "data_bundle_pipeline.yaml",
+        "foo_or_woo.yaml",
+        "generative_art_studio.yaml",
+        "interactive_wizard_staged.yaml",
+        "midi_groove_studio.yaml",
+        "podcast_producer_macos.yaml",
+    ]
+
+    for name in curated:
+        wf_path = workflows_dir / name
+        assert wf_path.is_file(), f"Missing expected workflow: {name}"
+        wf = load_workflow(wf_path)
+        issues = validate_workflow(wf, reg)
+        errors = [issue for issue in issues if issue.severity == "error"]
+        assert not errors, f"Workflow {name} had validation errors: {errors}"

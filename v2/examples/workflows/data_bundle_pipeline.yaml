@@ -1,0 +1,74 @@
+version: 1
+name: data_bundle_pipeline
+description: "Comprehensive data pipeline demonstrating CsvSummary, MathOp, JsonMerge, WriteText, BundleDirectory, ListDirectory, and MarkdownReport across scalar, structured, and directory types."
+stages:
+  ingestion:
+    title: "1. Data Ingestion & Calculation"
+    require_approval: false
+  packaging:
+    title: "2. Packaging & Manifest Generation"
+    require_approval: false
+  reporting:
+    title: "3. Audit & Reporting"
+    require_approval: false
+nodes:
+  csv_analysis:
+    op: standard_io/data:CsvSummary
+    title: "CSV Ingestion & Stats"
+    stage: ingestion
+    inputs:
+      csv_file: "examples/samples/sales_metrics.csv"
+      delimiter: ","
+  math_calc:
+    op: standard_io/data:MathOp
+    title: "Throughput Multiplier"
+    stage: ingestion
+    inputs:
+      a: 24.5
+      b: 4.0
+      operation: "mul"
+  json_data:
+    op: standard_io/data:JsonMerge
+    title: "Merge Pipeline Metadata"
+    stage: ingestion
+    inputs:
+      a:
+        department: "Data Engineering"
+        status: "active"
+        quarter: "Q4"
+      b:
+        target_env: "local"
+        batch_size: 1000
+      output_filename: "pipeline_meta.json"
+  create_notes:
+    op: standard_io/demo:WriteText
+    title: "Generate Release Notes"
+    stage: ingestion
+    inputs:
+      text: "Plynx Data Bundle v2.0 - Operations and metrics archive."
+      filename: "RELEASE_NOTES.txt"
+  bundle:
+    op: standard_io/files:BundleDirectory
+    title: "Bundle Directory"
+    stage: packaging
+    inputs:
+      file_a: $create_notes.file
+      file_b: $json_data.file
+      file_c: $csv_analysis.stats_json
+      bundle_name: "data_archive"
+  list_archive:
+    op: standard_io/files:ListDirectory
+    title: "Inspect Archive Directory"
+    stage: packaging
+    inputs:
+      directory: $bundle.bundle
+  summary_report:
+    op: standard_io/files:MarkdownReport
+    title: "Audit Markdown Report"
+    stage: reporting
+    inputs:
+      title: "Data Pipeline & Bundle Audit"
+      body: "Automated ingestion, mathematical calculation, JSON merging, and directory bundling completed."
+      metrics:
+        pipeline_status: "VERIFIED"
+      filename: "audit_report.md"

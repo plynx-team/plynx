@@ -244,12 +244,12 @@ All operations in `standard_io` must use **Python Standard Library only** (`depe
 ### Stage 5: Curated Demo Workflow Suite & Test Hygiene
 *Effort: **Low–Medium** | Recommended Model: **Fast / Balanced***
 
-- [ ] **5.1 Separate internal test fixtures from showcase `examples/workflows/` (per D4)**
+- [x] **5.1 Separate internal test fixtures from showcase `examples/workflows/` (per D4)**
   - **Files:** `tests/fixtures/workflows/`, test files referencing `examples/workflows/foo_or_woo.yaml`, `examples/workflows/`.
   - **Changes:** If D4 opts to clean up `examples/workflows/`, copy `foo_or_woo.yaml` and `staged.yaml` into `tests/fixtures/workflows/` and repoint unit tests there, leaving `examples/workflows/` clean for the curated showcase workflows.
   - **Accept:** Full pytest suite passes with zero reliance on user showcase examples (except dedicated workflow validation tests).
 
-- [ ] **5.2 Create & polish the 5–6 curated showcase workflows (with `.layout.json` sidecars)**
+- [x] **5.2 Create & polish the 5–6 curated showcase workflows (with `.layout.json` sidecars)**
   Target 5–6 high-signal examples spanning all domains and complexity levels:
   1. **`interactive_wizard_staged.yaml`** *(Simple — Core / Interactive + Stage Gates)*: Demonstrates `AskChoice` + `MultiStepQuestionnaire` (multiple sequential checkpoints + stdout/stderr logs) -> Stage Approval Gate (`require_approval: true`) -> `TemplateFormat` -> `MarkdownReport`.
   2. **`data_bundle_pipeline.yaml`** *(Simple/Medium — Core / Data & Files)*: Demonstrates `CsvSummary` + `MathOp` + `JsonMerge` + `WriteText` -> `BundleDirectory` -> `ListDirectory` -> `MarkdownReport`. Exercises `int`, `float`, `bool`, `dict`, `list`, `CsvFile`, `JsonFile`, `Directory`, `MarkdownFile`.
@@ -259,7 +259,7 @@ All operations in `standard_io` must use **Python Standard Library only** (`depe
   6. **`podcast_producer_macos.yaml`** *(Medium — macOS-only Cross-Pack Podcast Producer)*: Uses `TextToSpeech` *(macOS only)* + `ChordProgressionScore -> PolySynth` -> `AudioMixer` (auto-ducking) -> `AudioWaveformVisualizer` + `ShowNotesGenerator`.
   - **Accept:** Every example in `examples/workflows/` has a clean `.layout.json` sidecar, validates with zero errors or `uv.lock` warnings, and runs cleanly end-to-end.
 
-- [ ] **5.3 Update documentation (`v2/README.md`, walkthroughs)**
+- [x] **5.3 Update documentation (`v2/README.md`, walkthroughs)**
   - **Files:** `v2/README.md`, `v2/docs/PLAN.md` (if needed).
   - **Changes:** Document the curated showcase examples and the 8 op categories clearly. Run full verification suite (`ruff`, `mypy`, `pytest`, UI `lint`/`typecheck`/`test`/`build`, `check_legacy_untouched.py`).
   - **Accept:** All checks pass cleanly on a fresh run.

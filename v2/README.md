@@ -99,6 +99,36 @@ plynx clean --days 7
 
 ---
 
+## Curated Showcase Workflows
+
+PLynx includes production-grade reference workflows in `examples/workflows/`, complete with interactive `.layout.json` sidecars:
+
+| Workflow | Category Focus | Highlights |
+| :--- | :--- | :--- |
+| [`interactive_wizard_staged.yaml`](examples/workflows/interactive_wizard_staged.yaml) | `Core / Interactive` | Multi-step interactive survey with idempotent `checkpoint()` replay, human-in-the-loop stage approval gate (`require_approval: true`), string template formatting, and Markdown report generation. |
+| [`data_bundle_pipeline.yaml`](examples/workflows/data_bundle_pipeline.yaml) | `Core / Data & Files` | Full type-coverage data pipeline across `int`, `float`, `bool`, `dict`, `list`, `CsvFile`, `JsonFile`, `Directory`, and `MarkdownFile`. Combines CSV ingestion, math calculations, JSON merging, and directory bundling. |
+| [`generative_art_studio.yaml`](examples/workflows/generative_art_studio.yaml) | `Image` | Procedural digital art pipeline generating Mandelbrot fractals, geometric vector waves, edge enhancement filters, studio presentation cards, and media metadata auditing. |
+| [`midi_groove_studio.yaml`](examples/workflows/midi_groove_studio.yaml) | `Audio` | Cross-pack music composition pipeline combining Roman numeral chord progression (`vi - IV - I - V`), a 16-step ASCII drum/bass sequencer, MIDI merger, piano-roll visualizer, analog `PolySynth`, 808 `DrumSynth`, multi-track `AudioMixer`, and Pedalboard mastering. |
+| [`bach_prelude_c_major.yaml`](examples/workflows/bach_prelude_c_major.yaml) | `Audio` | Classical physical modeling: J.S. Bach Prelude I (BWV 846) MIDI score, concert grand acoustic piano synthesis, Spotify Pedalboard spatial effects (tone filter, chorus, delay, reverb), studio limiter, and waveform visualizer. |
+| [`podcast_producer_macos.yaml`](examples/workflows/podcast_producer_macos.yaml) | `Audio / Voice` | Automated podcast producer composing macOS native speech synthesis (`say`), lo-fi Rhodes chord progression, automatic sidechain audio ducking mixer, waveform visualizer, and Markdown show notes. *(macOS only)* |
+
+---
+
+## Built-in Operation Categories
+
+PLynx v2 features 40+ built-in operations organized into **8 cohesive categories**:
+
+* **`Core / Text & Data`**: `Echo`, `Concat`, `TemplateFormat`, `MathOp`, `JsonExtract`, `JsonMerge`, `CsvSummary`
+* **`Core / Files`**: `ReadText`, `WriteText`, `ListDirectory`, `BundleDirectory`, `MarkdownReport`
+* **`Core / Interactive`**: `AskChoice`, `AskFooOrWoo`, `MultiStepQuestionnaire`, `SecretCodeChallenge`
+* **`Audio / Score`**: `BachPreludeScore`, `ChordProgressionScore`, `StepSequencer`, `MidiMerge` *(all output `MidiFile`)*
+* **`Audio / Synth & Voice`**: `AcousticPianoSynth`, `PolySynth`, `DrumSynth`, `ToneSynth`, `TextToSpeech` *(macOS only)*
+* **`Audio / Effects & Mixing`**: `AudioMixer` *(multi-track with dynamic ducking)*, `PedalboardToneFilter`, `PedalboardChorus`, `PedalboardDelay`, `PedalboardReverb`, `PedalboardMastering`, `AudioEchoFilter`
+* **`Image`**: `MandelbrotFractal`, `GeometricPattern`, `ImageFilterOp`, `CardOrPoster`
+* **`Inspect & Visualize`**: `AudioWaveformVisualizer`, `MidiPianoRoll`, `AudioStats`, `MediaMetadataInspector`, `ShowNotesGenerator`
+
+---
+
 ## Development Setup
 
 To build and run PLynx from source:

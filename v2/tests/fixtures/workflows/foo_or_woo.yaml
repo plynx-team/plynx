@@ -1,0 +1,26 @@
+version: 1
+name: foo_or_woo
+concurrency: 4
+stages:
+  ask:
+    title: 1. Ask
+  print: {}
+nodes:
+  pick:
+    op: standard_io/demo:AskFooOrWoo
+    title: Pick one
+    stage: ask
+    inputs:
+      prompt: foo or woo?
+  echo:
+    op: standard_io/demo:Echo
+    stage: print
+    inputs:
+      text: $pick.choice
+  concat:
+    op: standard_io/text:Concat
+    title: Concat text
+    stage: ask
+    inputs:
+      b: $pick.choice
+      a: 'Hello, '

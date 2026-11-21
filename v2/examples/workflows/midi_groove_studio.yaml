@@ -1,0 +1,108 @@
+version: 1
+name: midi_groove_studio
+description: "Cross-pack music production pipeline combining ChordProgressionScore, StepSequencer, MidiMerge, MidiPianoRoll preview, parallel PolySynth and DrumSynth, multi-track AudioMixer, Pedalboard reverb and mastering, and waveform visualization."
+stages:
+  score_composition:
+    title: "1. Multi-Track MIDI Composition"
+    require_approval: false
+  synthesis:
+    title: "2. Polyphonic & Drum Synthesis"
+    require_approval: false
+  mixing_mastering:
+    title: "3. Studio Mixing, Reverb & Mastering"
+    require_approval: false
+nodes:
+  chords:
+    op: pedalboard_studio/score:ChordProgressionScore
+    title: "Cinematic Chords (MIDI)"
+    stage: score_composition
+    inputs:
+      progression: "vi - IV - I - V"
+      key: "C"
+      bpm: 112
+      bars: 4
+      voicing_style: "arpeggio"
+  drums:
+    op: pedalboard_studio/score:StepSequencer
+    title: "16-Step Drum & Bass Sequencer"
+    stage: score_composition
+    inputs:
+      pattern: |-
+        kick:  X...x...X...x...
+        snare: ....x.......x...
+        hat:   x.o.x.o.x.o.x.o.
+        clap:  ....X.......X...
+        bass:  C2..C2..G1..A1..
+      bpm: 112
+      bars: 4
+      swing: 0.12
+  merged_score:
+    op: pedalboard_studio/score:MidiMerge
+    title: "Multi-Channel MIDI Merger"
+    stage: score_composition
+    inputs:
+      track_a: $chords.midi
+      track_b: $drums.midi
+  piano_roll:
+    op: pedalboard_studio/inspect:MidiPianoRoll
+    title: "Score Piano Roll Preview"
+    stage: score_composition
+    inputs:
+      midi: $merged_score.midi
+      width: 1000
+      height: 380
+  synth:
+    op: pedalboard_studio/synth:PolySynth
+    title: "Analog Polyphonic Synth"
+    stage: synthesis
+    inputs:
+      midi: $merged_score.midi
+      waveform: "saw"
+      cutoff_hz: 3200.0
+      stereo_width: 0.7
+  drum_machine:
+    op: pedalboard_studio/synth:DrumSynth
+    title: "808 Drum Machine Synth"
+    stage: synthesis
+    inputs:
+      midi: $merged_score.midi
+      kit: "electronic_808"
+      punch: 1.2
+      stereo_width: 0.6
+  mixer:
+    op: pedalboard_studio/effects:AudioMixer
+    title: "Multi-Track Audio Mixer"
+    stage: mixing_mastering
+    inputs:
+      track_1: $synth.audio
+      track_2: $drum_machine.audio
+      track_1_gain: 0.85
+      track_2_gain: 1.0
+  reverb:
+    op: pedalboard_studio/effects:PedalboardReverb
+    title: "Concert Studio Reverb"
+    stage: mixing_mastering
+    inputs:
+      audio: $mixer.mixed_audio
+      room_size: 0.65
+      damping: 0.4
+      wet_level: 0.28
+      dry_level: 0.85
+  mastering:
+    op: pedalboard_studio/mastering:PedalboardMastering
+    title: "Studio Limiter & Mastering"
+    stage: mixing_mastering
+    inputs:
+      audio: $reverb.reverb_audio
+      compressor_threshold_db: -14.0
+      gain_db: 1.5
+      limiter_threshold_db: -0.3
+  waveform:
+    op: media_studio/inspect:AudioWaveformVisualizer
+    title: "Final Master Waveform"
+    stage: mixing_mastering
+    inputs:
+      audio: $mastering.mastered_audio
+      width: 800
+      height: 240
+      theme: "cyan"

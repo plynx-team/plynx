@@ -1,0 +1,57 @@
+version: 1
+name: generative_art_studio
+description: "Generative digital art pipeline combining fractal math, geometric vector patterns, visual image filtering, presentation card formatting, and media metadata auditing."
+stages:
+  synthesis:
+    title: "1. Procedural Art Synthesis"
+    require_approval: false
+  processing:
+    title: "2. Image Styling & Filtering"
+    require_approval: false
+  publishing:
+    title: "3. Poster Framing & Metadata Audit"
+    require_approval: false
+nodes:
+  fractal:
+    op: media_studio/image:MandelbrotFractal
+    title: "Mandelbrot Fractal Generator"
+    stage: synthesis
+    inputs:
+      palette: "neon_glow"
+      width: 600
+      height: 600
+      max_iter: 100
+      zoom: 1.4
+  pattern:
+    op: media_studio/image:GeometricPattern
+    title: "Geometric Pattern Background"
+    stage: synthesis
+    inputs:
+      pattern: "gradient_wave"
+      width: 600
+      height: 600
+      primary_color: "#2680eb"
+      secondary_color: "#38c172"
+  filter:
+    op: media_studio/image:ImageFilterOp
+    title: "Artistic Edge Enhancement"
+    stage: processing
+    inputs:
+      image: $fractal.image
+      filter_type: "edge_enhance"
+  poster:
+    op: media_studio/image:CardOrPoster
+    title: "Studio Showcase Poster"
+    stage: publishing
+    inputs:
+      image: $filter.filtered_image
+      title: "Neon Labyrinth"
+      subtitle: "Mathematical Chaos & Geometric Harmony"
+      badge: "GENERATIVE"
+      border_color: "#00d8ff"
+  metadata_audit:
+    op: media_studio/inspect:MediaMetadataInspector
+    title: "Media Asset Inspector"
+    stage: publishing
+    inputs:
+      image: $poster.card
