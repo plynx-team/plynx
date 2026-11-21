@@ -7,6 +7,7 @@ Anything outside the supported subset yields ``valid: False`` with a reason, nev
 from __future__ import annotations
 
 import ast
+import inspect
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -290,12 +291,65 @@ def _deduce_pack_and_module(
     return pack, module, source_path
 
 
+def _parse_docstring_args(doc: str) -> dict[str, str]:
+    """Parse parameter descriptions from Google-style 'Args:' section in docstring."""
+    if not doc:
+        return {}
+    cleaned = inspect.cleandoc(doc)
+    lines = cleaned.splitlines()
+    in_args = False
+    result: dict[str, str] = {}
+    current_param: str | None = None
+    current_desc: list[str] = []
+
+    def commit() -> None:
+        nonlocal current_param, current_desc
+        if current_param:
+            result[current_param] = " ".join(current_desc).strip()
+            current_param = None
+            current_desc = []
+
+    for line in lines:
+        stripped = line.strip()
+        if not in_args:
+            if re.match(r"^(?:Args|Arguments|Parameters):\s*$", stripped, re.IGNORECASE):
+                in_args = True
+            continue
+
+        # If another Google-style section starts, end the Args section
+        if re.match(
+            r"^(?:Returns|Yields|Raises|Note|Notes|Examples|Example|Attributes):\s*$",
+            stripped,
+            re.IGNORECASE,
+        ):
+            commit()
+            break
+
+        # Check for new parameter: "name [(type)]: description"
+        param_match = re.match(
+            r"^\s*([a-zA-Z_][a-zA-Z0-9_]*)(?:\s*\([^)]*\))?\s*:\s*(.*)$",
+            line,
+        )
+        if param_match:
+            commit()
+            current_param = param_match.group(1)
+            desc_part = param_match.group(2).strip()
+            if desc_part:
+                current_desc.append(desc_part)
+        elif current_param is not None and stripped:
+            current_desc.append(stripped)
+
+    commit()
+    return result
+
+
 def _extract_inputs(
     args: ast.arguments,
     *,
     is_method: bool,
     owner_name: str,
     module_aliases: dict[str, ast.AST],
+    param_descriptions: dict[str, str] | None = None,
 ) -> list[InputPortSpec]:
     """Extract input port specifications from function or method arguments."""
     if args.vararg is not None or args.kwarg is not None:
@@ -326,6 +380,7 @@ def _extract_inputs(
         else:
             default_val = None
             required = True
+        desc = param_descriptions.get(port_name, None) if param_descriptions else None
         inputs.append(
             InputPortSpec(
                 name=port_name,
@@ -337,6 +392,7 @@ def _extract_inputs(
                 step=parsed.step,
                 required=required,
                 default=default_val,
+                description=desc,
             )
         )
 
@@ -359,6 +415,7 @@ def _extract_inputs(
         else:
             default_val = None
             required = True
+        desc = param_descriptions.get(port_name, None) if param_descriptions else None
         inputs.append(
             InputPortSpec(
                 name=port_name,
@@ -370,6 +427,7 @@ def _extract_inputs(
                 step=parsed.step,
                 required=required,
                 default=default_val,
+                description=desc,
             )
         )
 
@@ -536,9 +594,21 @@ def _extract_class_op(
         if run_func is None:
             raise ValueError(f"Op class '{class_node.name}' must define a 'run' method")
 
-        doc = ast.get_docstring(class_node) or ""
-        doc_lines = [line.strip() for line in doc.splitlines() if line.strip()]
-        description = doc_lines[0] if doc_lines else ""
+        class_doc = ast.get_docstring(class_node)
+        run_doc = ast.get_docstring(run_func) if run_func else None
+
+        # Build parameter descriptions from run() docstring first, supplemented by class docstring
+        param_descriptions: dict[str, str] = {}
+        if run_doc:
+            param_descriptions.update(_parse_docstring_args(run_doc))
+        if class_doc:
+            for k, v in _parse_docstring_args(class_doc).items():
+                if k not in param_descriptions:
+                    param_descriptions[k] = v
+
+        # Preserve full markdown docstring (prefer class docstring, fallback to run docstring)
+        raw_doc = class_doc or run_doc or ""
+        description = inspect.cleandoc(raw_doc) if raw_doc else ""
 
         all_typed_dicts = dict(module_typed_dicts)
         all_typed_dicts.update(inner_typed_dicts)
@@ -549,6 +619,7 @@ def _extract_class_op(
             is_method=True,
             owner_name=f"{class_node.name}.run",
             module_aliases=module_aliases,
+            param_descriptions=param_descriptions,
         )
 
         return OpEntry(
@@ -679,8 +750,8 @@ def _extract_function_op(
             )
 
         doc = ast.get_docstring(func_node) or ""
-        doc_lines = [line.strip() for line in doc.splitlines() if line.strip()]
-        description = doc_lines[0] if doc_lines else ""
+        description = inspect.cleandoc(doc) if doc else ""
+        param_descriptions = _parse_docstring_args(doc)
 
         outputs = _extract_outputs(func_node.returns, module_typed_dicts, module_aliases)
         inputs = _extract_inputs(
@@ -688,6 +759,7 @@ def _extract_function_op(
             is_method=False,
             owner_name=func_node.name,
             module_aliases=module_aliases,
+            param_descriptions=param_descriptions,
         )
 
         return OpEntry(

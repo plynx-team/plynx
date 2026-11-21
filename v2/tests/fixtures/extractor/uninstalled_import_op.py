@@ -13,7 +13,7 @@ from plynx_sdk import Directory, Media, Op, Range, TextFile
 class UninstalledImportOp(Op):
     """Process data with uninstalled dependencies.
 
-    This subsequent line of docstring must not appear in description.
+    This multi-line markdown docstring is fully preserved in description.
     """
 
     TITLE = "Uninstalled Import Op"

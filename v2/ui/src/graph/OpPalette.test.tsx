@@ -119,4 +119,38 @@ describe("OpPalette component (Task 6.9)", () => {
       screen.queryByTestId("palette-op-standard_io/demo:ReadText"),
     ).not.toBeInTheDocument();
   });
+
+  it("truncates multi-line markdown description in tooltip title to single-line summary", () => {
+    const multiLineOps: Array<OpEntry> = [
+      {
+        id: "media_studio/audio:Synth",
+        pack: "media_studio",
+        module: "audio",
+        name: "Synth",
+        kind: "class",
+        title: "Synthesizer",
+        category: "Audio",
+        cacheable: true,
+        description: "# Synthesizer Overview\n\nLong paragraph.\n- bullet\n- bullet",
+        inputs: [],
+        outputs: [],
+        source: "audio.py",
+        valid: true,
+        error: null,
+      },
+    ];
+
+    render(
+      <OpPalette
+        ops={multiLineOps}
+        onAddOp={vi.fn()}
+      />,
+    );
+
+    const button = screen.getByTestId("palette-op-media_studio/audio:Synth");
+    expect(button).toHaveAttribute(
+      "title",
+      "Synthesizer Overview (media_studio/audio:Synth)",
+    );
+  });
 });

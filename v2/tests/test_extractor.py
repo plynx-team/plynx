@@ -44,7 +44,10 @@ def test_extract_from_uninstalled_fixture_without_importing() -> None:
     assert op.title == "Uninstalled Import Op"
     assert op.category == "Test / Fixtures"
     assert op.cacheable is False
-    assert op.description == "Process data with uninstalled dependencies."
+    assert op.description == (
+        "Process data with uninstalled dependencies.\n\n"
+        "This multi-line markdown docstring is fully preserved in description."
+    )
     assert op.valid is True
     assert op.error is None
 
@@ -275,7 +278,10 @@ def test_class_and_function_fixtures_produce_equal_registry_entries() -> None:
     assert (
         class_op.description
         == func_op.description
-        == "Process diverse data with rich annotations and aliases."
+        == (
+            "Process diverse data with rich annotations and aliases.\n\n"
+            "Second line of docstring that is preserved in full description."
+        )
     )
     assert class_op.valid == func_op.valid is True
     assert class_op.error == func_op.error is None
@@ -451,3 +457,107 @@ def unknown_fn(x: CompletelyUnknownType) -> str:
     assert ops2[0].valid is False
     assert ops2[0].error is not None
     assert "Unknown or unsupported port annotation" in ops2[0].error
+
+
+def test_multiline_markdown_docstring_preserved() -> None:
+    """Multi-paragraph Markdown docstrings are fully preserved in OpEntry.description."""
+    src = '''
+from plynx_sdk import Op
+
+class MarkdownDocOp(Op):
+    """# Markdown Header
+
+    This is an extended paragraph explaining the op.
+    It includes code examples:
+
+    ```python
+    x = 1 + 2
+    ```
+
+    - Bullet 1
+    - Bullet 2
+    """
+    TITLE = "Markdown Doc Op"
+
+    def run(self, val: str) -> str:
+        return val
+'''
+    ops = extract_ops_from_source(src, pack="test", module="md")
+    assert len(ops) == 1
+    op = ops[0]
+    assert op.title == "Markdown Doc Op"
+    assert "# Markdown Header" in op.description
+    assert "```python\nx = 1 + 2\n```" in op.description
+    assert "- Bullet 1\n- Bullet 2" in op.description
+
+
+def test_google_style_args_extracted_to_input_port_descriptions() -> None:
+    """Google-style 'Args:' section in run() docstring populates InputPortSpec.description."""
+    src = '''
+from plynx_sdk import Op
+
+class DocArgsOp(Op):
+    """Op with Google-style argument documentation."""
+    TITLE = "Doc Args Op"
+
+    def run(
+        self,
+        prompt: str,
+        max_tokens: int = 100,
+        temperature: float = 0.7,
+        debug_mode: bool = False,
+    ) -> str:
+        """Execute model inference.
+
+        Args:
+            prompt: Input text prompt to supply to the LLM model.
+            max_tokens (int): Maximum number of tokens to generate
+                across multiple continuation lines.
+            temperature (float, optional): Sampling temperature between 0.0 and 1.0.
+            debug_mode: Whether verbose debugging traces should be emitted.
+
+        Returns:
+            Generated text completion.
+        """
+        return prompt
+'''
+    ops = extract_ops_from_source(src, pack="test", module="docs")
+    assert len(ops) == 1
+    op = ops[0]
+    inputs_by_name = {inp.name: inp for inp in op.inputs}
+
+    assert inputs_by_name["prompt"].description == "Input text prompt to supply to the LLM model."
+    assert (
+        inputs_by_name["max_tokens"].description
+        == "Maximum number of tokens to generate across multiple continuation lines."
+    )
+    assert inputs_by_name["temperature"].description == "Sampling temperature between 0.0 and 1.0."
+    assert (
+        inputs_by_name["debug_mode"].description
+        == "Whether verbose debugging traces should be emitted."
+    )
+
+
+def test_builtin_pack_ops_parameter_descriptions() -> None:
+    """Builtin packs with Args: docstrings (AudioMixer, TextToSpeech) have input descriptions."""
+    from plynx.registry.pack_registry import PackRegistry
+
+    reg = PackRegistry(ROOT)
+    mixer_op = reg.get("podcast_studio/mixer:AudioMixer")
+    assert mixer_op is not None
+    mixer_inputs = {inp.name: inp for inp in mixer_op.inputs}
+    assert mixer_inputs["voiceover"].description == "Spoken voiceover WAV audio track."
+    assert mixer_inputs["bgm"].description == "Background music WAV audio track."
+    ducking_val = mixer_inputs["ducking_amount_db"].description
+    assert ducking_val is not None
+    ducking_desc = ducking_val.lower()
+    assert "attenuate" in ducking_desc or "decibels" in ducking_desc
+
+    tts_op = reg.get("podcast_studio/voice:TextToSpeech")
+    assert tts_op is not None
+    assert "macOS only" in tts_op.description
+    tts_inputs = {inp.name: inp for inp in tts_op.inputs}
+    text_desc = tts_inputs["text"].description
+    assert text_desc is not None and "Inline speech text" in text_desc
+    rate_desc = tts_inputs["rate"].description
+    assert rate_desc is not None and "words per minute" in rate_desc

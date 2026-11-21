@@ -365,6 +365,7 @@ class InputPortSpec(BaseModel):
     step: int | float | None = None
     required: bool = True
     default: Any = None
+    description: str | None = None
 
 
 class OutputPortSpec(BaseModel):
@@ -375,6 +376,7 @@ class OutputPortSpec(BaseModel):
     name: str
     type: PortType
     media: str | None = None
+    description: str | None = None
 
 
 class OpEntry(BaseModel):

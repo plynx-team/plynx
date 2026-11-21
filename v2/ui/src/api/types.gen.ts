@@ -238,6 +238,7 @@ export interface InputPortSpec {
   step?: number | null;
   required: boolean;
   default: unknown;
+  description?: string | null;
 }
 
 /** Output port schema in a registry entry. */
@@ -245,6 +246,7 @@ export interface OutputPortSpec {
   name: string;
   type: "str" | "int" | "float" | "bool" | "json" | "file" | "directory";
   media?: string | null;
+  description?: string | null;
 }
 
 /** Operation registry entry returned by ``GET /ops``. */

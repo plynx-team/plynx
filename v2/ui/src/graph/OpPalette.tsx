@@ -23,6 +23,13 @@ function isEditableTarget(target: EventTarget | null): boolean {
   return target.isContentEditable;
 }
 
+function getOpSummary(description?: string, title?: string): string {
+  if (!description) return title || "";
+  const firstLine =
+    description.split("\n").find((line) => line.trim().length > 0) || "";
+  return firstLine.replace(/^#+\s*/, "").trim() || title || "";
+}
+
 export function OpPalette({
   ops,
   onAddOp,
@@ -223,7 +230,7 @@ export function OpPalette({
                           readOnly
                             ? "Return to Working Draft (Editor) to add operations"
                             : op.valid
-                            ? `${op.description || op.title} (${op.id})`
+                            ? `${getOpSummary(op.description, op.title)} (${op.id})`
                             : `Invalid op: ${op.error ?? "unknown error"}`
                         }
                         className="hub-item-node"

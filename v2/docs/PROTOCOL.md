@@ -67,7 +67,10 @@ from typing import TypedDict
 from plynx_sdk import Op
 
 class Concat(Op):
-    """Join two strings."""            # first docstring line = description
+    """Join two strings.
+
+    Supports joining arbitrary strings with an optional delimiter.
+    """                                # cleaned docstring (inspect.cleandoc) = description
     TITLE = "Concat text"              # required, str literal
     CATEGORY = "Text / Basic"          # optional literal, default "Uncategorized"
     CACHEABLE = True                   # optional literal bool, default True
@@ -76,6 +79,12 @@ class Concat(Op):
         text: str
 
     def run(self, a: str, b: str = " ") -> Outputs:
+        """Run concatenation.
+
+        Args:
+            a: First string to join.
+            b: Second string to join (appended to `a`).
+        """
         return {"text": a + b}
 ```
 
@@ -113,15 +122,16 @@ Registry entry (served by `GET /api/v1/ops`, cached in `.plynx/registry_cache.js
 {
   "id": "standard_io/text:Concat", "pack": "standard_io", "module": "text", "name": "Concat",
   "kind": "class", "title": "Concat text", "category": "Text / Basic", "cacheable": true,
-  "description": "Join two strings.",
+  "description": "Join two strings.\n\nSupports joining arbitrary strings with an optional delimiter.",
   "inputs": [
     {
       "name": "a", "type": "str", "media": null,
       "options": null, "min": null, "max": null, "step": null,
-      "required": true, "default": null
+      "required": true, "default": null,
+      "description": "First string to join."
     }
   ],
-  "outputs": [{ "name": "text", "type": "str", "media": null }],
+  "outputs": [{ "name": "text", "type": "str", "media": null, "description": "" }],
   "source": "builtin_packs/standard_io/src/standard_io/text.py",
   "valid": true, "error": null
 }

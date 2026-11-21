@@ -443,4 +443,35 @@ describe("NodeInspector component (Task 6.11)", () => {
     fireEvent.click(moveDownBtn);
     expect(handleReorderStages).toHaveBeenCalledWith(["s2", "s1"]);
   });
+
+  it("renders help icon and tooltip for inputs with a description", () => {
+    const opsWithHelp = {
+      ...OPS_MAP,
+      "pack/mod:RichOp": {
+        ...OPS_MAP["pack/mod:RichOp"],
+        inputs: [
+          {
+            ...OPS_MAP["pack/mod:RichOp"].inputs[0],
+            description: "Detailed input text description for LLM prompt.",
+          },
+          ...OPS_MAP["pack/mod:RichOp"].inputs.slice(1),
+        ],
+      },
+    };
+
+    render(
+      <NodeInspector
+        nodeId="rich"
+        workflow={WORKFLOW}
+        opsMap={opsWithHelp}
+      />,
+    );
+
+    const helpIcon = screen.getByTestId("inspector-port-help-text");
+    expect(helpIcon).toBeDefined();
+    expect(helpIcon).toHaveAttribute(
+      "title",
+      "Detailed input text description for LLM prompt.",
+    );
+  });
 });

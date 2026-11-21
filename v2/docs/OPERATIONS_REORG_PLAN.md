@@ -127,17 +127,17 @@ Consolidate from 16 fragmented categories down to **8 cohesive categories** (3â€
 ### Stage 1: Rich Operator & Parameter Documentation
 *Effort: **Medium** | Recommended Model: **Balanced (Gemini Flash High / Sonnet)***
 
-- [ ] **1.1 Preserve full Markdown docstrings in AST extractor**
+- [x] **1.1 Preserve full Markdown docstrings in AST extractor**
   - **Files:** `v2/docs/PROTOCOL.md`, `packages/plynx/src/plynx/registry/extractor.py`.
   - **Changes:** Update `PROTOCOL.md` section 3 and `extractor.py` (`_extract_class_op` & `_extract_function_op`) to use `inspect.cleandoc(doc)` instead of taking only `doc_lines[0]`, preserving full multi-paragraph Markdown usage notes, examples, and chord/pattern syntax docs. Add a `summary` (first line) or keep first line cleanly usable in tooltips while passing full markdown in `OpEntry.description`.
   - **Accept:** Multi-line Markdown docstrings appear completely in `OpEntry.description` and render cleanly in `NodeInspector`'s `<MarkdownPreviewer>`; `OpPalette` hover tooltips truncate gracefully to the first line.
 
-- [ ] **1.2 Extract per-parameter descriptions from docstrings**
+- [x] **1.2 Extract per-parameter descriptions from docstrings**
   - **Files:** `packages/plynx/src/plynx/api_models.py`, `packages/plynx/src/plynx/registry/extractor.py`, `scripts/gen_ts_types.py`, `ui/src/api/types.gen.ts`.
   - **Changes:** Add optional `description: str = ""` to `InputPortSpec` (and optionally `OutputPortSpec`). Parse Google-style `Args:` blocks in `run()` / `@op` function docstrings during AST extraction so each parameter carries its help text. Re-run `gen_ts_types.py`.
   - **Accept:** Regenerating TS types produces zero diff on repeat runs; parameter docstrings show up in `GET /ops`.
 
-- [ ] **1.3 Display parameter tooltips & expandable op docs in UI**
+- [x] **1.3 Display parameter tooltips & expandable op docs in UI**
   - **Files:** `ui/src/graph/NodeInspector.tsx`, `ui/src/graph/OpPalette.tsx`.
   - **Changes:** Show parameter `description` on hover / info icon (`help-circle`) next to each input port in `NodeInspector`. Ensure `OpPalette` shows clean one-line summary tooltips rather than dumping walls of Markdown into HTML `title`.
   - **Accept:** `npm --prefix ui test` and `npm --prefix ui run build` pass; new Vitest test verifies port help text renders.

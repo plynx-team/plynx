@@ -26,7 +26,7 @@ class PairedOutputs(TypedDict):
 class ComprehensiveOp(Op):
     """Process diverse data with rich annotations and aliases.
 
-    Second line of docstring that should be ignored for description.
+    Second line of docstring that is preserved in full description.
     """
 
     TITLE = "Comprehensive Paired Op"

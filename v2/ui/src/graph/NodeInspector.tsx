@@ -1119,7 +1119,7 @@ export function NodeInspector({
                           className="ParameterNameCell"
                           title={`${port.name} (${port.type}${
                             port.media ? `: ${port.media}` : ""
-                          })`}
+                          })${port.description ? `\n\n${port.description}` : ""}`}
                         >
                           <FeatherIcon
                             name={getPortIconName(port.type, port.media)}
@@ -1132,6 +1132,15 @@ export function NodeInspector({
                           {port.required && (
                             <span style={{ color: "var(--color-error)" }}>
                               *
+                            </span>
+                          )}
+                          {port.description && (
+                            <span
+                              data-testid={`inspector-port-help-${port.name}`}
+                              title={port.description}
+                              className="inline-flex items-center text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] cursor-help ml-1"
+                            >
+                              <FeatherIcon name="help-circle" size={11} />
                             </span>
                           )}
                         </div>
@@ -1283,7 +1292,9 @@ export function NodeInspector({
                     <div className="OutputItem">
                       <div
                         className="OutputNameCell"
-                        title={`${out.name} (${out.type})`}
+                        title={`${out.name} (${out.type}${
+                          out.media ? `: ${out.media}` : ""
+                        })${out.description ? `\n\n${out.description}` : ""}`}
                       >
                         <FeatherIcon
                           name={getPortIconName(out.type, out.media)}
@@ -1293,6 +1304,15 @@ export function NodeInspector({
                         <span className="truncate font-semibold">
                           {out.name}
                         </span>
+                        {out.description && (
+                          <span
+                            data-testid={`inspector-output-help-${out.name}`}
+                            title={out.description}
+                            className="inline-flex items-center text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] cursor-help ml-1"
+                          >
+                            <FeatherIcon name="help-circle" size={11} />
+                          </span>
+                        )}
                       </div>
 
                       <div className="OutputValueCell">
