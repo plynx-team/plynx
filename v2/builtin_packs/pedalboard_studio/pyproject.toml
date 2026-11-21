@@ -1,0 +1,19 @@
+[project]
+name = "pedalboard-studio"
+version = "2.0.0"
+description = "PLynx built-in Node Pack: pedalboard audio DSP, acoustic synthesis, and studio mastering."
+requires-python = ">=3.11"
+dependencies = [
+    "plynx-sdk",
+    "pedalboard>=0.9.0",
+    "numpy>=1.24.0",
+    "scipy>=1.10.0",
+    "pillow>=10.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.0,<0.10"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "pedalboard_studio"

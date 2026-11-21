@@ -1,0 +1,80 @@
+version: 1
+name: bach_prelude_c_major
+description: "J.S. Bach - Prelude I in C Major (BWV 846) synthesized with acoustic physical modeling and mastered with Spotify Pedalboard."
+stages:
+  composition:
+    title: "1. Score & Composition"
+  synthesis:
+    title: "2. Acoustic Piano Synthesis"
+  dsp_effects:
+    title: "3. Pedalboard DSP Effects"
+  mastering:
+    title: "4. Studio Mastering & Visuals"
+nodes:
+  score:
+    op: pedalboard_studio/synth:BachPreludeScore
+    title: "Bach BWV 846 Score"
+    stage: composition
+    inputs:
+      tempo_bpm: 84
+      bars_count: 35
+      dynamics: expressive
+  piano_synth:
+    op: pedalboard_studio/synth:AcousticPianoSynth
+    title: "Concert Grand Synthesis"
+    stage: synthesis
+    inputs:
+      score: $score.score
+      brightness: 1.05
+      sustain_resonance: 0.75
+      stereo_width: 0.65
+  tone_filter:
+    op: pedalboard_studio/effects:PedalboardToneFilter
+    title: "Acoustic Tone Sculpting"
+    stage: dsp_effects
+    inputs:
+      audio: $piano_synth.audio
+      highpass_cutoff_hz: 50.0
+      lowpass_cutoff_hz: 14000.0
+  chorus:
+    op: pedalboard_studio/effects:PedalboardChorus
+    title: "Pedalboard Spatial Chorus"
+    stage: dsp_effects
+    inputs:
+      audio: $tone_filter.filtered_audio
+      rate_hz: 0.6
+      depth: 0.2
+      mix: 0.25
+  reverb:
+    op: pedalboard_studio/effects:PedalboardReverb
+    title: "Concert Hall Reverb"
+    stage: dsp_effects
+    inputs:
+      audio: $chorus.chorus_audio
+      room_size: 0.72
+      damping: 0.35
+      wet_level: 0.32
+      dry_level: 0.85
+  mastering:
+    op: pedalboard_studio/mastering:PedalboardMastering
+    title: "Final Studio Mastering"
+    stage: mastering
+    inputs:
+      audio: $reverb.reverb_audio
+      compressor_threshold_db: -15.0
+      compressor_ratio: 2.2
+      presence_boost_db: 1.5
+      gain_db: 2.0
+      limiter_threshold_db: -0.3
+  waveform_visualizer:
+    op: pedalboard_studio/inspect:AudioWaveformVisualizer
+    title: "Master Waveform Visualizer"
+    stage: mastering
+    inputs:
+      audio: $mastering.mastered_audio
+  audio_stats:
+    op: pedalboard_studio/inspect:AudioStats
+    title: "Technical Audio Stats"
+    stage: mastering
+    inputs:
+      audio: $mastering.mastered_audio

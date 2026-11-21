@@ -1,6 +1,6 @@
 # Guide: Create a Workflow
 
-A PLynx workflow is a declarative YAML document (stored under `workflows/` or anywhere in your workspace) specifying a directed acyclic graph (DAG) of operations.
+A PLynx workflow is a declarative YAML document specifying a directed acyclic graph (DAG) of operations. By convention, canonical reference examples live in `examples/workflows/` (tracked in git), while local user workflows live in `workflows/` (gitignored).
 
 ---
 

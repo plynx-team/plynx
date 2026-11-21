@@ -22,6 +22,8 @@ You are building PLynx v2.0.0 in `v2/`. This folder is the project root. The leg
 - **Simplicity wins.** Standard library first. A new dependency needs a one-line reason in the commit message.
 - **Do not guess.** If a fact, format or behavior is missing from these docs, ask the owner. Do not fill the gap.
 - **Windows is supported.** Use `pathlib`, forward slashes in manifests, no shell-isms, no POSIX-only calls outside the `procgroup` module.
+- **Workflows vs Examples.** Canonical reference/example workflows live in `examples/workflows/` and are tracked in git. The `workflows/` directory is reserved for user runtime workflows and is gitignored (`workflows/*`). Never place duplicate workflow files in both locations.
+- **Dependencies are optional and isolated.** `plynx-sdk` depends on standard library only (`dependencies = []`). The core `plynx` engine requires only lightweight CLI/HTTP packages (`fastapi`, `uvicorn`, `click`, `pydantic`, `ruamel.yaml`). Heavy libraries (e.g. `numpy`, `scipy`, `pedalboard`, `pillow`, `torch`) are declared exclusively inside individual Node Packs (`custom_packs/` or `builtin_packs/`) and installed on-demand into isolated pack virtual environments (`.plynx/envs/`). Users never need to install heavy environments to use Plynx.
 
 ## Definition of done (every task)
 

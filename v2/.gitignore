@@ -23,3 +23,7 @@ playwright-report/
 .env
 custom_packs/*
 !custom_packs/.gitkeep
+
+# User runtime workflows (examples/workflows/ are tracked reference examples)
+workflows/*
+!workflows/.gitkeep

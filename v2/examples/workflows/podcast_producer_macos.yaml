@@ -1,0 +1,64 @@
+version: 1
+name: podcast_producer_macos
+description: "🎙️ Automated podcast producer with macOS native voiceover (say), lo-fi BGM loop, automatic audio ducking mixer, waveform visualizer, and Markdown show notes. (macOS only: requires native 'say' command)"
+stages:
+  voiceover_bgm:
+    title: "1. Voiceover & BGM (macOS only)"
+  mixing:
+    title: "2. Studio Audio Ducking & Mixing"
+  publishing:
+    title: "3. Visuals & Publishing"
+nodes:
+  voiceover:
+    op: podcast_studio/voice:TextToSpeech
+    title: "macOS Native Voiceover (macOS only)"
+    stage: voiceover_bgm
+    inputs:
+      text: "Welcome to Plynx Studio! In today's episode, we explore reproducible graph automation, macOS native voice synthesis, and dynamic audio ducking with zero cloud API keys. Pure local magic."
+      voice: "Samantha"
+      rate: 175
+  bgm:
+    op: podcast_studio/music:BGMTrackGenerator
+    title: "Lo-Fi BGM Generator"
+    stage: voiceover_bgm
+    inputs:
+      mood: "lofi_chill"
+      duration_sec: 18.0
+      tempo_bpm: 85
+      volume: 0.35
+  mixer:
+    op: podcast_studio/mixer:AudioMixer
+    title: "Audio Mixer & Ducker"
+    stage: mixing
+    inputs:
+      voiceover: $voiceover.voiceover
+      bgm: $bgm.bgm
+      speech_volume: 1.0
+      bgm_volume: 0.35
+      ducking_amount_db: 14.0
+      lead_in_sec: 1.0
+      tail_sec: 2.0
+  waveform_visualizer:
+    op: podcast_studio/visuals:WaveformVisualizer
+    title: "Podcast Waveform Visualizer"
+    stage: publishing
+    inputs:
+      audio: $mixer.mixed_audio
+      width: 800
+      height: 240
+      theme: "emerald"
+  show_notes:
+    op: podcast_studio/notes:ShowNotesGenerator
+    title: "Show Notes & Transcript"
+    stage: publishing
+    inputs:
+      title: "Episode 1: Pure Local Magic with macOS Voice"
+      podcast_name: "Plynx Audio Labs"
+      host: "Plynx Studio"
+      summary: "In this episode, we demonstrate how macOS native voice synthesis pairs with procedural lo-fi background music, automatic audio ducking, and atomic reproducibility. Zero API keys, pure local magic."
+      chapters: |-
+        00:00 - Introduction & Welcome
+        00:01 - macOS Native Speech & Zero API Keys
+        00:06 - Dynamic Audio Ducking & Mixing
+        00:11 - Atomic Reproducibility & Outro
+      transcript: "Welcome to Plynx Studio! In today's episode, we demonstrate how macOS native voice synthesis pairs with procedural lo-fi background music, automatic audio ducking, and atomic reproducibility. Zero API keys, pure local magic."

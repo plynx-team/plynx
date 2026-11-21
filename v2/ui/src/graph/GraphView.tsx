@@ -420,7 +420,8 @@ function GraphCanvasInner({
           useSavedViewport ? (effectiveLayout?.viewport ?? undefined) : undefined
         }
         fitView={!useSavedViewport}
-        fitViewOptions={{ padding: 0.2 }}
+        fitViewOptions={{ padding: 0.2, minZoom: 0.125 }}
+        minZoom={0.125}
         nodesDraggable={!readOnly}
         nodesConnectable={!readOnly}
         edgesReconnectable={false}
