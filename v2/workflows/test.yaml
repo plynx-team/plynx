@@ -15,8 +15,6 @@ nodes:
     title: Audio Echo & Reverb
     inputs:
       audio: $chord_progression.audio
-  tone_synth:
-    op: media_studio/audio:ToneSynth
-    title: Synthesize Tone
-    inputs:
-      waveform: square
+  echo:
+    op: standard_io/demo:Echo
+    title: Echo text
