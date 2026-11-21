@@ -27,6 +27,13 @@ describe("detectPreviewKind", () => {
     expect(detectPreviewKind(null, "diagram.svg")).toBe("image");
   });
 
+  it("detects Audio from media type and extension", () => {
+    expect(detectPreviewKind("audio/wav")).toBe("audio");
+    expect(detectPreviewKind("audio/mpeg")).toBe("audio");
+    expect(detectPreviewKind(null, "chime.wav")).toBe("audio");
+    expect(detectPreviewKind(null, "song.mp3")).toBe("audio");
+  });
+
   it("detects CSV and TSV", () => {
     expect(detectPreviewKind("text/csv")).toBe("csv");
     expect(detectPreviewKind(null, "table.csv")).toBe("csv");

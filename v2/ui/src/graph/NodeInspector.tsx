@@ -105,7 +105,7 @@ function InlineOutputPreview({ target }: { target: ArtifactPreviewTarget }) {
   const [error, setError] = useState<string | null>(null);
 
   const kind = detectPreviewKind(target.mediaType, target.filename);
-  const isDirectUrl = kind === "pdf" || kind === "image";
+  const isDirectUrl = kind === "pdf" || kind === "image" || kind === "audio";
 
   useEffect(() => {
     if (isDirectUrl) {
@@ -172,6 +172,9 @@ function InlineOutputPreview({ target }: { target: ArtifactPreviewTarget }) {
       }}
     >
       {kind === "image" && <ImagePreviewer url={target.url} alt={target.title} />}
+      {kind === "audio" && (
+        <audio controls src={target.url} className="w-full my-1" />
+      )}
       {kind === "csv" && content !== null && (
         <CsvPreviewer content={content} delimiter="," />
       )}

@@ -51,6 +51,7 @@ export function getPortIconName(
 ): FeatherIconName {
   if (media) {
     if (media.startsWith("image/")) return "image";
+    if (media.startsWith("audio/")) return "music";
     if (media === "application/pdf") return "file-text";
     if (media === "text/csv") return "table";
     if (media === "text/markdown") return "book-open";

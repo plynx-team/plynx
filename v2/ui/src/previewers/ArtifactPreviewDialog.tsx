@@ -19,7 +19,7 @@ export interface ArtifactPreviewDialogProps {
 export function detectPreviewKind(
   mediaType?: string | null,
   filename?: string,
-): "pdf" | "image" | "csv" | "tsv" | "json" | "markdown" | "text" {
+): "pdf" | "image" | "audio" | "csv" | "tsv" | "json" | "markdown" | "text" {
   const mt = (mediaType || "").toLowerCase();
   const fn = (filename || "").toLowerCase();
 
@@ -34,6 +34,15 @@ export function detectPreviewKind(
     fn.endsWith(".webp")
   ) {
     return "image";
+  }
+  if (
+    mt.startsWith("audio/") ||
+    fn.endsWith(".wav") ||
+    fn.endsWith(".mp3") ||
+    fn.endsWith(".ogg") ||
+    fn.endsWith(".m4a")
+  ) {
+    return "audio";
   }
   if (mt === "text/csv" || fn.endsWith(".csv")) return "csv";
   if (mt === "text/tab-separated-values" || fn.endsWith(".tsv")) return "tsv";
@@ -55,7 +64,7 @@ export function ArtifactPreviewDialog({
   const [error, setError] = useState<string | null>(null);
 
   const kind = detectPreviewKind(mediaType, filename);
-  const isDirectUrl = kind === "pdf" || kind === "image";
+  const isDirectUrl = kind === "pdf" || kind === "image" || kind === "audio";
 
   useEffect(() => {
     if (isDirectUrl || initialContent !== undefined) {
@@ -166,6 +175,24 @@ export function ArtifactPreviewDialog({
             <div>
               {kind === "pdf" && <PdfPreviewer url={url} title={title} />}
               {kind === "image" && <ImagePreviewer url={url} alt={title} />}
+              {kind === "audio" && (
+                <div
+                  data-testid="audio-previewer"
+                  className="flex flex-col items-center justify-center p-8 bg-[#1e1e1e] rounded border border-[#3c3c3c] my-2"
+                >
+                  <FeatherIcon
+                    name="music"
+                    size={36}
+                    className="text-[var(--color-primary)] mb-4"
+                  />
+                  <audio
+                    data-testid="audio-element"
+                    controls
+                    src={url}
+                    className="w-full max-w-md"
+                  />
+                </div>
+              )}
               {kind === "csv" && (
                 <CsvPreviewer content={content} delimiter="," />
               )}

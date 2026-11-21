@@ -3,11 +3,14 @@ name = "plynx-workspace"
 version = "2.0.0"
 description = "Development workspace for PLynx v2 (not published)."
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "pillow>=13.0.0",
+]
 
 [dependency-groups]
 dev = [
     "httpx>=0.27",
+    "media-studio",
     "mypy>=1.10",
     "plynx",
     "plynx-sdk",
@@ -24,6 +27,7 @@ default-groups = ["dev"]
 members = ["packages/*", "builtin_packs/*"]
 
 [tool.uv.sources]
+media-studio = { workspace = true }
 plynx = { workspace = true }
 plynx-sdk = { workspace = true }
 standard-io = { workspace = true }
@@ -45,6 +49,7 @@ mypy_path = [
     "packages/plynx-sdk/src",
     "packages/plynx/src",
     "builtin_packs/standard_io/src",
+    "builtin_packs/media_studio/src",
 ]
 exclude = ["tests/fixtures/"]
 
