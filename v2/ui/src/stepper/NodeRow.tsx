@@ -2,6 +2,7 @@ import type { NodeRunState, NodeSpec, NodeStatus } from "../api/types.gen";
 import type { NodeDiff } from "../graph/runDiff";
 import { FeatherIcon } from "../components/FeatherIcon";
 import { formatDuration } from "../components/RunList";
+import { getCacheHint, getStatusHint } from "../graph/types";
 
 export function nodeStatusBadgeClasses(status: NodeStatus): string {
   return `status-badge ${status}`;
@@ -73,7 +74,8 @@ export function NodeRow({
           {nodeState?.cache_hit && (
             <span
               data-testid="cache-hit-badge"
-              className="status-badge READY !text-[10px] !px-1.5 !py-0"
+              className="status-badge READY !text-[10px] !px-1.5 !py-0 cursor-help"
+              title={getCacheHint(nodeState)}
             >
               cache hit
             </span>
@@ -96,9 +98,17 @@ export function NodeRow({
             {formatDuration(nodeState?.started_at, nodeState?.finished_at)}
           </span>
           {isNotInRun ? (
-            <span className="status-badge NOT_IN_RUN">NOT IN RUN</span>
+            <span
+              className="status-badge NOT_IN_RUN cursor-help"
+              title={getStatusHint(status, true, nodeState?.error)}
+            >
+              NOT IN RUN
+            </span>
           ) : (
-            <span className={nodeStatusBadgeClasses(status ?? "PENDING")}>
+            <span
+              className={`${nodeStatusBadgeClasses(status ?? "PENDING")} cursor-help`}
+              title={getStatusHint(status, false, nodeState?.error)}
+            >
               {status ?? "PENDING"}
             </span>
           )}

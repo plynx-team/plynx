@@ -10,6 +10,8 @@ import {
 import { MarkdownPreviewer } from "../previewers/MarkdownPreviewer";
 import {
   extractNodeRef,
+  getCacheHint,
+  getStatusHint,
   inputHandleId,
   outputHandleId,
   type WorkflowGraphNode,
@@ -102,8 +104,8 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
           <div className="flex items-center gap-1.5 min-w-0">
             <span
               data-testid={status ? `graph-node-status-${nodeId}` : undefined}
-              title={isNotInRun ? "Not in this run" : status ? `Status: ${status}` : "Idle"}
-              className="inline-flex items-center shrink-0"
+              title={getStatusHint(status, isNotInRun, nodeState?.error)}
+              className="inline-flex items-center shrink-0 cursor-help"
             >
               <FeatherIcon
                 name={statusIcon.icon}
@@ -145,8 +147,8 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
             {nodeState?.cache_hit && (
               <span
                 data-testid={`graph-node-cache-${nodeId}`}
-                title="Cache hit"
-                className="inline-flex items-center"
+                title={getCacheHint(nodeState)}
+                className="inline-flex items-center cursor-help"
                 style={{ color: "var(--color-status-ready)" }}
               >
                 <FeatherIcon name="zap" size={12} />

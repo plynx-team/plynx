@@ -4,6 +4,7 @@ import type {
   NodeRef,
   NodeRunState,
   NodeSpec,
+  NodeStatus,
   OpEntry,
   OutputPortSpec,
   StageGateState,
@@ -11,6 +12,44 @@ import type {
 import type { NodeDiff } from "./runDiff";
 
 export const STAGE_NODE_PREFIX = "__stage__:";
+
+export function getStatusHint(
+  status?: NodeStatus,
+  isNotInRun?: boolean,
+  error?: string | null,
+): string {
+  if (isNotInRun) {
+    return "Status: NOT IN RUN - This operation did not exist in the selected run";
+  }
+  switch (status) {
+    case "SUCCESS":
+      return "Status: SUCCESS - Operation completed successfully";
+    case "RUNNING":
+      return "Status: RUNNING - Operation is currently executing";
+    case "BUILDING_ENVIRONMENT":
+      return "Status: BUILDING_ENVIRONMENT - Preparing execution environment";
+    case "WAITING_FOR_USER":
+      return "Status: WAITING_FOR_USER - Paused waiting for user input or approval";
+    case "FAILED":
+      return error ? `Status: FAILED - ${error}` : "Status: FAILED - Operation failed";
+    case "CANCELED":
+      return "Status: CANCELED - Execution was canceled";
+    case "BLOCKED":
+      return "Status: BLOCKED - Upstream dependency failed or canceled";
+    case "PENDING":
+      return "Status: PENDING - Waiting for upstream dependencies";
+    default:
+      return "Status: IDLE - Blueprint draft (not running)";
+  }
+}
+
+export function getCacheHint(nodeState?: NodeRunState): string {
+  if (!nodeState?.cache_hit) return "";
+  if (nodeState.cache_key) {
+    return `Cached (Cache hit): Outputs reused from previous run via cache (Key: ${nodeState.cache_key.slice(0, 10)}...)`;
+  }
+  return "Cached (Cache hit): Outputs reused from previous run without re-running";
+}
 
 const REF_STRING_REGEX = /^\$([a-z][a-z0-9_]*)\.([a-zA-Z_][a-zA-Z0-9_]*)$/;
 

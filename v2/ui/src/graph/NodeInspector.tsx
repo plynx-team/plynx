@@ -26,7 +26,7 @@ import {
 import { LiteralWidget } from "./LiteralWidget";
 import { toSnakeCaseId } from "./mutations";
 import type { NodeDiff } from "./runDiff";
-import { extractNodeRef } from "./types";
+import { extractNodeRef, getCacheHint, getStatusHint } from "./types";
 import { getCompatibleUpstreamOutputs, validateStageChange } from "./validation";
 
 export interface ArtifactPreviewTarget {
@@ -813,9 +813,23 @@ export function NodeInspector({
           Properties of {displayTitle}
         </span>
         {nodeRunState && (
-          <span className={`status-badge ${nodeRunState.status} !text-[10px]`}>
-            {nodeRunState.status}
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {nodeRunState.cache_hit && (
+              <span
+                className="status-badge READY !text-[10px] cursor-help"
+                title={getCacheHint(nodeRunState)}
+              >
+                <FeatherIcon name="zap" size={10} className="inline mr-1" />
+                cached
+              </span>
+            )}
+            <span
+              className={`status-badge ${nodeRunState.status} !text-[10px] cursor-help`}
+              title={getStatusHint(nodeRunState.status, false, nodeRunState.error)}
+            >
+              {nodeRunState.status}
+            </span>
+          </div>
         )}
       </div>
 
