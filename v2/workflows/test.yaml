@@ -1,0 +1,10 @@
+version: 1
+name: test
+description: Just another one
+stages:
+  main:
+    title: Main
+nodes:
+  chord_progression:
+    op: media_studio/audio:ChordProgression
+    title: Chords & Melodies
