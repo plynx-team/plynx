@@ -149,7 +149,7 @@ Consolidate from 16 fragmented categories down to **8 cohesive categories** (3â€
 
 All operations in `standard_io` must use **Python Standard Library only** (`dependencies = ["plynx-sdk"]`).
 
-- [ ] **2.1 Add primitive & data transformation ops (`Core / Text & Data`)**
+- [x] **2.1 Add primitive & data transformation ops (`Core / Text & Data`)**
   - **Files:** `builtin_packs/standard_io/src/standard_io/data.py` (or `text.py`).
   - **Changes:** Implement and test:
     - `TemplateFormat`: Python template string formatting (`{a}`, `{b}`, ...) converting scalars into formatted `str`.
@@ -159,7 +159,7 @@ All operations in `standard_io` must use **Python Standard Library only** (`depe
     - `CsvSummary`: Parse `CsvFile` via stdlib `csv` module -> `row_count: int`, `column_names: list`, `stats_json: JsonFile`, `summary_md: MarkdownFile`.
   - **Accept:** Unit tests cover every primitive type (`str`, `int`, `float`, `bool`, `json`) and semantic file type (`CsvFile`, `JsonFile`, `MarkdownFile`).
 
-- [ ] **2.2 Add file & directory ops (`Core / Files`)**
+- [x] **2.2 Add file & directory ops (`Core / Files`)**
   - **Files:** `builtin_packs/standard_io/src/standard_io/files.py`.
   - **Changes:** Implement and test:
     - `ListDirectory`: Accepts `Directory`, returns `file_count: int`, `filenames: list`, `manifest: JsonFile`.
@@ -167,14 +167,14 @@ All operations in `standard_io` must use **Python Standard Library only** (`depe
     - `MarkdownReport`: Builds a clean `MarkdownFile` report from title, body, and optional metrics `dict`.
   - **Accept:** Directory blob tree hashing and read-only materialization pass end-to-end tests via `LocalExecutor`.
 
-- [ ] **2.3 Add `MultiStepQuestionnaire` & generic `AskChoice` (`Core / Interactive`)**
+- [x] **2.3 Add `MultiStepQuestionnaire` & generic `AskChoice` (`Core / Interactive`)**
   - **Files:** `builtin_packs/standard_io/src/standard_io/demo.py` (or `interactive.py`), `packages/plynx/src/plynx/registry/__init__.py`.
   - **Changes:**
     - Implement `MultiStepQuestionnaire` (`CACHEABLE = False`): sequentially calls `self.checkpoint(...)` 3 times (e.g., Q1 choice from options, Q2 freeform string input with `allow_freeform=True`, Q3 confirmation/numeric selection), logging progress to both `stdout` and `stderr` to demonstrate Plynx's idempotent replay model (`cp_0`, `cp_1`, `cp_2`).
     - Implement flexible `AskChoice` accepting configurable `question: str`, `options_csv: str`, and `allow_freeform: bool`. (Keep `AskFooOrWoo` only if D4 retains `foo_or_woo.yaml`.)
   - **Accept:** Engine test executes `MultiStepQuestionnaire` with 3 sequential checkpoint resumes and verifies deterministic replay of `cp_0`, `cp_1`, `cp_2`.
 
-- [ ] **2.4 Refresh `standard_io/uv.lock` and validate `default_fake_ops()`**
+- [x] **2.4 Refresh `standard_io/uv.lock` and validate `default_fake_ops()`**
   - **Files:** `builtin_packs/standard_io/uv.lock`, `packages/plynx/src/plynx/registry/__init__.py`.
   - **Accept:** Zero `uv.lock` validation warnings; `plynx validate` passes on all workflows using new `standard_io` ops.
 

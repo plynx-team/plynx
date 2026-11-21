@@ -191,6 +191,50 @@ def test_extract_standard_io_demo_matches_default_fake_ops() -> None:
         assert op == fake_ops[op.id]
 
 
+def test_extract_standard_io_data_matches_default_fake_ops() -> None:
+    """Extraction of standard_io/data.py matches all 5 data ops in FakeRegistry."""
+    data_py = ROOT / "builtin_packs" / "standard_io" / "src" / "standard_io" / "data.py"
+    extracted = extract_ops_from_file(data_py)
+    assert len(extracted) == 5
+
+    fake_ops = {op.id: op for op in default_fake_ops() if op.module == "data"}
+    assert len(fake_ops) == 5
+
+    for op in extracted:
+        assert op.id in fake_ops
+        assert op == fake_ops[op.id]
+
+
+def test_extract_standard_io_files_matches_default_fake_ops() -> None:
+    """Extraction of standard_io/files.py matches all 3 file ops in FakeRegistry."""
+    files_py = ROOT / "builtin_packs" / "standard_io" / "src" / "standard_io" / "files.py"
+    extracted = extract_ops_from_file(files_py)
+    assert len(extracted) == 3
+
+    fake_ops = {op.id: op for op in default_fake_ops() if op.module == "files"}
+    assert len(fake_ops) == 3
+
+    for op in extracted:
+        assert op.id in fake_ops
+        assert op == fake_ops[op.id]
+
+
+def test_extract_standard_io_interactive_matches_default_fake_ops() -> None:
+    """Extraction of standard_io/interactive.py matches all 2 interactive ops in FakeRegistry."""
+    interactive_py = (
+        ROOT / "builtin_packs" / "standard_io" / "src" / "standard_io" / "interactive.py"
+    )
+    extracted = extract_ops_from_file(interactive_py)
+    assert len(extracted) == 2
+
+    fake_ops = {op.id: op for op in default_fake_ops() if op.module == "interactive"}
+    assert len(fake_ops) == 2
+
+    for op in extracted:
+        assert op.id in fake_ops
+        assert op == fake_ops[op.id]
+
+
 def test_extract_single_return_named_result() -> None:
     """A single return type annotation that is not a TypedDict yields an output named 'result'."""
     src = '''
