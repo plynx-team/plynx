@@ -109,6 +109,7 @@ def concat(a: str, b: str = " ") -> ConcatOut:
   - Media files: `Annotated[Path, Media("<mime>")]`, aliases from `plynx_sdk.types` (`PdfFile`, `AudioWav`, `MarkdownFile`, `JsonFile`, `ImageFile`, `CsvFile`, `TextFile`), module-level aliases defined in the same file as `Name = Annotated[Path, Media("<mime>")]`, `Name = Literal[...]`, or `Name = Annotated[int | float, Range(...)]`.
   - Optionals: `X | None` / `Optional[X]` of any of the above.
 - Defaults are literals. Port names are `snake_case`.
+- Variadic operations: An op can declare `ALLOW_EXTRA_INPUTS = True` (class form) or `@op(..., allow_extra_inputs=True)` (function form). Variadic inputs are declared via typed keyword arguments `**extra: <Type>` (e.g. `**tracks: AudioWav`). When enabled, the workflow engine accepts arbitrary named input ports matching `<Type>`.
 - Inheritance from a custom base class or computed metadata is not supported in v2.0.0.
 
 Port type vocabulary (`type`): `str`, `int`, `float`, `bool`, `json` (`dict` or `list`), `file` (`Path`), `directory` (`Directory`).
@@ -132,6 +133,8 @@ Registry entry (served by `GET /api/v1/ops`, cached in `.plynx/registry_cache.js
     }
   ],
   "outputs": [{ "name": "text", "type": "str", "media": null, "description": "" }],
+  "allow_extra_inputs": false,
+  "extra_inputs_type": null,
   "source": "builtin_packs/standard_io/src/standard_io/text.py",
   "valid": true, "error": null
 }

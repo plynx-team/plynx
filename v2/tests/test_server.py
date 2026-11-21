@@ -424,23 +424,28 @@ nodes:
 def test_read_runs_pagination_and_get_run_prefix(tmp_path: Path) -> None:
     """GET /runs supports limit/cursor; GET /runs/{id} supports prefix and error codes."""
     store = RunStore(tmp_path)
-    # Create 3 runs in store
+    # Create 3 runs in store sharing same timestamp prefix
+    t0 = 1700000000.0
     id1 = store.create_run(
         workflow_path="workflows/w1.yaml",
         workflow_bytes=b"version: 1\nnodes: {}\n",
         node_ids=[],
+        run_id="20261121_120000_aaaaaa",
+        created_at=t0,
     )
-    time.sleep(0.01)
     id2 = store.create_run(
         workflow_path="workflows/w2.yaml",
         workflow_bytes=b"version: 1\nnodes: {}\n",
         node_ids=[],
+        run_id="20261121_120000_bbbbbb",
+        created_at=t0 + 1.0,
     )
-    time.sleep(0.01)
     id3 = store.create_run(
         workflow_path="workflows/w3.yaml",
         workflow_bytes=b"version: 1\nnodes: {}\n",
         node_ids=[],
+        run_id="20261121_120000_cccccc",
+        created_at=t0 + 2.0,
     )
 
     app = create_app(tmp_path)

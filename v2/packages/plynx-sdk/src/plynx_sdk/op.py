@@ -21,6 +21,7 @@ class OpMetadata:
     title: str
     category: str = "Uncategorized"
     cacheable: bool = True
+    allow_extra_inputs: bool = False
 
     def __post_init__(self) -> None:
         if not isinstance(self.title, str) or not self.title.strip():
@@ -29,6 +30,8 @@ class OpMetadata:
             raise ValueError("op category must be a non-empty string")
         if not isinstance(self.cacheable, bool):
             raise ValueError("op cacheable must be a bool")
+        if not isinstance(self.allow_extra_inputs, bool):
+            raise ValueError("op allow_extra_inputs must be a bool")
 
 
 class Op:
@@ -37,6 +40,7 @@ class Op:
     TITLE: ClassVar[str] = ""
     CATEGORY: ClassVar[str] = "Uncategorized"
     CACHEABLE: ClassVar[bool] = True
+    ALLOW_EXTRA_INPUTS: ClassVar[bool] = False
 
     def checkpoint(
         self,
@@ -56,9 +60,15 @@ def op(
     title: str,
     category: str = "Uncategorized",
     cacheable: bool = True,
+    allow_extra_inputs: bool = False,
 ) -> Callable[[F], F]:
     """Decorate a function as a PLynx operation."""
-    metadata = OpMetadata(title=title, category=category, cacheable=cacheable)
+    metadata = OpMetadata(
+        title=title,
+        category=category,
+        cacheable=cacheable,
+        allow_extra_inputs=allow_extra_inputs,
+    )
 
     def _decorator(func: F) -> F:
         func_any: Any = func

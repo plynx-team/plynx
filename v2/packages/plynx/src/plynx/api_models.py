@@ -395,6 +395,8 @@ class OpEntry(BaseModel):
     description: str = ""
     inputs: list[InputPortSpec] = Field(default_factory=list)
     outputs: list[OutputPortSpec] = Field(default_factory=list)
+    allow_extra_inputs: bool = False
+    extra_inputs_type: InputPortSpec | None = None
     source: str
     valid: bool = True
     error: str | None = None

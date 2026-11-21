@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { OpEntry, RunState, Workflow, WorkflowLayout } from "../api/types.gen";
+import type { NodeSpec, OpEntry, RunState, Workflow, WorkflowLayout } from "../api/types.gen";
 import {
   buildGraphElements,
   computeDagrePositions,
   findClosestStage,
   findStageAtPosition,
   getOrderedStageIds,
+  resolveNodePorts,
 } from "./layout";
 import { stageGroupId, type StageGroupGraphNode } from "./types";
 
@@ -34,6 +35,7 @@ const SAMPLE_OPS: Record<string, OpEntry> = {
       },
     ],
     outputs: [{ name: "choice", type: "str", media: null }],
+    allow_extra_inputs: false,
     source: "builtin_packs/standard_io/src/standard_io/demo.py",
     valid: true,
     error: null,
@@ -62,6 +64,7 @@ const SAMPLE_OPS: Record<string, OpEntry> = {
       },
     ],
     outputs: [{ name: "text", type: "str", media: null }],
+    allow_extra_inputs: false,
     source: "builtin_packs/standard_io/src/standard_io/demo.py",
     valid: true,
     error: null,
@@ -456,6 +459,63 @@ describe("graph layout utilities (Task 6.8)", () => {
       expect(findClosestStage({ x: 390, y: 200 }, mockStageNodes)).toBe("stage_b");
       // Empty stages array falls back to default stage ID
       expect(findClosestStage({ x: 100, y: 100 }, [], "fallback_stage")).toBe("fallback_stage");
+    });
+
+    it("resolves dynamic extra input ports when allow_extra_inputs is true (Task 3.3)", () => {
+      const variadicOp: OpEntry = {
+        id: "pack/mod:VariadicOp",
+        pack: "pack",
+        module: "mod",
+        name: "VariadicOp",
+        kind: "class",
+        title: "Variadic",
+        category: "Demo",
+        cacheable: true,
+        description: "",
+        inputs: [{ name: "base", type: "str", required: true, default: null, media: null }],
+        outputs: [{ name: "out", type: "str", media: null }],
+        allow_extra_inputs: true,
+        extra_inputs_type: {
+          name: "extra",
+          type: "file",
+          media: "audio/wav",
+          options: null,
+          min: null,
+          max: null,
+          step: null,
+          required: false,
+          default: null,
+        },
+        source: "mod.py",
+        valid: true,
+        error: null,
+      };
+
+      const spec: NodeSpec = {
+        op: "pack/mod:VariadicOp",
+        stage: "s1",
+        inputs: {
+          base: "main",
+          track_1: "audio1.wav",
+          track_2: "audio2.wav",
+        },
+      };
+
+      const wf: Workflow = {
+        version: 1,
+        name: "test",
+        nodes: { node_1: spec },
+      };
+
+      const ports = resolveNodePorts("node_1", spec, wf, variadicOp);
+      expect(ports.inputs).toHaveLength(3);
+      expect(ports.inputs[0].name).toBe("base");
+      expect(ports.inputs[1].name).toBe("track_1");
+      expect(ports.inputs[1].type).toBe("file");
+      expect(ports.inputs[1].media).toBe("audio/wav");
+      expect(ports.inputs[2].name).toBe("track_2");
+      expect(ports.inputs[2].type).toBe("file");
+      expect(ports.inputs[2].media).toBe("audio/wav");
     });
   });
 });

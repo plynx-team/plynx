@@ -29,6 +29,7 @@ const MOCK_OPS: Array<OpEntry> = [
       { name: "text", type: "str", required: true, default: null, media: null },
     ],
     outputs: [{ name: "res", type: "str", media: null }],
+    allow_extra_inputs: false,
   },
   {
     id: "standard_io/math:Add",
@@ -48,6 +49,7 @@ const MOCK_OPS: Array<OpEntry> = [
       { name: "b", type: "int", required: true, default: null, media: null },
     ],
     outputs: [{ name: "sum", type: "int", media: null }],
+    allow_extra_inputs: false,
   },
   {
     id: "standard_io/text:Concat",
@@ -67,6 +69,7 @@ const MOCK_OPS: Array<OpEntry> = [
       { name: "second", type: "str", required: true, default: null, media: null },
     ],
     outputs: [{ name: "combined", type: "str", media: null }],
+    allow_extra_inputs: false,
   },
 ];
 

@@ -218,6 +218,9 @@ export function NodeInspector({
   const [newStageRequireApproval, setNewStageRequireApproval] = useState<boolean>(false);
   const [isCreatingStageForNode, setIsCreatingStageForNode] = useState<boolean>(false);
   const [newNodeStageTitle, setNewNodeStageTitle] = useState<string>("");
+  const [isAddingExtraInput, setIsAddingExtraInput] = useState<boolean>(false);
+  const [newExtraPortName, setNewExtraPortName] = useState<string>("");
+  const [extraPortError, setExtraPortError] = useState<string | null>(null);
 
   const stageIds = getOrderedStageIds(workflow);
   const spec =
@@ -1083,10 +1086,104 @@ export function NodeInspector({
 
         {/* Parameters / Inputs Box */}
         <div className="PropertiesBox">
-          <div className="PropertiesBoxHeader">
+          <div className="PropertiesBoxHeader flex items-center justify-between">
             <span>Parameters ({ports.inputs.length})</span>
+            {!effectiveReadOnly && opEntry?.allow_extra_inputs && (
+              <button
+                type="button"
+                data-testid="btn-add-extra-input"
+                onClick={() => {
+                  setIsAddingExtraInput(true);
+                  setNewExtraPortName("");
+                  setExtraPortError(null);
+                }}
+                className="control-button !h-5 !min-h-5 !px-1.5 !text-[10px]"
+              >
+                <FeatherIcon name="plus" size={11} />
+                <span>Add input</span>
+              </button>
+            )}
           </div>
           <div className="PropertiesBoxContent">
+            {isAddingExtraInput && (
+              <div
+                data-testid="inline-add-extra-input-form"
+                className="p-2 rounded bg-[#242424] border border-[#404040] space-y-2 mb-2"
+              >
+                <div className="text-xs font-semibold">New Dynamic Input</div>
+                <div>
+                  <label className="text-[11px] block text-[var(--text-secondary)] mb-0.5">
+                    Port Name (snake_case)
+                  </label>
+                  <input
+                    type="text"
+                    data-testid="input-new-extra-port-name"
+                    placeholder="e.g. track_1, track_2"
+                    value={newExtraPortName}
+                    onChange={(e) => {
+                      setNewExtraPortName(e.target.value);
+                      setExtraPortError(null);
+                    }}
+                    className="w-full px-1.5 py-1 text-xs"
+                    autoFocus
+                  />
+                </div>
+                {extraPortError && (
+                  <p
+                    className="text-[10px]"
+                    style={{ color: "var(--color-error)" }}
+                  >
+                    {extraPortError}
+                  </p>
+                )}
+                <div className="flex items-center justify-end gap-1.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddingExtraInput(false);
+                      setNewExtraPortName("");
+                      setExtraPortError(null);
+                    }}
+                    className="control-button !h-6 !min-h-6 !px-2 !text-[11px]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="btn-submit-add-extra-input"
+                    disabled={!newExtraPortName.trim()}
+                    onClick={() => {
+                      const name = newExtraPortName.trim();
+                      if (!/^[a-z][a-z0-9_]*$/.test(name)) {
+                        setExtraPortError(
+                          "Port name must be snake_case (e.g. track_1)",
+                        );
+                        return;
+                      }
+                      if (spec.inputs && name in spec.inputs) {
+                        setExtraPortError(
+                          `Port '${name}' already exists on node`,
+                        );
+                        return;
+                      }
+                      if (opEntry?.inputs.some((p) => p.name === name)) {
+                        setExtraPortError(
+                          `Port '${name}' is already a declared input port`,
+                        );
+                        return;
+                      }
+                      handleLiteralChange(name, "");
+                      setIsAddingExtraInput(false);
+                      setNewExtraPortName("");
+                      setExtraPortError(null);
+                    }}
+                    className="control-button primary !h-6 !min-h-6 !px-2 !text-[11px]"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            )}
             {ports.inputs.length === 0 ? (
               <p
                 className="text-xs py-1"
@@ -1099,6 +1196,10 @@ export function NodeInspector({
                 {ports.inputs.map((port) => {
                   const rawVal = spec.inputs?.[port.name];
                   const ref = extractNodeRef(rawVal);
+                  const isDynamicExtra = Boolean(
+                    opEntry?.allow_extra_inputs &&
+                      !opEntry.inputs.some((p) => p.name === port.name),
+                  );
                   const compatibleOutputs = effectiveReadOnly
                     ? []
                     : getCompatibleUpstreamOutputs(
@@ -1134,6 +1235,17 @@ export function NodeInspector({
                               *
                             </span>
                           )}
+                          {isDynamicExtra && (
+                            <span
+                              className="text-[9px] px-1 py-0.2 rounded font-mono"
+                              style={{
+                                backgroundColor: "rgba(0, 216, 255, 0.15)",
+                                color: "#00d8ff",
+                              }}
+                            >
+                              extra
+                            </span>
+                          )}
                           {port.description && (
                             <span
                               data-testid={`inspector-port-help-${port.name}`}
@@ -1156,18 +1268,35 @@ export function NodeInspector({
                                 ${ref.from_node}.{ref.output}
                               </span>
                               {!effectiveReadOnly && (
-                                <button
-                                  type="button"
-                                  data-testid={`inspector-unbind-${port.name}`}
-                                  title="Unbind reference"
-                                  onClick={() =>
-                                    onUnbindInput?.(nodeId, port.name)
-                                  }
-                                  className="control-button !h-6 !min-h-6 !px-1.5 !text-[10px]"
-                                >
-                                  <FeatherIcon name="x" size={11} />
-                                  <span>Unbind</span>
-                                </button>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    data-testid={`inspector-unbind-${port.name}`}
+                                    title="Unbind reference"
+                                    onClick={() =>
+                                      onUnbindInput?.(nodeId, port.name)
+                                    }
+                                    className="control-button !h-6 !min-h-6 !px-1.5 !text-[10px]"
+                                  >
+                                    <FeatherIcon name="x" size={11} />
+                                    <span>Unbind</span>
+                                  </button>
+                                  {isDynamicExtra && (
+                                    <button
+                                      type="button"
+                                      data-testid={`inspector-remove-extra-${port.name}`}
+                                      title="Remove dynamic input"
+                                      onClick={() => {
+                                        onUnbindInput?.(nodeId, port.name);
+                                        handleLiteralChange(port.name, undefined);
+                                      }}
+                                      className="control-button !h-6 !min-h-6 !px-1.5 !text-[10px] text-[var(--color-error)]"
+                                    >
+                                      <FeatherIcon name="trash-2" size={11} />
+                                      <span>Remove</span>
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </div>
                           ) : (
@@ -1241,6 +1370,21 @@ export function NodeInspector({
                               className="control-button !h-5 !min-h-5 !px-1.5 !text-[10px]"
                             >
                               Clear
+                            </button>
+                          )}
+
+                          {isDynamicExtra && !effectiveReadOnly && (
+                            <button
+                              type="button"
+                              data-testid={`inspector-remove-extra-${port.name}`}
+                              title="Remove dynamic input"
+                              onClick={() =>
+                                handleLiteralChange(port.name, undefined)
+                              }
+                              className="control-button !h-5 !min-h-5 !px-1.5 !text-[10px] text-[var(--color-error)]"
+                            >
+                              <FeatherIcon name="trash-2" size={11} />
+                              <span>Remove</span>
                             </button>
                           )}
                         </div>

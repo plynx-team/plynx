@@ -199,15 +199,19 @@ def validate_workflow(
         for port_name, val in node.inputs.items():
             dst_port = dst_inputs.get(port_name)
             if dst_op is not None and dst_port is None:
-                issues.append(
-                    ValidationIssue(
-                        severity="error",
-                        node_id=node_id,
-                        message=(
-                            f"Node '{node_id}': unknown input port '{port_name}' for op '{node.op}'"
-                        ),
+                if dst_op.allow_extra_inputs:
+                    dst_port = dst_op.extra_inputs_type
+                else:
+                    issues.append(
+                        ValidationIssue(
+                            severity="error",
+                            node_id=node_id,
+                            message=(
+                                f"Node '{node_id}': unknown input port '{port_name}' "
+                                f"for op '{node.op}'"
+                            ),
+                        )
                     )
-                )
 
             if isinstance(val, NodeRef):
                 src_node_id = val.from_node

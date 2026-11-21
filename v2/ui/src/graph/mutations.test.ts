@@ -48,6 +48,7 @@ const CONCAT_OP: OpEntry = {
     },
   ],
   outputs: [{ name: "text", type: "str", media: null }],
+  allow_extra_inputs: false,
   source: "builtin_packs/standard_io/src/standard_io/text.py",
   valid: true,
   error: null,

@@ -183,12 +183,12 @@ All operations in `standard_io` must use **Python Standard Library only** (`depe
 ### Stage 3: Structured Widgets & Dynamic Extra Inputs (`ALLOW_EXTRA_INPUTS`)
 *Effort: **High** | Recommended Model: **Strong (Gemini Pro / Claude Opus)***
 
-- [ ] **3.1 Upgrade `LiteralWidget.tsx` for ergonomic freeform & structured editing**
+- [x] **3.1 Upgrade `LiteralWidget.tsx` for ergonomic freeform & structured editing**
   - **Files:** `ui/src/graph/LiteralWidget.tsx`, `v2/docs/PROTOCOL.md` (optional `examples`/`presets` or convention), tests in `ui/src/graph/`.
   - **Changes:** Add quick-fill preset suggestions or toggleable "Custom value" editing for string parameters (e.g., typing custom chord progressions like `"vi - IV - I - V"` alongside one-click preset buttons for classic progressions), and add an interactive string-list editor widget when typing array/JSON lists cleanly.
   - **Accept:** User can either pick a preset or type custom chords/patterns directly in the Inspector; Vitest UI tests pass.
 
-- [ ] **3.2 Protocol & Engine support for `ALLOW_EXTRA_INPUTS` (variadic ops)**
+- [x] **3.2 Protocol & Engine support for `ALLOW_EXTRA_INPUTS` (variadic ops)**
   - **Files:** `v2/docs/PROTOCOL.md`, `packages/plynx-sdk/src/plynx_sdk/op.py`, `packages/plynx-sdk/src/plynx_sdk/harness.py`, `packages/plynx/src/plynx/api_models.py`, `packages/plynx/src/plynx/registry/extractor.py`, `packages/plynx/src/plynx/workflow/validator.py`, `packages/plynx/src/plynx/cas/cache_key.py`.
   - **Changes:**
     - Update `PROTOCOL.md` first: define `ALLOW_EXTRA_INPUTS = True` (or `@op(..., allow_extra_inputs=True)`) and typed `**extra: <Type>` in `run(...)`.
@@ -197,7 +197,7 @@ All operations in `standard_io` must use **Python Standard Library only** (`depe
     - Re-run `scripts/gen_ts_types.py`.
   - **Accept:** Test workflow wires arbitrary N inputs (e.g. `track_1`, `track_2`, `track_3`) into a variadic op; validation, cache hits/misses, and execution all pass.
 
-- [ ] **3.3 UI support for adding/wiring dynamic extra inputs**
+- [x] **3.3 UI support for adding/wiring dynamic extra inputs**
   - **Files:** `ui/src/graph/NodeInspector.tsx`, `ui/src/graph/layout.ts`, `ui/src/graph/OperationNode.tsx`, `ui/src/graph/GraphView.tsx`.
   - **Changes:** When `opEntry.allow_extra_inputs` is true, render dynamically added input ports as connectable handles on `OperationNode` and add an `+ Add input` control in `NodeInspector` (prompting for `snake_case` port name).
   - **Accept:** Vitest tests verify adding, wiring, and removing dynamic extra input ports on canvas and inspector.

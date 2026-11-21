@@ -229,6 +229,11 @@ def _prepare_call_kwargs(
             kwargs[port_name] = resolved_node_dir / input_val.path
         elif isinstance(input_val, ScalarValue):
             ann = param_hints.get(port_name)
+            if ann is None:
+                for param in sig.parameters.values():
+                    if param.kind == inspect.Parameter.VAR_KEYWORD:
+                        ann = param_hints.get(param.name)
+                        break
             if ann is not None and input_val.value is not None:
                 try:
                     info = _parse_type_annotation(ann)

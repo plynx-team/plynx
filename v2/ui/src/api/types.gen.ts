@@ -262,6 +262,8 @@ export interface OpEntry {
   description: string;
   inputs: Array<InputPortSpec>;
   outputs: Array<OutputPortSpec>;
+  allow_extra_inputs: boolean;
+  extra_inputs_type?: InputPortSpec | null;
   source: string;
   valid: boolean;
   error?: string | null;

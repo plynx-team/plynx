@@ -26,6 +26,7 @@ const OPS_MAP: Record<string, OpEntry> = {
     description: "Produces text.",
     inputs: [],
     outputs: [{ name: "text", type: "str", media: null }],
+    allow_extra_inputs: false,
     source: "mod.py",
     valid: true,
     error: null,
@@ -101,6 +102,7 @@ const OPS_MAP: Record<string, OpEntry> = {
       { name: "summary", type: "str", media: null },
       { name: "report", type: "file", media: "text/markdown" },
     ],
+    allow_extra_inputs: false,
     source: "mod.py",
     valid: true,
     error: null,
@@ -473,5 +475,95 @@ describe("NodeInspector component (Task 6.11)", () => {
       "title",
       "Detailed input text description for LLM prompt.",
     );
+  });
+
+  it("supports adding and removing dynamic extra input ports when allow_extra_inputs is true (Task 3.3)", () => {
+    const handleUpdateNodeSpec = vi.fn();
+    const opsWithExtra = {
+      ...OPS_MAP,
+      "pack/mod:VariadicOp": {
+        id: "pack/mod:VariadicOp",
+        pack: "pack",
+        module: "mod",
+        name: "VariadicOp",
+        kind: "class" as const,
+        title: "Variadic Op",
+        category: "Demo",
+        cacheable: true,
+        description: "Op accepting extra inputs.",
+        inputs: [],
+        outputs: [],
+        allow_extra_inputs: true,
+        extra_inputs_type: {
+          name: "tracks",
+          type: "file" as const,
+          media: "audio/wav",
+          options: null,
+          min: null,
+          max: null,
+          step: null,
+          required: false,
+          default: null,
+        },
+        source: "mod.py",
+        valid: true,
+        error: null,
+      },
+    };
+
+    const wf: Workflow = {
+      version: 1,
+      name: "variadic_test",
+      nodes: {
+        var_node: {
+          op: "pack/mod:VariadicOp",
+          stage: "s1",
+          inputs: {
+            track_1: "audio1.wav",
+          },
+        },
+      },
+      stages: {
+        s1: { title: "Stage 1", require_approval: false },
+      },
+    };
+
+    render(
+      <NodeInspector
+        nodeId="var_node"
+        workflow={wf}
+        opsMap={opsWithExtra}
+        onUpdateNodeSpec={handleUpdateNodeSpec}
+      />,
+    );
+
+    // Dynamic port track_1 should be rendered with extra badge and remove button
+    expect(screen.getByText("track_1")).toBeInTheDocument();
+    expect(screen.getByText("extra")).toBeInTheDocument();
+    const removeBtn = screen.getByTestId("inspector-remove-extra-track_1");
+    expect(removeBtn).toBeInTheDocument();
+
+    // Clicking remove should delete the port
+    fireEvent.click(removeBtn);
+    expect(handleUpdateNodeSpec).toHaveBeenCalled();
+
+    // Add input button is visible
+    const addInputBtn = screen.getByTestId("btn-add-extra-input");
+    expect(addInputBtn).toBeInTheDocument();
+    fireEvent.click(addInputBtn);
+
+    // Form is displayed
+    const inputField = screen.getByTestId("input-new-extra-port-name");
+    const submitBtn = screen.getByTestId("btn-submit-add-extra-input");
+
+    // Invalid snake_case
+    fireEvent.change(inputField, { target: { value: "Track 2" } });
+    fireEvent.click(submitBtn);
+    expect(screen.getByText("Port name must be snake_case (e.g. track_1)")).toBeInTheDocument();
+
+    // Valid snake_case
+    fireEvent.change(inputField, { target: { value: "track_2" } });
+    fireEvent.click(submitBtn);
+    expect(handleUpdateNodeSpec).toHaveBeenCalled();
   });
 });

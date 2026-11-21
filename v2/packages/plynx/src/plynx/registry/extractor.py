@@ -350,10 +350,43 @@ def _extract_inputs(
     owner_name: str,
     module_aliases: dict[str, ast.AST],
     param_descriptions: dict[str, str] | None = None,
-) -> list[InputPortSpec]:
+    allow_extra_inputs: bool = False,
+) -> tuple[list[InputPortSpec], InputPortSpec | None]:
     """Extract input port specifications from function or method arguments."""
-    if args.vararg is not None or args.kwarg is not None:
-        raise ValueError("*args and **kwargs are not supported in Op signatures")
+    if args.vararg is not None:
+        if args.kwarg is not None:
+            raise ValueError("*args and **kwargs are not supported in Op signatures")
+        raise ValueError("*args is not supported in Op signatures")
+    if args.kwarg is not None and not allow_extra_inputs:
+        raise ValueError(
+            f"**{args.kwarg.arg} is not supported in Op signatures unless "
+            "allow_extra_inputs=True (or ALLOW_EXTRA_INPUTS = True on class)"
+        )
+    if allow_extra_inputs and args.kwarg is None:
+        raise ValueError(
+            f"Op '{owner_name}' declared allow_extra_inputs=True but signature is missing **kwargs"
+        )
+
+    extra_inputs_type: InputPortSpec | None = None
+    if args.kwarg is not None:
+        kwarg_name = args.kwarg.arg
+        if not _SNAKE_CASE_RE.match(kwarg_name):
+            raise ValueError(f"Var-keyword name '{kwarg_name}' in {owner_name} must be snake_case")
+        if args.kwarg.annotation is not None:
+            parsed = _parse_annotation(args.kwarg.annotation, module_aliases)
+            desc = param_descriptions.get(kwarg_name, None) if param_descriptions else None
+            extra_inputs_type = InputPortSpec(
+                name=kwarg_name,
+                type=parsed.port_type,
+                media=parsed.media,
+                options=parsed.options,
+                min=parsed.min,
+                max=parsed.max,
+                step=parsed.step,
+                required=False,
+                default=None,
+                description=desc,
+            )
 
     inputs: list[InputPortSpec] = []
     pos_args = args.args
@@ -431,7 +464,7 @@ def _extract_inputs(
             )
         )
 
-    return inputs
+    return inputs, extra_inputs_type
 
 
 def _extract_outputs(
@@ -491,6 +524,7 @@ def _extract_class_op(
     title: str | None = None
     category = "Uncategorized"
     cacheable = True
+    allow_extra_inputs = False
     inner_typed_dicts: dict[str, ast.ClassDef] = {}
     run_func: ast.FunctionDef | None = None
     op_id = f"{pack}/{module}:{class_node.name}" if pack else f"{module}:{class_node.name}"
@@ -549,6 +583,19 @@ def _extract_class_op(
                                     f"CACHEABLE must be a boolean literal, got {tname}"
                                 )
                             cacheable = val
+                        elif t.id == "ALLOW_EXTRA_INPUTS":
+                            if not isinstance(item.value, ast.Constant):
+                                raise ValueError(
+                                    "Computed metadata is not supported: "
+                                    "ALLOW_EXTRA_INPUTS must be a boolean literal"
+                                )
+                            val = item.value.value
+                            if not isinstance(val, bool):
+                                tname = type(val).__name__
+                                raise ValueError(
+                                    f"ALLOW_EXTRA_INPUTS must be a boolean literal, got {tname}"
+                                )
+                            allow_extra_inputs = val
             elif (
                 isinstance(item, ast.AnnAssign)
                 and isinstance(item.target, ast.Name)
@@ -585,6 +632,19 @@ def _extract_class_op(
                         tname = type(val).__name__
                         raise ValueError(f"CACHEABLE must be a boolean literal, got {tname}")
                     cacheable = val
+                elif item.target.id == "ALLOW_EXTRA_INPUTS":
+                    if not isinstance(item.value, ast.Constant):
+                        raise ValueError(
+                            "Computed metadata is not supported: "
+                            "ALLOW_EXTRA_INPUTS must be a boolean literal"
+                        )
+                    val = item.value.value
+                    if not isinstance(val, bool):
+                        tname = type(val).__name__
+                        raise ValueError(
+                            f"ALLOW_EXTRA_INPUTS must be a boolean literal, got {tname}"
+                        )
+                    allow_extra_inputs = val
             elif isinstance(item, ast.FunctionDef) and item.name == "run":
                 run_func = item
 
@@ -614,12 +674,13 @@ def _extract_class_op(
         all_typed_dicts.update(inner_typed_dicts)
 
         outputs = _extract_outputs(run_func.returns, all_typed_dicts, module_aliases)
-        inputs = _extract_inputs(
+        inputs, extra_inputs_type = _extract_inputs(
             run_func.args,
             is_method=True,
             owner_name=f"{class_node.name}.run",
             module_aliases=module_aliases,
             param_descriptions=param_descriptions,
+            allow_extra_inputs=allow_extra_inputs,
         )
 
         return OpEntry(
@@ -634,6 +695,8 @@ def _extract_class_op(
             description=description,
             inputs=inputs,
             outputs=outputs,
+            allow_extra_inputs=allow_extra_inputs,
+            extra_inputs_type=extra_inputs_type,
             source=source_path,
             valid=True,
             error=None,
@@ -651,6 +714,8 @@ def _extract_class_op(
             description="",
             inputs=[],
             outputs=[],
+            allow_extra_inputs=allow_extra_inputs,
+            extra_inputs_type=None,
             source=source_path,
             valid=False,
             error=str(exc),
@@ -670,6 +735,7 @@ def _extract_function_op(
     title: str | None = None
     category = "Uncategorized"
     cacheable = True
+    allow_extra_inputs = False
     op_id = f"{pack}/{module}:{func_node.name}" if pack else f"{module}:{func_node.name}"
 
     try:
@@ -743,6 +809,18 @@ def _extract_function_op(
                     tname = type(kw.value.value).__name__
                     raise ValueError(f"Op cacheable must be a boolean literal, got {tname}")
                 cacheable = kw.value.value
+            elif kw.arg == "allow_extra_inputs":
+                if not isinstance(kw.value, ast.Constant):
+                    raise ValueError(
+                        "Computed metadata is not supported: "
+                        "allow_extra_inputs in @op must be a boolean literal"
+                    )
+                if not isinstance(kw.value.value, bool):
+                    tname = type(kw.value.value).__name__
+                    raise ValueError(
+                        f"Op allow_extra_inputs must be a boolean literal, got {tname}"
+                    )
+                allow_extra_inputs = kw.value.value
 
         if title is None:
             raise ValueError(
@@ -754,12 +832,13 @@ def _extract_function_op(
         param_descriptions = _parse_docstring_args(doc)
 
         outputs = _extract_outputs(func_node.returns, module_typed_dicts, module_aliases)
-        inputs = _extract_inputs(
+        inputs, extra_inputs_type = _extract_inputs(
             func_node.args,
             is_method=False,
             owner_name=func_node.name,
             module_aliases=module_aliases,
             param_descriptions=param_descriptions,
+            allow_extra_inputs=allow_extra_inputs,
         )
 
         return OpEntry(
@@ -774,6 +853,8 @@ def _extract_function_op(
             description=description,
             inputs=inputs,
             outputs=outputs,
+            allow_extra_inputs=allow_extra_inputs,
+            extra_inputs_type=extra_inputs_type,
             source=source_path,
             valid=True,
             error=None,
@@ -791,6 +872,8 @@ def _extract_function_op(
             description="",
             inputs=[],
             outputs=[],
+            allow_extra_inputs=allow_extra_inputs,
+            extra_inputs_type=None,
             source=source_path,
             valid=False,
             error=str(exc),

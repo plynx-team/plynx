@@ -74,8 +74,29 @@ export function resolveNodePorts(
   outputs: Array<OutputPortSpec>;
 } {
   if (opEntry) {
+    const inputs = [...opEntry.inputs];
+    if (opEntry.allow_extra_inputs && spec.inputs) {
+      const declared = new Set(inputs.map((p) => p.name));
+      for (const name of Object.keys(spec.inputs)) {
+        if (!declared.has(name)) {
+          const extraType = opEntry.extra_inputs_type;
+          inputs.push({
+            name,
+            type: extraType?.type ?? "str",
+            media: extraType?.media ?? null,
+            options: extraType?.options ?? null,
+            min: extraType?.min ?? null,
+            max: extraType?.max ?? null,
+            step: extraType?.step ?? null,
+            required: false,
+            default: null,
+            description: extraType?.description ?? null,
+          });
+        }
+      }
+    }
     return {
-      inputs: [...opEntry.inputs],
+      inputs,
       outputs: [...opEntry.outputs],
     };
   }

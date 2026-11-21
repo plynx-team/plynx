@@ -122,6 +122,13 @@ def materialize_inputs(
     # 1. Resolve bindings from workflow node spec
     for port_name, binding in spec.inputs.items():
         expected_type = port_types.get(port_name)
+        if (
+            expected_type is None
+            and op_entry is not None
+            and op_entry.allow_extra_inputs
+            and op_entry.extra_inputs_type is not None
+        ):
+            expected_type = op_entry.extra_inputs_type.type
 
         if isinstance(binding, NodeRef):
             src_outs = completed_outputs.get(binding.from_node, {})
@@ -222,6 +229,13 @@ def materialize_inputs(
             if key.startswith(prefix):
                 port_name = key[len(prefix) :]
                 expected_type = port_types.get(port_name)
+                if (
+                    expected_type is None
+                    and op_entry is not None
+                    and op_entry.allow_extra_inputs
+                    and op_entry.extra_inputs_type is not None
+                ):
+                    expected_type = op_entry.extra_inputs_type.type
                 if expected_type == "file" and isinstance(raw_val, (str, Path)):
                     file_path = (
                         Path(raw_val)

@@ -67,6 +67,7 @@ const OPS: Array<OpEntry> = [
       },
     ],
     outputs: [{ name: "choice", type: "str", media: null }],
+    allow_extra_inputs: false,
     source: "demo.py",
     valid: true,
     error: null,
