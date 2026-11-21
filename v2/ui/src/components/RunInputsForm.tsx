@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from "react";
 import {
   createRun,
+  fetchOps,
   fetchWorkflow,
   fetchWorkflowInputs,
   uploadFile,
 } from "../api/client";
 import type {
+  OpEntry,
+  Workflow,
   WorkflowDocument,
   WorkflowInputSpec,
+  WorkflowLayout,
 } from "../api/types.gen";
 import { getOrderedStageIds } from "../graph/layout";
 import { useRouter } from "../router/Router";
@@ -22,11 +26,41 @@ interface InputValueState {
   uploadFileName?: string;
 }
 
+export function extractUnboundInputs(
+  workflow: Workflow,
+  opsMap?: Record<string, OpEntry>,
+): Array<WorkflowInputSpec> {
+  if (!opsMap) return [];
+  const unbound: Array<WorkflowInputSpec> = [];
+  for (const [nodeId, node] of Object.entries(workflow.nodes ?? {})) {
+    const op = opsMap[node.op];
+    if (!op || !op.valid) continue;
+    for (const port of op.inputs ?? []) {
+      const hasInput = node.inputs && port.name in node.inputs;
+      if (!hasInput && port.required && port.default === null) {
+        unbound.push({
+          node_id: nodeId,
+          name: port.name,
+          type: port.type,
+          media: port.media ?? null,
+          required: port.required,
+          default: port.default ?? null,
+          stage_id: node.stage || "main",
+        });
+      }
+    }
+  }
+  return unbound;
+}
+
 export interface RunInputsFormProps {
   workflowPath: string;
   asModal?: boolean;
   onClose?: () => void;
   onRunStarted?: (runId: string) => void;
+  inMemoryWorkflow?: Workflow | null;
+  inMemoryLayout?: WorkflowLayout | null;
+  opsMap?: Record<string, OpEntry>;
 }
 
 export function RunInputsForm({
@@ -34,6 +68,9 @@ export function RunInputsForm({
   asModal = false,
   onClose,
   onRunStarted,
+  inMemoryWorkflow,
+  inMemoryLayout,
+  opsMap,
 }: RunInputsFormProps) {
   const { navigate } = useRouter();
   const [workflowDoc, setWorkflowDoc] = useState<WorkflowDocument | null>(null);
@@ -53,6 +90,63 @@ export function RunInputsForm({
     let active = true;
     setLoading(true);
     setError(null);
+
+    if (inMemoryWorkflow) {
+      const doc: WorkflowDocument = {
+        workflow: inMemoryWorkflow,
+        layout: inMemoryLayout ?? null,
+      };
+
+      const resolveInputs = async () => {
+        let currentOps = opsMap;
+        if (!currentOps || Object.keys(currentOps).length === 0) {
+          try {
+            const opsList = await fetchOps();
+            currentOps = {};
+            for (const op of opsList) {
+              currentOps[op.id] = op;
+            }
+          } catch {
+            currentOps = {};
+          }
+        }
+        return extractUnboundInputs(inMemoryWorkflow, currentOps);
+      };
+
+      resolveInputs()
+        .then((inputSpecs) => {
+          if (!active) return;
+          setWorkflowDoc(doc);
+          setInputs(inputSpecs);
+
+          const initialValues: Record<string, InputValueState> = {};
+          for (const spec of inputSpecs) {
+            const key = `${spec.node_id}.${spec.name}`;
+            const defaultValue =
+              spec.default !== undefined && spec.default !== null
+                ? spec.default
+                : "";
+            initialValues[key] = {
+              value: defaultValue,
+              rawText:
+                typeof defaultValue === "object"
+                  ? JSON.stringify(defaultValue)
+                  : String(defaultValue),
+            };
+          }
+          setFormValues(initialValues);
+          setLoading(false);
+        })
+        .catch((err: unknown) => {
+          if (!active) return;
+          setError(err instanceof Error ? err.message : String(err));
+          setLoading(false);
+        });
+
+      return () => {
+        active = false;
+      };
+    }
 
     Promise.all([
       fetchWorkflow(workflowPath),
@@ -90,7 +184,7 @@ export function RunInputsForm({
     return () => {
       active = false;
     };
-  }, [workflowPath]);
+  }, [workflowPath, inMemoryWorkflow, inMemoryLayout, opsMap]);
 
   const handleScalarChange = (key: string, rawVal: string, type: string) => {
     let parsedVal: unknown = rawVal;
@@ -240,6 +334,8 @@ export function RunInputsForm({
         workflow_path: workflowPath,
         inputs: finalInputs,
         no_cache: noCache,
+        workflow: inMemoryWorkflow ?? undefined,
+        layout: inMemoryLayout ?? undefined,
       });
       if (onRunStarted) {
         onRunStarted(res.run_id);
@@ -260,9 +356,20 @@ export function RunInputsForm({
         className="PropertiesBoxContent flex items-start justify-between gap-4 p-3"
       >
         <div>
-          <h1 className="text-base font-bold">
-            {workflowDoc?.workflow.name || workflowPath}
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-base font-bold">
+              {workflowDoc?.workflow.name || workflowPath}
+            </h1>
+            {inMemoryWorkflow && (
+              <span
+                data-testid="badge-unsaved-draft"
+                className="status-badge NOT_IN_RUN !text-[9px]"
+                title="Running in-memory draft from editor"
+              >
+                Unsaved Draft
+              </span>
+            )}
+          </div>
           {workflowDoc?.workflow.description && (
             <p
               className="mt-0.5 text-xs"
@@ -670,6 +777,7 @@ export function RunInputsForm({
               <button
                 type="button"
                 aria-label="Close run modal"
+                data-testid="btn-close-run-modal"
                 onClick={onClose}
                 className="p-1"
                 style={{ color: "var(--text-secondary)" }}

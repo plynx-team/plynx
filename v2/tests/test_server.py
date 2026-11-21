@@ -14,40 +14,17 @@ from pathlib import Path
 import httpx
 import pytest
 from click.testing import CliRunner
-from plynx.api_models import (
-    CleanResponse,
-    NodeLogEvent,
-    NodePosition,
-    NodeStatus,
-    OpEntry,
-    RunEvent,
-    RunListResponse,
-    RunState,
-    RunStatus,
-    RunStatusData,
-    UploadResponse,
-    ValidateWorkflowResponse,
-    Viewport,
-    WorkflowDocument,
-    WorkflowInputSpec,
-    WorkflowLayout,
-    WorkflowListItem,
-)
-from plynx.cas import BlobStore
-from plynx.cli import main
-from plynx.server import (
-    NonLoopbackHostError,
-    create_app,
-    is_loopback_host,
-    run_server,
-    validate_host,
-)
-from plynx.store import RunStore
-from plynx.store.run_store import generate_run_id
 from plynx_sdk.protocol import ResultFileValue, ResultManifest
 from pydantic import TypeAdapter
-
 from tests.test_validator import EXAMPLE_WORKFLOW
+
+from plynx.api_models import (CleanResponse, NodeLogEvent, NodePosition, NodeStatus, OpEntry, RunEvent, RunListResponse, RunState, RunStatus, RunStatusData,
+                              UploadResponse, ValidateWorkflowResponse, Viewport, WorkflowDocument, WorkflowInputSpec, WorkflowLayout, WorkflowListItem)
+from plynx.cas import BlobStore
+from plynx.cli import main
+from plynx.server import NonLoopbackHostError, create_app, is_loopback_host, run_server, validate_host
+from plynx.store import RunStore
+from plynx.store.run_store import generate_run_id
 
 _EVENT_ADAPTER: TypeAdapter[RunEvent] = TypeAdapter(RunEvent)
 
@@ -234,6 +211,46 @@ def test_post_runs_and_stream(tmp_path: Path) -> None:
             assert state_resp.status_code == 200
             state = RunState.model_validate(state_resp.json())
             assert state.status == RunStatus.SUCCESS
+
+    asyncio.run(_run())
+
+
+def test_post_runs_with_in_memory_workflow(tmp_path: Path) -> None:
+    """POST /runs with in-memory workflow executes draft without touching disk file."""
+    app = create_app(tmp_path)
+    in_memory_wf = {
+        "version": 1,
+        "name": "In Memory Draft",
+        "stages": {"main": {"title": "Main"}},
+        "nodes": {
+            "echo_node": {
+                "op": "standard_io/demo:Echo",
+                "inputs": {"text": "hello from memory"},
+            }
+        },
+    }
+
+    async def _run() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            create_resp = await client.post(
+                "/runs",
+                json={
+                    "workflow_path": "workflows/non_existent.yaml",
+                    "workflow": in_memory_wf,
+                    "inputs": {},
+                },
+            )
+            assert create_resp.status_code == 201, create_resp.text
+            run_id = create_resp.json()["run_id"]
+
+            state_resp = await client.get(f"/runs/{run_id}")
+            assert state_resp.status_code == 200
+            state = RunState.model_validate(state_resp.json())
+            assert state.workflow_snapshot is not None
+            assert state.workflow_snapshot.name == "In Memory Draft"
+            # Ensure the file was not written to disk
+            assert not (tmp_path / "workflows/non_existent.yaml").exists()
 
     asyncio.run(_run())
 

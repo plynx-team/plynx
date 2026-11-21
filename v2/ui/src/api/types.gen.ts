@@ -342,6 +342,8 @@ export interface CreateRunRequest {
   workflow_path: string;
   inputs?: Record<string, unknown>;
   no_cache?: boolean;
+  workflow?: Workflow | null;
+  layout?: WorkflowLayout | null;
 }
 
 /** Response body for ``POST /runs``. */

@@ -133,6 +133,8 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   const [opsCollapsed, setOpsCollapsed] = useState<boolean>(false);
   const [runActionBusy, setRunActionBusy] = useState<boolean>(false);
   const [showRunModal, setShowRunModal] = useState<boolean>(false);
+  const [showUnsavedRunConfirm, setShowUnsavedRunConfirm] = useState<boolean>(false);
+  const [runWithoutSaving, setRunWithoutSaving] = useState<boolean>(false);
   const [previewTarget, setPreviewTarget] =
     useState<ArtifactPreviewTarget | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(
@@ -1222,8 +1224,16 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         <ControlButton
           icon="play"
           text="Run Workflow"
+          data-testid="btn-run-workflow"
           variant="primary"
-          onClick={() => setShowRunModal(true)}
+          onClick={() => {
+            if (isDirty) {
+              setShowUnsavedRunConfirm(true);
+            } else {
+              setRunWithoutSaving(false);
+              setShowRunModal(true);
+            }
+          }}
         />
 
         <ControlButton
@@ -1690,10 +1700,98 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         </div>
       ) : null}
 
+      {showUnsavedRunConfirm && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          data-testid="unsaved-run-confirm-dialog"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
+        >
+          <div
+            className="w-full max-w-md rounded border border-[#404040] bg-[#242424] shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#3c3c3c] px-4 py-3">
+              <div className="flex items-center gap-2">
+                <FeatherIcon
+                  name="alert-triangle"
+                  size={16}
+                  style={{ color: "var(--color-warning, #ffa726)" }}
+                />
+                <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
+                  Unsaved Changes
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowUnsavedRunConfirm(false)}
+                className="p-1 rounded hover:bg-[#3c3c3c]"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                <FeatherIcon name="x" size={14} />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-3 text-xs" style={{ color: "var(--text-secondary)" }}>
+              <p>
+                You have unsaved changes in this workflow. How would you like to launch the run?
+              </p>
+              <div className="rounded p-2.5 bg-[#1a1a1a] border border-[#333] space-y-1">
+                <div>
+                  <strong className="text-[var(--text-primary)]">Save & Run:</strong> Saves your current workflow to disk and executes it.
+                </div>
+                <div>
+                  <strong className="text-[var(--text-primary)]">Run Without Saving:</strong> Keeps the file on disk untouched, but executes your in-memory editor workflow.
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-[#3c3c3c] bg-[#1e1e1e] px-4 py-2.5">
+              <button
+                type="button"
+                data-testid="btn-cancel-unsaved-run"
+                onClick={() => setShowUnsavedRunConfirm(false)}
+                className="control-button !h-7 !px-3 text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                data-testid="btn-run-without-saving"
+                onClick={() => {
+                  setShowUnsavedRunConfirm(false);
+                  setRunWithoutSaving(true);
+                  setShowRunModal(true);
+                }}
+                className="control-button !h-7 !px-3 text-xs"
+              >
+                Run Without Saving
+              </button>
+              <button
+                type="button"
+                data-testid="btn-save-and-run"
+                onClick={async () => {
+                  setShowUnsavedRunConfirm(false);
+                  await handleSave();
+                  setRunWithoutSaving(false);
+                  setShowRunModal(true);
+                }}
+                className="control-button primary !h-7 !px-3 text-xs font-semibold"
+              >
+                Save & Run
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showRunModal && (
         <RunInputsForm
           workflowPath={workflowPath}
           asModal={true}
+          inMemoryWorkflow={runWithoutSaving ? workflow : undefined}
+          inMemoryLayout={runWithoutSaving ? layout : undefined}
+          opsMap={opsMap}
           onClose={() => setShowRunModal(false)}
           onRunStarted={(newRunId) => {
             setShowRunModal(false);

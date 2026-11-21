@@ -7,10 +7,12 @@ import { WorkflowEditor } from "./WorkflowEditor";
 
 vi.mock("../api/client", () => ({
   fetchWorkflow: vi.fn(),
+  fetchWorkflowInputs: vi.fn().mockResolvedValue([]),
   fetchOps: vi.fn(),
   fetchRuns: vi.fn().mockResolvedValue({ runs: [] }),
   fetchRunState: vi.fn(),
   saveWorkflow: vi.fn(),
+  createRun: vi.fn().mockResolvedValue({ run_id: "test-run-id" }),
 }));
 
 import * as client from "../api/client";
@@ -389,6 +391,64 @@ describe("WorkflowEditor palette & node operations (Task 6.9)", () => {
       expect(screen.getByTestId("graph-node-concat")).toBeInTheDocument();
 
       document.body.removeChild(input);
+    });
+  });
+
+  describe("WorkflowEditor run confirmation with unsaved changes", () => {
+    it("prompts to save or run without saving when clicking run on dirty workflow", async () => {
+      vi.mocked(client.fetchWorkflow).mockResolvedValue(MOCK_DOC);
+      vi.mocked(client.fetchOps).mockResolvedValue(MOCK_OPS);
+      vi.mocked(client.saveWorkflow).mockResolvedValue({
+        workflow: MOCK_DOC.workflow,
+        layout: null,
+      });
+
+      render(
+        <RouterProvider>
+          <WorkflowEditor workflowPath="examples/workflows/sample.yaml" />
+        </RouterProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("graph-node-echo")).toBeInTheDocument();
+      });
+
+      // Initially clean: clicking Run directly opens run inputs modal without confirm dialog
+      const runBtn = screen.getByTestId("btn-run-workflow");
+      fireEvent.click(runBtn);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("run-inputs-modal")).toBeInTheDocument();
+      });
+      expect(screen.queryByTestId("unsaved-run-confirm-dialog")).not.toBeInTheDocument();
+
+      // Close the run modal
+      fireEvent.click(screen.getByTestId("btn-close-run-modal"));
+      await waitFor(() => {
+        expect(screen.queryByTestId("run-inputs-modal")).not.toBeInTheDocument();
+      });
+
+      // Make workflow dirty by adding a node
+      fireEvent.click(screen.getByTestId("palette-op-standard_io/text:Concat"));
+      await waitFor(() => {
+        expect(screen.getByTestId("graph-node-concat")).toBeInTheDocument();
+      });
+
+      // Now dirty: clicking Run should prompt with unsaved-run-confirm-dialog
+      fireEvent.click(screen.getByTestId("btn-run-workflow"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("unsaved-run-confirm-dialog")).toBeInTheDocument();
+      });
+
+      // Choosing "Run Without Saving" closes confirm dialog and opens run modal with in-memory draft badge
+      fireEvent.click(screen.getByTestId("btn-run-without-saving"));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("unsaved-run-confirm-dialog")).not.toBeInTheDocument();
+        expect(screen.getByTestId("run-inputs-modal")).toBeInTheDocument();
+        expect(screen.getByTestId("badge-unsaved-draft")).toBeInTheDocument();
+      });
     });
   });
 });

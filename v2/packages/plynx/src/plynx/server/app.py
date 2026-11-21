@@ -161,6 +161,16 @@ def _workflow_to_dict(wf: Any) -> dict[str, Any]:
     return out
 
 
+def _dump_workflow_yaml(wf: Any) -> bytes:
+    """Serialize a Workflow model to UTF-8 YAML bytes."""
+    yaml = YAML()
+    yaml.preserve_quotes = True
+    d = _workflow_to_dict(wf)
+    buf = StringIO()
+    yaml.dump(d, buf)
+    return buf.getvalue().encode("utf-8")
+
+
 DEV_ORIGINS: list[str] = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -452,27 +462,43 @@ def create_app(
                 "invalid_workflow_path",
                 "workflow_path must stay inside the workspace root",
             )
-        if not wf_candidate.is_file():
-            return _error_response(
-                404,
-                "workflow_not_found",
-                f"Workflow file not found: {body.workflow_path}",
-            )
+        layout_bytes: bytes | None = None
+        if body.workflow is not None:
+            wf_model = body.workflow
+            workflow_bytes = _dump_workflow_yaml(wf_model)
+            if body.layout is not None:
+                layout_bytes = (
+                    json.dumps(
+                        body.layout.model_dump(mode="json", by_alias=True),
+                        indent=2,
+                    )
+                    + "\n"
+                ).encode("utf-8")
+            else:
+                sidecar = wf_candidate.with_name(f".{wf_candidate.stem}.layout.json")
+                layout_bytes = await asyncio.to_thread(sidecar.read_bytes) if sidecar.is_file() else None
+        else:
+            if not wf_candidate.is_file():
+                return _error_response(
+                    404,
+                    "workflow_not_found",
+                    f"Workflow file not found: {body.workflow_path}",
+                )
 
-        try:
-            wf_model = await asyncio.to_thread(load_workflow, wf_candidate)
-        except (ValidationError, ValueError, OSError) as exc:
-            return _error_response(400, "invalid_workflow", str(exc))
+            try:
+                wf_model = await asyncio.to_thread(load_workflow, wf_candidate)
+            except (ValidationError, ValueError, OSError) as exc:
+                return _error_response(400, "invalid_workflow", str(exc))
+
+            workflow_bytes = await asyncio.to_thread(wf_candidate.read_bytes)
+            sidecar = wf_candidate.with_name(f".{wf_candidate.stem}.layout.json")
+            layout_bytes = await asyncio.to_thread(sidecar.read_bytes) if sidecar.is_file() else None
 
         issues = validate_workflow(wf_model, op_registry)
         errors = [issue for issue in issues if issue.severity == "error"]
         if errors:
             msg = "; ".join(issue.message for issue in errors)
             return _error_response(422, "validation_failed", msg)
-
-        workflow_bytes = await asyncio.to_thread(wf_candidate.read_bytes)
-        sidecar = wf_candidate.with_name(f".{wf_candidate.stem}.layout.json")
-        layout_bytes = await asyncio.to_thread(sidecar.read_bytes) if sidecar.is_file() else None
 
         run_id = await asyncio.to_thread(
             store.create_run,

@@ -482,6 +482,8 @@ class CreateRunRequest(BaseModel):
     workflow_path: str
     inputs: dict[str, Any] = Field(default_factory=dict)
     no_cache: bool = False
+    workflow: Workflow | None = None
+    layout: WorkflowLayout | None = None
 
 
 class CreateRunResponse(BaseModel):

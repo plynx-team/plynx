@@ -202,4 +202,46 @@ describe("RunInputsForm component", () => {
       });
     });
   });
+
+  it("uses inMemoryWorkflow when running an unsaved draft", async () => {
+    vi.spyOn(client, "createRun").mockResolvedValue({ run_id: "unsaved-run-999" });
+    const inMemoryWf = {
+      version: 1 as const,
+      name: "Draft Workflow",
+      stages: { main: { title: "Main" } },
+      nodes: {
+        step1: {
+          op: "standard_io/demo:Echo",
+          inputs: { text: "draft text" },
+        },
+      },
+    };
+
+    render(
+      <RouterProvider>
+        <RunInputsForm
+          workflowPath="workflows/test.yaml"
+          inMemoryWorkflow={inMemoryWf}
+        />
+      </RouterProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Draft Workflow")).toBeDefined();
+      expect(screen.getByTestId("badge-unsaved-draft")).toBeDefined();
+    });
+
+    const submitBtn = screen.getByRole("button", { name: "Start Run" });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(client.createRun).toHaveBeenCalledWith({
+        workflow_path: "workflows/test.yaml",
+        inputs: {},
+        no_cache: false,
+        workflow: inMemoryWf,
+        layout: undefined,
+      });
+    });
+  });
 });

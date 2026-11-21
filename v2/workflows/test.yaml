@@ -8,3 +8,15 @@ nodes:
   chord_progression:
     op: media_studio/audio:ChordProgression
     title: Chords & Melodies
+    inputs:
+      progression: bassline
+  audio_echo_filter:
+    op: media_studio/audio:AudioEchoFilter
+    title: Audio Echo & Reverb
+    inputs:
+      audio: $chord_progression.audio
+  tone_synth:
+    op: media_studio/audio:ToneSynth
+    title: Synthesize Tone
+    inputs:
+      waveform: square
