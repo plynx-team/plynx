@@ -217,6 +217,25 @@ class FakeExecutor:
                 options=["foo", "woo"],
                 allow_freeform=False,
             )
+        if request.op == "standard_io/demo:SecretCodeChallenge":
+            answers = request.inputs.checkpoint_answers
+            attempt = 0
+            while f"cp_{attempt}" in answers and answers[f"cp_{attempt}"] != "42":
+                attempt += 1
+            if f"cp_{attempt}" not in answers:
+                prompt_in = request.inputs.inputs.get("prompt")
+                base_prompt = (
+                    str(prompt_in.value)
+                    if isinstance(prompt_in, ScalarValue) and prompt_in.value
+                    else "Select the secret clearance code to proceed:"
+                )
+                return CheckpointManifest(
+                    checkpoint_id=f"cp_{attempt}",
+                    question=f"{base_prompt} (Attempt {attempt + 1})",
+                    options=["007", "42", "404", "90210"],
+                    allow_freeform=False,
+                )
+            return None
         return None
 
     def _resolve_outputs(
@@ -232,6 +251,11 @@ class FakeExecutor:
         if request.op == "standard_io/demo:AskFooOrWoo" and checkpoint is not None:
             answer = request.inputs.checkpoint_answers[checkpoint.checkpoint_id]
             return {"choice": ScalarValue(value=answer)}
+        if request.op == "standard_io/demo:SecretCodeChallenge":
+            return {
+                "code": ScalarValue(value="42"),
+                "message": ScalarValue(value="Access granted: 42 is the ultimate answer!"),
+            }
         return _default_outputs_for_op(request.op, request.inputs)
 
     def _record_and_return(self, request: ExecutionRequest, result: NodeResult) -> NodeResult:

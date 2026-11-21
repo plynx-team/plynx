@@ -56,6 +56,30 @@ def default_fake_ops() -> list[OpEntry]:
             source="builtin_packs/standard_io/src/standard_io/demo.py",
         ),
         OpEntry(
+            id="standard_io/demo:SecretCodeChallenge",
+            pack="standard_io",
+            module="demo",
+            name="SecretCodeChallenge",
+            kind="class",
+            title="Secret Code Challenge",
+            category="Demo",
+            cacheable=False,
+            description="Challenge the user to enter the secret clearance code with interactive checkpoints.",
+            inputs=[
+                InputPortSpec(
+                    name="prompt",
+                    type="str",
+                    required=False,
+                    default="Select the secret clearance code to proceed:",
+                ),
+            ],
+            outputs=[
+                OutputPortSpec(name="code", type="str"),
+                OutputPortSpec(name="message", type="str"),
+            ],
+            source="builtin_packs/standard_io/src/standard_io/demo.py",
+        ),
+        OpEntry(
             id="standard_io/demo:Echo",
             pack="standard_io",
             module="demo",
