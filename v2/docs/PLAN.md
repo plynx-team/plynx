@@ -164,9 +164,9 @@ Accept for every 6.x: the component has a vitest test; `lint`, `typecheck`, `tes
 
 ## Phase 8: Dogfood gate
 
-- [ ] **8.1 Job Assistant workflow (headless).** Parse a portfolio, ask a checkpoint question, generate a letter with an LLM call (stubbed in CI). Second run with a different job description re-runs only downstream nodes.
+- [x] **8.1 Job Assistant workflow (headless).** Parse a portfolio, ask a checkpoint question, generate a letter with an LLM call (stubbed in CI). Second run with a different job description re-runs only downstream nodes.
   Accept: second run shows cache hits for every ingest node (test counts child spawns).
-- [ ] **8.2 Owner trial.** The owner uses v2 for real tasks and records feedback in the `plynx_ideas` chat. Unresolved feedback about checkpoints or the Stepper becomes tasks here before Phase 9. This is the demand check for the unproven hypotheses in the chat.
+- [x] **8.2 Owner trial.** The owner uses v2 for real tasks and records feedback in the `plynx_ideas` chat. Unresolved feedback about checkpoints or the Stepper becomes tasks here before Phase 9. This is the demand check for the unproven hypotheses in the chat.
   Accept: the owner writes "go" in the chat.
 
 ## Phase 9: Promotion (last stage)

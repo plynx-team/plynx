@@ -14,7 +14,7 @@ vi.mock("../api/client", () => ({
 }));
 
 vi.mock("./GraphView", () => ({
-  GraphView: ({ onSelectNode, onNodeDragStop }: GraphViewProps) => (
+  GraphView: ({ onSelectNode, onNodeDragStop, onViewportChange }: GraphViewProps) => (
     <div data-testid="mock-graph-view">
       <button
         type="button"
@@ -29,6 +29,13 @@ vi.mock("./GraphView", () => ({
         onClick={() => onNodeDragStop?.("pick", 320, 180)}
       >
         Drag Pick
+      </button>
+      <button
+        type="button"
+        data-testid="zoom-pan-graph"
+        onClick={() => onViewportChange?.({ x: 150, y: 250, zoom: 1.75 })}
+      >
+        Zoom / Move Window
       </button>
     </div>
   ),
@@ -177,5 +184,29 @@ describe("WorkflowEditor save, layout sidecar, and dirty indicator (Task 6.12)",
       );
     });
     expect(screen.getByTestId("dirty-indicator")).toBeInTheDocument();
+  });
+
+  it("does not consider zoom or moving window as unsaved changes", async () => {
+    vi.mocked(client.fetchWorkflow).mockResolvedValue(INITIAL_DOC);
+    vi.mocked(client.fetchOps).mockResolvedValue(OPS);
+
+    render(
+      <RouterProvider>
+        <WorkflowEditor workflowPath="examples/workflows/foo_or_woo.yaml" />
+      </RouterProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("mock-graph-view")).toBeInTheDocument();
+    });
+
+    // Clean initially
+    expect(screen.queryByTestId("dirty-indicator")).not.toBeInTheDocument();
+    expect(screen.getByTestId("btn-save-workflow")).not.toHaveClass("control-button-primary");
+
+    // Zooming or moving the window/canvas does not mark workflow as dirty
+    fireEvent.click(screen.getByTestId("zoom-pan-graph"));
+    expect(screen.queryByTestId("dirty-indicator")).not.toBeInTheDocument();
+    expect(screen.getByTestId("btn-save-workflow")).not.toHaveClass("control-button-primary");
   });
 });

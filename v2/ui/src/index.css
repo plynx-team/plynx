@@ -592,22 +592,35 @@ textarea:read-only {
   color: rgba(235, 235, 235, 0.75);
   bottom: 16px;
   left: 56px;
-  line-height: normal;
+  max-width: calc(100% - 280px);
   display: flex;
-  align-items: baseline;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  line-height: normal;
   pointer-events: none;
   user-select: none;
 }
 
 .BackgroundLabels > .Title {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 600;
+  line-height: 1.25;
+  color: rgba(235, 235, 235, 0.85);
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .BackgroundLabels > .Description {
-  font-size: 16px;
+  font-size: 13px;
+  line-height: 1.45;
   color: var(--text-secondary);
+  overflow-wrap: break-word;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .flow-node {

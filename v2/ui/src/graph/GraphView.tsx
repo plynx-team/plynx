@@ -300,7 +300,7 @@ function GraphCanvasInner({
       }
       externalOnNodesChange?.(changes);
     },
-    [readOnly, externalOnNodesChange],
+    [readOnly, externalOnNodesChange, onMeasuredDimensionsChange],
   );
 
   const handleMoveEnd: OnMoveEnd | undefined = onViewportChange
@@ -413,7 +413,9 @@ function GraphCanvasInner({
       <div className="BackgroundLabels">
         <div className="Title">{effectiveWorkflow.name}</div>
         {effectiveWorkflow.description && (
-          <div className="Description">{effectiveWorkflow.description}</div>
+          <div className="Description" title={effectiveWorkflow.description}>
+            {effectiveWorkflow.description}
+          </div>
         )}
       </div>
 

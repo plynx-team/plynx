@@ -91,7 +91,8 @@ function serializeSnapshot(
   workflow: Workflow | null,
   layout: WorkflowLayout | null,
 ): string {
-  return JSON.stringify({ workflow, layout });
+  const nodes = layout?.nodes ?? {};
+  return JSON.stringify({ workflow, nodes });
 }
 
 function isEditableElement(target: EventTarget | null): boolean {
@@ -970,22 +971,6 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     [opsMap, commitStateChange],
   );
 
-  const handleViewportChange = useCallback(
-    (viewport: { x: number; y: number; zoom: number }) => {
-      setLayout((prev) => {
-        const base = prev ?? {
-          schema: 1 as const,
-          nodes: {},
-          viewport: { x: 0, y: 0, zoom: 1 },
-        };
-        return {
-          ...base,
-          viewport,
-        };
-      });
-    },
-    [],
-  );
 
   useEffect(() => {
     if (!isDirty) return;
@@ -1578,7 +1563,6 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
                   onStageDragStop={handleStageDragStop}
                   onDropOp={handleDropOp}
                   onWireDropOnPane={handleWireDropOnPane}
-                  onViewportChange={handleViewportChange}
                   onLiteralChange={handleInlineLiteralChange}
                   onPreviewOutput={handlePreviewNodeOutput}
                   onMeasuredDimensionsChange={(dims) => {
