@@ -73,6 +73,25 @@ describe("WorkflowPicker component", () => {
     });
   });
 
+  it("links row to stepper view by default and Graph button to graph view", async () => {
+    render(
+      <RouterProvider>
+        <WorkflowPicker />
+      </RouterProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Foo or Woo Demo")).toBeDefined();
+    });
+
+    const card = screen.getByTestId("workflow-card-examples/workflows/foo_or_woo.yaml");
+    expect(card).toHaveAttribute("href", "#/editor/examples/workflows/foo_or_woo.yaml?view=stepper");
+
+    const graphBtn = screen.getByTestId("edit-workflow-examples/workflows/foo_or_woo.yaml");
+    fireEvent.click(graphBtn);
+    expect(window.location.hash).toBe("#/editor/examples/workflows/foo_or_woo.yaml?view=graph");
+  });
+
   it("opens New Workflow modal and creates a workflow navigating to editor", async () => {
     const saveSpy = vi.spyOn(client, "saveWorkflow").mockResolvedValue({
       workflow: {

@@ -125,7 +125,7 @@ export function WorkflowPicker() {
           filtered.map((wf) => (
             <Link
               key={wf.path}
-              to={`/editor/${wf.path}`}
+              to={`/editor/${wf.path}?view=stepper`}
               data-testid={`workflow-card-${wf.path}`}
               className="list-item"
               style={{
@@ -164,9 +164,9 @@ export function WorkflowPicker() {
               >
                 <ControlButton
                   icon="grid"
-                  text="Edit Graph"
+                  text="Graph"
                   data-testid={`edit-workflow-${wf.path}`}
-                  onClick={() => navigate(`/editor/${wf.path}`)}
+                  onClick={() => navigate(`/editor/${wf.path}?view=graph`)}
                 />
                 <ControlButton
                   icon="play"

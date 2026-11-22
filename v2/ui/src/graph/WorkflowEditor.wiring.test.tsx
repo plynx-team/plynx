@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OpEntry, WorkflowDocument } from "../api/types.gen";
 import { RouterProvider } from "../router/Router";
 import type { GraphViewProps } from "./GraphView";
@@ -128,6 +128,10 @@ import { WorkflowEditor } from "./WorkflowEditor";
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+});
+
+beforeEach(() => {
+  window.location.hash = "#/editor/examples/workflows/wire_demo.yaml?view=graph";
 });
 
 const OPS: Array<OpEntry> = [

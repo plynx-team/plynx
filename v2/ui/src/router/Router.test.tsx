@@ -1,6 +1,6 @@
 import { describe, expect, it, afterEach } from "vitest";
 import { render, screen, fireEvent, act, cleanup } from "@testing-library/react";
-import { RouterProvider, useRouter, Link, matchRoute } from "./Router";
+import { RouterProvider, useRouter, Link, matchRoute, parseHash } from "./Router";
 
 afterEach(() => {
   cleanup();
@@ -83,5 +83,19 @@ describe("Router and Link component", () => {
       window.dispatchEvent(new HashChangeEvent("hashchange"));
     });
     expect(screen.getByTestId("current-path").textContent).toBe("/workflows");
+  });
+
+  it("parses hash with query parameters into pathname and queryParams", () => {
+    const res = parseHash("#/editor/sample.yaml?view=graph&run_id=run-1");
+    expect(res.pathname).toBe("/editor/sample.yaml");
+    expect(res.search).toBe("?view=graph&run_id=run-1");
+    expect(res.queryParams).toEqual({
+      view: "graph",
+      run_id: "run-1",
+    });
+
+    const empty = parseHash("");
+    expect(empty.pathname).toBe("/workflows");
+    expect(empty.queryParams).toEqual({});
   });
 });

@@ -7,12 +7,16 @@ export interface RouteMatch {
 
 export interface RouterContextValue {
   currentPath: string;
+  search: string;
+  queryParams: Record<string, string>;
   params: Record<string, string>;
-  navigate: (path: string) => void;
+  navigate: (path: string, options?: { replace?: boolean }) => void;
 }
 
 const RouterContext = createContext<RouterContextValue>({
   currentPath: "/workflows",
+  search: "",
+  queryParams: {},
   params: {},
   navigate: () => {},
 });
@@ -21,9 +25,42 @@ export function useRouter(): RouterContextValue {
   return useContext(RouterContext);
 }
 
-function parseHash(hash: string): string {
+export function parseQueryString(search: string): Record<string, string> {
+  const params: Record<string, string> = {};
+  if (!search) return params;
+  const clean = search.startsWith("?") ? search.slice(1) : search;
+  for (const part of clean.split("&")) {
+    if (!part) continue;
+    const [key, value] = part.split("=");
+    if (key) {
+      params[decodeURIComponent(key)] = value !== undefined ? decodeURIComponent(value) : "";
+    }
+  }
+  return params;
+}
+
+export interface ParsedRoute {
+  pathname: string;
+  search: string;
+  queryParams: Record<string, string>;
+}
+
+export function parseHash(hash: string): ParsedRoute {
   const clean = hash.replace(/^#\/?/, "");
-  return clean ? `/${clean}` : "/workflows";
+  if (!clean) {
+    return { pathname: "/workflows", search: "", queryParams: {} };
+  }
+  const qIndex = clean.indexOf("?");
+  if (qIndex === -1) {
+    return { pathname: `/${clean}`, search: "", queryParams: {} };
+  }
+  const rawPath = clean.slice(0, qIndex);
+  const rawSearch = clean.slice(qIndex);
+  return {
+    pathname: `/${rawPath}`,
+    search: rawSearch,
+    queryParams: parseQueryString(rawSearch),
+  };
 }
 
 export function matchRoute(
@@ -70,13 +107,15 @@ export function matchRoute(
 }
 
 export function RouterProvider({ children }: { children: React.ReactNode }) {
-  const [currentPath, setCurrentPath] = useState<string>(() =>
-    typeof window !== "undefined" ? parseHash(window.location.hash) : "/workflows",
+  const [route, setRoute] = useState<ParsedRoute>(() =>
+    typeof window !== "undefined"
+      ? parseHash(window.location.hash)
+      : { pathname: "/workflows", search: "", queryParams: {} },
   );
 
   useEffect(() => {
     const handleHashChange = () => {
-      setCurrentPath(parseHash(window.location.hash));
+      setRoute(parseHash(window.location.hash));
     };
 
     window.addEventListener("hashchange", handleHashChange);
@@ -85,15 +124,24 @@ export function RouterProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const navigate = (path: string) => {
+  const navigate = (path: string, options?: { replace?: boolean }) => {
     const target = path.startsWith("/") ? path : `/${path}`;
-    window.location.hash = `#${target}`;
+    if (options?.replace && typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.hash = `#${target}`;
+      window.history.replaceState(null, "", url);
+      setRoute(parseHash(url.hash));
+    } else {
+      window.location.hash = `#${target}`;
+    }
   };
 
   return (
     <RouterContext.Provider
       value={{
-        currentPath,
+        currentPath: route.pathname,
+        search: route.search,
+        queryParams: route.queryParams,
         params: {},
         navigate,
       }}
@@ -119,9 +167,10 @@ export function Link({
 }: LinkProps) {
   const { currentPath, navigate } = useRouter();
   const target = to.startsWith("/") ? to : `/${to}`;
+  const targetPathname = target.split("?")[0];
   const isActive =
-    currentPath === target ||
-    (target !== "/runs" && currentPath.startsWith(target));
+    currentPath === targetPathname ||
+    (targetPathname !== "/runs" && currentPath.startsWith(targetPathname));
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     // Let browser handle modifier clicks (Cmd+Click, Ctrl+Click, Shift+Click, middle click, etc.)

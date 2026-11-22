@@ -103,8 +103,15 @@ function isEditableElement(target: EventTarget | null): boolean {
 }
 
 export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
-  const { navigate } = useRouter();
-  const [viewMode, setViewMode] = useState<EditorViewMode>("graph");
+  const { navigate, queryParams } = useRouter();
+  const getInitialViewMode = (): EditorViewMode => {
+    const v = queryParams?.view;
+    if (v === "graph" || v === "runs" || v === "stepper") {
+      return v;
+    }
+    return "stepper";
+  };
+  const [viewMode, setViewMode] = useState<EditorViewMode>(getInitialViewMode);
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
   const [layout, setLayout] = useState<WorkflowLayout | null>(null);
   const [history, setHistory] = useState<WorkflowHistory | null>(null);
@@ -127,7 +134,9 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   const [fitViewTrigger, setFitViewTrigger] = useState<number>(0);
   const [ops, setOps] = useState<Array<OpEntry>>([]);
   const [workflowRuns, setWorkflowRuns] = useState<Array<RunSummary>>([]);
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(
+    () => queryParams?.run_id || null,
+  );
   const isInspectingRun = selectedRunId !== null;
   const [selectedRun, setSelectedRun] = useState<RunState | null>(null);
   const [runsCollapsed, setRunsCollapsed] = useState<boolean>(false);
@@ -170,6 +179,11 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     return map;
   }, [ops]);
 
+  const queryRunIdRef = useRef<string | null>(queryParams?.run_id || null);
+  useEffect(() => {
+    queryRunIdRef.current = queryParams?.run_id || null;
+  }, [queryParams?.run_id]);
+
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -181,10 +195,11 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     setSelectedEdgeId(undefined);
     setSelectedStageId(undefined);
     setStageToDelete(null);
-    setSelectedRunId(null);
+    const initialRunId = queryRunIdRef.current;
+    setSelectedRunId(initialRunId);
     setSelectedRun(null);
     setRunsCollapsed(false);
-    setOpsCollapsed(false);
+    setOpsCollapsed(Boolean(initialRunId));
     setWireError(null);
 
     Promise.all([fetchWorkflow(workflowPath), fetchOps()])
@@ -707,19 +722,76 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     [handleUpdateNodeSpec],
   );
 
-  const handleSelectRun = useCallback((nextRunId: string | null) => {
-    setSelectedRunId(nextRunId);
-    setSelectedEdgeId(undefined);
-    setSelectedStageId(undefined);
-    if (nextRunId !== null) {
-      setOpsCollapsed(true);
-      setRunsCollapsed(false);
-      setViewMode((prev) => (prev === "runs" ? "graph" : prev));
-    } else {
-      setSelectedRun(null);
-      setOpsCollapsed(false);
+  const syncUrlParams = useCallback(
+    (newView: EditorViewMode, newRunId: string | null) => {
+      const params = new URLSearchParams();
+      if (newView === "graph" || newView === "runs") {
+        params.set("view", newView);
+      } else if (newView === "stepper" && (newRunId || queryParams?.view === "stepper")) {
+        params.set("view", "stepper");
+      }
+      if (newRunId) {
+        params.set("run_id", newRunId);
+      }
+      const qs = params.toString();
+      const nextUrl = `/editor/${workflowPath}${qs ? `?${qs}` : ""}`;
+      navigate(nextUrl, { replace: true });
+    },
+    [workflowPath, queryParams?.view, navigate],
+  );
+
+  const handleToggleViewMode = useCallback(
+    (mode: EditorViewMode) => {
+      setViewMode(mode);
+      syncUrlParams(mode, selectedRunId);
+    },
+    [selectedRunId, syncUrlParams],
+  );
+
+  const handleSelectRun = useCallback(
+    (nextRunId: string | null) => {
+      setSelectedRunId(nextRunId);
+      setSelectedEdgeId(undefined);
+      setSelectedStageId(undefined);
+      let nextView = viewMode;
+      if (nextRunId !== null) {
+        setOpsCollapsed(true);
+        setRunsCollapsed(false);
+        if (viewMode === "runs") {
+          nextView = "stepper";
+          setViewMode("stepper");
+        }
+      } else {
+        setSelectedRun(null);
+        setOpsCollapsed(false);
+      }
+      syncUrlParams(nextView, nextRunId);
+    },
+    [viewMode, syncUrlParams],
+  );
+
+  useEffect(() => {
+    const v = queryParams?.view;
+    if (v === "graph" || v === "runs" || v === "stepper") {
+      setViewMode(v);
+    } else if (!v) {
+      setViewMode("stepper");
     }
-  }, []);
+
+    const targetRunId = queryParams?.run_id || null;
+    setSelectedRunId((prev) => {
+      if (prev !== targetRunId) {
+        if (targetRunId !== null) {
+          setOpsCollapsed(true);
+        } else {
+          setSelectedRun(null);
+          setOpsCollapsed(false);
+        }
+        return targetRunId;
+      }
+      return prev;
+    });
+  }, [queryParams?.view, queryParams?.run_id]);
 
   useEffect(() => {
     if (!selectedRunId || typeof fetchRunState !== "function") {
@@ -1148,21 +1220,9 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
           <button
             type="button"
             role="tab"
-            aria-selected={viewMode === "graph"}
-            onClick={() => setViewMode("graph")}
-            className={`control-button first ${
-              viewMode === "graph" ? "selected" : ""
-            }`}
-          >
-            <FeatherIcon name="grid" size={14} />
-            <span className="control-button-text">Graph</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
             aria-selected={viewMode === "stepper"}
-            onClick={() => setViewMode("stepper")}
-            className={`control-button ${
+            onClick={() => handleToggleViewMode("stepper")}
+            className={`control-button first ${
               viewMode === "stepper" ? "selected" : ""
             }`}
           >
@@ -1172,8 +1232,20 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
           <button
             type="button"
             role="tab"
+            aria-selected={viewMode === "graph"}
+            onClick={() => handleToggleViewMode("graph")}
+            className={`control-button ${
+              viewMode === "graph" ? "selected" : ""
+            }`}
+          >
+            <FeatherIcon name="grid" size={14} />
+            <span className="control-button-text">Graph</span>
+          </button>
+          <button
+            type="button"
+            role="tab"
             aria-selected={viewMode === "runs"}
-            onClick={() => setViewMode("runs")}
+            onClick={() => handleToggleViewMode("runs")}
             className={`control-button last ${
               viewMode === "runs" ? "selected" : ""
             }`}

@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OpEntry, WorkflowDocument } from "../api/types.gen";
 import { RouterProvider } from "../router/Router";
 import { WorkflowEditor } from "./WorkflowEditor";
@@ -39,6 +39,10 @@ beforeAll(() => {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+});
+
+beforeEach(() => {
+  window.location.hash = "#/editor/examples/workflows/sample.yaml?view=graph";
 });
 
 const MOCK_OPS: Array<OpEntry> = [
@@ -452,6 +456,77 @@ describe("WorkflowEditor palette & node operations (Task 6.9)", () => {
         expect(screen.queryByTestId("unsaved-run-confirm-dialog")).not.toBeInTheDocument();
         expect(screen.getByTestId("run-inputs-modal")).toBeInTheDocument();
         expect(screen.getByTestId("badge-unsaved-draft")).toBeInTheDocument();
+      });
+    });
+
+    it("defaults to Stepper view mode when visiting without view param and updates URL on tab toggle", async () => {
+      window.location.hash = "#/editor/examples/workflows/sample.yaml";
+      vi.mocked(client.fetchWorkflow).mockResolvedValue(MOCK_DOC);
+      vi.mocked(client.fetchOps).mockResolvedValue(MOCK_OPS);
+
+      render(
+        <RouterProvider>
+          <WorkflowEditor workflowPath="examples/workflows/sample.yaml" />
+        </RouterProvider>,
+      );
+
+      // In default Stepper view, Stepper tab is selected
+      await waitFor(() => {
+        const stepperTab = screen.getByRole("tab", { name: "Stepper" });
+        expect(stepperTab).toHaveAttribute("aria-selected", "true");
+      });
+      // Graph node is not in the document while in Stepper view
+      expect(screen.queryByTestId("graph-node-echo")).not.toBeInTheDocument();
+
+      // Clicking Graph tab switches to Graph view and updates URL hash
+      const graphTab = screen.getByRole("tab", { name: "Graph" });
+      fireEvent.click(graphTab);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("graph-node-echo")).toBeInTheDocument();
+        expect(window.location.hash).toBe("#/editor/examples/workflows/sample.yaml?view=graph");
+      });
+    });
+
+    it("initializes in Run Inspection mode when run_id is in URL query parameters", async () => {
+      window.location.hash = "#/editor/examples/workflows/sample.yaml?view=graph&run_id=20261120-120000-run1";
+      vi.mocked(client.fetchWorkflow).mockResolvedValue(MOCK_DOC);
+      vi.mocked(client.fetchOps).mockResolvedValue(MOCK_OPS);
+      vi.mocked(client.fetchRunState).mockResolvedValue({
+        id: "20261120-120000-run1",
+        workflow_path: "examples/workflows/sample.yaml",
+        workflow_sha256: "sha1",
+        status: "SUCCESS",
+        run_inputs: {},
+        cancel_requested: false,
+        pinned: false,
+        created_at: 1700000000,
+        started_at: 1700000000,
+        finished_at: 1700000005,
+        nodes: {
+          echo: {
+            node_id: "echo",
+            status: "SUCCESS",
+            cache_hit: true,
+            attempt: 1,
+          },
+        },
+        checkpoints: [],
+        stage_gates: {},
+      });
+
+      render(
+        <RouterProvider>
+          <WorkflowEditor workflowPath="examples/workflows/sample.yaml" />
+        </RouterProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("run-mode-hud")).toBeInTheDocument();
+        expect(screen.getByTestId("graph-node-echo")).toHaveAttribute(
+          "data-node-status",
+          "SUCCESS",
+        );
       });
     });
   });
