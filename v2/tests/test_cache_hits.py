@@ -252,3 +252,58 @@ def test_non_cacheable_op_is_never_cached(tmp_path: Path) -> None:
     assert state2.status == RunStatus.SUCCESS
     assert executor.spawn_count == 1
     assert state2.nodes["uncached"].cache_hit is False
+
+
+def test_resume_respects_no_cache_option(tmp_path: Path) -> None:
+    """scheduler.resume() uses cache by default and skips cache when options.no_cache=True."""
+    store = RunStore(tmp_path)
+    executor = CountingExecutor()
+    registry = _build_registry()
+    scheduler = Scheduler(store, executor, registry=registry)
+    wf = _cacheable_workflow()
+    wf_yaml = (
+        b"version: 1\nname: cache_flow\nnodes:\n"
+        b"  step1:\n    op: test/ops:ProduceFile\n    inputs: {}\n"
+        b"  step2:\n    op: test/ops:Echo\n    inputs:\n      text: hello\n"
+    )
+
+    # 1. Populate cache with a full run.
+    state1 = asyncio.run(scheduler.run(wf, workflow_bytes=wf_yaml))
+    assert state1.status == RunStatus.SUCCESS
+    assert executor.spawn_count == 2
+
+    # 2. Create a failed run where step2 still needs to run; resume with no_cache=False (default).
+    run_cached = store.create_run(
+        workflow_path="wf.yaml",
+        workflow_bytes=wf_yaml,
+        node_ids=["step1", "step2"],
+        status=RunStatus.FAILED,
+    )
+    store.update_node_status(run_cached, "step1", NodeStatus.FAILED, attempt=1, error="err")
+    store.update_node_status(run_cached, "step2", NodeStatus.PENDING, attempt=0)
+
+    executor.spawn_count = 0
+    resumed_cached = asyncio.run(scheduler.resume(run_cached, options=SchedulerOptions()))
+    assert resumed_cached.status == RunStatus.SUCCESS
+    assert executor.spawn_count == 0
+    assert resumed_cached.nodes["step1"].cache_hit is True
+    assert resumed_cached.nodes["step2"].cache_hit is True
+
+    # 3. Create another failed run and resume with no_cache=True; both nodes must execute.
+    run_uncached = store.create_run(
+        workflow_path="wf.yaml",
+        workflow_bytes=wf_yaml,
+        node_ids=["step1", "step2"],
+        status=RunStatus.FAILED,
+    )
+    store.update_node_status(run_uncached, "step1", NodeStatus.FAILED, attempt=1, error="err")
+    store.update_node_status(run_uncached, "step2", NodeStatus.PENDING, attempt=0)
+
+    executor.spawn_count = 0
+    resumed_uncached = asyncio.run(
+        scheduler.resume(run_uncached, options=SchedulerOptions(no_cache=True))
+    )
+    assert resumed_uncached.status == RunStatus.SUCCESS
+    assert executor.spawn_count == 2
+    assert resumed_uncached.nodes["step1"].cache_hit is False
+    assert resumed_uncached.nodes["step2"].cache_hit is False

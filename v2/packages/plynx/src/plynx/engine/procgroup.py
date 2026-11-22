@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import csv
 import os
 import signal
 import subprocess
@@ -95,18 +96,27 @@ def kill_process_group(pid: int) -> None:
         os.kill(pid, sigkill)
 
 
+def _parse_windows_tasklist_csv(output: str, pid: int) -> bool:
+    """Return True if ``tasklist /FO CSV /NH`` output contains an exact match for ``pid``."""
+    target = str(pid)
+    for row in csv.reader(output.splitlines()):
+        if len(row) >= 2 and row[1].strip() == target:
+            return True
+    return False
+
+
 def is_pid_alive(pid: int) -> bool:
-    """Return ``True`` if a non-zombie process with ``pid`` is currently alive."""
+    """Return ``True`` if a process with ``pid`` is currently alive."""
     if pid <= 0:
         return False
     if _IS_WINDOWS:
         res = subprocess.run(
-            ["tasklist", "/FI", f"PID eq {pid}", "/NH"],
+            ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
             capture_output=True,
             text=True,
             check=False,
         )
-        return str(pid) in res.stdout
+        return _parse_windows_tasklist_csv(res.stdout, pid)
 
     try:
         os.kill(pid, 0)
@@ -116,18 +126,7 @@ def is_pid_alive(pid: int) -> bool:
         return True
     except OSError:
         return False
-
-    # On POSIX, check that the process is not a defunct zombie ('Z').
-    res = subprocess.run(
-        ["ps", "-o", "stat=", "-p", str(pid)],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    stat_str = res.stdout.strip()
-    if not stat_str:
-        return False
-    return not stat_str.upper().startswith("Z")
+    return True
 
 
 __all__ = [

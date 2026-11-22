@@ -1530,3 +1530,121 @@ def test_event_log_read_from_offset_handles_partial_trailing_line(tmp_path: Path
     assert len(final_events) == 1
     assert final_events[0].seq == 2
     assert final_offset == event_log.path.stat().st_size
+
+
+def test_server_background_task_crash_marks_run_failed(tmp_path: Path) -> None:
+    """An unexpected exception in a background run task marks the run FAILED and emits an event."""
+    from plynx.engine.executor import ExecutionRequest, Executor, LaunchHandle, NodeResult
+
+    class CrashingExecutor(Executor):
+        async def run(self, request: ExecutionRequest) -> NodeResult:
+            raise RuntimeError("unexpected executor crash")
+
+        async def launch(self, request: ExecutionRequest) -> LaunchHandle:
+            raise NotImplementedError
+
+    wf_dir = tmp_path / "workflows"
+    wf_dir.mkdir(parents=True)
+    (wf_dir / "echo.yaml").write_text(
+        """version: 1
+name: echo_crash
+nodes:
+  n1:
+    op: standard_io/demo:Echo
+    inputs:
+      text: hello
+""",
+        encoding="utf-8",
+    )
+
+    app = create_app(tmp_path, executor_factory=lambda _ws: CrashingExecutor())
+
+    async def _test() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await client.post(
+                "/runs",
+                json={"workflow_path": "workflows/echo.yaml", "inputs": {}},
+            )
+            assert resp.status_code == 201
+            run_id = resp.json()["run_id"]
+
+            deadline = time.monotonic() + 5.0
+            state_data: dict[str, object] = {}
+            while time.monotonic() < deadline:
+                state_resp = await client.get(f"/runs/{run_id}")
+                state_data = state_resp.json()
+                if state_data.get("status") == "FAILED":
+                    break
+                await asyncio.sleep(0.02)
+
+            assert state_data["status"] == "FAILED"
+            assert "unexpected executor crash" in str(state_data.get("error", ""))
+            assert state_data["owner_pid"] is None
+
+            events = RunStore(tmp_path).event_log(run_id).read_after(0)
+            assert events
+            assert events[-1].type == "run_status"
+            assert getattr(events[-1].data, "status", None) == RunStatus.FAILED
+
+    asyncio.run(_test())
+
+
+def test_server_lifespan_shutdown_cancels_active_runs(tmp_path: Path) -> None:
+    """Exiting the FastAPI lifespan requests cancellation and awaits active background runs."""
+    from plynx.engine.executor import ExecutionRequest, Executor, LaunchHandle, NodeResult
+
+    started_event = asyncio.Event()
+
+    class BlockingExecutor(Executor):
+        async def run(self, request: ExecutionRequest) -> NodeResult:
+            started_event.set()
+            if request.cancel_event is not None:
+                await request.cancel_event.wait()
+            else:
+                await asyncio.sleep(30)
+            return NodeResult(
+                status=NodeStatus.CANCELED,
+                exit_code=-9,
+                started_at=time.time(),
+                finished_at=time.time(),
+                error="canceled",
+            )
+
+        async def launch(self, request: ExecutionRequest) -> LaunchHandle:
+            raise NotImplementedError
+
+    wf_dir = tmp_path / "workflows"
+    wf_dir.mkdir(parents=True)
+    (wf_dir / "slow.yaml").write_text(
+        """version: 1
+name: slow_shutdown
+nodes:
+  n1:
+    op: standard_io/demo:Echo
+    inputs:
+      text: hello
+""",
+        encoding="utf-8",
+    )
+
+    app = create_app(tmp_path, executor_factory=lambda _ws: BlockingExecutor())
+
+    async def _test() -> None:
+        async with app.router.lifespan_context(app):
+            transport = httpx.ASGITransport(app=app)
+            async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+                resp = await client.post(
+                    "/runs",
+                    json={"workflow_path": "workflows/slow.yaml", "inputs": {}},
+                )
+                assert resp.status_code == 201
+                run_id = resp.json()["run_id"]
+                await asyncio.wait_for(started_event.wait(), timeout=5.0)
+                assert len(app.state.background_tasks) == 1
+
+        store = RunStore(tmp_path)
+        assert store.is_cancel_requested(run_id) is True
+        assert len(app.state.background_tasks) == 0
+
+    asyncio.run(_test())

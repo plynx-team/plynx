@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import ipaddress
 import json
+import logging
 import os
 import re
 import tempfile
 import time
 from collections.abc import AsyncIterator, Callable, MutableMapping
+from contextlib import asynccontextmanager
 from io import StringIO
 from pathlib import Path
 from typing import Any
@@ -37,6 +40,7 @@ from plynx.api_models import (
     RunListResponse,
     RunState,
     RunStatus,
+    RunStatusData,
     RunStatusEvent,
     StageApproveRequest,
     StageGateKind,
@@ -70,6 +74,7 @@ MAX_UPLOAD_SIZE_BYTES: int = 100 * 1024 * 1024  # 100 MiB
 UPLOAD_CHUNK_SIZE: int = 64 * 1024  # 64 KiB
 SSE_POLL_INTERVAL_SECONDS: float = 0.1
 _PORT_NAME_RE: re.Pattern[str] = re.compile(r"^[a-z][a-z0-9_]*$")
+logger = logging.getLogger(__name__)
 
 
 def _error_response(status_code: int, code: str, message: str) -> JSONResponse:
@@ -263,8 +268,64 @@ def create_app(
     store.reconcile_dead_owners()
     op_registry: OpRegistry = Registry(ws_root) if registry is None else registry
     background_tasks: set[asyncio.Task[Any]] = set()
+    active_run_tasks: dict[asyncio.Task[Any], str] = {}
 
-    app = FastAPI(title="PLynx", version="2.0.0")
+    def _track_run_task(run_id: str, task: asyncio.Task[Any]) -> None:
+        background_tasks.add(task)
+        active_run_tasks[task] = run_id
+
+        def _on_done(done_task: asyncio.Task[Any]) -> None:
+            background_tasks.discard(done_task)
+            active_run_tasks.pop(done_task, None)
+            if done_task.cancelled():
+                return
+            exc = done_task.exception()
+            if exc is None:
+                return
+            logger.exception("Background run task crashed for run %s", run_id, exc_info=exc)
+            try:
+                status = store.get_run_status(run_id)
+                if status not in TERMINAL_RUN_STATUSES:
+                    err_msg = f"Unexpected engine error: {type(exc).__name__}: {exc}"
+                    store.update_run_status(
+                        run_id,
+                        RunStatus.FAILED,
+                        finished_at=time.time(),
+                        error=err_msg,
+                    )
+                    store.release_ownership(run_id)
+                    if store.run_dir(run_id).is_dir():
+                        store.event_log(run_id).append(
+                            "run_status",
+                            RunStatusData(
+                                run_id=run_id,
+                                status=RunStatus.FAILED,
+                                error=err_msg,
+                            ),
+                        )
+            except Exception:
+                logger.exception("Failed to record crash status for run %s", run_id)
+
+        task.add_done_callback(_on_done)
+
+    @asynccontextmanager
+    async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        yield
+        tasks_snapshot = list(active_run_tasks.items())
+        if not tasks_snapshot:
+            return
+        for _task, active_run_id in tasks_snapshot:
+            with contextlib.suppress(Exception):
+                await asyncio.to_thread(store.request_cancel, active_run_id)
+        pending_tasks = [t for t, _ in tasks_snapshot if not t.done()]
+        if pending_tasks:
+            _done, still_pending = await asyncio.wait(pending_tasks, timeout=5.0)
+            for pending in still_pending:
+                pending.cancel()
+            if still_pending:
+                await asyncio.gather(*still_pending, return_exceptions=True)
+
+    app = FastAPI(title="PLynx", version="2.0.0", lifespan=_lifespan)
 
     origins = allowed_origins if allowed_origins is not None else (DEV_ORIGINS if dev_mode else [])
     if origins:
@@ -556,8 +617,7 @@ def create_app(
                 options=opts,
             )
         )
-        background_tasks.add(task)
-        task.add_done_callback(background_tasks.discard)
+        _track_run_task(run_id, task)
         return CreateRunResponse(run_id=run_id)
 
     @router.post("/runs/{run_id}/cancel")
@@ -604,10 +664,9 @@ def create_app(
 
         executor = executor_factory(ws_root)
         scheduler = Scheduler(store, executor, op_registry)
-        opts = SchedulerOptions(no_cache=True)
+        opts = SchedulerOptions()
         task = asyncio.create_task(scheduler.resume(resolved_id, options=opts))
-        background_tasks.add(task)
-        task.add_done_callback(background_tasks.discard)
+        _track_run_task(resolved_id, task)
         return CreateRunResponse(run_id=resolved_id)
 
     async def _auto_resume_if_unowned(resolved_id: str) -> None:
@@ -623,10 +682,9 @@ def create_app(
             return
         executor = executor_factory(ws_root)
         scheduler = Scheduler(store, executor, op_registry)
-        opts = SchedulerOptions(no_cache=True)
+        opts = SchedulerOptions()
         task = asyncio.create_task(scheduler.resume(resolved_id, options=opts))
-        background_tasks.add(task)
-        task.add_done_callback(background_tasks.discard)
+        _track_run_task(resolved_id, task)
 
     @router.post("/runs/{run_id}/checkpoints/{node_id}/{checkpoint_id}/answer")
     async def answer_checkpoint_endpoint(

@@ -266,6 +266,7 @@ class InputDirectoryValue:
     path: str
     tree_sha256: str
     kind: Literal["directory"] = "directory"
+    entries: list[DirectoryEntry] | None = None
 
     def __post_init__(self) -> None:
         self.validate()
@@ -280,25 +281,46 @@ class InputDirectoryValue:
         _validate_non_empty_str(
             self.tree_sha256, field_name="tree_sha256", context="InputDirectoryValue"
         )
+        if self.entries is not None:
+            if not isinstance(self.entries, list):
+                raise ProtocolError("InputDirectoryValue: 'entries' must be a list or None")
+            for entry in self.entries:
+                if not isinstance(entry, DirectoryEntry):
+                    raise ProtocolError("InputDirectoryValue: every entry must be a DirectoryEntry")
+                entry.validate()
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to a validated JSON-ready dictionary."""
         self.validate()
-        return {
+        out: dict[str, Any] = {
             "kind": self.kind,
             "path": self.path,
             "tree_sha256": self.tree_sha256,
         }
+        if self.entries is not None:
+            out["entries"] = [e.to_dict() for e in self.entries]
+        return out
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> InputDirectoryValue:
         """Validate and construct from a dictionary."""
-        _check_keys(data, required={"kind", "path", "tree_sha256"}, context="InputDirectoryValue")
+        _check_keys(
+            data,
+            required={"kind", "path", "tree_sha256"},
+            optional={"entries"},
+            context="InputDirectoryValue",
+        )
         if data["kind"] != "directory":
             raise ProtocolError(
                 f"InputDirectoryValue: expected kind 'directory', got {data['kind']!r}"
             )
-        return cls(path=data["path"], tree_sha256=data["tree_sha256"])
+        raw_entries = data.get("entries")
+        entries: list[DirectoryEntry] | None = None
+        if raw_entries is not None:
+            if not isinstance(raw_entries, list):
+                raise ProtocolError("InputDirectoryValue: 'entries' must be a list")
+            entries = [DirectoryEntry.from_dict(item) for item in raw_entries]
+        return cls(path=data["path"], tree_sha256=data["tree_sha256"], entries=entries)
 
     def to_json(self) -> str:
         """Serialize to a validated JSON string."""

@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import contextlib
-import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from plynx_sdk.protocol import (
+    InputDirectoryValue,
     InputFileValue,
     InputsManifest,
     ResultDirectoryValue,
@@ -17,7 +17,7 @@ from plynx_sdk.protocol import (
     ResultManifest,
 )
 
-from plynx.cas.blob_store import BlobStore, hash_file, make_writable
+from plynx.cas.blob_store import BlobStore, make_writable
 from plynx.cas.materialize import safe_rmtree
 from plynx.store.run_store import RunStore
 
@@ -50,6 +50,28 @@ def _extract_shas_from_result_json(raw_json: str) -> Iterable[str]:
         pass
 
 
+def _collect_node_dir_referenced_shas(node_dir: Path) -> set[str]:
+    """Collect blob sha256 hashes referenced by ``result.json`` and ``inputs.json``."""
+    referenced: set[str] = set()
+    res_file = node_dir / "result.json"
+    if res_file.is_file():
+        with contextlib.suppress(Exception):
+            text = res_file.read_text(encoding="utf-8")
+            for sha in _extract_shas_from_result_json(text):
+                referenced.add(sha)
+    inp_file = node_dir / "inputs.json"
+    if inp_file.is_file():
+        with contextlib.suppress(Exception):
+            inp_manifest = InputsManifest.from_json(inp_file.read_bytes())
+            for inp_val in inp_manifest.inputs.values():
+                if isinstance(inp_val, InputFileValue):
+                    referenced.add(inp_val.sha256)
+                elif isinstance(inp_val, InputDirectoryValue) and inp_val.entries:
+                    for entry in inp_val.entries:
+                        referenced.add(entry.sha256)
+    return referenced
+
+
 def clean(
     workspace_root: Path,
     *,
@@ -59,15 +81,23 @@ def clean(
     blob_store: BlobStore | None = None,
 ) -> CleanResult:
     """Perform mark-and-sweep cleanup on runs, cache_index, and content-addressed blobs."""
+    if days < 0:
+        raise ValueError(f"days must be non-negative, got {days}")
+
     active_store = store or RunStore(workspace_root)
     active_blob_store = blob_store or BlobStore.from_workspace(workspace_root)
     cutoff_ts = time.time() - (days * 86400.0)
 
-    # 1. Identify old unpinned runs
+    # 1. Identify old unpinned runs (excluding active runs: RUNNING, WAITING_FOR_USER, PENDING)
     old_unpinned_runs: list[str] = []
     with active_store._connect() as conn:
         rows = conn.execute(
-            "SELECT id FROM runs WHERE pinned = 0 AND created_at < ?",
+            """
+            SELECT id FROM runs
+            WHERE pinned = 0
+              AND status NOT IN ('RUNNING', 'WAITING_FOR_USER', 'PENDING')
+              AND created_at < ?
+            """,
             (cutoff_ts,),
         ).fetchall()
         old_unpinned_runs = [str(r["id"]) for r in rows]
@@ -107,11 +137,16 @@ def clean(
             for sha in _extract_shas_from_result_json(str(r["result_json"])):
                 referenced_shas.add(sha)
 
-    # Mark from surviving runs (pinned OR created_at >= cutoff_ts)
+    # Mark from surviving runs (pinned OR created_at >= cutoff_ts OR active status)
     surviving_run_ids: set[str] = set()
     with active_store._connect() as conn:
         surv_rows = conn.execute(
-            "SELECT id FROM runs WHERE pinned = 1 OR created_at >= ?",
+            """
+            SELECT id FROM runs
+            WHERE pinned = 1
+               OR created_at >= ?
+               OR status IN ('RUNNING', 'WAITING_FOR_USER', 'PENDING')
+            """,
             (cutoff_ts,),
         ).fetchall()
         surviving_run_ids = {str(r["id"]) for r in surv_rows}
@@ -128,30 +163,7 @@ def clean(
             for node_dir in nodes_dir.iterdir():
                 if not node_dir.is_dir():
                     continue
-                # Result manifest
-                res_file = node_dir / "result.json"
-                if res_file.is_file():
-                    with contextlib.suppress(Exception):
-                        text = res_file.read_text(encoding="utf-8")
-                        for sha in _extract_shas_from_result_json(text):
-                            referenced_shas.add(sha)
-                # Inputs manifest
-                inp_file = node_dir / "inputs.json"
-                if inp_file.is_file():
-                    with contextlib.suppress(Exception):
-                        inp_manifest = InputsManifest.from_json(inp_file.read_bytes())
-                        for inp_val in inp_manifest.inputs.values():
-                            if isinstance(inp_val, InputFileValue):
-                                referenced_shas.add(inp_val.sha256)
-                # Any materialized inputs on disk
-                inp_dir = node_dir / "inputs"
-                if inp_dir.is_dir():
-                    for root, _, files in os.walk(inp_dir):
-                        for f in files:
-                            fp = Path(root) / f
-                            with contextlib.suppress(Exception):
-                                sha, _ = hash_file(fp)
-                                referenced_shas.add(sha)
+                referenced_shas.update(_collect_node_dir_referenced_shas(node_dir))
 
     # 4. Sweep phase: delete unreferenced blobs
     blobs_deleted = 0

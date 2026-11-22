@@ -56,3 +56,34 @@ time.sleep(60)
         kill_process_group(proc.pid)
         with contextlib.suppress(Exception):
             proc.wait(timeout=2.0)
+
+
+def test_is_pid_alive_windows_exact_pid_match() -> None:
+    """Windows tasklist CSV parsing matches exact PIDs, not substrings."""
+    from plynx.engine.procgroup import _parse_windows_tasklist_csv
+
+    csv_output = '"python.exe","1234","Console","1","12,340 K"\n'
+    assert _parse_windows_tasklist_csv(csv_output, 1234) is True
+    assert _parse_windows_tasklist_csv(csv_output, 12) is False
+    assert _parse_windows_tasklist_csv(csv_output, 234) is False
+    assert _parse_windows_tasklist_csv("INFO: No tasks are running.\n", 12) is False
+
+
+def test_is_pid_alive_posix_uses_no_subprocess(monkeypatch: object) -> None:
+    """On POSIX, is_pid_alive uses os.kill(pid, 0) without spawning a ps subprocess."""
+    import os
+    import subprocess
+
+    import pytest
+
+    if sys.platform == "win32":
+        return
+
+    assert isinstance(monkeypatch, pytest.MonkeyPatch)
+
+    def _forbid_subprocess(*args: object, **kwargs: object) -> object:
+        raise AssertionError("is_pid_alive must not spawn subprocesses on POSIX")
+
+    monkeypatch.setattr(subprocess, "run", _forbid_subprocess)
+    assert is_pid_alive(os.getpid()) is True
+    assert is_pid_alive(-1) is False

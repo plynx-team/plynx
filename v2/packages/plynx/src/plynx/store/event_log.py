@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import time
@@ -15,28 +16,67 @@ from pydantic import BaseModel, TypeAdapter
 from plynx.api_models import EventType, RunEvent
 
 _RUN_EVENT_ADAPTER: TypeAdapter[RunEvent] = TypeAdapter(RunEvent)
+_TAIL_CHUNK_SIZE = 4096
 
 
 @contextmanager
 def _file_lock(lock_path: Path, *, timeout: float = 10.0) -> Iterator[None]:
-    """Acquire an exclusive cross-process lock via atomic ``O_CREAT | O_EXCL``."""
+    """Acquire an exclusive cross-process OS advisory lock (POSIX ``flock`` / Windows ``msvcrt``).
+
+    OS-managed file locks are released automatically by the kernel if a writer process is killed.
+    """
     lock_path.parent.mkdir(parents=True, exist_ok=True)
-    deadline = time.monotonic() + timeout
-    fd: int | None = None
-    while True:
-        try:
-            fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-            break
-        except FileExistsError:
-            if time.monotonic() >= deadline:
-                raise TimeoutError(f"Timed out waiting for event log lock: {lock_path}") from None
-            time.sleep(0.001)
+    handle = lock_path.open("a+b")
     try:
-        yield
+        if os.name == "nt":
+            import msvcrt
+
+            handle.seek(0, os.SEEK_END)
+            if handle.tell() == 0:
+                handle.write(b"0")
+                handle.flush()
+            deadline = time.monotonic() + timeout
+            while True:
+                handle.seek(0)
+                try:
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)  # type: ignore[attr-defined]
+                    break
+                except OSError:
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError(
+                            f"Timed out waiting for event log lock: {lock_path}"
+                        ) from None
+                    time.sleep(0.005)
+        else:
+            import fcntl
+
+            deadline = time.monotonic() + timeout
+            while True:
+                try:
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    break
+                except BlockingIOError:
+                    if time.monotonic() >= deadline:
+                        raise TimeoutError(
+                            f"Timed out waiting for event log lock: {lock_path}"
+                        ) from None
+                    time.sleep(0.005)
+        try:
+            yield
+        finally:
+            if os.name == "nt":
+                import msvcrt
+
+                handle.seek(0)
+                with contextlib.suppress(OSError):
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)  # type: ignore[attr-defined]
+            else:
+                import fcntl
+
+                with contextlib.suppress(OSError):
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
     finally:
-        if fd is not None:
-            os.close(fd)
-        lock_path.unlink(missing_ok=True)
+        handle.close()
 
 
 class EventLog:
@@ -45,21 +85,47 @@ class EventLog:
     def __init__(self, path: Path) -> None:
         self.path = path
         self._lock_path = path.with_name(f"{path.name}.lock")
+        self._last_seq: int | None = None
+        self._last_size: int | None = None
 
-    def _read_last_seq_unlocked(self) -> int:
-        if not self.path.is_file():
+    def _read_last_seq_from_tail_unlocked(self, file_size: int) -> int:
+        """Read the highest ``seq`` from the end of ``events.jsonl`` in O(1) for normal lines."""
+        if file_size <= 0 or not self.path.is_file():
             return 0
-        last_seq = 0
-        with self.path.open("r", encoding="utf-8") as handle:
-            for raw_line in handle:
-                line = raw_line.strip()
-                if not line:
-                    continue
-                obj = json.loads(line)
-                seq = obj.get("seq")
-                if isinstance(seq, int) and seq > last_seq:
-                    last_seq = seq
-        return last_seq
+        with self.path.open("rb") as handle:
+            pos = file_size
+            buf = b""
+            while pos > 0:
+                read_size = min(_TAIL_CHUNK_SIZE, pos)
+                pos -= read_size
+                handle.seek(pos)
+                buf = handle.read(read_size) + buf
+                # Split lines; if we have at least one complete line (or reached start of file),
+                # scan backwards for the last valid JSON object with an int seq.
+                lines = buf.splitlines()
+                start_idx = 0 if pos == 0 else 1
+                for raw_line in reversed(lines[start_idx:]):
+                    stripped = raw_line.strip()
+                    if not stripped:
+                        continue
+                    try:
+                        obj = json.loads(stripped.decode("utf-8", errors="replace"))
+                    except json.JSONDecodeError:
+                        continue
+                    seq = obj.get("seq")
+                    if isinstance(seq, int):
+                        return seq
+        return 0
+
+    def _next_seq_unlocked(self) -> int:
+        if not self.path.is_file():
+            return 1
+        file_size = self.path.stat().st_size
+        if file_size == 0:
+            return 1
+        if self._last_seq is not None and self._last_size == file_size:
+            return self._last_seq + 1
+        return self._read_last_seq_from_tail_unlocked(file_size) + 1
 
     def append(
         self,
@@ -76,7 +142,7 @@ class EventLog:
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
         with _file_lock(self._lock_path):
-            seq = self._read_last_seq_unlocked() + 1
+            seq = self._next_seq_unlocked()
             envelope: dict[str, Any] = {
                 "seq": seq,
                 "ts": event_ts,
@@ -93,6 +159,8 @@ class EventLog:
                 handle.write(serialized + "\n")
                 handle.flush()
                 os.fsync(handle.fileno())
+                self._last_seq = seq
+                self._last_size = handle.tell()
             return event
 
     def read_after(self, after_seq: int = 0) -> list[RunEvent]:

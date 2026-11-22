@@ -5,6 +5,9 @@ from __future__ import annotations
 import json
 import multiprocessing
 import sqlite3
+import subprocess
+import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -233,6 +236,73 @@ def test_wal_access_from_two_processes(tmp_path: Path) -> None:
     for nid in nodes_a + nodes_b:
         assert state.nodes[nid].status == NodeStatus.SUCCESS
         assert state.nodes[nid].exit_code == 0
+
+
+def _run_inputs_updater_worker(workspace_str: str, run_id: str, prefix: str, count: int) -> bool:
+    """Child process target that merges disjoint keys into run_inputs concurrently."""
+    store = RunStore(Path(workspace_str))
+    for i in range(count):
+        store.update_run_inputs(run_id, {f"{prefix}_{i}": i})
+    return True
+
+
+def test_event_log_recovers_after_killed_writer(tmp_path: Path) -> None:
+    """If a writer is killed with SIGKILL while holding the lock, the next writer recovers cleanly."""
+    events_path = tmp_path / "events.jsonl"
+    lock_path = tmp_path / "events.jsonl.lock"
+    ready_file = tmp_path / "lock_ready.txt"
+
+    holder_code = f"""
+import time
+from pathlib import Path
+from plynx.store.event_log import _file_lock
+
+with _file_lock(Path({str(lock_path)!r})):
+    Path({str(ready_file)!r}).write_text("locked", encoding="utf-8")
+    time.sleep(30)
+"""
+    proc = subprocess.Popen([sys.executable, "-c", holder_code])
+    try:
+        deadline = time.monotonic() + 10.0
+        while not ready_file.is_file() and time.monotonic() < deadline:
+            time.sleep(0.02)
+        assert ready_file.is_file(), "Lock holder subprocess did not acquire lock in time"
+
+        # Abruptly SIGKILL the writer while it holds the lock.
+        proc.kill()
+        proc.wait(timeout=5)
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait()
+
+    log = EventLog(events_path)
+    ev1 = log.append("run_status", {"run_id": "r1", "status": "RUNNING"})
+    ev2 = log.append("run_status", {"run_id": "r1", "status": "SUCCESS"})
+    assert ev1.seq == 1
+    assert ev2.seq == 2
+
+
+def test_update_run_inputs_concurrent_processes(tmp_path: Path) -> None:
+    """Concurrent update_run_inputs calls preserve all updates via BEGIN IMMEDIATE."""
+    store = RunStore(tmp_path)
+    run_id = store.create_run(
+        workflow_path="workflows/test.yaml",
+        workflow_bytes=b"version: 1\n",
+        node_ids=[],
+    )
+    per_worker = 15
+    ctx = multiprocessing.get_context("spawn")
+    with ctx.Pool(processes=2) as pool:
+        r1 = pool.apply_async(_run_inputs_updater_worker, (str(tmp_path), run_id, "a", per_worker))
+        r2 = pool.apply_async(_run_inputs_updater_worker, (str(tmp_path), run_id, "b", per_worker))
+        assert r1.get(timeout=20) is True
+        assert r2.get(timeout=20) is True
+
+    state = store.get_run_state(run_id)
+    assert state is not None
+    expected = {f"a_{i}": i for i in range(per_worker)} | {f"b_{i}": i for i in range(per_worker)}
+    assert state.run_inputs == expected
 
 
 def test_stage_gates_and_prefix_resolution(tmp_path: Path) -> None:

@@ -3,42 +3,17 @@
 from __future__ import annotations
 
 import contextlib
-import os
-import re
-from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from ruamel.yaml import YAML
-
-from plynx.cas.blob_store import BlobStore, hash_file, make_writable
-from plynx.cas.clean import _extract_shas_from_result_json
+from plynx.cas.blob_store import BlobStore, make_writable
+from plynx.cas.clean import _collect_node_dir_referenced_shas, _extract_shas_from_result_json
+from plynx.config import load_workspace_config, parse_size_bytes
 from plynx.store.run_store import RunStore
 
 if TYPE_CHECKING:
     pass
-
-_SIZE_RE = re.compile(r"^\s*([0-9]+(?:\.[0-9]+)?)\s*([a-zA-Z]*)\s*$")
-
-_SIZE_UNITS: dict[str, int] = {
-    "": 1,
-    "b": 1,
-    "byte": 1,
-    "bytes": 1,
-    "k": 1024,
-    "kb": 1024,
-    "kib": 1024,
-    "m": 1024**2,
-    "mb": 1024**2,
-    "mib": 1024**2,
-    "g": 1024**3,
-    "gb": 1024**3,
-    "gib": 1024**3,
-    "t": 1024**4,
-    "tb": 1024**4,
-    "tib": 1024**4,
-}
 
 
 @dataclass
@@ -53,65 +28,16 @@ class BudgetResult:
     dry_run: bool = False
 
 
-def parse_size_bytes(val: str | int | float) -> int:
-    """Parse a size representation into integer bytes.
-
-    Supports integer bytes or strings with unit suffixes (e.g. '10GB', '500MB', '100KB').
-    """
-    if isinstance(val, (int, float)):
-        if val < 0:
-            raise ValueError(f"Size must be non-negative, got {val}")
-        return int(val)
-
-    match = _SIZE_RE.match(val)
-    if not match:
-        raise ValueError(f"Invalid size string: {val!r}")
-
-    number_str, unit_str = match.groups()
-    unit = unit_str.lower()
-    if unit not in _SIZE_UNITS:
-        raise ValueError(f"Unknown size unit {unit_str!r} in {val!r}")
-
-    bytes_per_unit = _SIZE_UNITS[unit]
-    number = float(number_str)
-    return int(number * bytes_per_unit)
-
-
 def load_cache_max_size(workspace_root: Path) -> int | None:
     """Read ``cache.max_size`` from ``<workspace_root>/plynx.yaml`` if present."""
-    cfg_path = workspace_root / "plynx.yaml"
-    if not cfg_path.is_file():
-        return None
-    yaml = YAML(typ="safe")
-    try:
-        parsed = yaml.load(cfg_path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-    if not isinstance(parsed, Mapping):
-        return None
-    raw_cache = parsed.get("cache")
-    if isinstance(raw_cache, Mapping):
-        max_size_val = raw_cache.get("max_size")
-        if max_size_val is not None:
-            try:
-                return parse_size_bytes(max_size_val)
-            except ValueError:
-                return None
-    elif isinstance(raw_cache, (str, int)):
-        try:
-            return parse_size_bytes(raw_cache)
-        except ValueError:
-            return None
-    return None
+    return load_workspace_config(workspace_root).cache_max_size
 
 
 def _collect_run_referenced_shas(store: RunStore) -> set[str]:
-    """Collect all blob sha256 hashes referenced by existing runs on disk."""
+    """Collect all blob sha256 hashes referenced by existing run manifests on disk."""
     referenced: set[str] = set()
     if not store.runs_dir.is_dir():
         return referenced
-
-    from plynx_sdk.protocol import InputFileValue, InputsManifest
 
     for run_dir in store.runs_dir.iterdir():
         if not run_dir.is_dir():
@@ -122,27 +48,7 @@ def _collect_run_referenced_shas(store: RunStore) -> set[str]:
         for node_dir in nodes_dir.iterdir():
             if not node_dir.is_dir():
                 continue
-            res_file = node_dir / "result.json"
-            if res_file.is_file():
-                with contextlib.suppress(Exception):
-                    text = res_file.read_text(encoding="utf-8")
-                    for sha in _extract_shas_from_result_json(text):
-                        referenced.add(sha)
-            inp_file = node_dir / "inputs.json"
-            if inp_file.is_file():
-                with contextlib.suppress(Exception):
-                    inp_manifest = InputsManifest.from_json(inp_file.read_bytes())
-                    for inp_val in inp_manifest.inputs.values():
-                        if isinstance(inp_val, InputFileValue):
-                            referenced.add(inp_val.sha256)
-            inp_dir = node_dir / "inputs"
-            if inp_dir.is_dir():
-                for root, _, files in os.walk(inp_dir):
-                    for f in files:
-                        fp = Path(root) / f
-                        with contextlib.suppress(Exception):
-                            sha, _ = hash_file(fp)
-                            referenced.add(sha)
+            referenced.update(_collect_node_dir_referenced_shas(node_dir))
     return referenced
 
 
@@ -247,3 +153,11 @@ def enforce_cache_budget(
         max_size=effective_max_size,
         dry_run=dry_run,
     )
+
+
+__all__ = [
+    "BudgetResult",
+    "enforce_cache_budget",
+    "load_cache_max_size",
+    "parse_size_bytes",
+]

@@ -317,3 +317,131 @@ def test_clean_directory_output_entries_survive(tmp_path: Path) -> None:
     assert result.blobs_deleted == 0
     assert blob_store.blob_path(sha_file_a).exists()
     assert blob_store.blob_path(sha_file_b).exists()
+
+
+def test_clean_active_runs_protected_even_if_old(tmp_path: Path) -> None:
+    """Active runs (RUNNING, WAITING_FOR_USER, PENDING) are preserved regardless of age."""
+    store = RunStore(tmp_path)
+    blob_store = BlobStore.from_workspace(tmp_path)
+    now = time.time()
+    old_time = now - (30 * 86400)
+
+    active_statuses = ["RUNNING", "WAITING_FOR_USER", "PENDING"]
+    blob_shas = []
+
+    for status in active_statuses:
+        sha, _ = blob_store.put_bytes(f"active-{status}-data".encode())
+        blob_shas.append(sha)
+        run_id = generate_run_id(now=old_time)
+        with store._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO runs (id, workflow_path, workflow_sha256, status, created_at, pinned)
+                VALUES (?, 'wf.yaml', 'sha_wf', ?, ?, 0)
+                """,
+                (run_id, status, old_time),
+            )
+        run_dir = store.run_dir(run_id)
+        _create_node_run_files(
+            run_dir,
+            "n_active",
+            result_manifest=_make_result_manifest(
+                outputs={
+                    "res": ResultFileValue(
+                        sha256=sha,
+                        size_bytes=10,
+                        media=None,
+                        filename="out.txt",
+                    )
+                }
+            ),
+        )
+
+    res = clean(tmp_path, days=14, store=store, blob_store=blob_store)
+    assert res.runs_deleted == 0
+    assert res.blobs_deleted == 0
+    for sha in blob_shas:
+        assert blob_store.blob_path(sha).exists()
+
+
+def test_clean_rejects_negative_days(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """clean rejects negative days parameter and CLI exits non-zero."""
+    with pytest.raises(ValueError, match="non-negative"):
+        clean(tmp_path, days=-1)
+
+    monkeypatch.chdir(tmp_path)
+    RunStore(tmp_path)
+    runner = CliRunner()
+    res = runner.invoke(main, ["clean", "--days", "-1"])
+    assert res.exit_code != 0
+
+
+def test_clean_and_budget_use_manifests_without_rehashing_inputs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """GC and budget protect file and directory input blobs via manifests without hashing disk."""
+    import plynx.cas.blob_store as blob_store_mod
+    from plynx.cas.budget import enforce_cache_budget
+    from plynx_sdk.protocol import InputDirectoryValue, InputFileValue
+
+    store = RunStore(tmp_path)
+    blob_store = BlobStore.from_workspace(tmp_path)
+    now = time.time()
+
+    sha_file_in, size_file_in = blob_store.put_bytes(b"input-file-bytes")
+    sha_dir_a, size_dir_a = blob_store.put_bytes(b"dir-entry-a")
+    sha_orphan, _ = blob_store.put_bytes(b"orphan-to-delete")
+
+    run_id = generate_run_id(now=now)
+    with store._connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO runs (id, workflow_path, workflow_sha256, status, created_at, pinned)
+            VALUES (?, 'wf.yaml', 'sha_wf', 'SUCCESS', ?, 0)
+            """,
+            (run_id, now),
+        )
+    run_dir = store.run_dir(run_id)
+    _create_node_run_files(
+        run_dir,
+        "n1",
+        inputs_manifest=InputsManifest(
+            inputs={
+                "doc": InputFileValue(
+                    path="inputs/doc/a.txt",
+                    sha256=sha_file_in,
+                    size_bytes=size_file_in,
+                ),
+                "frames": InputDirectoryValue(
+                    path="inputs/frames",
+                    tree_sha256="dummy_tree",
+                    entries=[DirectoryEntry(path="a.txt", sha256=sha_dir_a, size_bytes=size_dir_a)],
+                ),
+            }
+        ),
+    )
+    # Place materialized files in inputs/ to verify they are never hashed during GC/budget.
+    mat_dir = run_dir / "nodes" / "n1" / "inputs" / "doc"
+    mat_dir.mkdir(parents=True, exist_ok=True)
+    (mat_dir / "a.txt").write_bytes(b"input-file-bytes")
+
+    def _forbid_hash_file(*args: object, **kwargs: object) -> object:
+        raise AssertionError("hash_file must not be called during clean or budget enforcement")
+
+    monkeypatch.setattr(blob_store_mod, "hash_file", _forbid_hash_file)
+
+    budget_res = enforce_cache_budget(
+        tmp_path,
+        max_size=1,
+        dry_run=True,
+        store=store,
+        blob_store=blob_store,
+    )
+    # Only the orphan blob is eligible for eviction; both input blobs are protected.
+    assert budget_res.blobs_evicted == 1
+
+    clean_res = clean(tmp_path, days=14, store=store, blob_store=blob_store)
+    assert clean_res.blobs_deleted == 1
+    assert not blob_store.exists(sha_orphan)
+    assert blob_store.exists(sha_file_in)
+    assert blob_store.exists(sha_dir_a)

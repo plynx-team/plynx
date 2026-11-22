@@ -138,7 +138,6 @@ class RunStore:
         conn.row_factory = sqlite3.Row
         try:
             conn.execute("PRAGMA busy_timeout=5000;")
-            conn.execute("PRAGMA journal_mode=WAL;")
             conn.execute("PRAGMA foreign_keys=ON;")
             yield conn
         finally:
@@ -146,6 +145,7 @@ class RunStore:
 
     def _ensure_initialized(self) -> None:
         with self._connect() as conn:
+            conn.execute("PRAGMA journal_mode=WAL;")
             conn.execute("BEGIN IMMEDIATE;")
             try:
                 row = conn.execute("PRAGMA user_version;").fetchone()
@@ -662,19 +662,25 @@ class RunStore:
     ) -> dict[str, Any]:
         """Merge ``new_inputs`` into the run's ``run_inputs_json`` and update the manifest."""
         with self._connect() as conn:
-            row = conn.execute(
-                "SELECT run_inputs_json FROM runs WHERE id = ?",
-                (run_id,),
-            ).fetchone()
-            if row is None:
-                raise RunNotFoundError(f"Run {run_id!r} not found")
-            existing: dict[str, Any] = json.loads(str(row["run_inputs_json"] or "{}"))
-            existing.update(new_inputs)
-            merged_json = json.dumps(existing, ensure_ascii=False, sort_keys=True)
-            conn.execute(
-                "UPDATE runs SET run_inputs_json = ? WHERE id = ?",
-                (merged_json, run_id),
-            )
+            conn.execute("BEGIN IMMEDIATE;")
+            try:
+                row = conn.execute(
+                    "SELECT run_inputs_json FROM runs WHERE id = ?",
+                    (run_id,),
+                ).fetchone()
+                if row is None:
+                    raise RunNotFoundError(f"Run {run_id!r} not found")
+                existing: dict[str, Any] = json.loads(str(row["run_inputs_json"] or "{}"))
+                existing.update(new_inputs)
+                merged_json = json.dumps(existing, ensure_ascii=False, sort_keys=True)
+                conn.execute(
+                    "UPDATE runs SET run_inputs_json = ? WHERE id = ?",
+                    (merged_json, run_id),
+                )
+                conn.execute("COMMIT;")
+            except BaseException:
+                conn.execute("ROLLBACK;")
+                raise
         manifest_path = self.run_dir(run_id) / "run_manifest.json"
         if manifest_path.is_file():
             try:

@@ -70,7 +70,7 @@ Goal: `pip install plynx` or `uv tool install plynx` works cleanly inside any ex
   - Replace 20ms (`50Hz`) full-file `events.jsonl` re-reads + full `workflow.snapshot.yaml` YAML/Pydantic reparsing with byte-offset tailing and lightweight status checks (e.g. `100–200ms` or event-driven notification).
   - **Accept:** Resumed run streams live events to completion; benchmark/test confirms SSE idle tick does not re-parse `workflow.snapshot.yaml`.
 
-- [ ] **R2.2 Harden `EventLog`, SQLite concurrency, GC, and server lifecycle.**
+- [x] **R2.2 Harden `EventLog`, SQLite concurrency, GC, and server lifecycle.**
   - Replace `O_EXCL` lockfile + O(N²) full-file scan in `store/event_log.py` with `fcntl.flock` / Windows lock + tracked last `seq`.
   - Wrap `update_run_inputs` in `BEGIN IMMEDIATE`; avoid running `PRAGMA journal_mode=WAL` on every single query.
   - Add error-handling callback on server background run tasks (mark run `FAILED` on unexpected crash) and FastAPI `lifespan` shutdown hook to cancel active runs.
