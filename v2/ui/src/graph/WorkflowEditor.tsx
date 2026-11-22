@@ -1467,6 +1467,8 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
               collapsed={runsCollapsed}
               onToggleCollapse={() => setRunsCollapsed((v) => !v)}
               hasUnsavedChanges={isDirty}
+              fullHeight={viewMode !== "graph" || isInspectingRun}
+              pageSize={viewMode !== "graph" || isInspectingRun ? 12 : 6}
             />
             {viewMode === "graph" && !isInspectingRun && (
               <OpPalette

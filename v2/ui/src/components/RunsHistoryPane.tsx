@@ -12,6 +12,7 @@ export interface RunsHistoryPaneProps {
   compactLimit?: number;
   pageSize?: number;
   hasUnsavedChanges?: boolean;
+  fullHeight?: boolean;
 }
 
 function getRunStatusIcon(status: RunStatus): {
@@ -49,14 +50,15 @@ export function RunsHistoryPane({
   collapsed = false,
   onToggleCollapse,
   compactLimit = 2,
-  pageSize = 6,
+  pageSize = 10,
   hasUnsavedChanges = false,
+  fullHeight = false,
 }: RunsHistoryPaneProps) {
   const [page, setPage] = useState<number>(0);
   const [showAllInEditMode, setShowAllInEditMode] = useState<boolean>(false);
 
   const isInspectingRun = selectedRunId !== null;
-  const isExpandedList = isInspectingRun || showAllInEditMode;
+  const isExpandedList = isInspectingRun || showAllInEditMode || fullHeight;
 
   useEffect(() => {
     if (!selectedRunId) {
@@ -84,7 +86,7 @@ export function RunsHistoryPane({
       className={`dock-accordion-section ${
         collapsed
           ? "is-collapsed"
-          : isInspectingRun
+          : isInspectingRun || fullHeight || showAllInEditMode
           ? "is-expanded-full"
           : "is-compact"
       }`}
@@ -293,7 +295,7 @@ export function RunsHistoryPane({
             </div>
           )}
 
-          {showAllInEditMode && !isInspectingRun && runs.length > compactLimit && (
+          {showAllInEditMode && !isInspectingRun && !fullHeight && runs.length > compactLimit && (
             <button
               type="button"
               onClick={() => setShowAllInEditMode(false)}

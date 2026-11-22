@@ -133,7 +133,6 @@ function GraphCanvasInner({
   onLiteralChange,
   onPreviewOutput,
   onMeasuredDimensionsChange,
-  hasSavedViewport,
   fitViewTrigger = 0,
   heightClassName = "h-full",
 }: GraphViewProps) {
@@ -242,13 +241,20 @@ function GraphCanvasInner({
   useEffect(() => {
     if (fitViewTrigger > 0) {
       requestAnimationFrame(() => {
-        void reactFlow.fitView({ padding: 0.2 });
+        void reactFlow.fitView({ padding: 0.2, minZoom: 0.125 });
       });
     }
   }, [fitViewTrigger, reactFlow]);
 
-  const useSavedViewport =
-    hasSavedViewport ?? Boolean(effectiveLayout?.viewport);
+  const initialFitDoneRef = useRef(false);
+  useEffect(() => {
+    if (!initialFitDoneRef.current && rfNodes.length > 0) {
+      initialFitDoneRef.current = true;
+      requestAnimationFrame(() => {
+        void reactFlow.fitView({ padding: 0.2, minZoom: 0.125 });
+      });
+    }
+  }, [rfNodes.length, reactFlow]);
 
   const renderedEdges = useMemo(() => {
     if (!selectedEdgeId) return built.edges;
@@ -423,10 +429,7 @@ function GraphCanvasInner({
         nodes={rfNodes}
         edges={renderedEdges}
         nodeTypes={NODE_TYPES}
-        defaultViewport={
-          useSavedViewport ? (effectiveLayout?.viewport ?? undefined) : undefined
-        }
-        fitView={!useSavedViewport}
+        fitView={true}
         fitViewOptions={{ padding: 0.2, minZoom: 0.125 }}
         minZoom={0.125}
         nodesDraggable={!readOnly}

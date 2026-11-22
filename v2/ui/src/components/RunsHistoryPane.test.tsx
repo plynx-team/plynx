@@ -81,4 +81,29 @@ describe("RunsHistoryPane component (Task 6.19)", () => {
     fireEvent.click(screen.getByTestId("mode-working-draft"));
     expect(onSelectRun).toHaveBeenCalledWith(null);
   });
+
+  it("expands full height and shows full list of runs without compact limit when fullHeight is true", () => {
+    const onSelectRun = vi.fn();
+    render(
+      <RunsHistoryPane
+        runs={SAMPLE_RUNS}
+        selectedRunId={null}
+        onSelectRun={onSelectRun}
+        fullHeight={true}
+        pageSize={10}
+      />,
+    );
+
+    const section = screen.getByTestId("runs-history-pane");
+    expect(section).toHaveClass("is-expanded-full");
+    expect(section).not.toHaveClass("is-compact");
+
+    // All 8 runs should be directly rendered
+    SAMPLE_RUNS.forEach((run) => {
+      expect(screen.getByTestId(`run-history-item-${run.id}`)).toBeInTheDocument();
+    });
+
+    // "Show all N runs…" button should NOT be rendered
+    expect(screen.queryByTestId("runs-show-all-btn")).not.toBeInTheDocument();
+  });
 });
