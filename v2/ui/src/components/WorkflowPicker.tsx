@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchWorkflows } from "../api/client";
 import type { WorkflowListItem } from "../api/types.gen";
-import { useRouter } from "../router/Router";
+import { Link, useRouter } from "../router/Router";
 import {
   ControlButton,
   ControlPanel,
@@ -123,10 +123,10 @@ export function WorkflowPicker() {
           </div>
         ) : (
           filtered.map((wf) => (
-            <div
+            <Link
               key={wf.path}
+              to={`/editor/${wf.path}`}
               data-testid={`workflow-card-${wf.path}`}
-              onClick={() => navigate(`/editor/${wf.path}`)}
               className="list-item"
               style={{
                 gridTemplateColumns:
@@ -157,7 +157,10 @@ export function WorkflowPicker() {
 
               <div
                 className="flex items-center justify-end gap-1.5"
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
               >
                 <ControlButton
                   icon="grid"
@@ -172,7 +175,7 @@ export function WorkflowPicker() {
                   onClick={() => navigate(`/workflows/${wf.path}`)}
                 />
               </div>
-            </div>
+            </Link>
           ))
         )}
       </div>

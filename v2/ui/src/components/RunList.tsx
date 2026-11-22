@@ -176,9 +176,9 @@ export function RunList() {
           </div>
         ) : (
           filteredRuns.map((run) => (
-            <div
+            <Link
               key={run.id}
-              onClick={() => navigate(`/runs/${run.id}`)}
+              to={`/runs/${run.id}`}
               className="list-item"
               style={{
                 gridTemplateColumns:
@@ -201,14 +201,12 @@ export function RunList() {
               </div>
 
               <div className="list-field font-mono text-xs">
-                <Link
-                  to={`/runs/${run.id}`}
-                  onClick={(e) => e.stopPropagation()}
+                <span
                   style={{ color: "var(--color-primary)" }}
                   className="hover:underline font-semibold"
                 >
                   {run.id}
-                </Link>
+                </span>
               </div>
 
               <div
@@ -224,7 +222,7 @@ export function RunList() {
               >
                 {formatTimestamp(run.created_at)}
               </div>
-            </div>
+            </Link>
           ))
         )}
       </div>

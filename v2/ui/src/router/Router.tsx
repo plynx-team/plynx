@@ -124,6 +124,10 @@ export function Link({
     (target !== "/runs" && currentPath.startsWith(target));
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    // Let browser handle modifier clicks (Cmd+Click, Ctrl+Click, Shift+Click, middle click, etc.)
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
+      return;
+    }
     e.preventDefault();
     navigate(target);
     if (onClick) {
