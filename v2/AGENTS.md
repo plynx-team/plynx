@@ -1,33 +1,81 @@
 # AGENTS.md (PLynx v2)
 
-You are building PLynx v2.0.0 in `v2/`. This folder is the project root. The legacy v1 code lives one level up and is reference material only.
+Instructions for AI coding agents working on the PLynx v2 codebase.
+`v2/` is the active project root until Phase 9 promotion. Legacy v1 files one level up are read-only reference.
 
-## Read first, in this order
+## Philosophy
 
-1. `docs/ARCHITECTURE.md`: layout, invariants, non-goals.
-2. `docs/PROTOCOL.md`: exact formats. Code must match it. If they disagree, stop and ask.
-3. `docs/PLAN.md`: do the first unchecked task. Only that task.
-4. `docs/WORKFLOW.md`: git and legacy rules.
-5. `docs/PACK_RULES.md`: before writing any Node Pack or built-in op.
-6. `docs/UI_STYLE.md`: before writing or changing any UI component or stylesheet.
+- **Code-first workflows and operations.** Workflows are plain YAML; operations are plain Python (`Op` or `@op`). Both are Git-friendly, diffable, and easy to read.
+- **Reuse over reinvention.** Build small, general-purpose operations that compose cleanly. Do not overfit core code or built-in packs to one demo use case.
+- **Minimal abstractions.** Use standard library and built-in data structures first. Add a class, protocol, or layer only when current features clearly require it. Code must stay readable by humans.
+- **Human-friendly workflows.** Users should understand, run, and debug workflows without fighting graph clutter or opaque runtime errors. Listen to real user feedback and simplify friction.
+- **Docs match code.** Every change to behavior, CLI flags, API models, schemas, or file layout must update the matching doc in the same commit. Stale docs are bugs.
 
-## Hard rules
+## Read First
 
-- **v2 is the root.** Never write a path that mentions `v2/` or goes outside it (`../`). Run every command from this folder.
-- **Do not touch legacy.** Never edit, rename, move or delete a file outside `v2/`. The `scripts/check_legacy_untouched.py` check must pass before every commit.
-- **No legacy imports.** v2 code never imports the legacy `plynx` package. Copying a legacy file into `v2/` and modifying it is allowed. Record each copy in `docs/LEGACY_MAP.md`.
-- **Types first.** Every seam (SDK to engine, engine to server, server to UI) has a typed definition before it has an implementation. Mock the implementation, never the signature.
-- **One task, one commit.** Small, atomic, tests included. Never mix refactors with features.
-- **Stay inside non-goals.** `docs/ARCHITECTURE.md` lists what not to build. A request that needs a non-goal is a question for the owner.
-- **Simplicity wins.** Standard library first. A new dependency needs a one-line reason in the commit message.
-- **Do not guess.** If a fact, format or behavior is missing from these docs, ask the owner. Do not fill the gap.
-- **Windows is supported.** Use `pathlib`, forward slashes in manifests, no shell-isms, no POSIX-only calls outside the `procgroup` module.
-- **Workflows vs Examples.** Canonical reference/example workflows live in `examples/workflows/` and are tracked in git. The `workflows/` directory is reserved for user runtime workflows and is gitignored (`workflows/*`). Never place duplicate workflow files in both locations.
-- **Dependencies are optional and isolated.** `plynx-sdk` depends on standard library only (`dependencies = []`). The core `plynx` engine requires only lightweight CLI/HTTP packages (`fastapi`, `uvicorn`, `click`, `pydantic`, `ruamel.yaml`). Heavy libraries (e.g. `numpy`, `scipy`, `pedalboard`, `pillow`, `torch`) are declared exclusively inside individual Node Packs (`custom_packs/` or `builtin_packs/`) and installed on-demand into isolated pack virtual environments (`.plynx/envs/`). Users never need to install heavy environments to use Plynx.
+1. [docs/RELEASE_PLAN.md](docs/RELEASE_PLAN.md) — active checklist to ship `v2.0.0`. Do the first unchecked task unless told otherwise.
+2. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — module boundaries, invariants, non-goals.
+3. [docs/PROTOCOL.md](docs/PROTOCOL.md) — exact wire formats, YAML schema, REST API, CLI, SQLite tables.
+4. [docs/WORKFLOW.md](docs/WORKFLOW.md) — git workflow, legacy isolation, and Phase 9 promotion steps.
 
-## Definition of done (every task)
+## Code Structure
 
-- Acceptance criteria in `docs/PLAN.md` pass.
-- `uv run ruff check`, `uv run ruff format --check`, `uv run mypy`, `uv run pytest` pass. For UI work, `npm run lint`, `npm run typecheck`, `npm test` pass in `ui/`.
-- The task's checkbox in `docs/PLAN.md` is ticked in the same commit.
-- Docs changed if behavior changed. One fact lives in one file.
+- `packages/plynx-sdk/src/plynx_sdk/` — zero-dependency SDK (`Op`, `@op`, types, `checkpoint()`, `protocol.py`, child-process `harness.py`). Stdlib only.
+- `packages/plynx/src/plynx/` — core engine and CLI:
+  - `workflow/` — YAML workflow models and static DAG validator.
+  - `registry/` — static AST op extractor (`extractor.py`) and pack discovery (`pack_registry.py`).
+  - `engine/` — `graphlib` scheduler, local `uv` runner, env loader, process-group kill.
+  - `cas/` — content-addressed blob store, cache keys, input materialization, output ingestion, GC.
+  - `store/` — SQLite run/node/checkpoint/cache store and append-only `events.jsonl`.
+  - `server/` — FastAPI REST + SSE server and bundled static UI.
+  - `cli/` — Click CLI (`validate`, `run`, `resume`, `run-node`, `runs`, `ops`, `clean`, `ui`, `init`).
+  - `api_models.py` — Pydantic models that generate `ui/src/api/types.gen.ts`.
+- `builtin_packs/` — core domain-agnostic packs shipped in the `plynx` wheel (`standard_io` only).
+- `examples/` — optional demo packs (`examples/custom_packs/`) and showcase workflows (`examples/workflows/`).
+- `ui/` — React + TypeScript + Vite web app (Stepper + Graph editor + Run inspector). Builds into `packages/plynx/src/plynx/static/`.
+- `scripts/` — `gen_ts_types.py`, `build.py`, `check_legacy_untouched.py`.
+- `tests/` — pytest unit, integration, e2e, and wheel smoke tests.
+
+## Hard Rules
+
+- **Root is `v2/` (until Phase 9).** Run all commands from `v2/`. Never write paths containing `v2/` or `../`.
+- **Do not touch legacy (until Phase 9).** Never modify files outside `v2/` (except `.github/workflows/v2-*.yml`). Verify with `uv run python scripts/check_legacy_untouched.py`.
+- **Keep dependencies light.** `plynx-sdk` must have zero third-party dependencies. Core `plynx` keeps only lightweight CLI/HTTP/YAML packages. Heavy libraries belong only in isolated Node Packs.
+- **No test code in production packages.** Test fakes and demo fixtures live in `tests/`, never in `packages/plynx/src/`.
+- **Cross-platform.** Support Linux, macOS, and Windows. Use `pathlib`, POSIX forward slashes in manifests/outputs, no OS-specific shell commands in core or built-in packs.
+- **Types stay synced.** After changing `api_models.py` or `workflow/models.py`, run `uv run python scripts/gen_ts_types.py` and commit `ui/src/api/types.gen.ts`.
+- **Concise technical English.** Write comments, docstrings, and docs in short, clear, standard engineering English. Avoid fluff and marketing language. Keep one fact in one place.
+- **Do not guess.** If a spec or product call is unclear, stop and ask the owner.
+
+## Verification (Before Every Commit)
+
+Run from `v2/`:
+
+```bash
+uv run ruff check
+uv run ruff format --check
+uv run mypy
+uv run pytest
+uv run python scripts/gen_ts_types.py --check
+uv run python scripts/check_legacy_untouched.py
+```
+
+If `ui/` changed:
+
+```bash
+cd ui && npm run lint && npm run typecheck && npm test
+```
+
+If packaging or `builtin_packs/` changed:
+
+```bash
+uv run python scripts/build.py
+uv run pytest tests/test_wheel.py
+```
+
+## Definition of Done
+
+1. Acceptance criteria for the task pass.
+2. All checks above pass.
+3. Matching docs (`README.md`, `PROTOCOL.md`, `ARCHITECTURE.md`, guides, or `AGENTS.md`) are updated if behavior or structure changed.
+4. Task checkbox in `docs/RELEASE_PLAN.md` is ticked in the same commit.

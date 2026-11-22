@@ -44,10 +44,10 @@ When a v2 task reproduces a legacy feature (cache hit, previewers, parameter wid
 
 Done once, by the owner or under the owner's explicit instruction.
 
-1. Verify: all PLAN.md tasks through 8.2 are ticked, CI is green on all three OSes, the owner wrote "go".
+1. Verify: all tasks in `RELEASE_PLAN.md` (R0–R5) are ticked, CI is green on all three OSes, and the owner gives explicit approval.
 2. `git branch legacy/v1 master` and confirm tag `v1.12.0` exists. Legacy remains reachable there.
-3. Commit 1 on `v2`: delete every top-level path except `.git`, `LICENSE`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `v2/`. (`v2/` has its own `.gitignore`.) That removes `plynx/`, `ui/`, `tests/`, `docs/`, `docker/`, `kubernetes/`, `scripts/`, `data/`, `.circleci/`, `Makefile`, `setup.py`, `setup.cfg`, `requirements*.txt`, `config.yaml`, `template_config.yaml`, `docker-compose*.yml`, `wsgi.py`, `pylintrc`, `MANIFEST.in`, `pyproject.toml`, `uv.lock`, `AGENTS.md`, `README.md`, `CHANGELOG.md`, `.agents/`, `.kb/`, and the rest.
+3. Commit 1 on `v2`: delete every tracked top-level path except `.git`, `.github/`, `LICENSE`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `v2/`. (`v2/` has its own `.gitignore`.) That removes `plynx/`, `ui/`, `tests/`, `docs/`, `docker/`, `kubernetes/`, `scripts/`, `.circleci/`, `.dockerfile`, `.dockerignore`, `.gitmodules`, `.isort.cfg`, `.pre-commit-config.yaml`, `Makefile`, `setup.py`, `setup.cfg`, `requirements*.txt`, `config.yaml`, `template_config.yaml`, `docker-compose*.yml`, `wsgi.py`, `pylintrc`, `MANIFEST.in`, `pyproject.toml`, `AGENTS.md`, `README.md`, `.agents/`, and the rest. Also delete `v2/docs/PLAN.md`, `v2/docs/LEGACY_MAP.md`, `v2/docs/WORKFLOW.md`, `v2/docs/RELEASE_PLAN.md`, and `v2/scripts/check_legacy_untouched.py`.
 4. Commit 2: `git mv v2/* .` and `git mv v2/.[!.]* .` (hidden files). No content edits. Because nothing in `v2/` refers to `v2/`, paths keep working.
-5. Commit 3 (only what must change): CI paths (`working-directory: v2` removed), `README` badges, `CHANGELOG` entry. Rename `.github/workflows/v2-*.yml` to drop the prefix.
-6. Tag `v2.0.0rc1`, run the full suite and the wheel smoke test on all OSes, then tag `v2.0.0` and publish.
+5. Commit 3 (only what must change): remove `working-directory: v2` and `check_legacy_untouched.py` from CI, rename `.github/workflows/v2-*.yml` to drop the prefix, remove temporary `v2/` rules from `AGENTS.md`, update `README.md` clone instructions/badges, and add the `v2.0.0` entry to `CHANGELOG.md`.
+6. Tag `v2.0.0rc1`, run the full suite and the wheel smoke test on all OSes, then publish `plynx-sdk` followed by `plynx` to PyPI and tag `v2.0.0`.
 7. Merge `v2` into `master` as a normal merge (history of both lines is preserved). No force push.

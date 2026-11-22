@@ -1,4 +1,6 @@
-# Plan (PLynx v2.0.0)
+# Plan (PLynx v2.0.0 — Completed Bootstrap)
+
+> **Superseded:** Phases 0–8 are complete. Active pre-release hardening and Phase 9 promotion now live in [RELEASE_PLAN.md](RELEASE_PLAN.md).
 
 Do the first unchecked task. One task = one commit. Tick the box in the same commit. A task is done only when its **Accept** line passes and the checks in `AGENTS.md` pass. If an acceptance line cannot be met, stop and ask.
 
