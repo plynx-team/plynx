@@ -264,9 +264,10 @@ describe("WorkflowEditor palette & node operations (Task 6.9)", () => {
     expect(screen.getByTestId("workspace-center")).toHaveClass(
       "is-inspecting-run",
     );
-    expect(screen.getByTestId("op-palette")).toHaveClass("is-collapsed");
+    // Operations palette is hidden while inspecting a run (Option A)
+    expect(screen.queryByTestId("op-palette")).not.toBeInTheDocument();
 
-    // Clicking Return to Editor restores Clean Blueprint mode and expands Operations palette
+    // Clicking Return to Editor restores Clean Blueprint mode and re-displays Operations palette
     fireEvent.click(screen.getByTestId("btn-return-to-editor"));
     await waitFor(() => {
       expect(screen.queryByTestId("run-mode-hud")).not.toBeInTheDocument();
@@ -275,6 +276,7 @@ describe("WorkflowEditor palette & node operations (Task 6.9)", () => {
       "data-node-status",
       "IDLE",
     );
+    expect(screen.getByTestId("op-palette")).toBeInTheDocument();
     expect(screen.getByTestId("op-palette")).toHaveClass("is-expanded");
   });
 

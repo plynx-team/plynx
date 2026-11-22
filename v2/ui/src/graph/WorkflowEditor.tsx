@@ -1411,13 +1411,15 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
               onToggleCollapse={() => setRunsCollapsed((v) => !v)}
               hasUnsavedChanges={isDirty}
             />
-            <OpPalette
-              ops={ops}
-              onAddOp={(op) => handleAddOp(op)}
-              collapsed={opsCollapsed}
-              onToggleCollapse={() => setOpsCollapsed((v) => !v)}
-              readOnly={isInspectingRun}
-            />
+            {viewMode === "graph" && !isInspectingRun && (
+              <OpPalette
+                ops={ops}
+                onAddOp={(op) => handleAddOp(op)}
+                collapsed={opsCollapsed}
+                onToggleCollapse={() => setOpsCollapsed((v) => !v)}
+                readOnly={isInspectingRun}
+              />
+            )}
           </div>
 
           {/* Center Workspace */}
