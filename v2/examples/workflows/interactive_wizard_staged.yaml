@@ -1,6 +1,7 @@
 version: 1
 name: interactive_wizard_staged
-description: "Interactive onboarding wizard demonstrating AskChoice, MultiStepQuestionnaire with idempotent checkpoints, stage approval gates, TemplateFormat, and MarkdownReport."
+description: "Interactive onboarding wizard demonstrating AskChoice, MultiStepQuestionnaire
+  with idempotent checkpoints, stage approval gates, TemplateFormat, and MarkdownReport."
 stages:
   input_stage:
     title: "1. User Survey & Questionnaire"
