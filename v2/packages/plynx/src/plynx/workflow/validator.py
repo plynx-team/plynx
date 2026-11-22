@@ -15,7 +15,7 @@ from plynx.api_models import (
     ValidationIssue,
     WorkflowInputSpec,
 )
-from plynx.registry import OpRegistry, Registry, find_workspace_root
+from plynx.registry import OpRegistry, PackRegistry, find_workspace_root, is_direct_builtin_pack
 from plynx.workflow.models import NodeRef, Workflow, load_workflow
 
 
@@ -112,16 +112,11 @@ def get_unbound_run_inputs(
     return unbound
 
 
-def validate_workflow(
+def _resolve_node_ops(
     workflow: Workflow,
     registry: OpRegistry,
-    *,
-    run_inputs: dict[str, Any] | None = None,
-) -> list[ValidationIssue]:
-    """Validate ``workflow`` against ``registry`` and return all validation issues."""
-    issues: list[ValidationIssue] = []
-    stage_index = {stage_id: idx for idx, stage_id in enumerate(workflow.stages.keys())}
-
+    issues: list[ValidationIssue],
+) -> dict[str, OpEntry]:
     node_ops: dict[str, OpEntry] = {}
     for node_id, node in workflow.nodes.items():
         op_entry = registry.get(node.op)
@@ -145,8 +140,14 @@ def validate_workflow(
             )
             continue
         node_ops[node_id] = op_entry
+    return node_ops
 
-    # Check uv.lock presence per used pack (PROTOCOL.md section 4)
+
+def _check_pack_lockfiles(
+    node_ops: dict[str, OpEntry],
+    registry: OpRegistry,
+    issues: list[ValidationIssue],
+) -> None:
     discovered_packs: dict[str, Path] = getattr(registry, "discovered_packs", {})
     checked_packs: set[str] = set()
     for op_entry in node_ops.values():
@@ -155,7 +156,11 @@ def validate_workflow(
             continue
         checked_packs.add(pack_name)
         pack_dir = discovered_packs.get(pack_name)
-        if pack_dir is not None and not (pack_dir / "uv.lock").is_file():
+        if (
+            pack_dir is not None
+            and not is_direct_builtin_pack(pack_dir)
+            and not (pack_dir / "uv.lock").is_file()
+        ):
             issues.append(
                 ValidationIssue(
                     severity="warning",
@@ -164,32 +169,41 @@ def validate_workflow(
                 )
             )
 
-    # Check unbound run inputs
+
+def _check_unbound_inputs(
+    workflow: Workflow,
+    node_ops: dict[str, OpEntry],
+    run_inputs: dict[str, Any] | None,
+    issues: list[ValidationIssue],
+) -> None:
     for node_id, node in workflow.nodes.items():
         dst_op = node_ops.get(node_id)
         if dst_op is None:
             continue
         for port in dst_op.inputs:
-            if port.name not in node.inputs:
-                bound_in_run_inputs = False
-                if run_inputs:
-                    bound_in_run_inputs = (
-                        f"{node_id}.{port.name}" in run_inputs or port.name in run_inputs
+            if port.name in node.inputs:
+                continue
+            bound_in_run_inputs = bool(run_inputs and f"{node_id}.{port.name}" in run_inputs)
+            if not bound_in_run_inputs and port.required and port.default is None:
+                issues.append(
+                    ValidationIssue(
+                        severity="warning",
+                        node_id=node_id,
+                        message=(
+                            f"Node '{node_id}': unbound run input '{port.name}' "
+                            f"(type '{port.type}')"
+                        ),
                     )
-                if not bound_in_run_inputs and port.required and port.default is None:
-                    issues.append(
-                        ValidationIssue(
-                            severity="warning",
-                            node_id=node_id,
-                            message=(
-                                f"Node '{node_id}': unbound run input '{port.name}' "
-                                f"(type '{port.type}')"
-                            ),
-                        )
-                    )
+                )
 
-    dep_graph: dict[str, set[str]] = {node_id: set() for node_id in workflow.nodes}
 
+def _validate_node_inputs(
+    workflow: Workflow,
+    node_ops: dict[str, OpEntry],
+    stage_index: dict[str, int],
+    dep_graph: dict[str, set[str]],
+    issues: list[ValidationIssue],
+) -> None:
     for node_id, node in workflow.nodes.items():
         dst_op = node_ops.get(node_id)
         dst_inputs: dict[str, InputPortSpec] = (
@@ -284,6 +298,24 @@ def validate_workflow(
                         )
                     )
 
+
+def validate_workflow(
+    workflow: Workflow,
+    registry: OpRegistry,
+    *,
+    run_inputs: dict[str, Any] | None = None,
+) -> list[ValidationIssue]:
+    """Validate ``workflow`` against ``registry`` and return all validation issues."""
+    issues: list[ValidationIssue] = []
+    stage_index = {stage_id: idx for idx, stage_id in enumerate(workflow.stages.keys())}
+
+    node_ops = _resolve_node_ops(workflow, registry, issues)
+    _check_pack_lockfiles(node_ops, registry, issues)
+    _check_unbound_inputs(workflow, node_ops, run_inputs, issues)
+
+    dep_graph: dict[str, set[str]] = {node_id: set() for node_id in workflow.nodes}
+    _validate_node_inputs(workflow, node_ops, stage_index, dep_graph, issues)
+
     sorter = graphlib.TopologicalSorter(dep_graph)
     try:
         sorter.prepare()
@@ -307,11 +339,12 @@ def validate_workflow_file(
     registry: OpRegistry | None = None,
     *,
     run_inputs: dict[str, Any] | None = None,
+    workspace_root: Path | None = None,
 ) -> list[ValidationIssue]:
     """Load and validate a workflow YAML file, returning any parse or validation issues."""
     if registry is None:
-        workspace_root = find_workspace_root(path.parent)
-        reg: OpRegistry = Registry(workspace_root)
+        ws_root = (workspace_root or find_workspace_root()).resolve()
+        reg: OpRegistry = PackRegistry(ws_root)
     else:
         reg = registry
     try:

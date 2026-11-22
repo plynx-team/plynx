@@ -50,23 +50,10 @@ class NodeResult:
     error: str | None = None
 
 
-@dataclass(frozen=True)
-class LaunchHandle:
-    """Opaque handle returned by ``Executor.launch`` (reserved for post-v2.0.0)."""
-
-    handle_id: str
-    run_id: str
-    node_id: str
-
-
 @runtime_checkable
 class Executor(Protocol):
-    """Protocol implemented by node executors (``FakeExecutor``, ``LocalExecutor``)."""
+    """Protocol implemented by node executors (``LocalExecutor``)."""
 
     async def run(self, request: ExecutionRequest) -> NodeResult:
         """Execute a node attempt and wait for it to finish."""
-        ...
-
-    async def launch(self, request: ExecutionRequest) -> LaunchHandle:
-        """Hand a node to an external engine and return immediately (not implemented in v2.0.0)."""
         ...

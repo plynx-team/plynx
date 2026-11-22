@@ -89,6 +89,138 @@ def materialize_input_directory(
     )
 
 
+def _resolve_expected_port_type(
+    port_name: str,
+    port_types: Mapping[str, str],
+    op_entry: Any,
+) -> str | None:
+    expected_type = port_types.get(port_name)
+    if (
+        expected_type is None
+        and op_entry is not None
+        and op_entry.allow_extra_inputs
+        and op_entry.extra_inputs_type is not None
+    ):
+        return str(op_entry.extra_inputs_type.type)
+    return expected_type
+
+
+def _materialize_node_ref(
+    *,
+    port_name: str,
+    binding: NodeRef,
+    dst_node_dir: Path,
+    completed_outputs: Mapping[str, Mapping[str, ResultValue | OutputValue]],
+    blob_store: BlobStore,
+    workspace_root: Path,
+) -> InputValue | None:
+    src_outs = completed_outputs.get(binding.from_node, {})
+    out_val = src_outs.get(binding.output)
+    if out_val is None:
+        return None
+
+    if isinstance(out_val, ResultFileValue):
+        return materialize_input_file(
+            dst_node_dir=dst_node_dir,
+            port_name=port_name,
+            sha256=out_val.sha256,
+            size_bytes=out_val.size_bytes,
+            filename=out_val.filename,
+            blob_store=blob_store,
+        )
+    if isinstance(out_val, OutputFileValue):
+        src_file = (
+            workspace_root
+            / ".plynx"
+            / "runs"
+            / dst_node_dir.parent.parent.name
+            / "nodes"
+            / binding.from_node
+            / out_val.path
+        )
+        sha, size = blob_store.put_file(src_file)
+        return materialize_input_file(
+            dst_node_dir=dst_node_dir,
+            port_name=port_name,
+            sha256=sha,
+            size_bytes=size,
+            filename=src_file.name,
+            blob_store=blob_store,
+        )
+    if isinstance(out_val, ResultDirectoryValue):
+        return materialize_input_directory(
+            dst_node_dir=dst_node_dir,
+            port_name=port_name,
+            result_dir=out_val,
+            blob_store=blob_store,
+        )
+    if isinstance(out_val, OutputDirectoryValue):
+        src_dir = (
+            workspace_root
+            / ".plynx"
+            / "runs"
+            / dst_node_dir.parent.parent.name
+            / "nodes"
+            / binding.from_node
+            / out_val.path
+        )
+        res_dir = ingest_directory(src_dir, blob_store)
+        return materialize_input_directory(
+            dst_node_dir=dst_node_dir,
+            port_name=port_name,
+            result_dir=res_dir,
+            blob_store=blob_store,
+        )
+    if isinstance(out_val, ScalarValue):
+        return ScalarValue(value=out_val.value)
+    return None
+
+
+def _materialize_literal_binding(
+    *,
+    node_id: str,
+    port_name: str,
+    binding: Any,
+    expected_type: str | None,
+    dst_node_dir: Path,
+    blob_store: BlobStore,
+    workspace_root: Path,
+) -> InputValue:
+    if expected_type == "file" and isinstance(binding, (str, Path)):
+        if not str(binding).strip():
+            raise FileNotFoundError(f"Input '{node_id}.{port_name}': empty file path")
+        raw_path = Path(binding)
+        file_path = raw_path if raw_path.is_absolute() else (workspace_root / raw_path).resolve()
+        if not file_path.is_file():
+            raise FileNotFoundError(f"Input '{node_id}.{port_name}': file not found: {binding}")
+        sha, size = blob_store.put_file(file_path, allow_hardlink=False)
+        return materialize_input_file(
+            dst_node_dir=dst_node_dir,
+            port_name=port_name,
+            sha256=sha,
+            size_bytes=size,
+            filename=file_path.name,
+            blob_store=blob_store,
+        )
+    if expected_type == "directory" and isinstance(binding, (str, Path)):
+        if not str(binding).strip():
+            raise FileNotFoundError(f"Input '{node_id}.{port_name}': empty directory path")
+        raw_path = Path(binding)
+        dir_path = raw_path if raw_path.is_absolute() else (workspace_root / raw_path).resolve()
+        if not dir_path.is_dir():
+            raise FileNotFoundError(
+                f"Input '{node_id}.{port_name}': directory not found: {binding}"
+            )
+        res_dir = ingest_directory(dir_path, blob_store, allow_hardlink=False)
+        return materialize_input_directory(
+            dst_node_dir=dst_node_dir,
+            port_name=port_name,
+            result_dir=res_dir,
+            blob_store=blob_store,
+        )
+    return ScalarValue(value=binding)
+
+
 def materialize_inputs(
     *,
     node_id: str,
@@ -109,131 +241,37 @@ def materialize_inputs(
     """
     op_entry = registry.get(spec.op) if registry is not None else None
     port_types: dict[str, str] = {}
-    port_defaults: dict[str, Any] = {}
+    resolved_inputs: dict[str, InputValue] = {}
     if op_entry is not None:
         for port in op_entry.inputs:
             port_types[port.name] = port.type
             if not port.required and port.default is not None:
-                port_defaults[port.name] = port.default
-
-    resolved_inputs: dict[str, InputValue] = {}
-    for port_name, default_val in port_defaults.items():
-        resolved_inputs[port_name] = ScalarValue(value=default_val)
+                resolved_inputs[port.name] = ScalarValue(value=port.default)
 
     # 1. Resolve bindings from workflow node spec
     for port_name, binding in spec.inputs.items():
-        expected_type = port_types.get(port_name)
-        if (
-            expected_type is None
-            and op_entry is not None
-            and op_entry.allow_extra_inputs
-            and op_entry.extra_inputs_type is not None
-        ):
-            expected_type = op_entry.extra_inputs_type.type
-
         if isinstance(binding, NodeRef):
-            src_outs = completed_outputs.get(binding.from_node, {})
-            out_val = src_outs.get(binding.output)
-            if out_val is None:
-                continue
-
-            if isinstance(out_val, ResultFileValue):
-                resolved_inputs[port_name] = materialize_input_file(
-                    dst_node_dir=dst_node_dir,
-                    port_name=port_name,
-                    sha256=out_val.sha256,
-                    size_bytes=out_val.size_bytes,
-                    filename=out_val.filename,
-                    blob_store=blob_store,
-                )
-            elif isinstance(out_val, OutputFileValue):
-                src_file = (
-                    workspace_root
-                    / ".plynx"
-                    / "runs"
-                    / dst_node_dir.parent.parent.name
-                    / "nodes"
-                    / binding.from_node
-                    / out_val.path
-                )
-                sha, size = blob_store.put_file(src_file)
-                fname = src_file.name
-                resolved_inputs[port_name] = materialize_input_file(
-                    dst_node_dir=dst_node_dir,
-                    port_name=port_name,
-                    sha256=sha,
-                    size_bytes=size,
-                    filename=fname,
-                    blob_store=blob_store,
-                )
-            elif isinstance(out_val, ResultDirectoryValue):
-                resolved_inputs[port_name] = materialize_input_directory(
-                    dst_node_dir=dst_node_dir,
-                    port_name=port_name,
-                    result_dir=out_val,
-                    blob_store=blob_store,
-                )
-            elif isinstance(out_val, OutputDirectoryValue):
-                src_dir = (
-                    workspace_root
-                    / ".plynx"
-                    / "runs"
-                    / dst_node_dir.parent.parent.name
-                    / "nodes"
-                    / binding.from_node
-                    / out_val.path
-                )
-                res_dir = ingest_directory(src_dir, blob_store)
-                resolved_inputs[port_name] = materialize_input_directory(
-                    dst_node_dir=dst_node_dir,
-                    port_name=port_name,
-                    result_dir=res_dir,
-                    blob_store=blob_store,
-                )
-            elif isinstance(out_val, ScalarValue):
-                resolved_inputs[port_name] = ScalarValue(value=out_val.value)
+            ref_val = _materialize_node_ref(
+                port_name=port_name,
+                binding=binding,
+                dst_node_dir=dst_node_dir,
+                completed_outputs=completed_outputs,
+                blob_store=blob_store,
+                workspace_root=workspace_root,
+            )
+            if ref_val is not None:
+                resolved_inputs[port_name] = ref_val
         else:
-            # Literal binding
-            if expected_type == "file" and isinstance(binding, (str, Path)):
-                if not str(binding).strip():
-                    raise FileNotFoundError(f"Input '{node_id}.{port_name}': empty file path")
-                raw_path = Path(binding)
-                file_path = (
-                    raw_path if raw_path.is_absolute() else (workspace_root / raw_path).resolve()
-                )
-                if not file_path.is_file():
-                    raise FileNotFoundError(
-                        f"Input '{node_id}.{port_name}': file not found: {binding}"
-                    )
-                sha, size = blob_store.put_file(file_path, allow_hardlink=False)
-                resolved_inputs[port_name] = materialize_input_file(
-                    dst_node_dir=dst_node_dir,
-                    port_name=port_name,
-                    sha256=sha,
-                    size_bytes=size,
-                    filename=file_path.name,
-                    blob_store=blob_store,
-                )
-            elif expected_type == "directory" and isinstance(binding, (str, Path)):
-                if not str(binding).strip():
-                    raise FileNotFoundError(f"Input '{node_id}.{port_name}': empty directory path")
-                raw_path = Path(binding)
-                dir_path = (
-                    raw_path if raw_path.is_absolute() else (workspace_root / raw_path).resolve()
-                )
-                if not dir_path.is_dir():
-                    raise FileNotFoundError(
-                        f"Input '{node_id}.{port_name}': directory not found: {binding}"
-                    )
-                res_dir = ingest_directory(dir_path, blob_store, allow_hardlink=False)
-                resolved_inputs[port_name] = materialize_input_directory(
-                    dst_node_dir=dst_node_dir,
-                    port_name=port_name,
-                    result_dir=res_dir,
-                    blob_store=blob_store,
-                )
-            else:
-                resolved_inputs[port_name] = ScalarValue(value=binding)
+            expected_type = _resolve_expected_port_type(port_name, port_types, op_entry)
+            resolved_inputs[port_name] = _materialize_literal_binding(
+                node_id=node_id,
+                port_name=port_name,
+                binding=binding,
+                expected_type=expected_type,
+                dst_node_dir=dst_node_dir,
+                blob_store=blob_store,
+                workspace_root=workspace_root,
+            )
 
     # 2. Overrides from run_inputs (CLI --set, --input)
     if run_inputs:
@@ -241,60 +279,16 @@ def materialize_inputs(
         for key, raw_val in run_inputs.items():
             if key.startswith(prefix):
                 port_name = key[len(prefix) :]
-                expected_type = port_types.get(port_name)
-                if (
-                    expected_type is None
-                    and op_entry is not None
-                    and op_entry.allow_extra_inputs
-                    and op_entry.extra_inputs_type is not None
-                ):
-                    expected_type = op_entry.extra_inputs_type.type
-                if expected_type == "file" and isinstance(raw_val, (str, Path)):
-                    if not str(raw_val).strip():
-                        raise FileNotFoundError(f"Input '{node_id}.{port_name}': empty file path")
-                    file_path = (
-                        Path(raw_val)
-                        if Path(raw_val).is_absolute()
-                        else (workspace_root / raw_val).resolve()
-                    )
-                    if not file_path.is_file():
-                        raise FileNotFoundError(
-                            f"Input '{node_id}.{port_name}': file not found: {raw_val}"
-                        )
-                    sha, size = blob_store.put_file(file_path, allow_hardlink=False)
-                    resolved_inputs[port_name] = materialize_input_file(
-                        dst_node_dir=dst_node_dir,
-                        port_name=port_name,
-                        sha256=sha,
-                        size_bytes=size,
-                        filename=file_path.name,
-                        blob_store=blob_store,
-                    )
-                    continue
-                elif expected_type == "directory" and isinstance(raw_val, (str, Path)):
-                    if not str(raw_val).strip():
-                        raise FileNotFoundError(
-                            f"Input '{node_id}.{port_name}': empty directory path"
-                        )
-                    dir_path = (
-                        Path(raw_val)
-                        if Path(raw_val).is_absolute()
-                        else (workspace_root / raw_val).resolve()
-                    )
-                    if not dir_path.is_dir():
-                        raise FileNotFoundError(
-                            f"Input '{node_id}.{port_name}': directory not found: {raw_val}"
-                        )
-                    res_dir = ingest_directory(dir_path, blob_store, allow_hardlink=False)
-                    resolved_inputs[port_name] = materialize_input_directory(
-                        dst_node_dir=dst_node_dir,
-                        port_name=port_name,
-                        result_dir=res_dir,
-                        blob_store=blob_store,
-                    )
-                    continue
-
-                resolved_inputs[port_name] = ScalarValue(value=raw_val)
+                expected_type = _resolve_expected_port_type(port_name, port_types, op_entry)
+                resolved_inputs[port_name] = _materialize_literal_binding(
+                    node_id=node_id,
+                    port_name=port_name,
+                    binding=raw_val,
+                    expected_type=expected_type,
+                    dst_node_dir=dst_node_dir,
+                    blob_store=blob_store,
+                    workspace_root=workspace_root,
+                )
 
     # 3. Checkpoint answers
     cp_answers: dict[str, str] = {}
@@ -302,8 +296,7 @@ def materialize_inputs(
         prefix = f"{node_id}."
         for key, ans in answers.items():
             if key.startswith(prefix):
-                cp_id = key[len(prefix) :]
-                cp_answers[cp_id] = ans
+                cp_answers[key[len(prefix) :]] = ans
 
     if db_checkpoints:
         for cp in db_checkpoints:

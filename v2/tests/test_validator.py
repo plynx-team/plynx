@@ -8,9 +8,11 @@ import pytest
 from click.testing import CliRunner
 from plynx.api_models import InputPortSpec, OpEntry, OutputPortSpec
 from plynx.cli import main as cli_main
-from plynx.registry import FakeRegistry, OpRegistry
+from plynx.registry import OpRegistry
 from plynx.workflow.models import Workflow, load_workflow
 from plynx.workflow.validator import validate_workflow, validate_workflow_file
+
+from tests.fakes import FakeRegistry
 
 ROOT = Path(__file__).resolve().parent.parent
 EXAMPLE_WORKFLOW = ROOT / "examples" / "workflows" / "foo_or_woo.yaml"
@@ -417,11 +419,28 @@ def test_missing_uv_lock_warning(tmp_path: Path) -> None:
     assert len(uv_warnings_after) == 0
 
 
+def test_direct_builtin_pack_standard_io_has_no_uv_lock_warning() -> None:
+    """Built-in stdlib-only standard_io does not require uv.lock and emits no warning."""
+    from plynx.registry import PackRegistry
+
+    reg = PackRegistry(ROOT)
+    wf = Workflow.model_validate(
+        {
+            "version": 1,
+            "nodes": {
+                "echo": {"op": "standard_io/demo:Echo", "inputs": {"text": "hello"}},
+            },
+        }
+    )
+    issues = validate_workflow(wf, reg)
+    assert issues == []
+
+
 def test_validate_diamond_against_real_registry() -> None:
     """Diamond workflow validates cleanly against the real Registry."""
-    from plynx.registry import Registry
+    from plynx.registry import PackRegistry
 
-    reg = Registry(ROOT)
+    reg = PackRegistry(ROOT)
     diamond_wf = Workflow.model_validate(
         {
             "version": 1,

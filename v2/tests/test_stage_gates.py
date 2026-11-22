@@ -19,14 +19,14 @@ from plynx.api_models import (
     StageResolvedEvent,
 )
 from plynx.engine import (
-    FakeExecutor,
-    FakeNodeScript,
     LocalExecutor,
     Scheduler,
     SchedulerOptions,
 )
 from plynx.store import RunStore
 from plynx.workflow.models import Workflow
+
+from tests.fakes import FakeExecutor, FakeNodeScript
 
 
 def _two_stage_gated_workflow() -> Workflow:

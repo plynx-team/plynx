@@ -39,7 +39,6 @@ from plynx.server import (
     NonLoopbackHostError,
     create_app,
     is_loopback_host,
-    run_server,
     validate_host,
 )
 from plynx.store import RunStore
@@ -319,7 +318,7 @@ def test_read_ops_endpoint(tmp_path: Path) -> None:
             assert isinstance(ops_data, list)
             assert len(ops_data) > 0
             validated = [OpEntry.model_validate(item) for item in ops_data]
-            assert any(op.id == "standard_io/demo:AskFooOrWoo" for op in validated)
+            assert any(op.id == "standard_io/interactive:AskChoice" for op in validated)
 
             v1_resp = await client.get("/api/v1/ops")
             assert v1_resp.status_code == 200
@@ -902,9 +901,10 @@ name: foo_or_woo # inline name comment
 nodes:
   pick:
     # node comment
-    op: standard_io/demo:AskFooOrWoo
+    op: standard_io/interactive:AskChoice
     inputs:
-      prompt: "foo or woo?"
+      question: "foo or woo?"
+      options_csv: "foo, woo"
 """,
         encoding="utf-8",
     )
@@ -1069,9 +1069,9 @@ def test_server_loopback_host_binding_refusal(tmp_path: Path) -> None:
     valid_app = create_app(tmp_path, host="127.0.0.1")
     assert valid_app is not None
 
-    # 4. run_server with non-loopback host raises
+    # 4. validate_host with non-loopback host raises
     with pytest.raises(NonLoopbackHostError):
-        run_server(valid_app, host="0.0.0.0")
+        validate_host("0.0.0.0")
 
     # 5. CLI plynx ui --host 0.0.0.0 fails with parameter error
     runner = CliRunner()
@@ -1534,14 +1534,11 @@ def test_event_log_read_from_offset_handles_partial_trailing_line(tmp_path: Path
 
 def test_server_background_task_crash_marks_run_failed(tmp_path: Path) -> None:
     """An unexpected exception in a background run task marks the run FAILED and emits an event."""
-    from plynx.engine.executor import ExecutionRequest, Executor, LaunchHandle, NodeResult
+    from plynx.engine.executor import ExecutionRequest, Executor, NodeResult
 
     class CrashingExecutor(Executor):
         async def run(self, request: ExecutionRequest) -> NodeResult:
             raise RuntimeError("unexpected executor crash")
-
-        async def launch(self, request: ExecutionRequest) -> LaunchHandle:
-            raise NotImplementedError
 
     wf_dir = tmp_path / "workflows"
     wf_dir.mkdir(parents=True)
@@ -1592,7 +1589,7 @@ nodes:
 
 def test_server_lifespan_shutdown_cancels_active_runs(tmp_path: Path) -> None:
     """Exiting the FastAPI lifespan requests cancellation and awaits active background runs."""
-    from plynx.engine.executor import ExecutionRequest, Executor, LaunchHandle, NodeResult
+    from plynx.engine.executor import ExecutionRequest, Executor, NodeResult
 
     started_event = asyncio.Event()
 
@@ -1610,9 +1607,6 @@ def test_server_lifespan_shutdown_cancels_active_runs(tmp_path: Path) -> None:
                 finished_at=time.time(),
                 error="canceled",
             )
-
-        async def launch(self, request: ExecutionRequest) -> LaunchHandle:
-            raise NotImplementedError
 
     wf_dir = tmp_path / "workflows"
     wf_dir.mkdir(parents=True)

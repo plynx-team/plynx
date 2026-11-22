@@ -7,20 +7,14 @@ stages:
   print: {}
 nodes:
   pick:
-    op: standard_io/demo:AskFooOrWoo
+    op: standard_io/interactive:AskChoice
     title: Pick one
     stage: ask
     inputs:
-      prompt: foo or woo?
+      question: foo or woo?
+      options_csv: "foo, woo"
   echo:
     op: standard_io/demo:Echo
     stage: print
     inputs:
       text: $pick.choice
-  concat:
-    op: standard_io/text:Concat
-    title: Concat text
-    stage: ask
-    inputs:
-      b: $pick.choice
-      a: 'Hello, '

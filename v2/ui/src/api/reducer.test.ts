@@ -175,17 +175,39 @@ describe("applyRunEvent reducer", () => {
       seq: 1,
       ts: 10,
       type: "stage_approval",
-      data: { run_id: "r1", stage_id: "ask", title: "1. Ask" },
+      data: { run_id: "r1", stage_id: "ask", title: "1. Ask", kind: "input" },
     });
     expect(state.stage_gates.ask.status).toBe("WAITING");
+    expect(state.stage_gates.ask.kind).toBe("input");
 
     state = applyRunEvent(state, {
       seq: 2,
       ts: 20,
       type: "stage_resolved",
-      data: { run_id: "r1", stage_id: "ask" },
+      data: { run_id: "r1", stage_id: "ask", kind: "input" },
     });
     expect(state.stage_gates.ask.status).toBe("APPROVED");
+    expect(state.stage_gates.ask.kind).toBe("input");
     expect(state.stage_gates.ask.decided_at).toBe(20);
+
+    // Subsequent approval gate on the same stage transitions cleanly to WAITING
+    state = applyRunEvent(state, {
+      seq: 3,
+      ts: 30,
+      type: "stage_approval",
+      data: { run_id: "r1", stage_id: "ask", title: "1. Ask", kind: "approval" },
+    });
+    expect(state.stage_gates.ask.status).toBe("WAITING");
+    expect(state.stage_gates.ask.kind).toBe("approval");
+
+    state = applyRunEvent(state, {
+      seq: 4,
+      ts: 40,
+      type: "stage_resolved",
+      data: { run_id: "r1", stage_id: "ask", kind: "approval" },
+    });
+    expect(state.stage_gates.ask.status).toBe("APPROVED");
+    expect(state.stage_gates.ask.kind).toBe("approval");
+    expect(state.stage_gates.ask.decided_at).toBe(40);
   });
 });

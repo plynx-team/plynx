@@ -7,7 +7,7 @@ stages:
     title: "2. Second"
 nodes:
   late_node:
-    op: standard_io/demo:AskFooOrWoo
+    op: standard_io/interactive:AskChoice
     stage: second
   early_node:
     op: standard_io/demo:Echo

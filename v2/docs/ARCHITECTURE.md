@@ -45,7 +45,7 @@ ui/                       React + TypeScript + Vite
     graph/                React Flow editor, palette, inspector
     previewers/           artifact previewers
 builtin_packs/            Node Packs shipped with plynx (tracked)
-  standard_io/            pyproject.toml, uv.lock, src/standard_io/
+  standard_io/            pyproject.toml, src/standard_io/ (stdlib-only, bundled in wheel)
 custom_packs/             user packs (gitignored, .gitkeep tracked) — only in workspaces
 ```
 
@@ -74,7 +74,7 @@ custom_packs/                   user packs (searched after the packs shipped ins
 | SDK dependencies | stdlib only. Wire models are `dataclasses`. |
 | Engine dependencies | `pydantic>=2` (workflow, REST, SSE models), `fastapi`, `uvicorn`, `click`, `ruamel.yaml` (round-trip YAML writes). |
 | Scheduling | `graphlib.TopologicalSorter` + `asyncio` + `asyncio.Semaphore(concurrency)`. |
-| Child processes | `uv run`, one per node attempt, in its own process group. |
+| Child processes | `uv run` (or `sys.executable -B` for stdlib-only built-in packs), one per node attempt, in its own process group. |
 | State | SQLite (WAL) via stdlib `sqlite3`, called through `asyncio.to_thread`. |
 | Lint / types / tests | `ruff`, `mypy --strict`, `pytest`. |
 | UI | Vite, React, TypeScript strict, Tailwind, `@xyflow/react`, `dagre`, TanStack Query. No component library. **(proposed)** |
@@ -152,7 +152,7 @@ One process owns a run at a time (`RUNS.owner_pid`). Other processes (browser, s
 - **Failure:** a failed node blocks only its dependents. Independent branches finish. The run ends `FAILED`.
 - **Cancel / timeout:** the whole process tree is killed. POSIX: `os.killpg`. Windows: `taskkill /T /F`. Both inside `procgroup.py`.
 - **First run:** the engine emits `BUILDING_ENVIRONMENT` while `uv` creates an environment.
-- **Environments:** `UV_PROJECT_ENVIRONMENT=.plynx/envs/<pack>-<hash(pyproject+lock)>`, and `uv run --frozen`. Packs inside a wheel stay read-only. **(proposed)**
+- **Environments:** `UV_PROJECT_ENVIRONMENT=.plynx/envs/<pack>-<hash(pyproject+lock)>`, and `uv run --frozen`. Stdlib-only built-in packs (`standard_io`) run directly with `sys.executable -B`, `PYTHONPATH` pointing to the pack source, and `PYTHONDONTWRITEBYTECODE=1` so packs inside `site-packages` stay read-only. **(proposed)**
 - **Pack code reuse:** one pack is one `uv` project; ops in a pack share helpers.
 - **Op definition:** a class (`Op`) or a function (`@op`). Both produce the same registry schema. Metadata must be literals so static AST reading works. See PROTOCOL.md "Op declaration subset".
 

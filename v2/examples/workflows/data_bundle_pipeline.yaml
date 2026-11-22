@@ -71,4 +71,6 @@ nodes:
       body: "Automated ingestion, mathematical calculation, JSON merging, and directory bundling completed."
       metrics:
         pipeline_status: "VERIFIED"
+        throughput_multiplier: $math_calc.result
+        archived_files: $list_archive.file_count
       filename: "audit_report.md"

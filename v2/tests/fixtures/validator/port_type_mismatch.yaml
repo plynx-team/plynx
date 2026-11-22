@@ -2,7 +2,7 @@ version: 1
 name: port_type_mismatch
 nodes:
   pick:
-    op: standard_io/demo:AskFooOrWoo
+    op: standard_io/interactive:AskChoice
   reader:
     op: standard_io/demo:ReadText
     inputs:

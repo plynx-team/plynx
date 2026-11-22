@@ -7,10 +7,12 @@ import time
 from pathlib import Path
 
 from plynx.api_models import NodeStatus, RunStatus, StageGateStatus
-from plynx.engine import FakeExecutor, Scheduler, SchedulerOptions
+from plynx.engine import Scheduler, SchedulerOptions
 from plynx.server.app import create_app
 from plynx.store import RunStore
 from plynx.workflow.models import Workflow
+
+from tests.fakes import FakeExecutor
 
 
 def _two_stage_input_workflow() -> Workflow:
@@ -131,7 +133,9 @@ nodes:
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
             # 1. Start run with empty inputs (stage 2 input deferred)
-            res = await client.post("/runs", json={"workflow_path": "workflows/test_pipe.yaml", "inputs": {}})
+            res = await client.post(
+                "/runs", json={"workflow_path": "workflows/test_pipe.yaml", "inputs": {}}
+            )
             assert res.status_code == 201
             run_id = res.json()["run_id"]
 

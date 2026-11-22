@@ -6,7 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
     "click>=8.1",
     "fastapi>=0.110",
-    "plynx-sdk",
+    "plynx-sdk>=2.0.0,<3.0.0",
     "pydantic>=2.7",
     "python-multipart>=0.0.9",
     "ruamel.yaml>=0.18",
@@ -20,5 +20,24 @@ plynx = "plynx.cli:main"
 plynx-sdk = { workspace = true }
 
 [build-system]
-requires = ["uv_build>=0.9.0,<0.10"]
-build-backend = "uv_build"
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+artifacts = [
+    "src/plynx/static/**",
+    "src/plynx/builtin_packs/**",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/plynx/**",
+    "hatch_build.py",
+    "pyproject.toml",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/plynx"]
+
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"

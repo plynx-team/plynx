@@ -332,7 +332,7 @@ wheels = [
 [[package]]
 name = "media-studio"
 version = "2.0.0"
-source = { editable = "builtin_packs/media_studio" }
+source = { editable = "examples/custom_packs/media_studio" }
 dependencies = [
     { name = "pillow" },
     { name = "plynx-sdk" },
@@ -646,7 +646,7 @@ wheels = [
 [[package]]
 name = "pedalboard-studio"
 version = "2.0.0"
-source = { editable = "builtin_packs/pedalboard_studio" }
+source = { editable = "examples/custom_packs/pedalboard_studio" }
 dependencies = [
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
@@ -819,12 +819,12 @@ dev = [
 [package.metadata.requires-dev]
 dev = [
     { name = "httpx", specifier = ">=0.27" },
-    { name = "media-studio", editable = "builtin_packs/media_studio" },
+    { name = "media-studio", editable = "examples/custom_packs/media_studio" },
     { name = "mypy", specifier = ">=1.10" },
-    { name = "pedalboard-studio", editable = "builtin_packs/pedalboard_studio" },
+    { name = "pedalboard-studio", editable = "examples/custom_packs/pedalboard_studio" },
     { name = "plynx", editable = "packages/plynx" },
     { name = "plynx-sdk", editable = "packages/plynx-sdk" },
-    { name = "podcast-studio", editable = "builtin_packs/podcast_studio" },
+    { name = "podcast-studio", editable = "examples/custom_packs/podcast_studio" },
     { name = "pytest", specifier = ">=8" },
     { name = "ruff", specifier = ">=0.5" },
     { name = "standard-io", editable = "builtin_packs/standard_io" },
@@ -833,7 +833,7 @@ dev = [
 [[package]]
 name = "podcast-studio"
 version = "2.0.0"
-source = { editable = "builtin_packs/podcast_studio" }
+source = { editable = "examples/custom_packs/podcast_studio" }
 dependencies = [
     { name = "plynx-sdk" },
 ]

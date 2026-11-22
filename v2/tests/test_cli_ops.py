@@ -9,7 +9,7 @@ from click.testing import CliRunner
 from plynx.cli import main as cli_main
 
 EXPECTED_STANDARD_IO_OPS = {
-    "standard_io/demo:AskFooOrWoo",
+    "standard_io/interactive:AskChoice",
     "standard_io/demo:Echo",
     "standard_io/demo:ReadText",
     "standard_io/demo:WriteText",
@@ -70,7 +70,7 @@ def test_cli_ops_no_ops_found(tmp_path: Path, monkeypatch: object) -> None:
     import unittest.mock as mock
 
     runner = CliRunner()
-    with mock.patch("plynx.cli.Registry") as mock_reg_cls:
+    with mock.patch("plynx.cli.PackRegistry") as mock_reg_cls:
         mock_reg = mock.MagicMock()
         mock_reg.list_ops.return_value = []
         mock_reg_cls.return_value = mock_reg

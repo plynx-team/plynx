@@ -142,17 +142,25 @@ Registry entry (served by `GET /api/v1/ops`, cached in `.plynx/registry_cache.js
 
 ## 4. Node Pack layout
 
-A pack is a directory containing `pyproject.toml` and `uv.lock`. Its directory name equals its top-level import package (`standard_io`). Source is at `src/<pack>/` or `<pack>/`. `<pack>/<module>:<Name>` imports `<pack>.<module>` and reads `<Name>`. Dependencies: `plynx-sdk` and the pack's own libraries. Never `plynx`.
+A pack is a directory containing `pyproject.toml` and (for isolated third-party packs) `uv.lock`. Its directory name equals its top-level import package (`standard_io`). Source is at `src/<pack>/` or `<pack>/`. `<pack>/<module>:<Name>` imports `<pack>.<module>` and reads `<Name>`. Dependencies: `plynx-sdk` and the pack's own libraries. Never `plynx`. Stdlib-only built-in packs (`standard_io`) have no third-party dependencies, ship without `uv.lock`, and run directly using the active Python interpreter.
 
 ## 5. IPC between engine and child
 
 Command (engine to child), cwd = `<node_dir>/workdir`:
 
+For isolated packs:
+
 ```text
 uv run --frozen --project <pack_dir> python -m plynx_sdk.harness --op <pack>.<module>:<Name> --dir <abs node_dir>
 ```
 
-Environment: host environment (restricted by `env_passthrough` when set) + `.env` + `PYTHONUNBUFFERED=1`, `PYTHONUTF8=1`, `UV_PROJECT_ENVIRONMENT=<workspace>/.plynx/envs/<pack>-<hash>`. For `@op` functions the harness finds the function by name.
+For stdlib-only built-in packs (such as `standard_io`):
+
+```text
+<sys.executable> -B -m plynx_sdk.harness --op <pack>.<module>:<Name> --dir <abs node_dir>
+```
+
+Environment: host environment (restricted by `env_passthrough` when set) + `.env` + `PYTHONUNBUFFERED=1`, `PYTHONUTF8=1`. Isolated packs also receive `UV_PROJECT_ENVIRONMENT=<workspace>/.plynx/envs/<pack>-<hash>`. Direct built-in packs receive `PYTHONPATH=<pack_src>` and `PYTHONDONTWRITEBYTECODE=1` so wheel-bundled packs stay read-only. For `@op` functions the harness finds the function by name.
 
 ### `inputs.json` (engine writes)
 
@@ -269,8 +277,9 @@ CREATE TABLE checkpoints (
 );
 CREATE TABLE stage_gates (
   run_id TEXT NOT NULL REFERENCES runs(id) ON DELETE CASCADE, stage_id TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'approval' CHECK (kind IN ('input','approval')),
   status TEXT NOT NULL CHECK (status IN ('WAITING','APPROVED')),
-  created_at REAL NOT NULL, decided_at REAL, PRIMARY KEY (run_id, stage_id)
+  created_at REAL NOT NULL, decided_at REAL, PRIMARY KEY (run_id, stage_id, kind)
 );
 CREATE TABLE cache_index (
   cache_key TEXT PRIMARY KEY, result_json TEXT NOT NULL, created_at REAL NOT NULL, last_accessed_at REAL NOT NULL
@@ -307,8 +316,8 @@ Blob store: `.plynx/cache/blobs/<first 2 hex>/<sha256>`, mode read-only. Link or
 | `node_status` | `run_id`, `node_id`, `status`, `cache_hit`, `attempt`, `exit_code?`, `error?` |
 | `node_checkpoint` | `run_id`, `node_id`, `checkpoint_id`, `question`, `options`, `allow_freeform` |
 | `checkpoint_resolved` | `run_id`, `node_id`, `checkpoint_id` |
-| `stage_approval` | `run_id`, `stage_id`, `title` |
-| `stage_resolved` | `run_id`, `stage_id` |
+| `stage_approval` | `run_id`, `stage_id`, `title`, `kind` (`input`/`approval`) |
+| `stage_resolved` | `run_id`, `stage_id`, `kind` (`input`/`approval`) |
 | `node_log` | `run_id`, `node_id`, `stream` (`stdout`/`stderr`), `offset`, `lines` |
 
 `node_log` is not stored in `events.jsonl`. The server creates it by tailing the log files and batches at most one event per 50 ms per node.
@@ -333,7 +342,8 @@ SSE (`GET /api/v1/runs/{run_id}/stream`): frames `id: <seq>`, `event: <type>`, `
 | `POST /runs/{id}/cancel` | request cancel |
 | `POST /runs/{id}/resume` | take ownership and continue |
 | `POST /runs/{id}/checkpoints/{node_id}/{checkpoint_id}/answer` | `{ answer }` |
-| `POST /runs/{id}/stages/{stage_id}/approve` | approve gate |
+| `POST /runs/{id}/stages/{stage_id}/approve` | approve gate (optional `{ inputs }`) |
+| `POST /runs/{id}/stages/{stage_id}/inputs` | submit deferred stage inputs and resolve its `input` gate |
 | `GET /runs/{id}/stream` | SSE (section 9) |
 | `GET /runs/{id}/nodes/{node_id}/logs/{stream}?offset=0` | `text/plain`, header `X-Next-Offset` |
 | `GET /runs/{id}/nodes/{node_id}/outputs/{name}` | blob download, `Content-Type` from `media` |

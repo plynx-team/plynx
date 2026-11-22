@@ -53,7 +53,7 @@ def test_cli_run_foo_or_woo_exits_0_and_persists_state(
         for ev in events
         if isinstance(ev, NodeStatusEvent)
     ]
-    assert output_lines == node_event_lines
+    assert output_lines == [*node_event_lines, f"run_id: {run_id}"]
 
 
 def test_cli_run_non_interactive_and_answer(

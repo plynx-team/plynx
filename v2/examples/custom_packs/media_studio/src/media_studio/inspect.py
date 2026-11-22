@@ -62,7 +62,7 @@ def _read_wav_channels(path: Path) -> tuple[int, list[list[float]]]:
     elif sampwidth == 3:
         # 24-bit PCM
         for i in range(0, len(raw_data) - 2, 3):
-            val = int.from_bytes(raw_data[i:i + 3], byteorder="little", signed=True)
+            val = int.from_bytes(raw_data[i : i + 3], byteorder="little", signed=True)
             ch_idx = (i // 3) % n_channels
             channels[ch_idx].append(val / 8388608.0)
     elif sampwidth == 4:

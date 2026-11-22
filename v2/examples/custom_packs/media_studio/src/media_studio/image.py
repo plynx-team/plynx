@@ -10,7 +10,9 @@ from PIL import Image, ImageDraw, ImageFilter, ImageOps
 from plynx_sdk import ImageFile, Op, Range
 
 
-def _parse_hex_color(hex_str: str, default: tuple[int, int, int] = (38, 128, 235)) -> tuple[int, int, int]:
+def _parse_hex_color(
+    hex_str: str, default: tuple[int, int, int] = (38, 128, 235)
+) -> tuple[int, int, int]:
     """Parse hex color like '#2680eb' or '2680eb' into RGB tuple."""
     clean = hex_str.strip().lstrip("#")
     if len(clean) == 6:
@@ -90,7 +92,11 @@ class MandelbrotFractal(Op):
                     pixels[px, py] = (10, 10, 12)
                 else:
                     # Smooth fractional coloring
-                    smooth_i = iteration + 1 - math.log(max(1.0, math.log(x * x + y * y) / 2.0)) / math.log(2.0)
+                    smooth_i = (
+                        iteration
+                        + 1
+                        - math.log(max(1.0, math.log(x * x + y * y) / 2.0)) / math.log(2.0)
+                    )
                     t = (smooth_i / max_iter) % 1.0
                     pixels[px, py] = _get_palette_color(t, palette)
 
@@ -112,7 +118,9 @@ class GeometricPattern(Op):
 
     def run(
         self,
-        pattern: Literal["gradient_wave", "geometric_grid", "radial_rings", "checkerboard"] = "gradient_wave",
+        pattern: Literal[
+            "gradient_wave", "geometric_grid", "radial_rings", "checkerboard"
+        ] = "gradient_wave",
         width: Annotated[int, Range(200, 800)] = 400,
         height: Annotated[int, Range(200, 800)] = 400,
         primary_color: str = "#2680eb",
@@ -187,7 +195,9 @@ class ImageFilterOp(Op):
     def run(
         self,
         image: ImageFile,
-        filter_type: Literal["grayscale", "sepia", "invert", "blur", "contour", "edge_enhance"] = "sepia",
+        filter_type: Literal[
+            "grayscale", "sepia", "invert", "blur", "contour", "edge_enhance"
+        ] = "sepia",
     ) -> Outputs:
         src = Image.open(image).convert("RGB")
 
@@ -256,7 +266,9 @@ class CardOrPoster(Op):
         # Paste core artwork
         art_y = pad + header_h
         card.paste(src, (pad, art_y), mask=src if src.mode == "RGBA" else None)
-        draw.rectangle([pad - 1, art_y - 1, pad + base_w, art_y + base_h], outline=(60, 60, 60), width=1)
+        draw.rectangle(
+            [pad - 1, art_y - 1, pad + base_w, art_y + base_h], outline=(60, 60, 60), width=1
+        )
 
         # Footer Title & Subtitle
         foot_y = art_y + base_h + 12

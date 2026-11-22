@@ -10,7 +10,6 @@ from plynx.api_models import InputPortSpec, NodeStatus, OpEntry, OutputPortSpec,
 from plynx.cas import BlobStore
 from plynx.engine.executor import ExecutionRequest, Executor, NodeResult
 from plynx.engine.scheduler import Scheduler
-from plynx.registry import FakeRegistry
 from plynx.store import RunStore
 from plynx.workflow.models import Workflow
 from plynx_sdk.protocol import (
@@ -18,6 +17,8 @@ from plynx_sdk.protocol import (
     OutputsManifest,
     ScalarValue,
 )
+
+from tests.fakes import FakeRegistry
 
 
 class EarlyCutoffExecutor(Executor):

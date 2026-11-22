@@ -8,10 +8,8 @@ from standard_io.data import (
     TemplateFormat,
 )
 from standard_io.demo import (
-    AskFooOrWoo,
     Echo,
     ReadText,
-    SecretCodeChallenge,
     WriteText,
 )
 from standard_io.files import (
@@ -21,13 +19,11 @@ from standard_io.files import (
 )
 from standard_io.interactive import (
     AskChoice,
-    MultiStepQuestionnaire,
 )
 from standard_io.text import Concat
 
 __all__ = [
     "AskChoice",
-    "AskFooOrWoo",
     "BundleDirectory",
     "Concat",
     "CsvSummary",
@@ -37,9 +33,7 @@ __all__ = [
     "ListDirectory",
     "MarkdownReport",
     "MathOp",
-    "MultiStepQuestionnaire",
     "ReadText",
-    "SecretCodeChallenge",
     "TemplateFormat",
     "WriteText",
 ]

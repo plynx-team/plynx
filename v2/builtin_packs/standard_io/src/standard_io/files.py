@@ -43,7 +43,7 @@ class ListDirectory(Op):
         else:
             file_paths = sorted([p for p in dir_path.glob(pattern) if p.is_file()])
 
-        rel_filenames = [str(p.relative_to(dir_path)) for p in file_paths]
+        rel_filenames = [p.relative_to(dir_path).as_posix() for p in file_paths]
         manifest_path = Path("manifest.json")
         manifest_data = {
             "directory": dir_path.name,
@@ -60,18 +60,16 @@ class ListDirectory(Op):
 
 
 class BundleDirectory(Op):
-    """Bundle up to three files or sub-directories into a single structured output directory.
+    """Bundle arbitrary files or sub-directories into a single structured output directory.
 
     Args:
-        file_a: Optional first file or directory to include in the bundle.
-        file_b: Optional second file or directory to include in the bundle.
-        file_c: Optional third file or directory to include in the bundle.
         bundle_name: Name of the output destination folder in the working directory.
     """
 
     TITLE = "Bundle Directory"
     CATEGORY = "Core / Files"
     CACHEABLE = True
+    ALLOW_EXTRA_INPUTS = True
 
     class Outputs(TypedDict):
         bundle: Directory
@@ -79,10 +77,8 @@ class BundleDirectory(Op):
 
     def run(
         self,
-        file_a: Path | None = None,
-        file_b: Path | None = None,
-        file_c: Path | None = None,
         bundle_name: str = "bundle",
+        **files: Path,
     ) -> Outputs:
         bundle_path = Path(bundle_name)
         if bundle_path.is_absolute() or ".." in bundle_path.parts or len(bundle_path.parts) != 1:
@@ -92,15 +88,21 @@ class BundleDirectory(Op):
 
         bundle_path.mkdir(parents=True, exist_ok=True)
 
-        for candidate in (file_a, file_b, file_c):
+        for candidate in files.values():
             if candidate is not None:
                 src = Path(candidate)
-                if src.exists():
-                    target = bundle_path / src.name
-                    if src.is_dir():
-                        shutil.copytree(src, target, dirs_exist_ok=True)
-                    else:
-                        shutil.copy2(src, target)
+                if not src.exists():
+                    raise FileNotFoundError(f"Input file or directory to bundle not found: {src}")
+                target = bundle_path / src.name
+                if target.exists():
+                    counter = 1
+                    while target.exists():
+                        target = bundle_path / f"{src.stem}_{counter}{src.suffix}"
+                        counter += 1
+                if src.is_dir():
+                    shutil.copytree(src, target, dirs_exist_ok=True)
+                else:
+                    shutil.copy2(src, target)
 
         total_files = sum(1 for p in bundle_path.rglob("*") if p.is_file())
         return {

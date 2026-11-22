@@ -13,10 +13,12 @@ from pathlib import Path
 
 import pytest
 from plynx.api_models import NodeStatus, RunStatus, RunStatusEvent
-from plynx.engine import FakeExecutor, Scheduler, SchedulerOptions
+from plynx.engine import Scheduler, SchedulerOptions
 from plynx.engine.procgroup import is_pid_alive, kill_process_group
 from plynx.store import RunStore
 from plynx.workflow.models import Workflow
+
+from tests.fakes import FakeExecutor
 
 ROOT = Path(__file__).resolve().parent.parent
 SDK_PATH = ROOT / "packages" / "plynx-sdk"

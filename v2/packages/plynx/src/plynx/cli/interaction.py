@@ -16,8 +16,14 @@ from typing import Any, TextIO, TypeVar
 import click
 from plynx_sdk.protocol import CheckpointManifest
 
+from plynx.api_models import WorkflowInputSpec
+
 CheckpointPromptCallback = Callable[[str, str, CheckpointManifest], Awaitable[str | None]]
 StagePromptCallback = Callable[[str, str], Awaitable[bool]]
+StageInputsPromptCallback = Callable[
+    [str, str, list[WorkflowInputSpec]],
+    Awaitable[dict[str, Any] | None],
+]
 _T = TypeVar("_T")
 
 
@@ -186,6 +192,70 @@ def make_terminal_stage_approval_callback(
     return _prompt
 
 
+def make_terminal_stage_inputs_callback(
+    *,
+    input_stream: TextIO | None = None,
+    prompt_lock: asyncio.Lock | None = None,
+) -> StageInputsPromptCallback:
+    """Return an async callback that prompts the user on the terminal for deferred stage inputs."""
+    lock = prompt_lock if prompt_lock is not None else asyncio.Lock()
+
+    async def _prompt(
+        stage_id: str,
+        title: str,
+        missing_inputs: list[WorkflowInputSpec],
+    ) -> dict[str, Any] | None:
+        stream = input_stream if input_stream is not None else sys.stdin
+        provided: dict[str, Any] = {}
+        async with lock:
+            click.echo(f"\n[stage:{stage_id}] Stage '{title}' requires inputs:")
+            for spec in missing_inputs:
+                key = f"{spec.node_id}.{spec.name}"
+                while True:
+                    click.echo(f"  {key} ({spec.type}): ", nl=False)
+                    sys.stdout.flush()
+                    raw = await read_line_async(stream)
+                    if raw is None:
+                        return None
+                    val_str = raw.rstrip("\r\n")
+                    if spec.type == "str":
+                        provided[key] = val_str
+                        break
+                    trimmed = val_str.strip()
+                    if spec.type in ("file", "directory"):
+                        if not trimmed:
+                            click.echo(f"Please enter a non-empty {spec.type} path.", err=True)
+                            continue
+                        provided[key] = trimmed
+                        break
+                    try:
+                        parsed = json.loads(trimmed)
+                    except json.JSONDecodeError:
+                        click.echo(f"Invalid {spec.type} value: {trimmed!r}", err=True)
+                        continue
+                    if spec.type == "int" and (
+                        isinstance(parsed, bool) or not isinstance(parsed, int)
+                    ):
+                        click.echo(f"Expected int, got {trimmed!r}", err=True)
+                        continue
+                    if spec.type == "float" and (
+                        isinstance(parsed, bool) or not isinstance(parsed, (int, float))
+                    ):
+                        click.echo(f"Expected float, got {trimmed!r}", err=True)
+                        continue
+                    if spec.type == "bool" and not isinstance(parsed, bool):
+                        click.echo(f"Expected bool (true/false), got {trimmed!r}", err=True)
+                        continue
+                    if spec.type == "json" and not isinstance(parsed, (dict, list)):
+                        click.echo(f"Expected JSON object or array, got {trimmed!r}", err=True)
+                        continue
+                    provided[key] = parsed
+                    break
+        return provided
+
+    return _prompt
+
+
 async def run_with_cancel_signals(
     coro_factory: Callable[[asyncio.Event], Awaitable[_T]],
 ) -> _T:
@@ -230,11 +300,13 @@ async def run_with_cancel_signals(
 
 __all__ = [
     "CheckpointPromptCallback",
+    "StageInputsPromptCallback",
     "StagePromptCallback",
     "is_non_interactive",
     "load_cli_answers",
     "make_terminal_checkpoint_callback",
     "make_terminal_stage_approval_callback",
+    "make_terminal_stage_inputs_callback",
     "parse_checkpoint_input",
     "parse_key_value_pair",
     "read_line_async",

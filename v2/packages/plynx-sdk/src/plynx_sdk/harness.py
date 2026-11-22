@@ -411,6 +411,13 @@ def _build_outputs_map(
     for port_name, info in output_specs.items():
         val = raw_map[port_name]
         if info.kind == "file":
+            if val is None:
+                if info.optional:
+                    outputs[port_name] = ScalarValue(value=None)
+                    continue
+                raise HarnessProtocolError(
+                    f"Output {port_name!r}: None is not allowed for non-optional port"
+                )
             rel_path = _validate_and_resolve_workdir_path(
                 val,
                 port_name=port_name,
@@ -420,6 +427,13 @@ def _build_outputs_map(
             )
             outputs[port_name] = OutputFileValue(path=rel_path, media=info.media)
         elif info.kind == "directory":
+            if val is None:
+                if info.optional:
+                    outputs[port_name] = ScalarValue(value=None)
+                    continue
+                raise HarnessProtocolError(
+                    f"Output {port_name!r}: None is not allowed for non-optional port"
+                )
             rel_path = _validate_and_resolve_workdir_path(
                 val,
                 port_name=port_name,

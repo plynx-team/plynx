@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import shutil
+import subprocess
 from pathlib import Path
 
-import pytest
 from plynx.api_models import NodeStatus
 from plynx.engine import (
     ExecutionRequest,
@@ -133,22 +134,11 @@ def test_executor_factory_returns_local_executor(tmp_path: Path) -> None:
     assert isinstance(executor, LocalExecutor)
     assert isinstance(executor, Executor)
 
-    req = ExecutionRequest(
-        run_id="r1",
-        node_id="n1",
-        op="standard_io/demo:Echo",
-        attempt=1,
-        node_dir=tmp_path / "n1",
-        inputs=InputsManifest(inputs={"text": ScalarValue(value="hi")}),
-    )
-    with pytest.raises(NotImplementedError):
-        asyncio.run(executor.launch(req))
 
-
-def test_local_executor_runs_standard_io_and_emits_building_environment_once(
+def test_local_executor_runs_standard_io_directly_without_uv_env(
     tmp_path: Path,
 ) -> None:
-    """First run emits BUILDING_ENVIRONMENT -> RUNNING; second run skips BUILDING_ENVIRONMENT."""
+    """Built-in stdlib-only standard_io runs directly via sys.executable without uv sync."""
     executor = LocalExecutor(tmp_path)
     statuses_first: list[NodeStatus] = []
     node_dir_1 = tmp_path / ".plynx" / "runs" / "r1" / "nodes" / "echo"
@@ -159,31 +149,34 @@ def test_local_executor_runs_standard_io_and_emits_building_environment_once(
         op="standard_io/demo:Echo",
         attempt=1,
         node_dir=node_dir_1,
-        inputs=InputsManifest(inputs={"text": ScalarValue(value="hello uv")}),
+        inputs=InputsManifest(inputs={"text": ScalarValue(value="hello direct")}),
         on_status=statuses_first.append,
     )
     res_1 = asyncio.run(executor.run(req_1))
     assert res_1.status == NodeStatus.SUCCESS, res_1.error
     assert res_1.exit_code == 0
     assert res_1.outputs is not None
-    assert res_1.outputs.outputs == {"text": ScalarValue(value="hello uv")}
-    assert statuses_first == [NodeStatus.BUILDING_ENVIRONMENT, NodeStatus.RUNNING]
+    assert res_1.outputs.outputs == {"text": ScalarValue(value="hello direct")}
+    assert statuses_first == [NodeStatus.RUNNING]
 
     envs_dir = tmp_path / ".plynx" / "envs"
-    built_envs = list(envs_dir.glob("standard_io-*"))
-    assert len(built_envs) == 1
-    assert (built_envs[0] / "pyvenv.cfg").is_file()
+    assert not envs_dir.exists()
 
-    # Second run reuses the environment without emitting BUILDING_ENVIRONMENT
+    # Checkpoints also work under direct execution
     statuses_second: list[NodeStatus] = []
     node_dir_2 = tmp_path / ".plynx" / "runs" / "r1" / "nodes" / "pick"
     req_2 = ExecutionRequest(
         run_id="r1",
         node_id="pick",
-        op="standard_io/demo:AskFooOrWoo",
+        op="standard_io/interactive:AskChoice",
         attempt=1,
         node_dir=node_dir_2,
-        inputs=InputsManifest(inputs={"prompt": ScalarValue(value="foo or woo?")}),
+        inputs=InputsManifest(
+            inputs={
+                "question": ScalarValue(value="foo or woo?"),
+                "options_csv": ScalarValue(value="foo, woo"),
+            }
+        ),
         on_status=statuses_second.append,
     )
     res_2 = asyncio.run(executor.run(req_2))
@@ -191,6 +184,52 @@ def test_local_executor_runs_standard_io_and_emits_building_environment_once(
     assert res_2.exit_code == 10
     assert res_2.checkpoint is not None
     assert res_2.checkpoint.checkpoint_id == "cp_0"
+    assert statuses_second == [NodeStatus.RUNNING]
+
+
+def test_local_executor_custom_pack_emits_building_environment_once(
+    tmp_path: Path,
+) -> None:
+    """Custom pack first run emits BUILDING_ENVIRONMENT -> RUNNING; second run skips it."""
+    pack_dir = _create_fixture_pack(tmp_path)
+    uv_bin = shutil.which("uv")
+    assert uv_bin is not None
+    subprocess.run([uv_bin, "lock", "--project", str(pack_dir)], cwd=pack_dir, check=True)
+    executor = LocalExecutor(tmp_path)
+    statuses_first: list[NodeStatus] = []
+    node_dir_1 = tmp_path / ".plynx" / "runs" / "r1" / "nodes" / "loud1"
+
+    req_1 = ExecutionRequest(
+        run_id="r1",
+        node_id="loud1",
+        op="exit_pack/ops:LoudSuccessOp",
+        attempt=1,
+        node_dir=node_dir_1,
+        inputs=InputsManifest(inputs={"msg": ScalarValue(value="first")}),
+        on_status=statuses_first.append,
+    )
+    res_1 = asyncio.run(executor.run(req_1))
+    assert res_1.status == NodeStatus.SUCCESS, res_1.error
+    assert statuses_first == [NodeStatus.BUILDING_ENVIRONMENT, NodeStatus.RUNNING]
+
+    envs_dir = tmp_path / ".plynx" / "envs"
+    built_envs = list(envs_dir.glob("exit_pack-*"))
+    assert len(built_envs) == 1
+    assert (built_envs[0] / "pyvenv.cfg").is_file()
+
+    statuses_second: list[NodeStatus] = []
+    node_dir_2 = tmp_path / ".plynx" / "runs" / "r1" / "nodes" / "loud2"
+    req_2 = ExecutionRequest(
+        run_id="r1",
+        node_id="loud2",
+        op="exit_pack/ops:LoudSuccessOp",
+        attempt=1,
+        node_dir=node_dir_2,
+        inputs=InputsManifest(inputs={"msg": ScalarValue(value="second")}),
+        on_status=statuses_second.append,
+    )
+    res_2 = asyncio.run(executor.run(req_2))
+    assert res_2.status == NodeStatus.SUCCESS, res_2.error
     assert statuses_second == [NodeStatus.RUNNING]
 
 

@@ -8,7 +8,14 @@ from io import StringIO
 from pathlib import Path
 from typing import Any, Final, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
@@ -65,7 +72,11 @@ def parse_input_value(value: Any, *, port: str = "") -> Any:
             return NodeRef(from_node=match.group(1), output=match.group(2))
         return value
     if isinstance(value, Mapping):
-        if "from_node" in value:
+        if (
+            set(value.keys()) == {"from_node", "output"}
+            and isinstance(value.get("from_node"), str)
+            and isinstance(value.get("output"), str)
+        ):
             return NodeRef.model_validate(dict(value))
         return dict(value)
     if isinstance(value, list):
@@ -119,6 +130,18 @@ class NodeSpec(BaseModel):
                 raise ValueError(f"Invalid input port name {port!r}")
             parsed[port] = parse_input_value(raw_val, port=port)
         return parsed
+
+    @field_serializer("inputs")
+    def _serialize_inputs(self, inputs: dict[str, Any]) -> dict[str, Any]:
+        serialized: dict[str, Any] = {}
+        for port, val in inputs.items():
+            if isinstance(val, NodeRef):
+                serialized[port] = val.model_dump()
+            elif isinstance(val, str) and val.startswith("$"):
+                serialized[port] = f"${val}"
+            else:
+                serialized[port] = val
+        return serialized
 
 
 class Workflow(BaseModel):

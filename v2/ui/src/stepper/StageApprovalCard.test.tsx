@@ -11,6 +11,7 @@ afterEach(() => {
 
 const mockWaitingGate: StageGateState = {
   stage_id: "s1_ingest",
+  kind: "approval",
   status: "WAITING",
   created_at: 1700000000,
 };
@@ -138,7 +139,7 @@ describe("StageApprovalCard component (Task 6.6)", () => {
         runId="run-999"
         stageId="stage2"
         stageTitle="2. Transform"
-        gateState={{ stage_id: "stage2", status: "WAITING", created_at: 100 }}
+        gateState={{ stage_id: "stage2", kind: "input", status: "WAITING", created_at: 100 }}
         workflow={mockWorkflow}
         runInputs={{}}
         opsMap={mockOpsMap as unknown as Record<string, OpEntry>}

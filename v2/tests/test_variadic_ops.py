@@ -9,7 +9,7 @@ from pathlib import Path
 
 from plynx.api_models import InputPortSpec, OpEntry, OutputPortSpec
 from plynx.cas import compute_cache_key
-from plynx.registry import FakeRegistry, extract_ops_from_source
+from plynx.registry import extract_ops_from_source
 from plynx.workflow.models import NodeSpec, Stage, Workflow
 from plynx.workflow.validator import validate_workflow
 from plynx_sdk.protocol import (
@@ -17,6 +17,8 @@ from plynx_sdk.protocol import (
     OutputsManifest,
     ScalarValue,
 )
+
+from tests.fakes import FakeRegistry
 
 SDK_SRC = Path(__file__).resolve().parent.parent / "packages" / "plynx-sdk" / "src"
 

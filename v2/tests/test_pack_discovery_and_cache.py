@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from plynx.registry import OpRegistry, PackRegistry, Registry, discover_packs
+from plynx.registry import OpRegistry, PackRegistry, discover_packs
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -64,7 +64,7 @@ def test_registry_satisfies_op_registry_protocol(tmp_path: Path) -> None:
     """PackRegistry implements the OpRegistry protocol."""
     reg = PackRegistry(workspace_root=tmp_path)
     assert isinstance(reg, OpRegistry)
-    assert issubclass(Registry, OpRegistry)
+    assert issubclass(PackRegistry, OpRegistry)
 
 
 def test_cold_start_builds_cache_file(tmp_path: Path) -> None:

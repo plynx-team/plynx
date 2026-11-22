@@ -1,4 +1,4 @@
-"""In-memory ``FakeExecutor`` with scripted results, delays, failures, and checkpoints."""
+"""In-memory ``FakeExecutor`` with scripted results, delays, failures, and checkpoints for tests."""
 
 from __future__ import annotations
 
@@ -8,6 +8,9 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
+from plynx.api_models import NodeStatus
+from plynx.engine.executor import ExecutionRequest, NodeResult
+from plynx.store.run_store import atomic_write_text
 from plynx_sdk.protocol import (
     CheckpointManifest,
     InputsManifest,
@@ -15,10 +18,6 @@ from plynx_sdk.protocol import (
     OutputValue,
     ScalarValue,
 )
-
-from plynx.api_models import NodeStatus
-from plynx.engine.executor import ExecutionRequest, LaunchHandle, NodeResult
-from plynx.store.run_store import atomic_write_text
 
 OutputsFactory = Callable[[InputsManifest], Mapping[str, OutputValue]]
 
@@ -88,10 +87,6 @@ class FakeExecutor:
         self.executions = []
         self.active_count = 0
         self.max_active_count = 0
-
-    async def launch(self, request: ExecutionRequest) -> LaunchHandle:
-        """Raise ``NotImplementedError`` per ARCHITECTURE.md."""
-        raise NotImplementedError("Executor.launch is not implemented in v2.0.0")
 
     async def run(self, request: ExecutionRequest) -> NodeResult:
         """Run a scripted or default fake node attempt."""
@@ -204,8 +199,8 @@ class FakeExecutor:
     ) -> CheckpointManifest | None:
         if script is not None and script.checkpoint is not None:
             return script.checkpoint
-        if request.op == "standard_io/demo:AskFooOrWoo":
-            prompt_in = request.inputs.inputs.get("prompt")
+        if request.op in ("standard_io/demo:AskFooOrWoo", "standard_io/interactive:AskChoice"):
+            prompt_in = request.inputs.inputs.get("prompt") or request.inputs.inputs.get("question")
             question = (
                 str(prompt_in.value)
                 if isinstance(prompt_in, ScalarValue) and prompt_in.value
@@ -248,8 +243,11 @@ class FakeExecutor:
             if callable(script.outputs):
                 return dict(script.outputs(request.inputs))
             return dict(script.outputs)
-        if request.op == "standard_io/demo:AskFooOrWoo" and checkpoint is not None:
-            answer = request.inputs.checkpoint_answers[checkpoint.checkpoint_id]
+        if (
+            request.op in ("standard_io/demo:AskFooOrWoo", "standard_io/interactive:AskChoice")
+            and checkpoint is not None
+        ):
+            answer = request.inputs.checkpoint_answers.get(checkpoint.checkpoint_id, "foo")
             return {"choice": ScalarValue(value=answer)}
         if request.op == "standard_io/demo:SecretCodeChallenge":
             return {

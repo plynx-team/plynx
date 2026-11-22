@@ -6,20 +6,16 @@ import asyncio
 import itertools
 from pathlib import Path
 
-import pytest
 from plynx.api_models import NodeStatus, NodeStatusEvent, RunStatus, RunStatusEvent
 from plynx.engine import (
-    ExecutionRequest,
-    Executor,
-    FakeExecutor,
-    FakeNodeScript,
     Scheduler,
     SchedulerOptions,
 )
-from plynx.engine.fake_executor import scalar_outputs
 from plynx.store import RunStore
 from plynx.workflow.models import Workflow
-from plynx_sdk.protocol import CheckpointManifest, InputsManifest, ScalarValue
+from plynx_sdk.protocol import CheckpointManifest, ScalarValue
+
+from tests.fakes import FakeExecutor, FakeNodeScript, scalar_outputs
 
 
 def _diamond_workflow() -> Workflow:
@@ -47,22 +43,6 @@ def _diamond_workflow() -> Workflow:
             },
         }
     )
-
-
-def test_executor_launch_raises_not_implemented(tmp_path: Path) -> None:
-    """Executor.launch raises NotImplementedError in v2.0.0."""
-    executor = FakeExecutor()
-    assert isinstance(executor, Executor)
-    req = ExecutionRequest(
-        run_id="r1",
-        node_id="n1",
-        op="standard_io/demo:Echo",
-        attempt=1,
-        node_dir=tmp_path,
-        inputs=InputsManifest(),
-    )
-    with pytest.raises(NotImplementedError):
-        asyncio.run(executor.launch(req))
 
 
 def test_four_node_diamond_runs_and_events_in_valid_order(tmp_path: Path) -> None:
@@ -200,8 +180,8 @@ def test_checkpoint_pause_and_replay_in_scheduler(tmp_path: Path) -> None:
             "name": "cp_test",
             "nodes": {
                 "pick": {
-                    "op": "standard_io/demo:AskFooOrWoo",
-                    "inputs": {"prompt": "foo or woo?"},
+                    "op": "standard_io/interactive:AskChoice",
+                    "inputs": {"question": "foo or woo?", "options_csv": "foo, woo"},
                 },
                 "echo": {
                     "op": "standard_io/demo:Echo",

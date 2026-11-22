@@ -91,12 +91,6 @@ def compute_cache_key(
         direct = pack_dir / "uv.lock"
         if direct.is_file():
             lock_file = direct
-        else:
-            for parent in list(pack_dir.parents)[:3]:
-                candidate = parent / "uv.lock"
-                if candidate.is_file():
-                    lock_file = candidate
-                    break
     if lock_file is not None and lock_file.is_file():
         uv_lock_sha256, _ = hash_file(lock_file)
 

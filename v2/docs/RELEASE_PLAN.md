@@ -83,14 +83,14 @@ Goal: `pip install plynx` or `uv tool install plynx` works cleanly inside any ex
 
 ## Phase R3: Domain-Agnostic Cleanup & Code Simplification (P1/P2)
 
-- [ ] **R3.1 Trim `builtin_packs/` to core, domain-agnostic `standard_io` only.**
+- [x] **R3.1 Trim `builtin_packs/` to core, domain-agnostic `standard_io` only.**
   - Move `media_studio`, `pedalboard_studio`, and `podcast_studio` out of `builtin_packs/` into `examples/custom_packs/` (they remain runnable as examples, not bundled in the wheel).
   - Move hardcoded test toys (`AskFooOrWoo`, `SecretCodeChallenge`, `MultiStepQuestionnaire`) from `standard_io` into `tests/fixtures/`.
   - Upgrade `TemplateFormat` and `BundleDirectory` to use `ALLOW_EXTRA_INPUTS = True`; fix `BundleDirectory` missing-file/basename-collision bugs; use `.as_posix()` in `ListDirectory`; fix `JsonExtract` scalar JSON formatting.
   - Fix orphan/unwired nodes in remaining showcase workflows in `examples/workflows/`.
   - **Accept:** `builtin_packs/` contains only stdlib-only, cross-platform `standard_io`; all remaining example workflows have valid wiring with no fake/orphan nodes.
 
-- [ ] **R3.2 Remove test fakes, dead abstractions, and duplicate boilerplate in Python.**
+- [x] **R3.2 Remove test fakes, dead abstractions, and duplicate boilerplate in Python.**
   - Move `FakeRegistry`, `default_fake_ops` (536 lines), and `FakeExecutor` out of `packages/plynx/src/` into `tests/`.
   - Delete unused dead APIs: `Executor.launch()`, `LaunchHandle`, `spawn_process_group()`, `run_server()`, `ResultDirectoryEntry`, `Registry` alias, unused `approved_gates` set.
   - Create one small `WorkspaceConfig` loader (`plynx/config.py`) replacing the 4 duplicate `plynx.yaml` parsers, and wire `concurrency` (and `db` if kept, or drop `db` from `PROTOCOL.md`).
@@ -99,7 +99,7 @@ Goal: `pip install plynx` or `uv tool install plynx` works cleanly inside any ex
   - Read package version from `importlib.metadata.version("plynx")` instead of 4 hardcoded `"2.0.0"` strings.
   - **Accept:** Zero test fakes in `src/`; all ruff/mypy/pytest checks pass; net LOC reduced significantly.
 
-- [ ] **R3.3 Break up Python god-functions.**
+- [x] **R3.3 Break up Python god-functions.**
   - Split `Scheduler.run()` (873 lines) into focused methods/helper class (`_RunExecution`) with explicit state instead of 15 closure-captured variables.
   - Split `server/app.py` (`create_app()`, 865 lines) into clean route modules (`routes/workflows.py`, `routes/runs.py`, `routes/ops.py`) and explicit app state.
   - **Accept:** No function in `packages/plynx/src/` exceeds ~150 lines; all server and engine tests pass.

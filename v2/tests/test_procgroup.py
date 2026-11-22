@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -10,7 +11,7 @@ from pathlib import Path
 from plynx.engine.procgroup import (
     is_pid_alive,
     kill_process_group,
-    spawn_process_group,
+    popen_group_kwargs,
 )
 
 
@@ -38,7 +39,7 @@ gc = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
 Path({str(grandchild_pid_file)!r}).write_text(str(gc.pid), encoding="utf-8")
 time.sleep(60)
 """
-    proc = spawn_process_group([sys.executable, "-c", child_code])
+    proc = subprocess.Popen([sys.executable, "-c", child_code], **popen_group_kwargs())
     try:
         assert _wait_until(grandchild_pid_file.is_file, timeout=5.0)
         grandchild_pid = int(grandchild_pid_file.read_text(encoding="utf-8").strip())

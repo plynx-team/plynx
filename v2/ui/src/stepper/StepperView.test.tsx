@@ -71,6 +71,7 @@ const mockRunState: RunState = {
   stage_gates: {
     s2: {
       stage_id: "s2",
+      kind: "approval",
       status: "WAITING",
       created_at: 1700000000,
     },

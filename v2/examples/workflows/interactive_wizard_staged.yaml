@@ -1,7 +1,6 @@
 version: 1
 name: interactive_wizard_staged
-description: "Interactive onboarding wizard demonstrating AskChoice, MultiStepQuestionnaire
-  with idempotent checkpoints, stage approval gates, TemplateFormat, and MarkdownReport."
+description: "Interactive onboarding wizard demonstrating AskChoice with stage approval gates, TemplateFormat, and MarkdownReport."
 stages:
   input_stage:
     title: "1. User Survey & Questionnaire"
@@ -20,21 +19,21 @@ nodes:
     inputs:
       question: "Select your project category:"
       options_csv: "Machine Learning, Web Automation, Audio Production, Data Analytics"
-  survey:
-    op: standard_io/interactive:MultiStepQuestionnaire
-    title: "3-Step User Questionnaire"
+  role_choice:
+    op: standard_io/interactive:AskChoice
+    title: "Project Role Selection"
     stage: input_stage
     inputs:
-      intro_prompt: "Welcome to the interactive project onboarding wizard."
+      question: "Select your primary role:"
+      options_csv: "Data Scientist, Software Engineer, DevOps Engineer, Researcher"
   format_summary:
     op: standard_io/data:TemplateFormat
     title: "Format Profile Summary"
     stage: review_gate
     inputs:
-      template: "Project Category: {a}\nUser Role: {b}\nGoal: {c}"
-      a: $choice.choice
-      b: $survey.step1_answer
-      c: $survey.step2_answer
+      template: "Project Category: {category}\nUser Role: {role}"
+      category: $choice.choice
+      role: $role_choice.choice
   final_report:
     op: standard_io/files:MarkdownReport
     title: "Compile Onboarding Report"

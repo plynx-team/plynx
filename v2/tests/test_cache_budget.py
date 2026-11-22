@@ -222,9 +222,10 @@ def test_budget_dry_run_leaves_files_intact(tmp_path: Path) -> None:
 
 @pytest.mark.anyio
 async def test_scheduler_enforces_cache_max_size_from_plynx_yaml(tmp_path: Path) -> None:
-    from plynx.engine import FakeExecutor, Scheduler, SchedulerOptions
-    from plynx.registry import FakeRegistry
+    from plynx.engine import Scheduler, SchedulerOptions
     from plynx.workflow.models import NodeSpec, Workflow
+
+    from tests.fakes import FakeExecutor, FakeRegistry
 
     # Write plynx.yaml with a 50-byte cache limit
     (tmp_path / "plynx.yaml").write_text("cache:\n  max_size: 50B\n", encoding="utf-8")

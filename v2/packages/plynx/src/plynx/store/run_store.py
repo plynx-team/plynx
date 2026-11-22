@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Final
 
+from plynx import __version__
 from plynx.api_models import (
     CheckpointState,
     NodeRunState,
@@ -28,10 +29,11 @@ from plynx.api_models import (
     StageGateState,
     StageGateStatus,
 )
+from plynx.config import load_workspace_config
 from plynx.store.event_log import EventLog
 
 USER_VERSION: Final[int] = 1
-PLYNX_VERSION: Final[str] = "2.0.0"
+PLYNX_VERSION: Final[str] = __version__
 
 SCHEMA_SQL: Final[str] = """
 CREATE TABLE runs (
@@ -127,7 +129,11 @@ class RunStore:
     def __init__(self, workspace_root: Path, db_path: Path | None = None) -> None:
         self.workspace_root = workspace_root.resolve()
         self.plynx_dir = self.workspace_root / ".plynx"
-        self.db_path = (db_path or (self.plynx_dir / "plynx.db")).resolve()
+        if db_path is not None:
+            self.db_path = db_path.resolve()
+        else:
+            cfg = load_workspace_config(self.workspace_root)
+            self.db_path = (self.workspace_root / cfg.db).resolve()
         self.runs_dir = self.plynx_dir / "runs"
         self._ensure_initialized()
 

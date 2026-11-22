@@ -109,14 +109,22 @@ export function applyRunEvent(state: RunState, event: RunEvent): RunState {
     }
     case "stage_approval": {
       const prevGate = state.stage_gates[event.data.stage_id];
-      // Do not revert an already-approved gate when historical SSE events replay
-      if (prevGate?.status === "APPROVED") {
+      const eventKind = event.data.kind ?? "approval";
+      // Do not revert an already-approved gate of the same kind when historical SSE events replay
+      if (
+        prevGate?.status === "APPROVED" &&
+        (prevGate.kind ?? "approval") === eventKind
+      ) {
         return state;
       }
       const gate: StageGateState = {
         stage_id: event.data.stage_id,
+        kind: eventKind,
         status: "WAITING",
-        created_at: prevGate?.created_at ?? event.ts,
+        created_at:
+          prevGate && (prevGate.kind ?? "approval") === eventKind
+            ? prevGate.created_at
+            : event.ts,
         decided_at: null,
       };
       return {
@@ -130,8 +138,10 @@ export function applyRunEvent(state: RunState, event: RunEvent): RunState {
     case "stage_resolved": {
       const prev: StageGateState | undefined =
         state.stage_gates[event.data.stage_id];
+      const eventKind = event.data.kind ?? prev?.kind ?? "approval";
       const gate: StageGateState = {
         stage_id: event.data.stage_id,
+        kind: eventKind,
         status: "APPROVED",
         created_at: prev?.created_at ?? event.ts,
         decided_at: event.ts,

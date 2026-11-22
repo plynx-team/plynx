@@ -36,8 +36,9 @@ from standard_io.files import (
 )
 from standard_io.interactive import (
     AskChoice,
-    MultiStepQuestionnaire,
 )
+
+from tests.fixtures.toy_ops import MultiStepQuestionnaire
 
 ROOT = Path(__file__).resolve().parent.parent
 EXAMPLE_WORKFLOW = ROOT / "examples" / "workflows" / "foo_or_woo.yaml"
@@ -83,8 +84,8 @@ def test_all_standard_io_demo_ops_pipeline(tmp_path: Path) -> None:
             "name": "all_demo_ops",
             "nodes": {
                 "ask": {
-                    "op": "standard_io/demo:AskFooOrWoo",
-                    "inputs": {"prompt": "Choose one"},
+                    "op": "standard_io/interactive:AskChoice",
+                    "inputs": {"question": "Choose one", "options_csv": "foo, woo"},
                 },
                 "join": {
                     "op": "standard_io/text:Concat",
@@ -140,6 +141,9 @@ def test_template_format() -> None:
     res2 = op.run(template="{greeting} {target}", values={"greeting": "Hi", "target": "World"})
     assert res2 == {"text": "Hi World"}
 
+    res_extra = op.run(template="Project: {project}, owner: {owner}", project="PLynx", owner="Dev")
+    assert res_extra == {"text": "Project: PLynx, owner: Dev"}
+
     with pytest.raises(KeyError):
         op.run(template="{missing_key}")
 
@@ -167,13 +171,32 @@ def test_math_op() -> None:
 def test_json_extract(tmp_path: Path) -> None:
     """JsonExtract extracts nested keys, array items, or whole JSON trees."""
     op = JsonExtract()
-    data = {"user": {"profile": {"name": "Charlie", "tags": ["admin", "dev"]}}}
+    data = {
+        "user": {
+            "profile": {
+                "name": "Charlie",
+                "tags": ["admin", "dev"],
+                "active": True,
+                "score": 42,
+                "extra": None,
+            }
+        }
+    }
 
     res = op.run(json_data=data, key="user.profile.name")
     assert res == {"value_str": "Charlie", "value_json": {"value": "Charlie"}, "found": True}
 
     res_idx = op.run(json_data=data, key="user.profile.tags.0")
     assert res_idx == {"value_str": "admin", "value_json": {"value": "admin"}, "found": True}
+
+    res_bool = op.run(json_data=data, key="user.profile.active")
+    assert res_bool == {"value_str": "true", "value_json": {"value": True}, "found": True}
+
+    res_int = op.run(json_data=data, key="user.profile.score")
+    assert res_int == {"value_str": "42", "value_json": {"value": 42}, "found": True}
+
+    res_null = op.run(json_data=data, key="user.profile.extra")
+    assert res_null == {"value_str": "null", "value_json": {"value": None}, "found": True}
 
     res_missing = op.run(json_data=data, key="user.nonexistent", default="N/A")
     assert res_missing == {"value_str": "N/A", "value_json": {}, "found": False}
@@ -259,7 +282,7 @@ def test_list_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None
 
 
 def test_bundle_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """BundleDirectory groups up to three files into an output folder."""
+    """BundleDirectory groups files into an output folder, handling collisions and missing files."""
     monkeypatch.chdir(tmp_path)
     f1 = tmp_path / "item1.txt"
     f1.write_text("1", encoding="utf-8")
@@ -273,6 +296,25 @@ def test_bundle_directory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
     assert bundle_dir.is_dir()
     assert (bundle_dir / "item1.txt").is_file()
     assert (bundle_dir / "item2.txt").is_file()
+
+    # Missing file raises FileNotFoundError
+    with pytest.raises(FileNotFoundError, match="not found"):
+        op.run(f1=tmp_path / "nonexistent.txt")
+
+    # Basename collision resolves cleanly without overwriting
+    d1 = tmp_path / "d1"
+    d2 = tmp_path / "d2"
+    d1.mkdir()
+    d2.mkdir()
+    (d1 / "same.txt").write_text("from d1", encoding="utf-8")
+    (d2 / "same.txt").write_text("from d2", encoding="utf-8")
+    res_coll = op.run(bundle_name="coll_bundle", first=d1 / "same.txt", second=d2 / "same.txt")
+    assert res_coll["file_count"] == 2
+    coll_dir = Path(res_coll["bundle"])
+    assert (coll_dir / "same.txt").is_file()
+    assert (coll_dir / "same_1.txt").is_file()
+    assert (coll_dir / "same.txt").read_text(encoding="utf-8") == "from d1"
+    assert (coll_dir / "same_1.txt").read_text(encoding="utf-8") == "from d2"
 
     with pytest.raises(ValueError, match="single relative folder name"):
         op.run(bundle_name="/root/escape")
@@ -451,16 +493,16 @@ def test_data_and_files_end_to_end_pipeline(tmp_path: Path) -> None:
     assert isinstance(list_res.outputs["manifest"], ResultFileValue)
 
 
-def test_multi_step_questionnaire_scheduler_replay(tmp_path: Path) -> None:
-    """Scheduler executes MultiStepQuestionnaire with 3 sequential checkpoint resumes."""
+def test_ask_choice_scheduler_replay(tmp_path: Path) -> None:
+    """Scheduler executes AskChoice with checkpoint pausing and answer resumption."""
     wf = Workflow.model_validate(
         {
             "version": 1,
-            "name": "interactive_survey",
+            "name": "interactive_choice",
             "nodes": {
-                "survey": {
-                    "op": "standard_io/interactive:MultiStepQuestionnaire",
-                    "inputs": {"intro_prompt": "Interactive Test Survey"},
+                "choice": {
+                    "op": "standard_io/interactive:AskChoice",
+                    "inputs": {"question": "Choose target", "options_csv": "dev, staging, prod"},
                 },
             },
         }
@@ -473,65 +515,23 @@ def test_multi_step_questionnaire_scheduler_replay(tmp_path: Path) -> None:
     # Attempt 1: No answers -> pauses at cp_0
     state1 = asyncio.run(scheduler.run(wf, options=SchedulerOptions(non_interactive=True)))
     assert state1.status == RunStatus.WAITING_FOR_USER
-    assert state1.nodes["survey"].status == NodeStatus.WAITING_FOR_USER
+    assert state1.nodes["choice"].status == NodeStatus.WAITING_FOR_USER
     assert len(state1.checkpoints) == 1
     assert state1.checkpoints[0].checkpoint_id == "cp_0"
 
-    # Attempt 2: Answer cp_0 -> pauses at cp_1
+    # Attempt 2: Answer cp_0 -> succeeds!
     state2 = asyncio.run(
         scheduler.run(
             wf,
             options=SchedulerOptions(
-                non_interactive=True,
-                answers={"survey.cp_0": "DevOps Engineer"},
+                answers={"choice.cp_0": "staging"},
             ),
         )
     )
-    assert state2.status == RunStatus.WAITING_FOR_USER
-    assert state2.nodes["survey"].status == NodeStatus.WAITING_FOR_USER
-    assert len(state2.checkpoints) == 1
-    assert state2.checkpoints[0].checkpoint_id == "cp_1"
-
-    # Attempt 3: Answer cp_0 and cp_1 -> pauses at cp_2
-    state3 = asyncio.run(
-        scheduler.run(
-            wf,
-            options=SchedulerOptions(
-                non_interactive=True,
-                answers={
-                    "survey.cp_0": "DevOps Engineer",
-                    "survey.cp_1": "Automate deployment pipeline",
-                },
-            ),
-        )
-    )
-    assert state3.status == RunStatus.WAITING_FOR_USER
-    assert state3.nodes["survey"].status == NodeStatus.WAITING_FOR_USER
-    assert len(state3.checkpoints) == 1
-    assert state3.checkpoints[0].checkpoint_id == "cp_2"
-
-    # Attempt 4: Answer all 3 checkpoints -> succeeds!
-    state4 = asyncio.run(
-        scheduler.run(
-            wf,
-            options=SchedulerOptions(
-                answers={
-                    "survey.cp_0": "DevOps Engineer",
-                    "survey.cp_1": "Automate deployment pipeline",
-                    "survey.cp_2": "Production Cloud",
-                }
-            ),
-        )
-    )
-    assert state4.status == RunStatus.SUCCESS
-    assert state4.nodes["survey"].status == NodeStatus.SUCCESS
+    assert state2.status == RunStatus.SUCCESS
+    assert state2.nodes["choice"].status == NodeStatus.SUCCESS
 
     outputs = OutputsManifest.from_json(
-        (store.node_dir(state4.id, "survey") / "outputs.json").read_text(encoding="utf-8")
+        (store.node_dir(state2.id, "choice") / "outputs.json").read_text(encoding="utf-8")
     )
-    assert outputs.outputs["step1_answer"] == ScalarValue(value="DevOps Engineer")
-    assert outputs.outputs["step2_answer"] == ScalarValue(value="Automate deployment pipeline")
-    assert outputs.outputs["step3_answer"] == ScalarValue(value="Production Cloud")
-    summary_out = outputs.outputs["summary"]
-    assert isinstance(summary_out, ScalarValue)
-    assert "Role: DevOps Engineer" in str(summary_out.value)
+    assert outputs.outputs["choice"] == ScalarValue(value="staging")

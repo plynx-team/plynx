@@ -97,6 +97,38 @@ def _unwrap_optional(node: ast.AST) -> tuple[ast.AST, bool]:
     return node, False
 
 
+def _extract_literal_str(expr: ast.AST, field_name: str, context: str = "") -> str:
+    """Extract a string literal from an AST node, raising ValueError on computed/non-string values."""
+    if not isinstance(expr, ast.Constant):
+        msg = f"Computed metadata is not supported: {field_name} must be a string literal"
+        if context:
+            msg = f"Computed metadata is not supported: {field_name} in {context} must be a string literal"
+        raise ValueError(msg)
+    if not isinstance(expr.value, str):
+        tname = type(expr.value).__name__
+        msg = f"{field_name} must be a string literal, got {tname}"
+        if context:
+            msg = f"Op {field_name} must be a string literal, got {tname}"
+        raise ValueError(msg)
+    return expr.value
+
+
+def _extract_literal_bool(expr: ast.AST, field_name: str, context: str = "") -> bool:
+    """Extract a bool literal from an AST node, raising ValueError on computed/non-bool values."""
+    if not isinstance(expr, ast.Constant):
+        msg = f"Computed metadata is not supported: {field_name} must be a boolean literal"
+        if context:
+            msg = f"Computed metadata is not supported: {field_name} in {context} must be a boolean literal"
+        raise ValueError(msg)
+    if not isinstance(expr.value, bool):
+        tname = type(expr.value).__name__
+        msg = f"{field_name} must be a boolean literal, got {tname}"
+        if context:
+            msg = f"Op {field_name} must be a boolean literal, got {tname}"
+        raise ValueError(msg)
+    return expr.value
+
+
 def _parse_annotation(
     node: ast.AST,
     module_aliases: dict[str, ast.AST],
@@ -233,22 +265,29 @@ def _parse_annotation(
 
 def _is_op_candidate_class(node: ast.ClassDef) -> bool:
     """Return whether ``node`` is an attempted PLynx Op class."""
+    if any(_get_name_or_attr(base) == "TypedDict" for base in node.bases):
+        return False
     if any(_get_name_or_attr(base) == "Op" for base in node.bases):
         return True
-    if any(_get_name_or_attr(base).endswith("Op") for base in node.bases):
-        return True
+
+    has_run = any(isinstance(item, ast.FunctionDef) and item.name == "run" for item in node.body)
+    has_title = False
     for item in node.body:
         if isinstance(item, ast.Assign):
             for t in item.targets:
                 if isinstance(t, ast.Name) and t.id == "TITLE":
-                    return True
+                    has_title = True
+                    break
         elif (
             isinstance(item, ast.AnnAssign)
             and isinstance(item.target, ast.Name)
             and item.target.id == "TITLE"
         ):
-            return True
-    return False
+            has_title = True
+            break
+
+    has_op_base = any(_get_name_or_attr(base).endswith("Op") for base in node.bases)
+    return bool(has_run and (has_title or has_op_base))
 
 
 def _get_op_decorator(node: ast.FunctionDef) -> ast.Call | ast.AST | None:
@@ -259,6 +298,17 @@ def _get_op_decorator(node: ast.FunctionDef) -> ast.Call | ast.AST | None:
         if isinstance(dec, (ast.Name, ast.Attribute)) and _get_name_or_attr(dec) == "op":
             return dec
     return None
+
+
+def _format_op_id(pack: str, module: str, name: str) -> str:
+    """Format an op ID as <pack>/<module>:<name>, <pack>:<name>, <module>:<name>, or <name>."""
+    if pack and module:
+        return f"{pack}/{module}:{name}"
+    if pack:
+        return f"{pack}:{name}"
+    if module:
+        return f"{module}:{name}"
+    return name
 
 
 def _deduce_pack_and_module(
@@ -276,7 +326,7 @@ def _deduce_pack_and_module(
 
     parts = Path(source_path).parts
     pack = ""
-    module = file_path.stem
+    module = file_path.stem if file_path.stem != "__init__" else ""
 
     for i, part in enumerate(parts):
         if part in ("builtin_packs", "custom_packs") and i + 1 < len(parts):
@@ -287,6 +337,19 @@ def _deduce_pack_and_module(
         idx = parts.index("packages")
         if idx + 1 < len(parts):
             pack = parts[idx + 1]
+
+    if file_path.stem == "__init__" and pack:
+        try:
+            if pack in parts:
+                pack_idx = parts.index(pack)
+                subparts = list(parts[pack_idx + 1 : -1])
+                if subparts and subparts[0] == "src":
+                    subparts.pop(0)
+                if subparts and subparts[0] == pack:
+                    subparts.pop(0)
+                module = ".".join(subparts)
+        except Exception:
+            module = ""
 
     return pack, module, source_path
 
@@ -373,20 +436,23 @@ def _extract_inputs(
         if not _SNAKE_CASE_RE.match(kwarg_name):
             raise ValueError(f"Var-keyword name '{kwarg_name}' in {owner_name} must be snake_case")
         if args.kwarg.annotation is not None:
-            parsed = _parse_annotation(args.kwarg.annotation, module_aliases)
-            desc = param_descriptions.get(kwarg_name, None) if param_descriptions else None
-            extra_inputs_type = InputPortSpec(
-                name=kwarg_name,
-                type=parsed.port_type,
-                media=parsed.media,
-                options=parsed.options,
-                min=parsed.min,
-                max=parsed.max,
-                step=parsed.step,
-                required=False,
-                default=None,
-                description=desc,
-            )
+            if _get_name_or_attr(args.kwarg.annotation) == "Any":
+                extra_inputs_type = None
+            else:
+                parsed = _parse_annotation(args.kwarg.annotation, module_aliases)
+                desc = param_descriptions.get(kwarg_name, None) if param_descriptions else None
+                extra_inputs_type = InputPortSpec(
+                    name=kwarg_name,
+                    type=parsed.port_type,
+                    media=parsed.media,
+                    options=parsed.options,
+                    min=parsed.min,
+                    max=parsed.max,
+                    step=parsed.step,
+                    required=False,
+                    default=None,
+                    description=desc,
+                )
 
     inputs: list[InputPortSpec] = []
     pos_args = args.args
@@ -471,6 +537,8 @@ def _extract_outputs(
     returns: ast.AST | None,
     typed_dicts: dict[str, ast.ClassDef],
     module_aliases: dict[str, ast.AST],
+    *,
+    allow_default_outputs_typed_dict: bool = False,
 ) -> list[OutputPortSpec]:
     """Extract output port specifications from return annotations or a TypedDict."""
     outputs: list[OutputPortSpec] = []
@@ -481,7 +549,7 @@ def _extract_outputs(
         if ret_name in typed_dicts:
             output_typed_dict = typed_dicts[ret_name]
 
-    if output_typed_dict is None and "Outputs" in typed_dicts:
+    if output_typed_dict is None and allow_default_outputs_typed_dict and "Outputs" in typed_dicts:
         output_typed_dict = typed_dicts["Outputs"]
 
     if output_typed_dict is not None:
@@ -527,7 +595,7 @@ def _extract_class_op(
     allow_extra_inputs = False
     inner_typed_dicts: dict[str, ast.ClassDef] = {}
     run_func: ast.FunctionDef | None = None
-    op_id = f"{pack}/{module}:{class_node.name}" if pack else f"{module}:{class_node.name}"
+    op_id = _format_op_id(pack, module, class_node.name)
 
     try:
         # Check base inheritance
@@ -545,106 +613,24 @@ def _extract_class_op(
             if isinstance(item, ast.ClassDef):
                 if any(_get_name_or_attr(base) == "TypedDict" for base in item.bases):
                     inner_typed_dicts[item.name] = item
-            elif isinstance(item, ast.Assign):
-                for t in item.targets:
-                    if isinstance(t, ast.Name):
-                        if t.id == "TITLE":
-                            if not isinstance(item.value, ast.Constant):
-                                raise ValueError(
-                                    "Computed metadata is not supported: "
-                                    "TITLE must be a string literal"
-                                )
-                            val = item.value.value
-                            if not isinstance(val, str):
-                                tname = type(val).__name__
-                                raise ValueError(f"TITLE must be a string literal, got {tname}")
-                            title = val
-                        elif t.id == "CATEGORY":
-                            if not isinstance(item.value, ast.Constant):
-                                raise ValueError(
-                                    "Computed metadata is not supported: "
-                                    "CATEGORY must be a string literal"
-                                )
-                            val = item.value.value
-                            if not isinstance(val, str):
-                                tname = type(val).__name__
-                                raise ValueError(f"CATEGORY must be a string literal, got {tname}")
-                            category = val
-                        elif t.id == "CACHEABLE":
-                            if not isinstance(item.value, ast.Constant):
-                                raise ValueError(
-                                    "Computed metadata is not supported: "
-                                    "CACHEABLE must be a boolean literal"
-                                )
-                            val = item.value.value
-                            if not isinstance(val, bool):
-                                tname = type(val).__name__
-                                raise ValueError(
-                                    f"CACHEABLE must be a boolean literal, got {tname}"
-                                )
-                            cacheable = val
-                        elif t.id == "ALLOW_EXTRA_INPUTS":
-                            if not isinstance(item.value, ast.Constant):
-                                raise ValueError(
-                                    "Computed metadata is not supported: "
-                                    "ALLOW_EXTRA_INPUTS must be a boolean literal"
-                                )
-                            val = item.value.value
-                            if not isinstance(val, bool):
-                                tname = type(val).__name__
-                                raise ValueError(
-                                    f"ALLOW_EXTRA_INPUTS must be a boolean literal, got {tname}"
-                                )
-                            allow_extra_inputs = val
-            elif (
-                isinstance(item, ast.AnnAssign)
-                and isinstance(item.target, ast.Name)
-                and item.value is not None
-            ):
-                if item.target.id == "TITLE":
-                    if not isinstance(item.value, ast.Constant):
-                        raise ValueError(
-                            "Computed metadata is not supported: TITLE must be a string literal"
-                        )
-                    val = item.value.value
-                    if not isinstance(val, str):
-                        tname = type(val).__name__
-                        raise ValueError(f"TITLE must be a string literal, got {tname}")
-                    title = val
-                elif item.target.id == "CATEGORY":
-                    if not isinstance(item.value, ast.Constant):
-                        raise ValueError(
-                            "Computed metadata is not supported: CATEGORY must be a string literal"
-                        )
-                    val = item.value.value
-                    if not isinstance(val, str):
-                        tname = type(val).__name__
-                        raise ValueError(f"CATEGORY must be a string literal, got {tname}")
-                    category = val
-                elif item.target.id == "CACHEABLE":
-                    if not isinstance(item.value, ast.Constant):
-                        raise ValueError(
-                            "Computed metadata is not supported: "
-                            "CACHEABLE must be a boolean literal"
-                        )
-                    val = item.value.value
-                    if not isinstance(val, bool):
-                        tname = type(val).__name__
-                        raise ValueError(f"CACHEABLE must be a boolean literal, got {tname}")
-                    cacheable = val
-                elif item.target.id == "ALLOW_EXTRA_INPUTS":
-                    if not isinstance(item.value, ast.Constant):
-                        raise ValueError(
-                            "Computed metadata is not supported: "
-                            "ALLOW_EXTRA_INPUTS must be a boolean literal"
-                        )
-                    val = item.value.value
-                    if not isinstance(val, bool):
-                        tname = type(val).__name__
-                        raise ValueError(
-                            f"ALLOW_EXTRA_INPUTS must be a boolean literal, got {tname}"
-                        )
-                    allow_extra_inputs = val
+            elif isinstance(item, (ast.Assign, ast.AnnAssign)):
+                pairs: list[tuple[str, ast.AST]] = []
+                if isinstance(item, ast.Assign):
+                    for t in item.targets:
+                        if isinstance(t, ast.Name):
+                            pairs.append((t.id, item.value))
+                elif isinstance(item.target, ast.Name) and item.value is not None:
+                    pairs.append((item.target.id, item.value))
+
+                for target_id, val_expr in pairs:
+                    if target_id == "TITLE":
+                        title = _extract_literal_str(val_expr, "TITLE")
+                    elif target_id == "CATEGORY":
+                        category = _extract_literal_str(val_expr, "CATEGORY")
+                    elif target_id == "CACHEABLE":
+                        cacheable = _extract_literal_bool(val_expr, "CACHEABLE")
+                    elif target_id == "ALLOW_EXTRA_INPUTS":
+                        allow_extra_inputs = _extract_literal_bool(val_expr, "ALLOW_EXTRA_INPUTS")
             elif isinstance(item, ast.FunctionDef) and item.name == "run":
                 run_func = item
 
@@ -673,7 +659,18 @@ def _extract_class_op(
         all_typed_dicts = dict(module_typed_dicts)
         all_typed_dicts.update(inner_typed_dicts)
 
-        outputs = _extract_outputs(run_func.returns, all_typed_dicts, module_aliases)
+        has_inner_outputs = "Outputs" in inner_typed_dicts
+        if not has_inner_outputs and run_func.returns is None:
+            raise ValueError(
+                f"Op class '{class_node.name}' has no Outputs TypedDict or return annotation"
+            )
+
+        outputs = _extract_outputs(
+            run_func.returns,
+            all_typed_dicts,
+            module_aliases,
+            allow_default_outputs_typed_dict=has_inner_outputs,
+        )
         inputs, extra_inputs_type = _extract_inputs(
             run_func.args,
             is_method=True,
@@ -736,7 +733,7 @@ def _extract_function_op(
     category = "Uncategorized"
     cacheable = True
     allow_extra_inputs = False
-    op_id = f"{pack}/{module}:{func_node.name}" if pack else f"{module}:{func_node.name}"
+    op_id = _format_op_id(pack, module, func_node.name)
 
     try:
         dec = _get_op_decorator(func_node)
@@ -746,81 +743,24 @@ def _extract_function_op(
                 "(e.g. @op(title=...))"
             )
 
-        # Positional arguments to @op(...)
-        if len(dec.args) >= 1:
-            arg0 = dec.args[0]
-            if not isinstance(arg0, ast.Constant):
-                raise ValueError(
-                    "Computed metadata is not supported: title in @op must be a string literal"
-                )
-            if not isinstance(arg0.value, str):
-                tname = type(arg0.value).__name__
-                raise ValueError(f"Op title must be a string literal, got {tname}")
-            title = arg0.value
-        if len(dec.args) >= 2:
-            arg1 = dec.args[1]
-            if not isinstance(arg1, ast.Constant):
-                raise ValueError(
-                    "Computed metadata is not supported: category in @op must be a string literal"
-                )
-            if not isinstance(arg1.value, str):
-                tname = type(arg1.value).__name__
-                raise ValueError(f"Op category must be a string literal, got {tname}")
-            category = arg1.value
-        if len(dec.args) >= 3:
-            arg2 = dec.args[2]
-            if not isinstance(arg2, ast.Constant):
-                raise ValueError(
-                    "Computed metadata is not supported: cacheable in @op must be a boolean literal"
-                )
-            if not isinstance(arg2.value, bool):
-                tname = type(arg2.value).__name__
-                raise ValueError(f"Op cacheable must be a boolean literal, got {tname}")
-            cacheable = arg2.value
-
-        # Keyword arguments to @op(...)
+        raw_kwargs: dict[str, ast.expr] = {}
+        for name, expr in zip(["title", "category", "cacheable"], dec.args, strict=False):
+            raw_kwargs[name] = expr
         for kw in dec.keywords:
-            if kw.arg == "title":
-                if not isinstance(kw.value, ast.Constant):
-                    raise ValueError(
-                        "Computed metadata is not supported: title in @op must be a string literal"
-                    )
-                if not isinstance(kw.value.value, str):
-                    tname = type(kw.value.value).__name__
-                    raise ValueError(f"Op title must be a string literal, got {tname}")
-                title = kw.value.value
-            elif kw.arg == "category":
-                if not isinstance(kw.value, ast.Constant):
-                    raise ValueError(
-                        "Computed metadata is not supported: "
-                        "category in @op must be a string literal"
-                    )
-                if not isinstance(kw.value.value, str):
-                    tname = type(kw.value.value).__name__
-                    raise ValueError(f"Op category must be a string literal, got {tname}")
-                category = kw.value.value
-            elif kw.arg == "cacheable":
-                if not isinstance(kw.value, ast.Constant):
-                    raise ValueError(
-                        "Computed metadata is not supported: "
-                        "cacheable in @op must be a boolean literal"
-                    )
-                if not isinstance(kw.value.value, bool):
-                    tname = type(kw.value.value).__name__
-                    raise ValueError(f"Op cacheable must be a boolean literal, got {tname}")
-                cacheable = kw.value.value
-            elif kw.arg == "allow_extra_inputs":
-                if not isinstance(kw.value, ast.Constant):
-                    raise ValueError(
-                        "Computed metadata is not supported: "
-                        "allow_extra_inputs in @op must be a boolean literal"
-                    )
-                if not isinstance(kw.value.value, bool):
-                    tname = type(kw.value.value).__name__
-                    raise ValueError(
-                        f"Op allow_extra_inputs must be a boolean literal, got {tname}"
-                    )
-                allow_extra_inputs = kw.value.value
+            if kw.arg is not None:
+                raw_kwargs[kw.arg] = kw.value
+
+        for name, expr in raw_kwargs.items():
+            if name == "title":
+                title = _extract_literal_str(expr, "title", context="@op")
+            elif name == "category":
+                category = _extract_literal_str(expr, "category", context="@op")
+            elif name == "cacheable":
+                cacheable = _extract_literal_bool(expr, "cacheable", context="@op")
+            elif name == "allow_extra_inputs":
+                allow_extra_inputs = _extract_literal_bool(
+                    expr, "allow_extra_inputs", context="@op"
+                )
 
         if title is None:
             raise ValueError(
@@ -831,7 +771,15 @@ def _extract_function_op(
         description = inspect.cleandoc(doc) if doc else ""
         param_descriptions = _parse_docstring_args(doc)
 
-        outputs = _extract_outputs(func_node.returns, module_typed_dicts, module_aliases)
+        if func_node.returns is None:
+            raise ValueError(f"Op function '{func_node.name}' is missing a return annotation")
+
+        outputs = _extract_outputs(
+            func_node.returns,
+            module_typed_dicts,
+            module_aliases,
+            allow_default_outputs_typed_dict=False,
+        )
         inputs, extra_inputs_type = _extract_inputs(
             func_node.args,
             is_method=False,
@@ -891,7 +839,7 @@ def extract_ops_from_source(
     try:
         tree = ast.parse(source, filename=source_path or "<string>")
     except SyntaxError as exc:
-        op_id = f"{pack}/{module}:<syntax_error>" if pack else f"{module}:<syntax_error>"
+        op_id = _format_op_id(pack, module, "<syntax_error>")
         return [
             OpEntry(
                 id=op_id,

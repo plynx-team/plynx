@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Final
 
-from ruamel.yaml import YAML
+from plynx.config import load_workspace_config
 
 # System variables required by the OS, Python, and `uv` to spawn processes when
 # `env_passthrough` restricts inherited host variables.
@@ -107,25 +107,12 @@ def load_dotenv_file(dotenv_path: Path) -> dict[str, str]:
 
 def load_workspace_env_passthrough(workspace_root: Path) -> list[str] | None:
     """Read ``env_passthrough`` from ``<workspace_root>/plynx.yaml`` if present."""
-    cfg_path = workspace_root / "plynx.yaml"
-    if not cfg_path.is_file():
-        return None
-    yaml = YAML(typ="safe")
-    try:
-        parsed = yaml.load(cfg_path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-    if not isinstance(parsed, Mapping):
-        return None
-    raw_passthrough = parsed.get("env_passthrough")
-    if not isinstance(raw_passthrough, list):
-        return None
-    return [str(item) for item in raw_passthrough if isinstance(item, str)]
+    return load_workspace_config(workspace_root).env_passthrough
 
 
 def build_child_environment(
     workspace_root: Path,
-    env_dir: Path,
+    env_dir: Path | None = None,
     *,
     host_env: Mapping[str, str] | None = None,
     env_passthrough: Sequence[str] | None = None,
@@ -158,7 +145,10 @@ def build_child_environment(
 
     env["PYTHONUNBUFFERED"] = "1"
     env["PYTHONUTF8"] = "1"
-    env["UV_PROJECT_ENVIRONMENT"] = str(env_dir)
+    if env_dir is not None:
+        env["UV_PROJECT_ENVIRONMENT"] = str(env_dir)
+    else:
+        env.pop("UV_PROJECT_ENVIRONMENT", None)
     return env
 
 

@@ -13,9 +13,10 @@ from plynx.engine import (
     build_child_environment,
     parse_dotenv,
 )
-from plynx.registry import FakeRegistry
 from plynx.store import RunStore
 from plynx.workflow.models import Workflow
+
+from tests.fakes import FakeRegistry
 
 ENV_OP_CODE = '''"""Fixture op that checks environment variables without leaking secrets."""
 

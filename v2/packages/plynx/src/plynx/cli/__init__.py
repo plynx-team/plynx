@@ -20,13 +20,14 @@ from plynx.cli.interaction import (
     load_cli_answers,
     make_terminal_checkpoint_callback,
     make_terminal_stage_approval_callback,
+    make_terminal_stage_inputs_callback,
     parse_key_value_pair,
     run_with_cancel_signals,
 )
 from plynx.engine import LocalExecutor, Scheduler, SchedulerOptions, create_executor
-from plynx.registry import Registry, find_workspace_root
+from plynx.registry import OpRegistry, PackRegistry, find_workspace_root
 from plynx.store import AmbiguousRunIdError, RunNotFoundError, RunStore, StoreError
-from plynx.workflow.models import load_workflow
+from plynx.workflow.models import Workflow, load_workflow
 from plynx.workflow.validator import validate_workflow, validate_workflow_file
 
 
@@ -38,6 +39,24 @@ def _parse_scalar_value(raw: str) -> Any:
     if isinstance(parsed, (int, float, bool, list, dict)):
         return parsed
     return raw
+
+
+def _lookup_port_type(workflow: Workflow, registry: OpRegistry, key: str) -> str | None:
+    if "." not in key:
+        return None
+    node_id, _, port_name = key.partition(".")
+    node = workflow.nodes.get(node_id)
+    if node is None:
+        return None
+    op_entry = registry.get(node.op)
+    if op_entry is None:
+        return None
+    for port in op_entry.inputs:
+        if port.name == port_name:
+            return port.type
+    if op_entry.allow_extra_inputs and op_entry.extra_inputs_type is not None:
+        return op_entry.extra_inputs_type.type
+    return None
 
 
 def _relative_workflow_path(workflow: Path, workspace_root: Path) -> str:
@@ -67,6 +86,58 @@ def main() -> None:
     """PLynx v2 local-first workflow engine."""
 
 
+@main.command("init")
+@click.argument("target_dir", type=click.Path(path_type=Path), required=False, default=None)
+def init_cmd(target_dir: Path | None) -> None:
+    """Initialize a new PLynx workspace in TARGET_DIR (default: current directory)."""
+    dest = (target_dir or Path.cwd()).resolve()
+    dest.mkdir(parents=True, exist_ok=True)
+
+    (dest / ".plynx").mkdir(parents=True, exist_ok=True)
+
+    workflows_dir = dest / "workflows"
+    workflows_dir.mkdir(parents=True, exist_ok=True)
+    gitkeep_wf = workflows_dir / ".gitkeep"
+    if not any(workflows_dir.iterdir()):
+        gitkeep_wf.touch(exist_ok=True)
+
+    packs_dir = dest / "custom_packs"
+    packs_dir.mkdir(parents=True, exist_ok=True)
+    (packs_dir / ".gitkeep").touch(exist_ok=True)
+
+    cfg_file = dest / "plynx.yaml"
+    if not cfg_file.is_file():
+        cfg_file.write_text(
+            "# PLynx workspace configuration (PROTOCOL.md section 12)\n"
+            "workflows: workflows\n"
+            "packs:\n"
+            "  - custom_packs\n",
+            encoding="utf-8",
+        )
+
+    git_root: Path | None = None
+    for candidate in [dest, *dest.parents]:
+        if (candidate / ".git").exists():
+            git_root = candidate
+            break
+
+    if git_root is not None:
+        target_gi = (
+            dest / ".gitignore" if (dest / ".gitignore").is_file() else git_root / ".gitignore"
+        )
+        entry = ".plynx/"
+        if target_gi.is_file():
+            content = target_gi.read_text(encoding="utf-8")
+            lines = [line.strip() for line in content.splitlines()]
+            if entry not in lines and ".plynx" not in lines:
+                separator = "" if content.endswith("\n") or not content else "\n"
+                target_gi.write_text(f"{content}{separator}{entry}\n", encoding="utf-8")
+        else:
+            target_gi.write_text(f"{entry}\n", encoding="utf-8")
+
+    click.echo(f"Initialized PLynx workspace in {dest}")
+
+
 @main.command("validate")
 @click.argument("workflow", type=click.Path(path_type=Path))
 def validate_cmd(workflow: Path) -> None:
@@ -74,7 +145,9 @@ def validate_cmd(workflow: Path) -> None:
     if not workflow.is_file():
         click.echo(f"error: workflow file not found: {workflow}", err=True)
         sys.exit(1)
-    issues = validate_workflow_file(workflow)
+    workspace_root = find_workspace_root()
+    registry = PackRegistry(workspace_root)
+    issues = validate_workflow_file(workflow, registry=registry)
     errors = [issue for issue in issues if issue.severity == "error"]
     for issue in issues:
         click.echo(f"{issue.severity}: {issue.message}", err=True)
@@ -124,7 +197,7 @@ def run_cmd(
         sys.exit(1)
 
     workspace_root = find_workspace_root()
-    registry = Registry(workspace_root)
+    registry = PackRegistry(workspace_root)
     try:
         wf_model = load_workflow(workflow)
     except (ValidationError, ValueError, OSError) as exc:
@@ -134,7 +207,11 @@ def run_cmd(
     run_inputs: dict[str, Any] = {}
     for pair in set_pairs:
         key, raw_val = parse_key_value_pair(pair, flag="--set")
-        run_inputs[key] = _parse_scalar_value(raw_val)
+        port_type = _lookup_port_type(wf_model, registry, key)
+        if port_type == "str":
+            run_inputs[key] = raw_val
+        else:
+            run_inputs[key] = _parse_scalar_value(raw_val)
     for pair in input_pairs:
         key, path_val = parse_key_value_pair(pair, flag="--input")
         run_inputs[key] = path_val
@@ -188,6 +265,11 @@ def run_cmd(
                 if effective_non_interactive
                 else make_terminal_stage_approval_callback(prompt_lock=prompt_lock)
             ),
+            stage_inputs_callback=(
+                None
+                if effective_non_interactive
+                else make_terminal_stage_inputs_callback(prompt_lock=prompt_lock)
+            ),
             on_node_status=_print_node_status,
         )
         return await scheduler.run(
@@ -199,6 +281,7 @@ def run_cmd(
         )
 
     final_state = asyncio.run(run_with_cancel_signals(_run_workflow))
+    click.echo(f"run_id: {final_state.id}")
 
     if final_state.status == RunStatus.SUCCESS:
         sys.exit(0)
@@ -249,7 +332,7 @@ def resume_cmd(
     store = RunStore(workspace_root)
     resolved_id = _resolve_run_id_or_exit(store, run_id)
 
-    registry = Registry(workspace_root)
+    registry = PackRegistry(workspace_root)
     executor = create_executor(workspace_root)
     scheduler = Scheduler(store, executor, registry)
 
@@ -275,6 +358,11 @@ def resume_cmd(
                 None
                 if effective_non_interactive
                 else make_terminal_stage_approval_callback(prompt_lock=prompt_lock)
+            ),
+            stage_inputs_callback=(
+                None
+                if effective_non_interactive
+                else make_terminal_stage_inputs_callback(prompt_lock=prompt_lock)
             ),
             on_node_status=_print_node_status,
         )
@@ -442,7 +530,7 @@ def runs_cmd(run_id: str | None, limit: int) -> None:
 def ops_cmd(as_json: bool) -> None:
     """List registered operations."""
     workspace_root = find_workspace_root()
-    registry = Registry(workspace_root)
+    registry = PackRegistry(workspace_root)
     ops = registry.list_ops()
 
     if as_json:
@@ -487,9 +575,9 @@ def ops_cmd(as_json: bool) -> None:
 @click.option(
     "--days",
     default=14,
-    type=int,
+    type=click.IntRange(min=0),
     show_default=True,
-    help="Delete runs older than N days.",
+    help="Delete runs older than N days (must be >= 0).",
 )
 @click.option(
     "--dry-run",
@@ -499,6 +587,9 @@ def ops_cmd(as_json: bool) -> None:
 )
 def clean_cmd(days: int, dry_run: bool) -> None:
     """Mark-and-sweep garbage collection of old unpinned runs and unreferenced blobs."""
+    if days < 0:
+        click.echo("error: --days must be non-negative", err=True)
+        sys.exit(1)
     from plynx.cas import clean
 
     workspace_root = find_workspace_root()

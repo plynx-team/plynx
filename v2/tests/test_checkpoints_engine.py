@@ -16,17 +16,16 @@ from plynx.api_models import (
 )
 from plynx.engine import (
     ExecutionRequest,
-    FakeExecutor,
-    FakeNodeScript,
     LocalExecutor,
     NodeResult,
     Scheduler,
     SchedulerOptions,
 )
-from plynx.engine.fake_executor import scalar_outputs
 from plynx.store import RunStore
 from plynx.workflow.models import Workflow
 from plynx_sdk.protocol import CheckpointManifest, InputsManifest, ResultManifest, ScalarValue
+
+from tests.fakes import FakeExecutor, FakeNodeScript, scalar_outputs
 
 
 def _diamond_with_checkpoint_workflow() -> Workflow:
@@ -40,8 +39,8 @@ def _diamond_with_checkpoint_workflow() -> Workflow:
                     "inputs": {"text": "seed"},
                 },
                 "left": {
-                    "op": "standard_io/demo:AskFooOrWoo",
-                    "inputs": {"prompt": "$root.text"},
+                    "op": "standard_io/interactive:AskChoice",
+                    "inputs": {"question": "$root.text", "options_csv": "foo, woo"},
                 },
                 "right": {
                     "op": "standard_io/text:Concat",
@@ -251,8 +250,8 @@ def test_external_db_answer_wins_over_slow_callback(tmp_path: Path) -> None:
             "name": "race_cp",
             "nodes": {
                 "pick": {
-                    "op": "standard_io/demo:AskFooOrWoo",
-                    "inputs": {"prompt": "foo or woo?"},
+                    "op": "standard_io/interactive:AskChoice",
+                    "inputs": {"question": "foo or woo?", "options_csv": "foo, woo"},
                 },
                 "echo": {
                     "op": "standard_io/demo:Echo",

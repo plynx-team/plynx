@@ -5,11 +5,14 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import hashlib
+import os
 import shutil
+import sys
 import tempfile
 import time
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
+from typing import BinaryIO, Final
 
 from plynx_sdk.protocol import (
     CheckpointManifest,
@@ -19,35 +22,69 @@ from plynx_sdk.protocol import (
 
 from plynx.api_models import NodeStatus
 from plynx.cas.materialize import safe_rmtree
+from plynx.config import load_workspace_config
 from plynx.engine.env import build_child_environment
-from plynx.engine.executor import ExecutionRequest, LaunchHandle, NodeResult
+from plynx.engine.executor import ExecutionRequest, NodeResult
 from plynx.engine.procgroup import kill_process_group, spawn_async_process_group
+from plynx.registry.pack_registry import (
+    discover_packs,
+    is_direct_builtin_pack,
+)
 from plynx.store.run_store import atomic_write_text
 
-
-def _discover_builtin_packs_dirs() -> list[Path]:
-    dirs: list[Path] = []
-    # 1. Check workspace repo ancestor directories (development mode)
-    for ancestor in Path(__file__).resolve().parents:
-        if (ancestor / "pyproject.toml").is_file() and ancestor.name != "plynx":
-            candidate = ancestor / "builtin_packs"
-            if candidate.is_dir() and candidate not in dirs:
-                dirs.append(candidate)
-
-    # 2. Package-internal builtin_packs (e.g. when installed from a wheel)
-    wheel_builtin = Path(__file__).resolve().parent.parent / "builtin_packs"
-    if wheel_builtin.is_dir() and wheel_builtin not in dirs:
-        dirs.append(wheel_builtin)
-
-    # 3. Any other ancestor directories
-    for ancestor in Path(__file__).resolve().parents:
-        candidate = ancestor / "builtin_packs"
-        if candidate.is_dir() and candidate not in dirs:
-            dirs.append(candidate)
-    return dirs
+ENV_READY_SENTINEL: Final[str] = ".plynx_env_ready"
 
 
-_BUILTIN_PACKS_DIRS = _discover_builtin_packs_dirs()
+def _is_env_ready(env_dir: Path) -> bool:
+    """Return True only when ``env_dir`` has both ``pyvenv.cfg`` and the ready sentinel."""
+    return (env_dir / ENV_READY_SENTINEL).is_file() and (env_dir / "pyvenv.cfg").is_file()
+
+
+def _acquire_env_file_lock(lock_path: Path) -> BinaryIO:
+    """Acquire an exclusive cross-process file lock (POSIX ``flock`` / Windows ``msvcrt``)."""
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    handle = lock_path.open("a+b")
+    try:
+        if os.name == "nt":
+            import msvcrt
+
+            handle.seek(0, os.SEEK_END)
+            if handle.tell() == 0:
+                handle.write(b"0")
+                handle.flush()
+            while True:
+                handle.seek(0)
+                try:
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)  # type: ignore[attr-defined]
+                    break
+                except OSError:
+                    time.sleep(0.05)
+        else:
+            import fcntl
+
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+    except BaseException:
+        handle.close()
+        raise
+    return handle
+
+
+def _release_env_file_lock(handle: BinaryIO) -> None:
+    """Release and close a file lock acquired by ``_acquire_env_file_lock``."""
+    try:
+        if os.name == "nt":
+            import msvcrt
+
+            handle.seek(0)
+            with contextlib.suppress(OSError):
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)  # type: ignore[attr-defined]
+        else:
+            import fcntl
+
+            with contextlib.suppress(OSError):
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+    finally:
+        handle.close()
 
 
 def _parse_op_spec(op: str) -> tuple[str, str]:
@@ -74,21 +111,15 @@ def _parse_op_spec(op: str) -> tuple[str, str]:
 
 
 def _find_lock_bytes(pack_dir: Path) -> bytes:
-    """Return bytes of ``pack_dir / 'uv.lock'`` or an enclosing workspace ``uv.lock``."""
+    """Return bytes of ``pack_dir / 'uv.lock'``."""
     direct_lock = pack_dir / "uv.lock"
     if direct_lock.is_file():
         return direct_lock.read_bytes()
-    for parent in list(pack_dir.parents)[:3]:
-        candidate = parent / "uv.lock"
-        if candidate.is_file():
-            return candidate.read_bytes()
     return b""
 
 
 def _has_lockfile(pack_dir: Path) -> bool:
-    if (pack_dir / "uv.lock").is_file():
-        return True
-    return any((parent / "uv.lock").is_file() for parent in list(pack_dir.parents)[:3])
+    return (pack_dir / "uv.lock").is_file()
 
 
 def _compute_env_hash(pack_dir: Path) -> str:
@@ -146,36 +177,26 @@ class LocalExecutor:
         extra_env: Mapping[str, str] | None = None,
     ) -> None:
         self.workspace_root = (workspace_root or Path.cwd()).resolve()
-        self.pack_dirs: list[Path] = [p.resolve() for p in pack_dirs] if pack_dirs else []
-        self.env_passthrough: list[str] | None = (
-            list(env_passthrough) if env_passthrough is not None else None
-        )
+        config = load_workspace_config(self.workspace_root)
+        if pack_dirs is not None:
+            self.pack_dirs: list[Path] | None = [p.resolve() for p in pack_dirs]
+        elif config.packs:
+            self.pack_dirs = list(config.packs)
+        else:
+            self.pack_dirs = None
+        if env_passthrough is not None:
+            self.env_passthrough: list[str] | None = list(env_passthrough)
+        elif config.env_passthrough is not None:
+            self.env_passthrough = list(config.env_passthrough)
+        else:
+            self.env_passthrough = None
         self.extra_env: dict[str, str] = dict(extra_env) if extra_env else {}
         self._env_locks: dict[Path, asyncio.Lock] = {}
 
-    async def launch(self, request: ExecutionRequest) -> LaunchHandle:
-        """Raise ``NotImplementedError`` per ARCHITECTURE.md."""
-        raise NotImplementedError("Executor.launch is not implemented in v2.0.0")
-
     def resolve_pack_dir(self, pack_name: str) -> Path | None:
         """Locate the directory containing ``pyproject.toml`` for ``pack_name``."""
-        candidates: list[Path] = []
-        for custom in self.pack_dirs:
-            if custom.name == pack_name and (custom / "pyproject.toml").is_file():
-                candidates.append(custom)
-            candidates.append(custom / pack_name)
-
-        candidates.extend(
-            [
-                self.workspace_root / "custom_packs" / pack_name,
-                self.workspace_root / "builtin_packs" / pack_name,
-                *(d / pack_name for d in _BUILTIN_PACKS_DIRS),
-            ]
-        )
-        for candidate in candidates:
-            if (candidate / "pyproject.toml").is_file():
-                return candidate.resolve()
-        return None
+        discovered = discover_packs(self.workspace_root, custom_pack_dirs=self.pack_dirs)
+        return discovered.get(pack_name)
 
     def _build_child_env(self, env_dir: Path) -> dict[str, str]:
         return build_child_environment(
@@ -185,12 +206,82 @@ class LocalExecutor:
             extra_env=self.extra_env,
         )
 
+    def _build_direct_child_env(self, pack_dir: Path) -> dict[str, str]:
+        """Build child env for stdlib-only built-in packs run directly via ``sys.executable``."""
+        child_env = build_child_environment(
+            self.workspace_root,
+            env_dir=None,
+            env_passthrough=self.env_passthrough,
+            extra_env=self.extra_env,
+        )
+        src_root = pack_dir / "src" if (pack_dir / "src").is_dir() else pack_dir
+        existing_pypath = child_env.get("PYTHONPATH", "")
+        child_env["PYTHONPATH"] = (
+            f"{src_root}{os.pathsep}{existing_pypath}" if existing_pypath else str(src_root)
+        )
+        child_env["PYTHONDONTWRITEBYTECODE"] = "1"
+        return child_env
+
+    @staticmethod
+    def _build_harness_cmd(
+        pack_dir: Path,
+        harness_op: str,
+        node_dir: Path,
+        *,
+        direct_python: bool,
+    ) -> list[str]:
+        if direct_python:
+            return [
+                sys.executable,
+                "-B",
+                "-m",
+                "plynx_sdk.harness",
+                "--op",
+                harness_op,
+                "--dir",
+                str(node_dir),
+            ]
+        cmd: list[str] = ["uv", "run"]
+        if _has_lockfile(pack_dir):
+            cmd.append("--frozen")
+        cmd.extend(
+            [
+                "--no-dev",
+                "--project",
+                str(pack_dir),
+                "python",
+                "-m",
+                "plynx_sdk.harness",
+                "--op",
+                harness_op,
+                "--dir",
+                str(node_dir),
+            ]
+        )
+        return cmd
+
     def _get_env_lock(self, env_dir: Path) -> asyncio.Lock:
         lock = self._env_locks.get(env_dir)
         if lock is None:
             lock = asyncio.Lock()
             self._env_locks[env_dir] = lock
         return lock
+
+    async def _resolve_child_env(
+        self, pack_name: str, pack_dir: Path
+    ) -> tuple[bool, Path | None, dict[str, str]]:
+        """Resolve child environment settings and return (direct_python, env_dir, child_env)."""
+        direct_python = is_direct_builtin_pack(pack_dir)
+        env_dir: Path | None = None
+        if direct_python:
+            child_env = self._build_direct_child_env(pack_dir)
+        else:
+            env_hash = await asyncio.to_thread(_compute_env_hash, pack_dir)
+            env_dir = (
+                self.workspace_root / ".plynx" / "envs" / f"{pack_name}-{env_hash}"
+            ).resolve()
+            child_env = self._build_child_env(env_dir)
+        return direct_python, env_dir, child_env
 
     async def _ensure_environment(
         self,
@@ -199,52 +290,89 @@ class LocalExecutor:
         env_dir: Path,
         child_env: Mapping[str, str],
     ) -> tuple[bool, str | None]:
-        """Build ``env_dir`` on first use, emitting ``BUILDING_ENVIRONMENT``."""
-        pyvenv_cfg = env_dir / "pyvenv.cfg"
-        if pyvenv_cfg.is_file():
+        """Build ``env_dir`` on first use with cross-process locking and atomic readiness."""
+        if _is_env_ready(env_dir):
             return True, None
 
         lock = self._get_env_lock(env_dir)
         async with lock:
-            if pyvenv_cfg.is_file():
+            if _is_env_ready(env_dir):
                 return True, None
             if request.cancel_event is not None and request.cancel_event.is_set():
                 return False, "canceled"
 
-            await request.notify_status(NodeStatus.BUILDING_ENVIRONMENT)
-            await asyncio.to_thread(env_dir.parent.mkdir, parents=True, exist_ok=True)
-
-            cmd = ["uv", "sync", "--no-dev", "--project", str(pack_dir)]
-            if _has_lockfile(pack_dir):
-                cmd.insert(2, "--frozen")
-
-            proc = await spawn_async_process_group(
-                cmd,
-                cwd=pack_dir,
-                env=child_env,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            comm_task: asyncio.Task[tuple[bytes, bytes]] = asyncio.create_task(proc.communicate())
-            if request.cancel_event is None:
-                _, stderr_bytes = await comm_task
-            else:
-                cancel_task: asyncio.Task[bool] = asyncio.create_task(request.cancel_event.wait())
-                done, _ = await asyncio.wait(
-                    {comm_task, cancel_task},
-                    return_when=asyncio.FIRST_COMPLETED,
-                )
-                if cancel_task in done and comm_task not in done:
-                    kill_process_group(proc.pid)
-                    await comm_task
+            lock_path = env_dir.parent / f".{env_dir.name}.lock"
+            file_lock = await asyncio.to_thread(_acquire_env_file_lock, lock_path)
+            try:
+                if _is_env_ready(env_dir):
+                    return True, None
+                if request.cancel_event is not None and request.cancel_event.is_set():
                     return False, "canceled"
-                if not cancel_task.done():
-                    cancel_task.cancel()
-                _, stderr_bytes = await comm_task
-            if proc.returncode != 0:
-                err_msg = stderr_bytes.decode("utf-8", errors="replace").strip()
-                return False, f"Failed to build environment for {pack_dir.name}: {err_msg}"
-            return True, None
+
+                # Remove any partial/interrupted environment left without the ready sentinel.
+                if env_dir.exists():
+                    await asyncio.to_thread(safe_rmtree, env_dir)
+
+                await request.notify_status(NodeStatus.BUILDING_ENVIRONMENT)
+                await asyncio.to_thread(env_dir.parent.mkdir, parents=True, exist_ok=True)
+
+                cmd = ["uv", "sync", "--no-dev", "--project", str(pack_dir)]
+                if _has_lockfile(pack_dir):
+                    cmd.insert(2, "--frozen")
+
+                proc = await spawn_async_process_group(
+                    cmd,
+                    cwd=pack_dir,
+                    env=child_env,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                comm_task: asyncio.Task[tuple[bytes, bytes]] = asyncio.create_task(
+                    proc.communicate()
+                )
+                try:
+                    if request.cancel_event is None:
+                        _, stderr_bytes = await comm_task
+                    else:
+                        cancel_task: asyncio.Task[bool] = asyncio.create_task(
+                            request.cancel_event.wait()
+                        )
+                        done, _ = await asyncio.wait(
+                            {comm_task, cancel_task},
+                            return_when=asyncio.FIRST_COMPLETED,
+                        )
+                        if cancel_task in done and comm_task not in done:
+                            kill_process_group(proc.pid)
+                            await comm_task
+                            if env_dir.exists():
+                                await asyncio.to_thread(safe_rmtree, env_dir)
+                            return False, "canceled"
+                        if not cancel_task.done():
+                            cancel_task.cancel()
+                        _, stderr_bytes = await comm_task
+                except BaseException:
+                    if not comm_task.done():
+                        kill_process_group(proc.pid)
+                        with contextlib.suppress(BaseException):
+                            await comm_task
+                    if env_dir.exists():
+                        await asyncio.to_thread(safe_rmtree, env_dir)
+                    raise
+
+                if proc.returncode != 0:
+                    if env_dir.exists():
+                        await asyncio.to_thread(safe_rmtree, env_dir)
+                    err_msg = stderr_bytes.decode("utf-8", errors="replace").strip()
+                    return False, f"Failed to build environment for {pack_dir.name}: {err_msg}"
+
+                await asyncio.to_thread(
+                    atomic_write_text,
+                    env_dir / ENV_READY_SENTINEL,
+                    "ready\n",
+                )
+                return True, None
+            finally:
+                await asyncio.to_thread(_release_env_file_lock, file_lock)
 
     async def run(self, request: ExecutionRequest) -> NodeResult:
         """Execute ``request`` via ``uv run`` and map its exit code per PROTOCOL.md section 5."""
@@ -302,30 +430,28 @@ class LocalExecutor:
                 error=msg,
             )
 
-        env_hash = await asyncio.to_thread(_compute_env_hash, pack_dir)
-        env_dir = (self.workspace_root / ".plynx" / "envs" / f"{pack_name}-{env_hash}").resolve()
-        child_env = self._build_child_env(env_dir)
-
-        ok_env, env_err = await self._ensure_environment(request, pack_dir, env_dir, child_env)
-        if not ok_env:
-            if request.cancel_event is not None and request.cancel_event.is_set():
+        direct_python, env_dir, child_env = await self._resolve_child_env(pack_name, pack_dir)
+        if env_dir is not None:
+            ok_env, env_err = await self._ensure_environment(request, pack_dir, env_dir, child_env)
+            if not ok_env:
+                if request.cancel_event is not None and request.cancel_event.is_set():
+                    return NodeResult(
+                        status=NodeStatus.CANCELED,
+                        exit_code=-9,
+                        started_at=started_at,
+                        finished_at=time.time(),
+                        error="canceled",
+                    )
+                await request.notify_status(NodeStatus.RUNNING)
+                if env_err:
+                    await asyncio.to_thread(self._append_stderr_line, stderr_path, env_err)
                 return NodeResult(
-                    status=NodeStatus.CANCELED,
-                    exit_code=-9,
+                    status=NodeStatus.FAILED,
+                    exit_code=2,
                     started_at=started_at,
                     finished_at=time.time(),
-                    error="canceled",
+                    error=env_err or "Environment build failed",
                 )
-            await request.notify_status(NodeStatus.RUNNING)
-            if env_err:
-                await asyncio.to_thread(self._append_stderr_line, stderr_path, env_err)
-            return NodeResult(
-                status=NodeStatus.FAILED,
-                exit_code=2,
-                started_at=started_at,
-                finished_at=time.time(),
-                error=env_err or "Environment build failed",
-            )
 
         if request.cancel_event is not None and request.cancel_event.is_set():
             return NodeResult(
@@ -339,22 +465,11 @@ class LocalExecutor:
         started_at = time.time()
         await request.notify_status(NodeStatus.RUNNING)
 
-        cmd: list[str] = ["uv", "run"]
-        if _has_lockfile(pack_dir):
-            cmd.append("--frozen")
-        cmd.extend(
-            [
-                "--no-dev",
-                "--project",
-                str(pack_dir),
-                "python",
-                "-m",
-                "plynx_sdk.harness",
-                "--op",
-                harness_op,
-                "--dir",
-                str(node_dir),
-            ]
+        cmd = self._build_harness_cmd(
+            pack_dir,
+            harness_op,
+            node_dir,
+            direct_python=direct_python,
         )
 
         stdout_handle = stdout_path.open("ab")
@@ -566,9 +681,7 @@ class LocalExecutor:
                 on_stderr(f"error: Pack {pack_name!r} not found for op {op!r}\n")
             return 1
 
-        env_hash = await asyncio.to_thread(_compute_env_hash, pack_dir)
-        env_dir = (self.workspace_root / ".plynx" / "envs" / f"{pack_name}-{env_hash}").resolve()
-        child_env = self._build_child_env(env_dir)
+        direct_python, env_dir, child_env = await self._resolve_child_env(pack_name, pack_dir)
 
         scratch_dir = Path(
             await asyncio.to_thread(
@@ -588,9 +701,8 @@ class LocalExecutor:
                     scratch_dir / "inputs",
                 )
 
-            # Ensure the pack environment exists before running the harness.
-            pyvenv_cfg = env_dir / "pyvenv.cfg"
-            if not pyvenv_cfg.is_file():
+            # Ensure the pack environment exists before running the harness (for uv-managed packs).
+            if env_dir is not None and not _is_env_ready(env_dir):
                 from plynx_sdk.protocol import InputsManifest
 
                 dummy_req = ExecutionRequest(
@@ -615,22 +727,11 @@ class LocalExecutor:
                         on_stderr(env_err + "\n")
                     return 1
 
-            cmd: list[str] = ["uv", "run"]
-            if _has_lockfile(pack_dir):
-                cmd.append("--frozen")
-            cmd.extend(
-                [
-                    "--no-dev",
-                    "--project",
-                    str(pack_dir),
-                    "python",
-                    "-m",
-                    "plynx_sdk.harness",
-                    "--op",
-                    harness_op,
-                    "--dir",
-                    str(scratch_dir),
-                ]
+            cmd = self._build_harness_cmd(
+                pack_dir,
+                harness_op,
+                scratch_dir,
+                direct_python=direct_python,
             )
 
             proc = await spawn_async_process_group(

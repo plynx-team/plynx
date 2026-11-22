@@ -16,15 +16,13 @@ class TemplateFormat(Op):
 
     Args:
         template: Python format string containing replacement fields like '{a}', '{b}'.
-        a: Optional scalar string value for field '{a}'.
-        b: Optional scalar string value for field '{b}'.
-        c: Optional scalar string value for field '{c}'.
         values: Optional dictionary mapping field names to values.
     """
 
     TITLE = "Template Format"
     CATEGORY = "Core / Text & Data"
     CACHEABLE = True
+    ALLOW_EXTRA_INPUTS = True
 
     class Outputs(TypedDict):
         text: str
@@ -32,14 +30,13 @@ class TemplateFormat(Op):
     def run(
         self,
         template: str,
-        a: str = "",
-        b: str = "",
-        c: str = "",
         values: dict[str, Any] | None = None,
+        **extra_values: Any,
     ) -> Outputs:
-        kwargs: dict[str, Any] = {"a": a, "b": b, "c": c}
+        kwargs: dict[str, Any] = {}
         if values is not None:
             kwargs.update(values)
+        kwargs.update(extra_values)
         return {"text": template.format(**kwargs)}
 
 
@@ -131,7 +128,7 @@ class JsonExtract(Op):
             return {"value_str": default, "value_json": {}, "found": False}
 
         if not key:
-            val_str = json.dumps(data) if isinstance(data, (dict, list)) else str(data)
+            val_str = data if isinstance(data, str) else json.dumps(data)
             val_json = data if isinstance(data, dict) else {"value": data}
             return {"value_str": val_str, "value_json": val_json, "found": True}
 
@@ -150,7 +147,7 @@ class JsonExtract(Op):
         if not found:
             return {"value_str": default, "value_json": {}, "found": False}
 
-        val_str = json.dumps(current) if isinstance(current, (dict, list)) else str(current)
+        val_str = current if isinstance(current, str) else json.dumps(current)
         val_json = current if isinstance(current, dict) else {"value": current}
         return {"value_str": val_str, "value_json": val_json, "found": True}
 

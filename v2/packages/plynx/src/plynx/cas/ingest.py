@@ -59,8 +59,10 @@ def ingest_file(
 def ingest_directory(
     dir_path: Path,
     blob_store: BlobStore,
+    *,
+    allow_hardlink: bool = True,
 ) -> ResultDirectoryValue:
-    """Ingest a directory of output files into the blob store as a tree of blobs."""
+    """Ingest a directory of files into the blob store as a tree of blobs."""
     if not dir_path.is_dir():
         if dir_path.exists():
             raise NotADirectoryError(f"Expected directory, got file: {dir_path}")
@@ -71,7 +73,10 @@ def ingest_directory(
         for f in files:
             file_path = Path(root) / f
             rel_path = file_path.relative_to(dir_path).as_posix()
-            sha256, size_bytes = blob_store.put_file(file_path)
+            sha256, size_bytes = blob_store.put_file(
+                file_path,
+                allow_hardlink=allow_hardlink,
+            )
             entries.append(
                 DirectoryEntry(
                     path=rel_path,

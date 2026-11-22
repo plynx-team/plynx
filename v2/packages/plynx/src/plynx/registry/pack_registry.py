@@ -7,13 +7,14 @@ manifests in ``.plynx/registry_cache.json`` keyed by source file path and mtime.
 from __future__ import annotations
 
 import json
+import re
+import tomllib
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from ruamel.yaml import YAML
-
 from plynx.api_models import OpEntry
+from plynx.config import load_workspace_config
 from plynx.registry.extractor import extract_ops_from_file
 from plynx.store.run_store import atomic_write_text
 
@@ -21,30 +22,48 @@ CACHE_SCHEMA_VERSION = 2
 
 
 def find_workspace_root(start: Path | None = None) -> Path:
-    """Return the nearest ancestor containing ``.plynx/`` or ``pyproject.toml``, or ``start``."""
+    """Return workspace root by scanning upward in priority order:
+
+    1. Nearest ancestor containing ``.plynx`` or ``plynx.yaml``.
+    2. Nearest ancestor containing ``.git``.
+    3. Nearest ancestor containing ``pyproject.toml`` (excluding ``custom_packs``).
+    4. ``start`` (or ``Path.cwd()``).
+    """
     base = (start or Path.cwd()).resolve()
-    for candidate in (base, *base.parents):
-        if (candidate / ".plynx").is_dir() or (candidate / "pyproject.toml").is_file():
+    if base.is_file():
+        base = base.parent
+    candidates = [base, *base.parents]
+
+    # Priority 1: .plynx or plynx.yaml
+    for candidate in candidates:
+        if (candidate / ".plynx").exists() or (candidate / "plynx.yaml").is_file():
             return candidate
+
+    # Priority 2: .git
+    for candidate in candidates:
+        if (candidate / ".git").exists():
+            return candidate
+
+    # Priority 3: pyproject.toml (avoid stopping at custom_packs/<pack>/pyproject.toml)
+    for candidate in candidates:
+        if (candidate / "pyproject.toml").is_file():
+            if candidate.parent.name == "custom_packs" or "custom_packs" in candidate.parts:
+                continue
+            return candidate
+
+    # Priority 4: start (or cwd)
     return base
 
 
 def discover_builtin_packs_dirs() -> list[Path]:
     """Return candidate directories containing built-in packs."""
     dirs: list[Path] = []
-    # 1. Check workspace repo ancestor directories (development mode)
-    for ancestor in Path(__file__).resolve().parents:
-        if (ancestor / "pyproject.toml").is_file() and ancestor.name != "plynx":
-            candidate = ancestor / "builtin_packs"
-            if candidate.is_dir() and candidate not in dirs:
-                dirs.append(candidate)
-
-    # 2. Check inside installed plynx package (e.g. when distributed in a wheel)
+    # 1. Check inside installed plynx package (e.g. when distributed in a wheel)
     wheel_builtin = Path(__file__).resolve().parent.parent / "builtin_packs"
-    if wheel_builtin.is_dir() and wheel_builtin not in dirs:
+    if wheel_builtin.is_dir():
         dirs.append(wheel_builtin)
 
-    # 3. Check any other repo ancestor directories
+    # 2. Check repo ancestor directories (development mode)
     for ancestor in Path(__file__).resolve().parents:
         candidate = ancestor / "builtin_packs"
         if candidate.is_dir() and candidate not in dirs:
@@ -52,29 +71,56 @@ def discover_builtin_packs_dirs() -> list[Path]:
     return dirs
 
 
+def _normalize_dist_name(requirement: str) -> str:
+    """Extract a PEP 503 normalized distribution name from a PEP 508 requirement string."""
+    match = re.match(r"^\s*([A-Za-z0-9][A-Za-z0-9._-]*)", requirement)
+    if not match:
+        return ""
+    return re.sub(r"[-_.]+", "-", match.group(1)).lower()
+
+
+def is_direct_builtin_pack(pack_dir: Path) -> bool:
+    """Return True if ``pack_dir`` is a stdlib-only built-in pack runnable via ``sys.executable``.
+
+    Built-in packs that declare no third-party dependencies beyond ``plynx-sdk`` execute directly
+    in the active ``plynx`` Python environment without ``uv sync`` or writes to ``site-packages``.
+    """
+    resolved = pack_dir.resolve()
+    builtin_roots = {d.resolve() for d in discover_builtin_packs_dirs()}
+    if resolved.parent not in builtin_roots:
+        return False
+
+    pyproject_path = resolved / "pyproject.toml"
+    if not pyproject_path.is_file():
+        return False
+
+    try:
+        parsed = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return False
+
+    project = parsed.get("project")
+    if not isinstance(project, Mapping):
+        return False
+
+    deps = project.get("dependencies", [])
+    if not isinstance(deps, list):
+        return False
+
+    for dep in deps:
+        if not isinstance(dep, str):
+            return False
+        dist_name = _normalize_dist_name(dep)
+        if dist_name and dist_name != "plynx-sdk":
+            return False
+
+    return True
+
+
 def _load_custom_packs_from_config(workspace_root: Path) -> list[Path]:
     """Read custom pack directories from ``<workspace_root>/plynx.yaml`` if present."""
-    cfg_path = workspace_root / "plynx.yaml"
-    if not cfg_path.is_file():
-        return []
-    yaml = YAML(typ="safe")
-    try:
-        parsed = yaml.load(cfg_path.read_text(encoding="utf-8"))
-    except Exception:
-        return []
-    if not isinstance(parsed, Mapping):
-        return []
-    raw_packs = parsed.get("packs")
-    if not isinstance(raw_packs, list):
-        return []
-    result: list[Path] = []
-    for item in raw_packs:
-        if isinstance(item, str):
-            p = Path(item)
-            resolved = p.resolve() if p.is_absolute() else (workspace_root / p).resolve()
-            if resolved.is_dir():
-                result.append(resolved)
-    return result
+    config = load_workspace_config(workspace_root)
+    return [p for p in config.packs if p.is_dir()]
 
 
 def discover_packs(
@@ -85,6 +131,7 @@ def discover_packs(
     """Discover all packs in search order: wheel-shipped, built-in, and custom packs.
 
     Returns a mapping from pack name to pack root directory containing ``pyproject.toml``.
+    Raises ``ValueError`` on duplicate pack name collisions across different directories.
     """
     search_roots: list[Path] = []
 
@@ -99,9 +146,9 @@ def discover_packs(
         search_roots.extend(custom_pack_dirs)
     else:
         search_roots.extend(_load_custom_packs_from_config(workspace_root))
-        ws_custom = workspace_root / "custom_packs"
-        if ws_custom.is_dir() and ws_custom not in search_roots:
-            search_roots.append(ws_custom)
+    ws_custom = workspace_root / "custom_packs"
+    if ws_custom.is_dir() and ws_custom not in search_roots:
+        search_roots.append(ws_custom)
 
     packs: dict[str, Path] = {}
 
@@ -113,7 +160,14 @@ def discover_packs(
         # If the root itself is a pack
         if (resolved_root / "pyproject.toml").is_file():
             pack_name = resolved_root.name
-            if pack_name not in packs:
+            if pack_name in packs:
+                if packs[pack_name].resolve() != resolved_root.resolve():
+                    msg = (
+                        f"Duplicate pack name {pack_name!r} found at '{resolved_root}' "
+                        f"and '{packs[pack_name]}'"
+                    )
+                    raise ValueError(msg)
+            else:
                 packs[pack_name] = resolved_root
             continue
 
@@ -121,8 +175,16 @@ def discover_packs(
         for sub in sorted(resolved_root.iterdir()):
             if sub.is_dir() and (sub / "pyproject.toml").is_file():
                 pack_name = sub.name
-                if pack_name not in packs:
-                    packs[pack_name] = sub.resolve()
+                resolved_sub = sub.resolve()
+                if pack_name in packs:
+                    if packs[pack_name].resolve() != resolved_sub:
+                        msg = (
+                            f"Duplicate pack name {pack_name!r} found at '{resolved_sub}' "
+                            f"and '{packs[pack_name]}'"
+                        )
+                        raise ValueError(msg)
+                else:
+                    packs[pack_name] = resolved_sub
 
     return packs
 
@@ -287,12 +349,10 @@ class PackRegistry:
             atomic_write_text(self.cache_path, json.dumps(manifest, indent=2) + "\n")
 
 
-Registry = PackRegistry
-
 __all__ = [
     "PackRegistry",
-    "Registry",
     "discover_builtin_packs_dirs",
     "discover_packs",
     "find_workspace_root",
+    "is_direct_builtin_pack",
 ]

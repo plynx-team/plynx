@@ -28,25 +28,6 @@ def popen_group_kwargs() -> dict[str, Any]:
     return {"start_new_session": True}
 
 
-def spawn_process_group(
-    args: Sequence[str],
-    *,
-    cwd: Path | None = None,
-    env: Mapping[str, str] | None = None,
-    stdout: Any = None,
-    stderr: Any = None,
-) -> subprocess.Popen[bytes]:
-    """Start a synchronous ``subprocess.Popen`` in its own process group."""
-    return subprocess.Popen(
-        list(args),
-        cwd=str(cwd) if cwd is not None else None,
-        env=dict(env) if env is not None else None,
-        stdout=stdout,
-        stderr=stderr,
-        **popen_group_kwargs(),
-    )
-
-
 async def spawn_async_process_group(
     args: Sequence[str],
     *,
@@ -134,5 +115,4 @@ __all__ = [
     "kill_process_group",
     "popen_group_kwargs",
     "spawn_async_process_group",
-    "spawn_process_group",
 ]

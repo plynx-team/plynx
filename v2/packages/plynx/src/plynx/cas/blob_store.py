@@ -46,20 +46,27 @@ def make_writable(path: Path) -> None:
     os.chmod(path, current_mode | stat.S_IWUSR)
 
 
-def link_or_copy(source: Path, target: Path, *, make_target_readonly: bool = True) -> None:
-    """Link source to target with os.link, falling back to atomic copy on OSError."""
+def link_or_copy(
+    source: Path,
+    target: Path,
+    *,
+    make_target_readonly: bool = True,
+    allow_hardlink: bool = True,
+) -> None:
+    """Link source to target with os.link (when allowed), falling back to atomic copy."""
     target.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        os.link(source, target)
-        if make_target_readonly:
-            make_readonly(target)
-        return
-    except FileExistsError:
-        return
-    except OSError:
-        pass
+    if allow_hardlink:
+        try:
+            os.link(source, target)
+            if make_target_readonly:
+                make_readonly(target)
+            return
+        except FileExistsError:
+            return
+        except OSError:
+            pass
 
-    # Fallback to copy via temporary file in target directory for atomic write
+    # Copy via temporary file in target directory for atomic write
     temp_target = target.parent / f".tmp.{target.name}.{os.getpid()}.{time.time_ns()}"
     try:
         shutil.copy2(source, temp_target)
@@ -132,11 +139,18 @@ class BlobStore:
             raise FileNotFoundError(f"Blob not found: {sha256}")
         return path.read_bytes()
 
-    def put_file(self, source: Path, sha256: str | None = None) -> tuple[str, int]:
+    def put_file(
+        self,
+        source: Path,
+        sha256: str | None = None,
+        *,
+        allow_hardlink: bool = True,
+    ) -> tuple[str, int]:
         """Store a file in the blob store.
 
         Returns ``(sha256, size_bytes)``. If duplicate content is already stored,
-        it is not copied or linked again.
+        it is not copied or linked again. Pass ``allow_hardlink=False`` for external
+        user/workspace files so PLynx never marks them read-only or shares their inode.
         """
         if not source.is_file():
             if source.is_dir():
@@ -153,7 +167,12 @@ class BlobStore:
         if target.is_file():
             return file_sha256, target.stat().st_size
 
-        link_or_copy(source, target, make_target_readonly=True)
+        link_or_copy(
+            source,
+            target,
+            make_target_readonly=True,
+            allow_hardlink=allow_hardlink,
+        )
         return file_sha256, size_bytes
 
     def put_bytes(self, data: bytes) -> tuple[str, int]:

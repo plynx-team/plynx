@@ -13,7 +13,6 @@ from plynx.cas import (
     materialize_input_file,
     materialize_inputs,
 )
-from plynx.registry import FakeRegistry
 from plynx.workflow.models import NodeRef, NodeSpec
 from plynx_sdk.protocol import (
     DirectoryEntry,
@@ -23,6 +22,8 @@ from plynx_sdk.protocol import (
     ResultFileValue,
     ScalarValue,
 )
+
+from tests.fakes import FakeRegistry
 
 
 def test_materialize_input_file_preserves_extension_and_rejects_writes(tmp_path: Path) -> None:

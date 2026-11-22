@@ -7,7 +7,9 @@ from pathlib import Path
 
 import pytest
 from plynx.api_models import InputPortSpec, OutputPortSpec
-from plynx.registry import default_fake_ops, extract_ops_from_file, extract_ops_from_source
+from plynx.registry import extract_ops_from_file, extract_ops_from_source
+
+from tests.fakes import default_fake_ops
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures" / "extractor"
@@ -178,13 +180,13 @@ def test_extract_standard_io_text_concat_matches_default_fake_ops() -> None:
 
 
 def test_extract_standard_io_demo_matches_default_fake_ops() -> None:
-    """Extraction of standard_io/demo.py matches all 5 demo ops in FakeRegistry."""
+    """Extraction of standard_io/demo.py matches all 3 demo ops in FakeRegistry."""
     demo_py = ROOT / "builtin_packs" / "standard_io" / "src" / "standard_io" / "demo.py"
     extracted = extract_ops_from_file(demo_py)
-    assert len(extracted) == 5
+    assert len(extracted) == 3
 
     fake_ops = {op.id: op for op in default_fake_ops() if op.module == "demo"}
-    assert len(fake_ops) == 5
+    assert len(fake_ops) == 3
 
     for op in extracted:
         assert op.id in fake_ops
@@ -220,19 +222,28 @@ def test_extract_standard_io_files_matches_default_fake_ops() -> None:
 
 
 def test_extract_standard_io_interactive_matches_default_fake_ops() -> None:
-    """Extraction of standard_io/interactive.py matches all 2 interactive ops in FakeRegistry."""
+    """Extraction of standard_io/interactive.py matches the AskChoice op in FakeRegistry."""
     interactive_py = (
         ROOT / "builtin_packs" / "standard_io" / "src" / "standard_io" / "interactive.py"
     )
     extracted = extract_ops_from_file(interactive_py)
-    assert len(extracted) == 2
+    assert len(extracted) == 1
 
     fake_ops = {op.id: op for op in default_fake_ops() if op.module == "interactive"}
-    assert len(fake_ops) == 2
+    assert len(fake_ops) == 1
 
     for op in extracted:
         assert op.id in fake_ops
         assert op == fake_ops[op.id]
+
+
+def test_extract_toy_ops() -> None:
+    """Extraction of tests/fixtures/toy_ops.py extracts AskFooOrWoo, SecretCodeChallenge, MultiStepQuestionnaire."""
+    toy_py = ROOT / "tests" / "fixtures" / "toy_ops.py"
+    extracted = extract_ops_from_file(toy_py)
+    assert len(extracted) == 3
+    names = {op.name for op in extracted}
+    assert names == {"AskFooOrWoo", "SecretCodeChallenge", "MultiStepQuestionnaire"}
 
 
 def test_extract_single_return_named_result() -> None:
@@ -624,3 +635,113 @@ def test_midi_file_semantic_alias_extraction() -> None:
     midi_in = next(inp for inp in piano_op.inputs if inp.name == "midi")
     assert midi_in.type == "file"
     assert midi_in.media == "audio/midi"
+
+
+def test_function_op_does_not_hijack_unrelated_outputs_typed_dict() -> None:
+    """A function op in a module with an unrelated Outputs TypedDict does not inherit its ports."""
+    src = """
+from typing import TypedDict
+from plynx_sdk import op
+
+class Outputs(TypedDict):
+    unrelated_a: str
+    unrelated_b: int
+
+@op(title="Compute Text")
+def compute_text(val: str) -> str:
+    return val
+"""
+    ops = extract_ops_from_source(src, pack="test_pack", module="math_ops")
+    assert len(ops) == 1
+    op_entry = ops[0]
+    assert op_entry.valid is True
+    assert len(op_entry.outputs) == 1
+    assert op_entry.outputs[0].name == "result"
+    assert op_entry.outputs[0].type == "str"
+
+
+def test_missing_return_annotation_yields_valid_false_error() -> None:
+    """Missing return annotations on function or class ops yield valid: False aligned with harness."""
+    func_src = """
+from plynx_sdk import op
+
+@op(title="No Return Func")
+def missing_func(x: int):
+    pass
+"""
+    ops = extract_ops_from_source(func_src, pack="test_pack", module="fn")
+    assert len(ops) == 1
+    assert ops[0].valid is False
+    assert ops[0].error is not None
+    assert "missing a return annotation" in ops[0].error
+
+    class_src = """
+from plynx_sdk import Op
+
+class NoReturnOp(Op):
+    TITLE = "No Return Class"
+
+    def run(self, x: int):
+        pass
+"""
+    class_ops = extract_ops_from_source(class_src, pack="test_pack", module="cls")
+    assert len(class_ops) == 1
+    assert class_ops[0].valid is False
+    assert class_ops[0].error is not None
+    assert "has no Outputs TypedDict or return annotation" in class_ops[0].error
+
+
+def test_non_op_helper_classes_ignored_without_false_positives() -> None:
+    """Helper classes, config classes, and non-Op classes with run() do not generate false-positive ops."""
+    src = """
+from plynx_sdk import Op
+
+class Helper:
+    def format_text(self, s: str) -> str:
+        return s.strip()
+
+class Config:
+    TITLE = "Some Config Document"
+
+class WorkerThread:
+    def run(self):
+        pass
+
+class RealOp(Op):
+    TITLE = "Real Op"
+
+    def run(self, x: int) -> int:
+        return x * 2
+"""
+    ops = extract_ops_from_source(src, pack="test_pack", module="ops")
+    assert len(ops) == 1
+    assert ops[0].name == "RealOp"
+    assert ops[0].valid is True
+
+
+def test_init_py_clean_module_and_id(tmp_path: Path) -> None:
+    """Ops defined in root __init__.py receive clean IDs (pack:Name) without trailing slashes."""
+    src = """
+from plynx_sdk import Op
+
+class RootOp(Op):
+    TITLE = "Root Operation"
+
+    def run(self) -> str:
+        return "root"
+"""
+    ops = extract_ops_from_source(src, pack="test_pack", module="")
+    assert len(ops) == 1
+    assert ops[0].id == "test_pack:RootOp"
+    assert ops[0].module == ""
+    assert ops[0].valid is True
+
+    init_file = tmp_path / "custom_packs" / "mypack" / "src" / "mypack" / "__init__.py"
+    init_file.parent.mkdir(parents=True, exist_ok=True)
+    init_file.write_text(src, encoding="utf-8")
+
+    from plynx.registry.extractor import _deduce_pack_and_module
+
+    deduced_pack, deduced_module, _ = _deduce_pack_and_module(init_file, workspace_root=tmp_path)
+    assert deduced_pack == "mypack"
+    assert deduced_module == ""

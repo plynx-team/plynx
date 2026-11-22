@@ -22,16 +22,6 @@ nodes:
       height: 600
       max_iter: 100
       zoom: 1.4
-  pattern:
-    op: media_studio/image:GeometricPattern
-    title: "Geometric Pattern Background"
-    stage: synthesis
-    inputs:
-      pattern: "gradient_wave"
-      width: 600
-      height: 600
-      primary_color: "#2680eb"
-      secondary_color: "#38c172"
   filter:
     op: media_studio/image:ImageFilterOp
     title: "Artistic Edge Enhancement"

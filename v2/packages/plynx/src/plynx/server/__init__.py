@@ -4,7 +4,6 @@ from plynx.server.app import (
     NonLoopbackHostError,
     create_app,
     is_loopback_host,
-    run_server,
     validate_host,
 )
 
@@ -12,6 +11,5 @@ __all__ = [
     "NonLoopbackHostError",
     "create_app",
     "is_loopback_host",
-    "run_server",
     "validate_host",
 ]

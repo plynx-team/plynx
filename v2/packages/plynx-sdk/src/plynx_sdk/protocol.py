@@ -12,7 +12,9 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import PurePosixPath, PureWindowsPath
-from typing import Any, Final, Literal
+from typing import Any, Final, Literal, TypeVar
+
+_T = TypeVar("_T")
 
 SCHEMA_VERSION: Final[int] = 1
 MAX_SCALAR_BYTES: Final[int] = 1024 * 1024
@@ -479,9 +481,6 @@ class DirectoryEntry:
         return cls.from_dict(_loads_json_object(raw, context="DirectoryEntry"))
 
 
-ResultDirectoryEntry = DirectoryEntry
-
-
 @dataclass
 class ResultFileValue:
     """An ingested file output recorded in ``result.json``."""
@@ -617,43 +616,46 @@ OutputValue = ScalarValue | OutputFileValue | OutputDirectoryValue
 ResultValue = ScalarValue | ResultFileValue | ResultDirectoryValue
 
 
-def _parse_input_value(data: object, *, port: str) -> InputValue:
+def _parse_kind_value(
+    data: object,
+    parsers: Mapping[str, type[_T]],
+    *,
+    context: str,
+) -> _T:
     if not isinstance(data, Mapping):
-        raise ProtocolError(f"InputsManifest.inputs[{port!r}]: expected an object")
+        raise ProtocolError(f"{context}: expected an object")
     kind = data.get("kind")
-    if kind == "scalar":
-        return ScalarValue.from_dict(data)
-    if kind == "file":
-        return InputFileValue.from_dict(data)
-    if kind == "directory":
-        return InputDirectoryValue.from_dict(data)
-    raise ProtocolError(f"InputsManifest.inputs[{port!r}]: unknown kind {kind!r}")
+    parser = parsers.get(kind) if isinstance(kind, str) else None
+    if parser is not None:
+        return parser.from_dict(data)  # type: ignore[attr-defined,no-any-return]
+    raise ProtocolError(f"{context}: unknown kind {kind!r}")
+
+
+def _parse_input_value(data: object, *, port: str) -> InputValue:
+    parsers: dict[str, type[InputValue]] = {
+        "scalar": ScalarValue,
+        "file": InputFileValue,
+        "directory": InputDirectoryValue,
+    }
+    return _parse_kind_value(data, parsers, context=f"InputsManifest.inputs[{port!r}]")
 
 
 def _parse_output_value(data: object, *, port: str) -> OutputValue:
-    if not isinstance(data, Mapping):
-        raise ProtocolError(f"OutputsManifest.outputs[{port!r}]: expected an object")
-    kind = data.get("kind")
-    if kind == "scalar":
-        return ScalarValue.from_dict(data)
-    if kind == "file":
-        return OutputFileValue.from_dict(data)
-    if kind == "directory":
-        return OutputDirectoryValue.from_dict(data)
-    raise ProtocolError(f"OutputsManifest.outputs[{port!r}]: unknown kind {kind!r}")
+    parsers: dict[str, type[OutputValue]] = {
+        "scalar": ScalarValue,
+        "file": OutputFileValue,
+        "directory": OutputDirectoryValue,
+    }
+    return _parse_kind_value(data, parsers, context=f"OutputsManifest.outputs[{port!r}]")
 
 
 def _parse_result_value(data: object, *, port: str) -> ResultValue:
-    if not isinstance(data, Mapping):
-        raise ProtocolError(f"ResultManifest.outputs[{port!r}]: expected an object")
-    kind = data.get("kind")
-    if kind == "scalar":
-        return ScalarValue.from_dict(data)
-    if kind == "file":
-        return ResultFileValue.from_dict(data)
-    if kind == "directory":
-        return ResultDirectoryValue.from_dict(data)
-    raise ProtocolError(f"ResultManifest.outputs[{port!r}]: unknown kind {kind!r}")
+    parsers: dict[str, type[ResultValue]] = {
+        "scalar": ScalarValue,
+        "file": ResultFileValue,
+        "directory": ResultDirectoryValue,
+    }
+    return _parse_kind_value(data, parsers, context=f"ResultManifest.outputs[{port!r}]")
 
 
 def _validate_port_name(name: object, *, context: str) -> None:
@@ -690,7 +692,6 @@ class InputsManifest:
                 raise ProtocolError(
                     f"InputsManifest.inputs[{port!r}]: invalid value type {type(val).__name__}"
                 )
-            val.validate()
         if not isinstance(self.checkpoint_answers, dict):
             raise ProtocolError("InputsManifest: 'checkpoint_answers' must be a dict")
         for cp_id, answer in self.checkpoint_answers.items():
@@ -788,7 +789,6 @@ class OutputsManifest:
                 raise ProtocolError(
                     f"OutputsManifest.outputs[{port!r}]: invalid value type {type(val).__name__}"
                 )
-            val.validate()
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to a validated JSON-ready dictionary."""
@@ -877,7 +877,6 @@ class ResultManifest:
                 raise ProtocolError(
                     f"ResultManifest.outputs[{port!r}]: invalid value type {type(val).__name__}"
                 )
-            val.validate()
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to a validated JSON-ready dictionary."""
@@ -1018,7 +1017,6 @@ __all__ = [
     "OutputValue",
     "OutputsManifest",
     "ProtocolError",
-    "ResultDirectoryEntry",
     "ResultDirectoryValue",
     "ResultFileValue",
     "ResultManifest",

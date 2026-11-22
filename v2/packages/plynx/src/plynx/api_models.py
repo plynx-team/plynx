@@ -10,6 +10,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from plynx import __version__
 from plynx.workflow.models import Workflow
 
 
@@ -41,6 +42,13 @@ class StageGateStatus(StrEnum):
 
     WAITING = "WAITING"
     APPROVED = "APPROVED"
+
+
+class StageGateKind(StrEnum):
+    """Kind of stage gate: pre-stage input collection or post-stage approval."""
+
+    INPUT = "input"
+    APPROVAL = "approval"
 
 
 PortType = Literal["str", "int", "float", "bool", "json", "file", "directory"]
@@ -93,11 +101,12 @@ class CheckpointState(BaseModel):
 
 
 class StageGateState(BaseModel):
-    """State of a stage approval gate."""
+    """State of a stage gate (input collection or post-stage approval)."""
 
     model_config = ConfigDict(extra="forbid")
 
     stage_id: str
+    kind: StageGateKind = StageGateKind.APPROVAL
     status: StageGateStatus
     created_at: float
     decided_at: float | None = None
@@ -234,6 +243,7 @@ class StageApprovalData(BaseModel):
     run_id: str
     stage_id: str
     title: str
+    kind: StageGateKind = StageGateKind.APPROVAL
 
 
 class StageResolvedData(BaseModel):
@@ -243,6 +253,7 @@ class StageResolvedData(BaseModel):
 
     run_id: str
     stage_id: str
+    kind: StageGateKind = StageGateKind.APPROVAL
 
 
 class NodeLogData(BaseModel):
@@ -348,6 +359,7 @@ RunEvent = Annotated[
 
 # ---------------------------------------------------------------------------
 # Registry and REST API request/response models (PROTOCOL.md sections 2, 3, 10)
+
 # ---------------------------------------------------------------------------
 
 
@@ -408,7 +420,7 @@ class HealthResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     status: Literal["ok"] = "ok"
-    version: str = "2.0.0"
+    version: str = __version__
 
 
 class WorkflowListItem(BaseModel):

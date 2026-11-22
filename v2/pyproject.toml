@@ -24,7 +24,7 @@ package = false
 default-groups = ["dev"]
 
 [tool.uv.workspace]
-members = ["packages/*", "builtin_packs/*"]
+members = ["packages/*", "builtin_packs/*", "examples/custom_packs/*"]
 
 [tool.uv.sources]
 media-studio = { workspace = true }
@@ -41,19 +41,20 @@ extend-exclude = ["ui", ".plynx", "docs"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["E501"]
 
 [tool.mypy]
 strict = true
 python_version = "3.11"
-files = ["packages", "builtin_packs", "scripts", "tests"]
+files = ["packages", "builtin_packs", "examples/custom_packs", "scripts", "tests"]
 explicit_package_bases = true
 mypy_path = [
     "packages/plynx-sdk/src",
     "packages/plynx/src",
     "builtin_packs/standard_io/src",
-    "builtin_packs/media_studio/src",
-    "builtin_packs/podcast_studio/src",
-    "builtin_packs/pedalboard_studio/src",
+    "examples/custom_packs/media_studio/src",
+    "examples/custom_packs/podcast_studio/src",
+    "examples/custom_packs/pedalboard_studio/src",
 ]
 exclude = ["tests/fixtures/"]
 

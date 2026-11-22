@@ -66,7 +66,7 @@ def _read_pcm16_wav(path: Path) -> tuple[int, list[list[float]]]:
             ch_data[i % channels].append(val / 32768.0)
     elif sampwidth == 3:
         for i in range(0, len(raw_data) - 2, 3):
-            val = int.from_bytes(raw_data[i:i + 3], byteorder="little", signed=True)
+            val = int.from_bytes(raw_data[i : i + 3], byteorder="little", signed=True)
             ch_data[(i // 3) % channels].append(val / 8388608.0)
     elif sampwidth == 4:
         count = len(raw_data) // 4
@@ -198,7 +198,9 @@ class ChordProgression(Op):
                     detune = math.sin(t * (0.2 + idx * 0.1)) * 0.7
                     val += math.sin(2.0 * math.pi * (f + detune) * t)
                 val /= len(freqs)
-                fade = min(1.0, i / (sample_rate * 0.5)) * min(1.0, (total_samples - i) / (sample_rate * 0.5))
+                fade = min(1.0, i / (sample_rate * 0.5)) * min(
+                    1.0, (total_samples - i) / (sample_rate * 0.5)
+                )
                 samples[i] = val * volume * fade
 
         elif progression == "arpeggio":
@@ -223,7 +225,9 @@ class ChordProgression(Op):
                 t_note = (i % note_len) / sample_rate
                 # Warm sawtooth-like square
                 phase = (freq * t_note) % 1.0
-                val = (1.0 if phase < 0.5 else -1.0) * 0.7 + math.sin(2.0 * math.pi * freq * t_note) * 0.3
+                val = (1.0 if phase < 0.5 else -1.0) * 0.7 + math.sin(
+                    2.0 * math.pi * freq * t_note
+                ) * 0.3
                 env = math.exp(-2.5 * t_note)
                 samples[i] = val * env * volume
 

@@ -70,9 +70,10 @@ export interface CheckpointState {
   answered_at?: number | null;
 }
 
-/** State of a stage approval gate. */
+/** State of a stage gate (input collection or post-stage approval). */
 export interface StageGateState {
   stage_id: string;
+  kind: StageGateKind;
   status: StageGateStatus;
   created_at: number;
   decided_at?: number | null;
@@ -154,12 +155,14 @@ export interface StageApprovalData {
   run_id: string;
   stage_id: string;
   title: string;
+  kind: StageGateKind;
 }
 
 /** Payload for ``stage_resolved`` events. */
 export interface StageResolvedData {
   run_id: string;
   stage_id: string;
+  kind: StageGateKind;
 }
 
 /** Payload for ``node_log`` SSE events. */
@@ -399,3 +402,5 @@ export interface ApiErrorDetail {
 export interface ApiErrorResponse {
   error: ApiErrorDetail;
 }
+
+export type StageGateKind = "input" | "approval";

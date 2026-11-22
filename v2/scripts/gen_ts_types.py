@@ -14,17 +14,61 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from plynx.api_models import (
+    AnswerCheckpointRequest,
+    ApiErrorDetail,
+    ApiErrorResponse,
+    CheckpointResolvedData,
+    CheckpointResolvedEvent,
+    CheckpointState,
+    CleanRequest,
+    CleanResponse,
+    CreateRunRequest,
+    CreateRunResponse,
+    EventType,
+    HealthResponse,
+    InputPortSpec,
+    LogStream,
+    NodeCheckpointData,
+    NodeCheckpointEvent,
+    NodeLogData,
+    NodeLogEvent,
+    NodePosition,
+    NodeRunState,
+    NodeStatus,
+    NodeStatusData,
+    NodeStatusEvent,
+    OpEntry,
+    OutputPortSpec,
+    PortType,
+    RunEvent,
+    RunListResponse,
+    RunState,
+    RunStatus,
+    RunStatusData,
+    RunStatusEvent,
+    RunSummary,
+    StageApprovalData,
+    StageApprovalEvent,
+    StageApproveRequest,
+    StageGateState,
+    StageGateStatus,
+    StageInputsRequest,
+    StageResolvedData,
+    StageResolvedEvent,
+    UploadResponse,
+    ValidateWorkflowRequest,
+    ValidateWorkflowResponse,
+    ValidationIssue,
+    Viewport,
+    WorkflowDocument,
+    WorkflowInputSpec,
+    WorkflowLayout,
+    WorkflowListItem,
+)
+from plynx.workflow.models import NodeRef, NodeSpec, Stage, Workflow
 from pydantic import BaseModel, TypeAdapter
 from pydantic.json_schema import models_json_schema
-
-from plynx.api_models import (AnswerCheckpointRequest, ApiErrorDetail, ApiErrorResponse, CheckpointResolvedData, CheckpointResolvedEvent, CheckpointState,
-                              CleanRequest, CleanResponse, CreateRunRequest, CreateRunResponse, EventType, HealthResponse, InputPortSpec, LogStream,
-                              NodeCheckpointData, NodeCheckpointEvent, NodeLogData, NodeLogEvent, NodePosition, NodeRunState, NodeStatus, NodeStatusData,
-                              NodeStatusEvent, OpEntry, OutputPortSpec, PortType, RunEvent, RunListResponse, RunState, RunStatus, RunStatusData, RunStatusEvent,
-                              RunSummary, StageApprovalData, StageApprovalEvent, StageApproveRequest, StageGateState, StageGateStatus, StageInputsRequest,
-                              StageResolvedData, StageResolvedEvent, UploadResponse, ValidateWorkflowRequest, ValidateWorkflowResponse, ValidationIssue,
-                              Viewport, WorkflowDocument, WorkflowInputSpec, WorkflowLayout, WorkflowListItem)
-from plynx.workflow.models import NodeRef, NodeSpec, Stage, Workflow
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 TARGET_PATH = PROJECT_ROOT / "ui" / "src" / "api" / "types.gen.ts"
