@@ -177,4 +177,27 @@ describe("StepperView component (Task 6.3)", () => {
     expect(screen.getByText("removed_op")).toBeDefined();
     expect(screen.getByText("NEW")).toBeDefined();
   });
+
+  it("dims inactive stages and progress when a checkpoint or stage approval gate is waiting", () => {
+    render(
+      <StepperView
+        runState={mockRunState}
+        workflowDoc={mockWorkflowDoc}
+      />,
+    );
+
+    // s2 is WAITING in mockRunState, s1 is not waiting
+    const s1Title = screen.getByText("1. Ingest Stage");
+    const s1Wrapper = s1Title.closest(".transition-opacity");
+    expect(s1Wrapper?.className).toContain("opacity-40");
+
+    const s2Title = screen.getByText("2. Processing Stage");
+    const s2Wrapper = s2Title.closest(".transition-opacity");
+    expect(s2Wrapper?.className).toContain("opacity-100");
+    expect(s2Wrapper?.className).not.toContain("opacity-40");
+
+    // Progress header should also be dimmed
+    const progressHeader = screen.getByText("Overall Progress").closest(".transition-opacity");
+    expect(progressHeader?.className).toContain("opacity-40");
+  });
 });

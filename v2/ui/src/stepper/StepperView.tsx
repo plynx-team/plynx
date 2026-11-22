@@ -81,11 +81,24 @@ export function StepperView({
   const isRunActive =
     runState.status === "RUNNING" || runState.status === "WAITING_FOR_USER";
 
+  const activeCheckpoints = isRunActive
+    ? runState.checkpoints.filter((cp) => !cp.answered_at)
+    : [];
+  const waitingStageIds = new Set(
+    Object.entries(runState.stage_gates)
+      .filter(([, g]) => isRunActive && g.status === "WAITING")
+      .map(([sid]) => sid),
+  );
+  const hasActiveFeedback =
+    activeCheckpoints.length > 0 || waitingStageIds.size > 0;
+
   return (
     <div className="p-3 space-y-3">
       {/* Overall Progress Header */}
       <div
-        className="rounded p-3 space-y-2"
+        className={`rounded p-3 space-y-2 transition-opacity duration-200 ${
+          hasActiveFeedback ? "opacity-40 hover:opacity-100" : ""
+        }`}
         style={{
           backgroundColor: "var(--bg-panel)",
           border: "1px solid var(--border-subtle)",
@@ -128,15 +141,13 @@ export function StepperView({
 
       {/* Active Checkpoints */}
       {isRunActive &&
-        runState.checkpoints
-          .filter((cp) => !cp.answered_at)
-          .map((cp) => (
-            <CheckpointCard
-              key={`${cp.node_id}-${cp.checkpoint_id}`}
-              runId={runState.id}
-              checkpoint={cp}
-            />
-          ))}
+        activeCheckpoints.map((cp) => (
+          <CheckpointCard
+            key={`${cp.node_id}-${cp.checkpoint_id}`}
+            runId={runState.id}
+            checkpoint={cp}
+          />
+        ))}
 
       {/* Stage Cards */}
       <div className="space-y-3">
@@ -144,24 +155,32 @@ export function StepperView({
           const stageDef: Stage | undefined = stagesDef[stageId];
           const gateState = runState.stage_gates[stageId];
           const nodes = stageGroups[stageId];
+          const isWaitingGate = waitingStageIds.has(stageId);
+          const isDimmed = hasActiveFeedback && !isWaitingGate;
 
           return (
-            <StageCard
+            <div
               key={stageId}
-              runId={runState.id}
-              stageId={stageId}
-              stageDef={stageDef}
-              gateState={gateState}
-              runActive={isRunActive}
-              runDiff={runDiff}
-              nodes={nodes}
-              selectedNodeId={selectedNodeId}
-              onSelectNode={onSelectNode}
-              workflow={workflow}
-              runInputs={runState.run_inputs}
-              opsMap={opsMap}
-              onApproved={onApproved}
-            />
+              className={`transition-opacity duration-200 ${
+                isDimmed ? "opacity-40 hover:opacity-100" : "opacity-100"
+              }`}
+            >
+              <StageCard
+                runId={runState.id}
+                stageId={stageId}
+                stageDef={stageDef}
+                gateState={gateState}
+                runActive={isRunActive}
+                runDiff={runDiff}
+                nodes={nodes}
+                selectedNodeId={selectedNodeId}
+                onSelectNode={onSelectNode}
+                workflow={workflow}
+                runInputs={runState.run_inputs}
+                opsMap={opsMap}
+                onApproved={onApproved}
+              />
+            </div>
           );
         })}
       </div>
