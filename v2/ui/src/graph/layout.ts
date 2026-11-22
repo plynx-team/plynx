@@ -139,11 +139,26 @@ export function estimateNodeDimensions(
   inputsCount: number,
   outputsCount: number,
   unwiredCount: number = 0,
+  unwiredPorts?: Array<{ type?: string; value?: unknown; multiline?: boolean }>,
 ): { width: number; height: number } {
   const socketRows = Math.max(inputsCount, outputsCount);
   const headerHeight = 28;
   const socketsHeight = socketRows > 0 ? 18 + socketRows * 24 : 0;
-  const widgetsHeight = unwiredCount > 0 ? 8 + unwiredCount * 28 : 0;
+  
+  // Calculate widgets height dynamically: multiline/JSON textareas take ~84px each, single-line pills take ~28px
+  let widgetsHeight = 0;
+  if (unwiredPorts && unwiredPorts.length > 0) {
+    widgetsHeight = 8;
+    for (const p of unwiredPorts) {
+      const isJson = p.type === "json";
+      const hasNewlines = typeof p.value === "string" && p.value.includes("\n");
+      const isMultiline = p.multiline || isJson || hasNewlines;
+      widgetsHeight += isMultiline ? 84 : 28;
+    }
+  } else if (unwiredCount > 0) {
+    widgetsHeight = 8 + unwiredCount * 28;
+  }
+
   const border = 4;
   const height = headerHeight + socketsHeight + widgetsHeight + border;
   return {
@@ -155,6 +170,7 @@ export function estimateNodeDimensions(
 export function computeDagrePositions(
   workflow: Workflow,
   opsMap: Record<string, OpEntry> = {},
+  measuredDimensions?: Record<string, { width: number; height: number }>,
 ): Record<string, NodePosition> {
   const nodesDef = workflow.nodes ?? {};
   const stageIds = getOrderedStageIds(workflow);
@@ -196,14 +212,26 @@ export function computeDagrePositions(
     for (const nodeId of memberIds) {
       const spec = nodesDef[nodeId];
       const ports = resolveNodePorts(nodeId, spec, workflow, opsMap[spec.op]);
-      const unwiredCount = ports.inputs.filter(
+      const unwired = ports.inputs.filter(
         (p) => !extractNodeRef(spec.inputs?.[p.name]),
-      ).length;
-      const dims = estimateNodeDimensions(
-        ports.inputs.length,
-        ports.outputs.length,
-        unwiredCount,
       );
+      const measured = measuredDimensions?.[nodeId];
+      let dims: { width: number; height: number };
+      if (measured?.height && measured.height > 0 && measured?.width && measured.width > 0) {
+        dims = { width: measured.width, height: measured.height };
+      } else {
+        const unwiredInfo = unwired.map((p) => ({
+          type: p.type,
+          value: spec.inputs?.[p.name],
+          multiline: p.type === "json",
+        }));
+        dims = estimateNodeDimensions(
+          ports.inputs.length,
+          ports.outputs.length,
+          unwired.length,
+          unwiredInfo,
+        );
+      }
       dimsMap[nodeId] = dims;
       g.setNode(nodeId, { width: dims.width, height: dims.height });
     }
@@ -367,7 +395,11 @@ export function buildGraphElements(
     nodes: nodesDef,
     stages: stagesDef,
   };
-  const dagrePositions = computeDagrePositions(effectiveWf, opsMap);
+  const dagrePositions = computeDagrePositions(
+    effectiveWf,
+    opsMap,
+    options.measuredDimensions,
+  );
   const absolutePositions: Record<string, NodePosition> = {};
 
   for (const nodeId of Object.keys(nodesDef)) {

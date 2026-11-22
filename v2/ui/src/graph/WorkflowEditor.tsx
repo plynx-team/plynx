@@ -861,10 +861,18 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     [commitStateChange],
   );
 
+  const measuredDimsRef = useRef<
+    Record<string, { width: number; height: number }>
+  >({});
+
   const handleAutoLayout = useCallback(() => {
     const currentWf = workflowRef.current;
     if (!currentWf) return;
-    const positions = computeDagrePositions(currentWf, opsMap);
+    const positions = computeDagrePositions(
+      currentWf,
+      opsMap,
+      measuredDimsRef.current,
+    );
     const nextLayout: WorkflowLayout = {
       schema: 1,
       nodes: positions,
@@ -1575,6 +1583,9 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
                   onViewportChange={handleViewportChange}
                   onLiteralChange={handleInlineLiteralChange}
                   onPreviewOutput={handlePreviewNodeOutput}
+                  onMeasuredDimensionsChange={(dims) => {
+                    measuredDimsRef.current = dims;
+                  }}
                   hasSavedViewport={hasSavedViewport}
                   fitViewTrigger={fitViewTrigger}
                   heightClassName="h-full"

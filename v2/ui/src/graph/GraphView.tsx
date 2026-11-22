@@ -82,6 +82,9 @@ export interface GraphViewProps {
   onViewportChange?: (viewport: { x: number; y: number; zoom: number }) => void;
   onLiteralChange?: (nodeId: string, portName: string, value: unknown) => void;
   onPreviewOutput?: (nodeId: string, output: OutputPortSpec) => void;
+  onMeasuredDimensionsChange?: (
+    dims: Record<string, { width: number; height: number }>,
+  ) => void;
   hasSavedViewport?: boolean;
   fitViewTrigger?: number;
   heightClassName?: string;
@@ -129,6 +132,7 @@ function GraphCanvasInner({
   onViewportChange,
   onLiteralChange,
   onPreviewOutput,
+  onMeasuredDimensionsChange,
   hasSavedViewport,
   fitViewTrigger = 0,
   heightClassName = "h-full",
@@ -288,6 +292,7 @@ function GraphCanvasInner({
       if (dimsChanged) {
         measuredDimsRef.current = nextDims;
         setMeasuredDims(nextDims);
+        onMeasuredDimensionsChange?.(nextDims);
       }
 
       if (!readOnly) {

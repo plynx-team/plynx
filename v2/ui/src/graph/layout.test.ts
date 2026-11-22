@@ -3,6 +3,7 @@ import type { NodeSpec, OpEntry, RunState, Workflow, WorkflowLayout } from "../a
 import {
   buildGraphElements,
   computeDagrePositions,
+  estimateNodeDimensions,
   findClosestStage,
   findStageAtPosition,
   getOrderedStageIds,
@@ -516,6 +517,41 @@ describe("graph layout utilities (Task 6.8)", () => {
       expect(ports.inputs[2].name).toBe("track_2");
       expect(ports.inputs[2].type).toBe("file");
       expect(ports.inputs[2].media).toBe("audio/wav");
+    });
+
+    it("uses measuredDimensions in computeDagrePositions when provided", () => {
+      const wf: Workflow = {
+        version: 1,
+        name: "test",
+        stages: { s1: { title: "Stage 1" } },
+        nodes: {
+          node_a: { op: "pack/mod:OpA", stage: "s1", inputs: {} },
+          node_b: { op: "pack/mod:OpB", stage: "s1", inputs: {} },
+        },
+      };
+
+      // node_a is very tall (e.g. 400px with a multiline JSON input)
+      const measured = {
+        node_a: { width: 280, height: 400 },
+        node_b: { width: 280, height: 80 },
+      };
+
+      const positions = computeDagrePositions(wf, {}, measured);
+      expect(positions.node_a).toBeDefined();
+      expect(positions.node_b).toBeDefined();
+      // With dagre vertical spacing for parallel nodes in the same stage or sequential,
+      // the vertical distance reflects node_a's height plus separation
+      const yDiff = Math.abs(positions.node_b.y - positions.node_a.y);
+      expect(yDiff).toBeGreaterThanOrEqual(200);
+    });
+
+    it("estimates larger heights for multiline and json ports in estimateNodeDimensions", () => {
+      const basicDims = estimateNodeDimensions(1, 1, 1, [{ type: "str", value: "hello" }]);
+      const jsonDims = estimateNodeDimensions(1, 1, 1, [{ type: "json", value: "{}" }]);
+      const multilineDims = estimateNodeDimensions(1, 1, 1, [{ type: "str", value: "line1\nline2" }]);
+
+      expect(jsonDims.height).toBeGreaterThan(basicDims.height);
+      expect(multilineDims.height).toBeGreaterThan(basicDims.height);
     });
   });
 });
