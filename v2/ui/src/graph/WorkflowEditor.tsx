@@ -1515,14 +1515,10 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
               </div>
             )}
 
-            {/* Open Checkpoints & Stage Approvals for the Selected Run */}
-            {isInspectingRun && selectedRun && (
+            {/* Open Checkpoints & Stage Approvals for the Selected Run (Graph view overlay only; Stepper view renders them inside its stage cards) */}
+            {isInspectingRun && selectedRun && viewMode === "graph" && (
               <div
-                className={
-                  viewMode === "graph"
-                    ? "absolute top-11 left-3 right-3 z-20 space-y-2 pointer-events-none empty:hidden max-h-[40vh] overflow-y-auto"
-                    : "space-y-2 px-3 pt-2 empty:hidden"
-                }
+                className="absolute top-11 left-3 right-3 z-20 space-y-2 pointer-events-none empty:hidden max-h-[40vh] overflow-y-auto"
               >
                 {Object.values(selectedRun.stage_gates)
                   .filter((g) => g.status === "WAITING")
