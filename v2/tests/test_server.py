@@ -14,17 +14,40 @@ from pathlib import Path
 import httpx
 import pytest
 from click.testing import CliRunner
-from plynx_sdk.protocol import ResultFileValue, ResultManifest
-from pydantic import TypeAdapter
-from tests.test_validator import EXAMPLE_WORKFLOW
-
-from plynx.api_models import (CleanResponse, NodeLogEvent, NodePosition, NodeStatus, OpEntry, RunEvent, RunListResponse, RunState, RunStatus, RunStatusData,
-                              UploadResponse, ValidateWorkflowResponse, Viewport, WorkflowDocument, WorkflowInputSpec, WorkflowLayout, WorkflowListItem)
+from plynx.api_models import (
+    CleanResponse,
+    NodeLogEvent,
+    NodePosition,
+    NodeStatus,
+    OpEntry,
+    RunEvent,
+    RunListResponse,
+    RunState,
+    RunStatus,
+    RunStatusData,
+    UploadResponse,
+    ValidateWorkflowResponse,
+    Viewport,
+    WorkflowDocument,
+    WorkflowInputSpec,
+    WorkflowLayout,
+    WorkflowListItem,
+)
 from plynx.cas import BlobStore
 from plynx.cli import main
-from plynx.server import NonLoopbackHostError, create_app, is_loopback_host, run_server, validate_host
+from plynx.server import (
+    NonLoopbackHostError,
+    create_app,
+    is_loopback_host,
+    run_server,
+    validate_host,
+)
 from plynx.store import RunStore
 from plynx.store.run_store import generate_run_id
+from plynx_sdk.protocol import ResultFileValue, ResultManifest
+from pydantic import TypeAdapter
+
+from tests.test_validator import EXAMPLE_WORKFLOW
 
 _EVENT_ADAPTER: TypeAdapter[RunEvent] = TypeAdapter(RunEvent)
 
@@ -1258,3 +1281,252 @@ def test_answer_checkpoint_auto_resumes_unowned_waiting_run(tmp_path: Path) -> N
             assert state_data["nodes"]["echo"]["status"] == "SUCCESS"
 
     asyncio.run(_test())
+
+
+def test_server_node_id_and_port_validation_and_path_traversal(tmp_path: Path) -> None:
+    """Validate node_id against NODE_ID_PATTERN and port name against snake_case pattern."""
+    store = RunStore(tmp_path)
+    run_id = generate_run_id()
+    with store._connect() as conn:
+        conn.execute(
+            """
+            INSERT INTO runs (id, workflow_path, workflow_sha256, status, created_at, pinned)
+            VALUES (?, 'wf.yaml', 'sha_wf', 'SUCCESS', ?, 0)
+            """,
+            (run_id, time.time()),
+        )
+
+    app = create_app(tmp_path)
+
+    async def _test() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            # 1. Logs: invalid node_id traversal and malformed names
+            for bad_node in ("%2e%2e", "Node-1", "bad.node", "123node", "invalid:node"):
+                resp = await client.get(f"/runs/{run_id}/nodes/{bad_node}/logs/stdout")
+                assert resp.status_code == 400
+                assert resp.json()["error"]["code"] == "invalid_node_id"
+
+            # 2. Outputs: invalid node_id
+            for bad_node in ("%2e%2e", "Node-1", "bad.node", "123node"):
+                resp = await client.get(f"/runs/{run_id}/nodes/{bad_node}/outputs/my_port")
+                assert resp.status_code == 400
+                assert resp.json()["error"]["code"] == "invalid_node_id"
+
+            # 3. Outputs: invalid port name
+            for bad_port in ("%2e%2e", "Port-1", "port.txt", "port-name"):
+                resp = await client.get(f"/runs/{run_id}/nodes/valid_node/outputs/{bad_port}")
+                assert resp.status_code == 400
+                assert resp.json()["error"]["code"] == "invalid_output_name"
+
+    asyncio.run(_test())
+
+
+def test_server_uploads_collision_safe_and_size_limit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Uploads stream in chunks, avoid filename collisions, and enforce size limits."""
+    import plynx.server.app as app_mod
+
+    app = create_app(tmp_path)
+
+    async def _test() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            # 1. Upload first time -> sample.txt
+            r1 = await client.post("/uploads", files={"file": ("sample.txt", b"v1", "text/plain")})
+            assert r1.status_code == 201
+            assert r1.json()["path"] == ".plynx/uploads/sample.txt"
+            assert (tmp_path / ".plynx" / "uploads" / "sample.txt").read_bytes() == b"v1"
+
+            # 2. Upload same name -> sample-1.txt
+            r2 = await client.post("/uploads", files={"file": ("sample.txt", b"v2", "text/plain")})
+            assert r2.status_code == 201
+            assert r2.json()["path"] == ".plynx/uploads/sample-1.txt"
+            assert (tmp_path / ".plynx" / "uploads" / "sample-1.txt").read_bytes() == b"v2"
+
+            # 3. Upload third time -> sample-2.txt
+            r3 = await client.post("/uploads", files={"file": ("sample.txt", b"v3", "text/plain")})
+            assert r3.status_code == 201
+            assert r3.json()["path"] == ".plynx/uploads/sample-2.txt"
+
+            # 4. Enforce upload size limit
+            monkeypatch.setattr(app_mod, "MAX_UPLOAD_SIZE_BYTES", 50)
+            monkeypatch.setattr(app_mod, "UPLOAD_CHUNK_SIZE", 16)
+            r_large = await client.post(
+                "/uploads",
+                files={"file": ("big.bin", b"X" * 100, "application/octet-stream")},
+            )
+            assert r_large.status_code == 413
+            assert r_large.json()["error"]["code"] == "upload_too_large"
+            # Ensure no orphaned temp files remained
+            uploads_dir = tmp_path / ".plynx" / "uploads"
+            tmp_files = list(uploads_dir.glob("*.tmp"))
+            assert not tmp_files
+
+    asyncio.run(_test())
+
+
+def test_sse_resumed_run_does_not_disconnect_on_prior_failed_event(tmp_path: Path) -> None:
+    """Replaying a prior FAILED event on a resumed RUNNING run must not close the SSE stream."""
+    from plynx.api_models import NodeStatusData
+
+    store = RunStore(tmp_path)
+    run_id = store.create_run(
+        workflow_path="workflows/resume_sse.yaml",
+        workflow_bytes=b"version: 1\nname: resume_sse\nnodes: {}\n",
+        node_ids=["step1"],
+        status=RunStatus.RUNNING,
+    )
+    event_log = store.event_log(run_id)
+    event_log.append("run_status", RunStatusData(run_id=run_id, status=RunStatus.RUNNING))
+    event_log.append(
+        "run_status",
+        RunStatusData(run_id=run_id, status=RunStatus.FAILED, error="transient error"),
+    )
+    # Run has been claimed for resume: SQLite status is RUNNING even before new events arrive.
+    store.update_run_status(run_id, RunStatus.RUNNING)
+
+    app = create_app(tmp_path)
+
+    async def _test() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+
+            async def _produce_resumed_events() -> None:
+                await asyncio.sleep(0.15)
+                event_log.append(
+                    "run_status", RunStatusData(run_id=run_id, status=RunStatus.RUNNING)
+                )
+                event_log.append(
+                    "node_status",
+                    NodeStatusData(
+                        run_id=run_id,
+                        node_id="step1",
+                        status=NodeStatus.SUCCESS,
+                        cache_hit=False,
+                        attempt=2,
+                    ),
+                )
+                store.update_run_status(run_id, RunStatus.SUCCESS)
+                event_log.append(
+                    "run_status", RunStatusData(run_id=run_id, status=RunStatus.SUCCESS)
+                )
+
+            producer = asyncio.create_task(_produce_resumed_events())
+            try:
+                resp = await client.get(f"/runs/{run_id}/stream", timeout=10.0)
+            finally:
+                await producer
+
+            assert resp.status_code == 200
+            frames = _parse_sse_stream(resp.text)
+            event_frames = [f for f in frames if f.event_type != "node_log"]
+            assert [f.event_id for f in event_frames] == [1, 2, 3, 4, 5]
+            assert event_frames[-1].event_type == "run_status"
+            assert getattr(event_frames[-1].data.data, "status", None) == RunStatus.SUCCESS
+
+    asyncio.run(_test())
+
+
+def test_sse_idle_tick_does_not_reparse_workflow_snapshot(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """SSE polling must use lightweight status checks and byte-offset tailing, never load_workflow."""
+    import plynx.workflow.models as wf_models
+
+    store = RunStore(tmp_path)
+    run_id = store.create_run(
+        workflow_path="workflows/idle_sse.yaml",
+        workflow_bytes=(
+            b"version: 1\nname: idle_sse\nnodes:\n  n1:\n    op: standard_io/demo:Echo\n"
+            b"    inputs:\n      text: hello\n"
+        ),
+        node_ids=["n1"],
+        status=RunStatus.RUNNING,
+    )
+    event_log = store.event_log(run_id)
+    event_log.append("run_status", RunStatusData(run_id=run_id, status=RunStatus.RUNNING))
+
+    app = create_app(tmp_path)
+
+    def _forbid_load_workflow(*args: object, **kwargs: object) -> object:
+        raise AssertionError("workflow.snapshot.yaml must not be parsed during SSE streaming")
+
+    monkeypatch.setattr(wf_models, "load_workflow", _forbid_load_workflow)
+    get_run_state_calls = 0
+    orig_get_run_state = app.state.store.get_run_state
+
+    def _counting_get_run_state(rid: str) -> object:
+        nonlocal get_run_state_calls
+        get_run_state_calls += 1
+        return orig_get_run_state(rid)
+
+    monkeypatch.setattr(app.state.store, "get_run_state", _counting_get_run_state)
+
+    async def _test() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+
+            async def _finish_after_idle_ticks() -> None:
+                # Wait long enough for several idle poll ticks.
+                await asyncio.sleep(0.35)
+                store.update_run_status(run_id, RunStatus.SUCCESS)
+                event_log.append(
+                    "run_status", RunStatusData(run_id=run_id, status=RunStatus.SUCCESS)
+                )
+
+            finisher = asyncio.create_task(_finish_after_idle_ticks())
+            try:
+                resp = await client.get(f"/runs/{run_id}/stream", timeout=10.0)
+            finally:
+                await finisher
+
+            assert resp.status_code == 200
+            frames = _parse_sse_stream(resp.text)
+            assert [f.event_id for f in frames] == [1, 2]
+            assert get_run_state_calls == 0
+
+    asyncio.run(_test())
+
+
+def test_event_log_read_from_offset_handles_partial_trailing_line(tmp_path: Path) -> None:
+    """read_from_offset waits for newline termination before advancing past a partial line."""
+    store = RunStore(tmp_path)
+    run_id = store.create_run(
+        workflow_path="workflows/partial.yaml",
+        workflow_bytes=b"version: 1\nnodes: {}\n",
+        node_ids=[],
+    )
+    event_log = store.event_log(run_id)
+    ev1 = event_log.append("run_status", RunStatusData(run_id=run_id, status=RunStatus.RUNNING))
+    events, offset = event_log.read_from_offset(0, after_seq=0)
+    assert events == [ev1]
+    assert offset == event_log.path.stat().st_size
+
+    # Simulate a writer mid-line without trailing newline.
+    partial_line = json.dumps(
+        {
+            "seq": 2,
+            "ts": time.time(),
+            "type": "run_status",
+            "data": {"run_id": run_id, "status": "SUCCESS"},
+        },
+        separators=(",", ":"),
+    )
+    with event_log.path.open("ab") as handle:
+        handle.write(partial_line[:20].encode("utf-8"))
+        handle.flush()
+
+    mid_events, mid_offset = event_log.read_from_offset(offset, after_seq=1)
+    assert mid_events == []
+    assert mid_offset == offset
+
+    with event_log.path.open("ab") as handle:
+        handle.write((partial_line[20:] + "\n").encode("utf-8"))
+        handle.flush()
+
+    final_events, final_offset = event_log.read_from_offset(mid_offset, after_seq=1)
+    assert len(final_events) == 1
+    assert final_events[0].seq == 2
+    assert final_offset == event_log.path.stat().st_size

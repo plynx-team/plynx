@@ -5,8 +5,11 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import json
+import os
+import re
+import tempfile
 import time
-from collections.abc import AsyncIterator, Callable, Mapping, MutableMapping
+from collections.abc import AsyncIterator, Callable, MutableMapping
 from io import StringIO
 from pathlib import Path
 from typing import Any
@@ -19,20 +22,54 @@ from plynx_sdk.protocol import ResultFileValue, ResultManifest
 from pydantic import ValidationError
 from ruamel.yaml import YAML
 
-from plynx.api_models import (AnswerCheckpointRequest, ApiErrorDetail, ApiErrorResponse, CleanRequest, CleanResponse, CreateRunRequest, CreateRunResponse,
-                              HealthResponse, NodeLogData, NodeLogEvent, OpEntry, RunListResponse, RunState, RunStatus, RunStatusEvent, StageApproveRequest,
-                              StageGateStatus, StageInputsRequest, UploadResponse, ValidateWorkflowRequest, ValidateWorkflowResponse, WorkflowDocument,
-                              WorkflowInputSpec, WorkflowLayout, WorkflowListItem)
+from plynx.api_models import (
+    AnswerCheckpointRequest,
+    ApiErrorDetail,
+    ApiErrorResponse,
+    CleanRequest,
+    CleanResponse,
+    CreateRunRequest,
+    CreateRunResponse,
+    HealthResponse,
+    NodeLogData,
+    NodeLogEvent,
+    OpEntry,
+    RunListResponse,
+    RunState,
+    RunStatus,
+    RunStatusEvent,
+    StageApproveRequest,
+    StageGateKind,
+    StageGateStatus,
+    StageInputsRequest,
+    UploadResponse,
+    ValidateWorkflowRequest,
+    ValidateWorkflowResponse,
+    WorkflowDocument,
+    WorkflowInputSpec,
+    WorkflowLayout,
+    WorkflowListItem,
+)
 from plynx.cas import BlobStore, clean
 from plynx.engine import Executor, Scheduler, SchedulerOptions, create_executor
 from plynx.engine.procgroup import is_pid_alive
 from plynx.registry import OpRegistry, Registry, find_workspace_root
-from plynx.store import AmbiguousRunIdError, RunNotFoundError, RunStore, StoreError, atomic_write_bytes, atomic_write_text
-from plynx.workflow.models import NodeRef, load_workflow
+from plynx.store import (
+    AmbiguousRunIdError,
+    RunNotFoundError,
+    RunStore,
+    StoreError,
+    atomic_write_text,
+)
+from plynx.workflow.models import NODE_ID_PATTERN, NodeRef, load_workflow
 from plynx.workflow.validator import get_unbound_run_inputs, validate_workflow
 
 TERMINAL_RUN_STATUSES = frozenset({RunStatus.SUCCESS, RunStatus.FAILED, RunStatus.CANCELED})
 DEFAULT_STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+MAX_UPLOAD_SIZE_BYTES: int = 100 * 1024 * 1024  # 100 MiB
+UPLOAD_CHUNK_SIZE: int = 64 * 1024  # 64 KiB
+SSE_POLL_INTERVAL_SECONDS: float = 0.1
+_PORT_NAME_RE: re.Pattern[str] = re.compile(r"^[a-z][a-z0-9_]*$")
 
 
 def _error_response(status_code: int, code: str, message: str) -> JSONResponse:
@@ -66,20 +103,10 @@ def _format_sse_frame(
 
 
 def _discover_workflows(workspace_root: Path) -> list[WorkflowListItem]:
-    cfg_path = workspace_root / "plynx.yaml"
-    wf_dir_names: list[str] = ["workflows", "examples/workflows"]
-    if cfg_path.is_file():
-        try:
-            yaml = YAML(typ="safe")
-            parsed = yaml.load(cfg_path.read_text(encoding="utf-8"))
-            if isinstance(parsed, Mapping) and "workflows" in parsed:
-                val = parsed["workflows"]
-                if isinstance(val, str):
-                    wf_dir_names = [val]
-                elif isinstance(val, list):
-                    wf_dir_names = [str(x) for x in val]
-        except Exception:
-            pass
+    from plynx.config import load_workspace_config
+
+    config = load_workspace_config(workspace_root)
+    wf_dir_names: list[str] = config.workflows
 
     items: list[WorkflowListItem] = []
     seen_paths: set[str] = set()
@@ -476,7 +503,9 @@ def create_app(
                 ).encode("utf-8")
             else:
                 sidecar = wf_candidate.with_name(f".{wf_candidate.stem}.layout.json")
-                layout_bytes = await asyncio.to_thread(sidecar.read_bytes) if sidecar.is_file() else None
+                layout_bytes = (
+                    await asyncio.to_thread(sidecar.read_bytes) if sidecar.is_file() else None
+                )
         else:
             if not wf_candidate.is_file():
                 return _error_response(
@@ -492,7 +521,9 @@ def create_app(
 
             workflow_bytes = await asyncio.to_thread(wf_candidate.read_bytes)
             sidecar = wf_candidate.with_name(f".{wf_candidate.stem}.layout.json")
-            layout_bytes = await asyncio.to_thread(sidecar.read_bytes) if sidecar.is_file() else None
+            layout_bytes = (
+                await asyncio.to_thread(sidecar.read_bytes) if sidecar.is_file() else None
+            )
 
         issues = validate_workflow(wf_model, op_registry)
         errors = [issue for issue in issues if issue.severity == "error"]
@@ -673,7 +704,12 @@ def create_app(
         if body is not None and body.inputs:
             await asyncio.to_thread(store.update_run_inputs, resolved_id, body.inputs)
 
-        applied = await asyncio.to_thread(store.approve_stage_gate, resolved_id, stage_id)
+        applied = await asyncio.to_thread(
+            store.approve_stage_gate,
+            resolved_id,
+            stage_id,
+            kind=gate.kind,
+        )
         if not applied:
             return _error_response(
                 409,
@@ -681,7 +717,7 @@ def create_app(
                 f"Stage gate '{stage_id}' has already been approved",
             )
         await _auto_resume_if_unowned(resolved_id)
-        return {"status": "ok", "stage_id": stage_id}
+        return {"status": "ok", "stage_id": stage_id, "kind": gate.kind.value}
 
     @router.post("/runs/{run_id}/stages/{stage_id}/inputs")
     async def stage_inputs_endpoint(
@@ -689,7 +725,7 @@ def create_app(
         stage_id: str,
         body: StageInputsRequest,
     ) -> Any:
-        """Submit inputs for a stage and approve its gate if waiting."""
+        """Submit inputs for a stage and approve its input gate if waiting."""
         try:
             resolved_id = await asyncio.to_thread(store.resolve_run_id, run_id)
         except RunNotFoundError as exc:
@@ -700,12 +736,22 @@ def create_app(
         if body.inputs:
             await asyncio.to_thread(store.update_run_inputs, resolved_id, body.inputs)
 
-        gate = await asyncio.to_thread(store.get_stage_gate, resolved_id, stage_id)
+        gate = await asyncio.to_thread(
+            store.get_stage_gate,
+            resolved_id,
+            stage_id,
+            kind=StageGateKind.INPUT,
+        )
         if gate is not None and gate.status == StageGateStatus.WAITING:
-            await asyncio.to_thread(store.approve_stage_gate, resolved_id, stage_id)
+            await asyncio.to_thread(
+                store.approve_stage_gate,
+                resolved_id,
+                stage_id,
+                kind=StageGateKind.INPUT,
+            )
 
         await _auto_resume_if_unowned(resolved_id)
-        return {"status": "ok", "stage_id": stage_id}
+        return {"status": "ok", "stage_id": stage_id, "kind": StageGateKind.INPUT.value}
 
     @router.get("/runs/{run_id}/nodes/{node_id}/logs/{stream}")
     async def get_node_logs(
@@ -715,6 +761,13 @@ def create_app(
         offset: int = Query(default=0, ge=0),
     ) -> Any:
         """Return plain-text logs for a node stream from offset with X-Next-Offset header."""
+        if not NODE_ID_PATTERN.match(node_id):
+            return _error_response(
+                400,
+                "invalid_node_id",
+                f"Node ID {node_id!r} is invalid: must match {NODE_ID_PATTERN.pattern}",
+            )
+
         try:
             resolved_id = await asyncio.to_thread(store.resolve_run_id, run_id)
         except RunNotFoundError as exc:
@@ -729,7 +782,17 @@ def create_app(
                 f"Stream must be 'stdout' or 'stderr', got {stream!r}",
             )
 
-        log_path = store.run_dir(resolved_id) / "logs" / f"{node_id}.{stream}.log"
+        logs_dir = store.run_dir(resolved_id) / "logs"
+        log_path = (logs_dir / f"{node_id}.{stream}.log").resolve()
+        try:
+            log_path.relative_to(logs_dir.resolve())
+        except ValueError:
+            return _error_response(
+                400,
+                "invalid_node_id",
+                "Log path must stay inside the logs directory",
+            )
+
         if not log_path.is_file():
             return Response(
                 content="",
@@ -785,8 +848,42 @@ def create_app(
                 "Uploaded file path must stay inside the uploads directory",
             )
 
-        content = await file.read()
-        await asyncio.to_thread(atomic_write_bytes, dest, content)
+        if dest.exists():
+            stem = Path(raw_filename).stem
+            suffix = Path(raw_filename).suffix
+            counter = 1
+            while dest.exists():
+                dest = (uploads_dir / f"{stem}-{counter}{suffix}").resolve()
+                counter += 1
+
+        fd, tmp_path_str = tempfile.mkstemp(
+            dir=str(uploads_dir),
+            prefix=f".{dest.name}.",
+            suffix=".tmp",
+        )
+        tmp_path = Path(tmp_path_str)
+        bytes_written = 0
+        try:
+            with os.fdopen(fd, "wb") as handle:
+                while True:
+                    chunk = await file.read(UPLOAD_CHUNK_SIZE)
+                    if not chunk:
+                        break
+                    bytes_written += len(chunk)
+                    if bytes_written > MAX_UPLOAD_SIZE_BYTES:
+                        raise ValueError(
+                            f"File size exceeds maximum allowed limit of {MAX_UPLOAD_SIZE_BYTES} bytes"
+                        )
+                    handle.write(chunk)
+            os.replace(tmp_path, dest)
+        except ValueError as exc:
+            if tmp_path.exists():
+                tmp_path.unlink(missing_ok=True)
+            return _error_response(413, "upload_too_large", str(exc))
+        except Exception:
+            if tmp_path.exists():
+                tmp_path.unlink(missing_ok=True)
+            raise
 
         rel_path = dest.relative_to(ws_root.resolve()).as_posix()
         return UploadResponse(path=rel_path)
@@ -794,6 +891,20 @@ def create_app(
     @router.get("/runs/{run_id}/nodes/{node_id}/outputs/{name}")
     async def get_node_output(run_id: str, node_id: str, name: str) -> Any:
         """Download or fetch an output artifact from a node."""
+        if not NODE_ID_PATTERN.match(node_id):
+            return _error_response(
+                400,
+                "invalid_node_id",
+                f"Node ID {node_id!r} is invalid: must match {NODE_ID_PATTERN.pattern}",
+            )
+
+        if not _PORT_NAME_RE.match(name):
+            return _error_response(
+                400,
+                "invalid_output_name",
+                f"Output port name {name!r} is invalid: must match {_PORT_NAME_RE.pattern}",
+            )
+
         try:
             resolved_id = await asyncio.to_thread(store.resolve_run_id, run_id)
         except RunNotFoundError as exc:
@@ -801,7 +912,17 @@ def create_app(
         except AmbiguousRunIdError as exc:
             return _error_response(409, "ambiguous_run_id", str(exc))
 
-        result_path = store.node_dir(resolved_id, node_id) / "result.json"
+        node_dir = store.node_dir(resolved_id, node_id).resolve()
+        try:
+            node_dir.relative_to(store.run_dir(resolved_id).resolve())
+        except ValueError:
+            return _error_response(
+                400,
+                "invalid_node_id",
+                "Node path must stay inside the run directory",
+            )
+
+        result_path = node_dir / "result.json"
         if not result_path.is_file():
             return _error_response(
                 404,
@@ -959,9 +1080,13 @@ def create_app(
 
         async def _event_generator() -> AsyncIterator[str]:
             nonlocal after_seq
+            event_byte_offset = 0
             while True:
-                events = await asyncio.to_thread(event_log.read_after, after_seq)
-                saw_terminal = False
+                events, event_byte_offset = await asyncio.to_thread(
+                    event_log.read_from_offset,
+                    event_byte_offset,
+                    after_seq=after_seq,
+                )
                 for ev in events:
                     if ev.seq is not None:
                         after_seq = ev.seq
@@ -975,27 +1100,22 @@ def create_app(
                         data_json=payload,
                         seq=ev.seq,
                     )
-                    if isinstance(ev, RunStatusEvent) and ev.data.status in TERMINAL_RUN_STATUSES:
-                        saw_terminal = True
 
-                log_frames = await asyncio.to_thread(_get_new_log_frames, force_flush=saw_terminal)
-                for frame in log_frames:
-                    yield frame
+                run_status = await asyncio.to_thread(store.get_run_status, resolved_id)
+                is_terminal = run_status is None or run_status in TERMINAL_RUN_STATUSES
 
-                if saw_terminal:
-                    final_log_frames = await asyncio.to_thread(
-                        _get_new_log_frames, force_flush=True
+                if is_terminal:
+                    trailing, event_byte_offset = await asyncio.to_thread(
+                        event_log.read_from_offset,
+                        event_byte_offset,
+                        after_seq=after_seq,
                     )
-                    for frame in final_log_frames:
-                        yield frame
-                    break
-
-                state = await asyncio.to_thread(store.get_run_state, resolved_id)
-                if state is not None and state.status in TERMINAL_RUN_STATUSES:
-                    trailing = await asyncio.to_thread(event_log.read_after, after_seq)
+                    last_trailing_status: RunStatus | None = None
                     for ev in trailing:
                         if ev.seq is not None:
                             after_seq = ev.seq
+                        if isinstance(ev, RunStatusEvent):
+                            last_trailing_status = ev.data.status
                         payload = json.dumps(
                             ev.model_dump(mode="json", exclude_none=True),
                             ensure_ascii=False,
@@ -1006,16 +1126,22 @@ def create_app(
                             data_json=payload,
                             seq=ev.seq,
                         )
-                    final_log_frames = await asyncio.to_thread(
-                        _get_new_log_frames, force_flush=True
-                    )
-                    for frame in final_log_frames:
-                        yield frame
+                    if (
+                        last_trailing_status is not None
+                        and last_trailing_status not in TERMINAL_RUN_STATUSES
+                    ):
+                        is_terminal = False
+
+                log_frames = await asyncio.to_thread(_get_new_log_frames, force_flush=is_terminal)
+                for frame in log_frames:
+                    yield frame
+
+                if is_terminal:
                     break
 
                 if await request.is_disconnected():
                     break
-                await asyncio.sleep(0.02)
+                await asyncio.sleep(SSE_POLL_INTERVAL_SECONDS)
 
         return StreamingResponse(
             _event_generator(),

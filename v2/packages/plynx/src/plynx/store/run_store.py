@@ -15,8 +15,19 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Final
 
-from plynx.api_models import (CheckpointState, NodeRunState, NodeStatus, NodeStatusData, RunState, RunStatus, RunStatusData, RunSummary, StageGateState,
-                              StageGateStatus)
+from plynx.api_models import (
+    CheckpointState,
+    NodeRunState,
+    NodeStatus,
+    NodeStatusData,
+    RunState,
+    RunStatus,
+    RunStatusData,
+    RunSummary,
+    StageGateKind,
+    StageGateState,
+    StageGateStatus,
+)
 from plynx.store.event_log import EventLog
 
 USER_VERSION: Final[int] = 1
@@ -44,8 +55,9 @@ CREATE TABLE checkpoints (
 );
 CREATE TABLE stage_gates (
   run_id TEXT NOT NULL REFERENCES runs(id) ON DELETE CASCADE, stage_id TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'approval' CHECK (kind IN ('input','approval')),
   status TEXT NOT NULL CHECK (status IN ('WAITING','APPROVED')),
-  created_at REAL NOT NULL, decided_at REAL, PRIMARY KEY (run_id, stage_id)
+  created_at REAL NOT NULL, decided_at REAL, PRIMARY KEY (run_id, stage_id, kind)
 );
 CREATE TABLE cache_index (
   cache_key TEXT PRIMARY KEY, result_json TEXT NOT NULL,
@@ -620,21 +632,24 @@ class RunStore:
         run_id: str,
         stage_id: str,
         *,
+        kind: StageGateKind = StageGateKind.APPROVAL,
         created_at: float | None = None,
     ) -> StageGateState:
-        """Create a ``WAITING`` stage gate row."""
+        """Create a ``WAITING`` stage gate row for ``(run_id, stage_id, kind)``."""
         now = time.time() if created_at is None else created_at
         with self._connect() as conn:
             conn.execute(
                 """
-                INSERT INTO stage_gates (run_id, stage_id, status, created_at, decided_at)
-                VALUES (?, ?, 'WAITING', ?, NULL)
-                ON CONFLICT(run_id, stage_id) DO UPDATE SET status = 'WAITING', decided_at = NULL
+                INSERT INTO stage_gates (run_id, stage_id, kind, status, created_at, decided_at)
+                VALUES (?, ?, ?, 'WAITING', ?, NULL)
+                ON CONFLICT(run_id, stage_id, kind) DO UPDATE SET
+                  status = 'WAITING', decided_at = NULL
                 """,
-                (run_id, stage_id, now),
+                (run_id, stage_id, kind.value, now),
             )
         return StageGateState(
             stage_id=stage_id,
+            kind=kind,
             status=StageGateStatus.WAITING,
             created_at=now,
             decided_at=None,
@@ -678,40 +693,104 @@ class RunStore:
         run_id: str,
         stage_id: str,
         *,
+        kind: StageGateKind | None = None,
         decided_at: float | None = None,
     ) -> bool:
         """Approve a ``WAITING`` stage gate. Returns True if transitioned to ``APPROVED``."""
         now = time.time() if decided_at is None else decided_at
         with self._connect() as conn:
-            cursor = conn.execute(
-                """
-                UPDATE stage_gates
-                SET status = 'APPROVED', decided_at = ?
-                WHERE run_id = ? AND stage_id = ? AND status = 'WAITING'
-                """,
-                (now, run_id, stage_id),
-            )
-            return cursor.rowcount == 1
+            if kind is not None:
+                cursor = conn.execute(
+                    """
+                    UPDATE stage_gates
+                    SET status = 'APPROVED', decided_at = ?
+                    WHERE run_id = ? AND stage_id = ? AND kind = ? AND status = 'WAITING'
+                    """,
+                    (now, run_id, stage_id, kind.value),
+                )
+            else:
+                cursor = conn.execute(
+                    """
+                    UPDATE stage_gates
+                    SET status = 'APPROVED', decided_at = ?
+                    WHERE run_id = ? AND stage_id = ? AND status = 'WAITING'
+                    """,
+                    (now, run_id, stage_id),
+                )
+            return cursor.rowcount >= 1
 
-    def get_stage_gate(self, run_id: str, stage_id: str) -> StageGateState | None:
-        """Fetch a single stage gate state."""
+    def get_stage_gate(
+        self,
+        run_id: str,
+        stage_id: str,
+        *,
+        kind: StageGateKind | None = None,
+    ) -> StageGateState | None:
+        """Fetch a single stage gate state (active ``WAITING`` gate first when ``kind`` is None)."""
         with self._connect() as conn:
-            row = conn.execute(
-                """
-                SELECT stage_id, status, created_at, decided_at
-                FROM stage_gates
-                WHERE run_id = ? AND stage_id = ?
-                """,
-                (run_id, stage_id),
-            ).fetchone()
+            if kind is not None:
+                row = conn.execute(
+                    """
+                    SELECT stage_id, kind, status, created_at, decided_at
+                    FROM stage_gates
+                    WHERE run_id = ? AND stage_id = ? AND kind = ?
+                    """,
+                    (run_id, stage_id, kind.value),
+                ).fetchone()
+            else:
+                row = conn.execute(
+                    """
+                    SELECT stage_id, kind, status, created_at, decided_at
+                    FROM stage_gates
+                    WHERE run_id = ? AND stage_id = ?
+                    ORDER BY
+                      CASE status WHEN 'WAITING' THEN 0 ELSE 1 END,
+                      CASE kind WHEN 'approval' THEN 0 ELSE 1 END,
+                      created_at DESC
+                    LIMIT 1
+                    """,
+                    (run_id, stage_id),
+                ).fetchone()
         if row is None:
             return None
         return StageGateState(
             stage_id=str(row["stage_id"]),
+            kind=StageGateKind(str(row["kind"])),
             status=StageGateStatus(str(row["status"])),
             created_at=float(row["created_at"]),
             decided_at=row["decided_at"],
         )
+
+    def list_stage_gates(self, run_id: str) -> list[StageGateState]:
+        """Return all stage gate rows (both ``input`` and ``approval``) for ``run_id``."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT stage_id, kind, status, created_at, decided_at
+                FROM stage_gates
+                WHERE run_id = ?
+                ORDER BY created_at, stage_id, kind
+                """,
+                (run_id,),
+            ).fetchall()
+        return [
+            StageGateState(
+                stage_id=str(r["stage_id"]),
+                kind=StageGateKind(str(r["kind"])),
+                status=StageGateStatus(str(r["status"])),
+                created_at=float(r["created_at"]),
+                decided_at=r["decided_at"],
+            )
+            for r in rows
+        ]
+
+    def get_run_status(self, run_id: str) -> RunStatus | None:
+        """Return the current ``RunStatus`` for ``run_id`` without loading snapshots."""
+        with self._connect() as conn:
+            row = conn.execute("SELECT status FROM runs WHERE id = ?", (run_id,)).fetchone()
+        if row is None:
+            return None
+        return RunStatus(str(row["status"]))
 
     def get_run_state(self, run_id: str) -> RunState | None:
         """Return the complete ``RunState`` for ``run_id``, or ``None`` if not found."""
@@ -746,15 +825,26 @@ class RunStore:
             for r in node_rows
         }
         checkpoints = [_row_to_checkpoint(r) for r in cp_rows]
-        stage_gates = {
-            str(r["stage_id"]): StageGateState(
-                stage_id=str(r["stage_id"]),
+        stage_gates: dict[str, StageGateState] = {}
+        for r in gate_rows:
+            sid = str(r["stage_id"])
+            gate = StageGateState(
+                stage_id=sid,
+                kind=StageGateKind(str(r["kind"])),
                 status=StageGateStatus(str(r["status"])),
                 created_at=float(r["created_at"]),
                 decided_at=r["decided_at"],
             )
-            for r in gate_rows
-        }
+            existing_gate = stage_gates.get(sid)
+            if (
+                existing_gate is None
+                or gate.status == StageGateStatus.WAITING
+                or (
+                    existing_gate.status != StageGateStatus.WAITING
+                    and gate.kind == StageGateKind.APPROVAL
+                )
+            ):
+                stage_gates[sid] = gate
         run_inputs = json.loads(str(run_row["run_inputs_json"] or "{}"))
         run_id_str = str(run_row["id"])
         workflow_snapshot = None

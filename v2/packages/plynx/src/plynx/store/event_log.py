@@ -97,22 +97,52 @@ class EventLog:
 
     def read_after(self, after_seq: int = 0) -> list[RunEvent]:
         """Return all stored events with ``seq > after_seq`` in ``seq`` order."""
+        events, _ = self.read_from_offset(0, after_seq=after_seq)
+        return events
+
+    def read_from_offset(
+        self,
+        byte_offset: int = 0,
+        *,
+        after_seq: int = 0,
+    ) -> tuple[list[RunEvent], int]:
+        """Read complete JSONL events starting at ``byte_offset`` with ``seq > after_seq``.
+
+        Returns ``(events, next_byte_offset)`` where ``next_byte_offset`` only advances
+        past complete newline-terminated lines so partial writes are retried on the next read.
+        """
         if not self.path.is_file():
-            return []
+            return [], byte_offset
         events: list[RunEvent] = []
-        with self.path.open("r", encoding="utf-8") as handle:
-            for raw_line in handle:
-                line = raw_line.strip()
+        next_offset = byte_offset
+        with self.path.open("rb") as handle:
+            handle.seek(0, os.SEEK_END)
+            file_size = handle.tell()
+            if file_size < byte_offset:
+                byte_offset = 0
+                next_offset = 0
+            if file_size <= byte_offset:
+                return [], next_offset
+            handle.seek(byte_offset)
+            while True:
+                line_start = handle.tell()
+                raw_line = handle.readline()
+                if not raw_line:
+                    break
+                if not raw_line.endswith(b"\n"):
+                    next_offset = line_start
+                    break
+                next_offset = handle.tell()
+                line = raw_line.decode("utf-8", errors="replace").strip()
                 if not line:
                     continue
                 try:
                     raw_obj = json.loads(line)
                 except json.JSONDecodeError:
-                    # Ignore a partial trailing line if a reader races with an active writer.
                     continue
                 seq = raw_obj.get("seq")
                 if isinstance(seq, int) and seq <= after_seq:
                     continue
                 event: RunEvent = _RUN_EVENT_ADAPTER.validate_python(raw_obj)
                 events.append(event)
-        return events
+        return events, next_offset
