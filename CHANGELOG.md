@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [2.0.0] - Unreleased
+## [2.0.0] - 2026-11-22
 
 Complete ground-up rewrite as a local-first, code-first workflow engine. Legacy PLynx v1 (`v1.12.1`) is preserved on the `legacy/v1` branch.
 

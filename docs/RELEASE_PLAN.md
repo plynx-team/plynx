@@ -171,4 +171,4 @@ Run only after R0–R5 are complete, CI is green on all 3 OSes, and the owner gi
 - [x] **9.2** Commit 1: delete legacy root files (preserving `.git`, `.github/`, `LICENSE`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `v2/`). Delete obsolete `v2/docs/PLAN.md`, `v2/docs/LEGACY_MAP.md`, `v2/docs/WORKFLOW.md`, and `v2/scripts/check_legacy_untouched.py`.
 - [x] **9.3** Commit 2: `git mv` everything from `v2/` to repo root. No content edits.
 - [x] **9.4** Commit 3: remove `working-directory: v2` and `check_legacy_untouched.py` from CI, rename `.github/workflows/v2-ci.yml` to `ci.yml`, update `AGENTS.md` (remove `v2/`-specific rules) and `README.md` (remove `cd plynx/v2`), update `CHANGELOG.md`.
-- [ ] **9.5** Tag `v2.0.0rc1`, run full CI + wheel smoke tests on all 3 OSes, publish `plynx-sdk` then `plynx` to PyPI, tag `v2.0.0`, and merge `v2` into `master`.
+- [x] **9.5** Tag `v2.0.0rc1`, run full CI + wheel smoke tests on all 3 OSes, publish `plynx-sdk` then `plynx` to PyPI, tag `v2.0.0`, and merge `v2` into `master`.

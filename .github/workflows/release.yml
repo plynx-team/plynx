@@ -53,6 +53,21 @@ jobs:
         working-directory: ui
         run: npm run build
 
+      - name: Verify tag matches package versions
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: |
+          python3 - <<'PY'
+          import os, tomllib
+          from pathlib import Path
+          tag = os.environ["GITHUB_REF_NAME"]
+          for pkg in ("packages/plynx-sdk/pyproject.toml", "packages/plynx/pyproject.toml"):
+              ver = tomllib.loads(Path(pkg).read_text(encoding="utf-8"))["project"]["version"]
+              expected = f"v{ver}"
+              if tag != expected:
+                  raise SystemExit(f"Tag {tag!r} does not match {pkg} version {ver!r} (expected {expected!r})")
+          print(f"Verified tag {tag} matches plynx-sdk and plynx versions.")
+          PY
+
       - name: Build distributions for plynx-sdk and plynx
         run: |
           mkdir -p dist/sdk dist/plynx
@@ -77,11 +92,11 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/sdk/
-          repository-url: ${{ inputs.test_pypi && 'https://test.pypi.org/legacy/' || '' }}
+          repository-url: ${{ inputs.test_pypi && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}
 
       # --- 2. Publish plynx (engine, server, UI, and built-in standard_io) ---
       - name: Publish plynx to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/plynx/
-          repository-url: ${{ inputs.test_pypi && 'https://test.pypi.org/legacy/' || '' }}
+          repository-url: ${{ inputs.test_pypi && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}

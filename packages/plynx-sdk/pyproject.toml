@@ -2,8 +2,30 @@
 name = "plynx-sdk"
 version = "2.0.0"
 description = "PLynx SDK: op authoring API and process wire types. Standard library only."
+readme = "README.md"
+license = "Apache-2.0"
 requires-python = ">=3.11"
+authors = [{ name = "Ivan Khomyakov" }]
+keywords = ["plynx", "sdk", "workflow", "dag", "pipeline"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/plynx-team/plynx"
+Repository = "https://github.com/plynx-team/plynx"
+Issues = "https://github.com/plynx-team/plynx/issues"
+Changelog = "https://github.com/plynx-team/plynx/blob/master/CHANGELOG.md"
+Documentation = "https://github.com/plynx-team/plynx/blob/master/docs/guides/author_pack.md"
 
 [build-system]
 requires = ["uv_build>=0.9.0,<0.10"]
