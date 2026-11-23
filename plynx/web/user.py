@@ -63,7 +63,8 @@ def get_user(username: str):
 def post_user():
     """Update user info"""
     data = json.loads(request.data)
-    logger.info(data)
+    # do not log the body: it carries old_password and new_password
+    logger.info(f"Update user, action: `{data.get('action', '')}`")
     action = data.get("action", "")
     old_password = data.get("old_password", "")
     new_password = data.get("new_password", "")
