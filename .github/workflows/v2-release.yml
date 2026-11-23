@@ -1,0 +1,90 @@
+name: v2 Release (PyPI)
+
+on:
+  push:
+    tags:
+      - "v2.*"
+  workflow_dispatch:
+    inputs:
+      test_pypi:
+        description: "Publish to TestPyPI instead of production PyPI"
+        type: boolean
+        default: false
+
+jobs:
+  release:
+    name: Build & Publish Wheels to PyPI
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # Required for PyPI Trusted Publishing (OIDC)
+      contents: read
+    defaults:
+      run:
+        working-directory: v2
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: v2/ui/package-lock.json
+
+      - name: Sync workspace dependencies
+        run: uv sync
+
+      - name: Install UI dependencies
+        working-directory: v2/ui
+        run: npm ci
+
+      - name: Build UI static assets
+        working-directory: v2/ui
+        run: npm run build
+
+      - name: Build distributions for plynx-sdk and plynx
+        run: |
+          mkdir -p dist/sdk dist/plynx
+          uv run python scripts/build.py --out-dir dist
+          cp dist/plynx_sdk* dist/sdk/
+          cp dist/plynx-2* dist/plynx/
+
+      - name: Verify built distribution artifacts
+        run: |
+          ls -la dist/sdk/
+          ls -la dist/plynx/
+          test -f dist/sdk/plynx_sdk-*.whl
+          test -f dist/sdk/plynx_sdk-*.tar.gz
+          test -f dist/plynx/plynx-*.whl
+          test -f dist/plynx/plynx-*.tar.gz
+
+      - name: Smoke test built wheels
+        run: uv run pytest tests/test_wheel.py
+
+      # --- 1. Publish plynx-sdk (zero-dependency SDK) ---
+      - name: Publish plynx-sdk to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: v2/dist/sdk/
+          repository-url: ${{ inputs.test_pypi && 'https://test.pypi.org/legacy/' || '' }}
+
+      # --- 2. Publish plynx (engine, server, UI, and built-in standard_io) ---
+      - name: Publish plynx to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: v2/dist/plynx/
+          repository-url: ${{ inputs.test_pypi && 'https://test.pypi.org/legacy/' || '' }}

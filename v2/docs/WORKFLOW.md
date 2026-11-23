@@ -2,7 +2,7 @@
 
 ## Branch and folders
 
-- Work on branch `v2`, created from `master` (`master` is at tag `v1.12.0`, the legacy reference).
+- Work on branch `v2`, created from `master` (`master` is at tag `v1.12.1`, the legacy reference).
 - All new work lives in `v2/`. `v2/` is the project root for every script, config, and document. Nothing inside `v2/` mentions `v2/` or reads outside it.
 - Legacy files stay exactly as they are until Phase 9.
 - Hotfixes to legacy go to `master` and are merged into `v2` with a normal merge. The check script ignores merged-in changes (three-dot diff).
@@ -45,7 +45,7 @@ When a v2 task reproduces a legacy feature (cache hit, previewers, parameter wid
 Done once, by the owner or under the owner's explicit instruction.
 
 1. Verify: all tasks in `RELEASE_PLAN.md` (R0–R5) are ticked, CI is green on all three OSes, and the owner gives explicit approval.
-2. `git branch legacy/v1 master` and confirm tag `v1.12.0` exists. Legacy remains reachable there.
+2. `git branch legacy/v1 master` and confirm tag `v1.12.1` exists. Legacy remains reachable there.
 3. Commit 1 on `v2`: delete every tracked top-level path except `.git`, `.github/`, `LICENSE`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `v2/`. (`v2/` has its own `.gitignore`.) That removes `plynx/`, `ui/`, `tests/`, `docs/`, `docker/`, `kubernetes/`, `scripts/`, `.circleci/`, `.dockerfile`, `.dockerignore`, `.gitmodules`, `.isort.cfg`, `.pre-commit-config.yaml`, `Makefile`, `setup.py`, `setup.cfg`, `requirements*.txt`, `config.yaml`, `template_config.yaml`, `docker-compose*.yml`, `wsgi.py`, `pylintrc`, `MANIFEST.in`, `pyproject.toml`, `AGENTS.md`, `README.md`, `.agents/`, and the rest. Also delete `v2/docs/PLAN.md`, `v2/docs/LEGACY_MAP.md`, `v2/docs/WORKFLOW.md`, `v2/docs/RELEASE_PLAN.md`, and `v2/scripts/check_legacy_untouched.py`.
 4. Commit 2: `git mv v2/* .` and `git mv v2/.[!.]* .` (hidden files). No content edits. Because nothing in `v2/` refers to `v2/`, paths keep working.
 5. Commit 3 (only what must change): remove `working-directory: v2` and `check_legacy_untouched.py` from CI, rename `.github/workflows/v2-*.yml` to drop the prefix, remove temporary `v2/` rules from `AGENTS.md`, update `README.md` clone instructions/badges, and add the `v2.0.0` entry to `CHANGELOG.md`.

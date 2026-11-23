@@ -1,6 +1,6 @@
 # Legacy map (v1 -> v2)
 
-The legacy code is at the repo root (`master`, tag `v1.12.0`). It is a **reference**. Paths here are relative to the repo root, one level above the v2 root. Read a legacy file before you copy it. Paths below were checked to exist on 2026-11-16. Their content was only partly read, so the "use" column is a pointer, not a promise.
+The legacy code is at the repo root (`master`, tag `v1.12.1`). It is a **reference**. Paths here are relative to the repo root, one level above the v2 root. Read a legacy file before you copy it. Paths below were checked to exist on 2026-11-16. Their content was only partly read, so the "use" column is a pointer, not a promise.
 
 Policy (owner, 2026-11-16): copying a legacy file into v2 and modifying it is allowed. Do not import legacy code. Log each copy in the table at the end.
 

@@ -175,7 +175,7 @@ Accept for every 6.x: the component has a vitest test; `lint`, `typecheck`, `tes
 
 Only after 8.2. Follow [WORKFLOW.md](WORKFLOW.md) section "Promotion". This is the only phase allowed to modify, move, or delete files outside `v2/`.
 
-- [ ] **9.1** Freeze legacy: confirm tag `v1.12.0` and create branch `legacy/v1` from `master`.
+- [ ] **9.1** Freeze legacy: confirm tag `v1.12.1` and create branch `legacy/v1` from `master`.
 - [ ] **9.2** Commit 1: delete legacy files (list in WORKFLOW.md).
 - [ ] **9.3** Commit 2: `git mv` everything from `v2/` to the root. No content edits.
 - [ ] **9.4** Fix CI paths and badges, tag `v2.0.0rc1`, run the full suite on all OSes.
