@@ -70,11 +70,11 @@ plynx ui
 ## Documentation
 
 - [GitHub Repository](https://github.com/plynx-team/plynx)
-- [Guide: Creating a Workflow](https://github.com/plynx-team/plynx/blob/master/docs/guides/create_workflow.md)
-- [Guide: Authoring a Node Pack](https://github.com/plynx-team/plynx/blob/master/docs/guides/author_pack.md)
-- [Guide: Debugging a Failed Node](https://github.com/plynx-team/plynx/blob/master/docs/guides/debug_failed_node.md)
-- [User Agent Reference](https://github.com/plynx-team/plynx/blob/master/docs/AGENT_GUIDE.md)
-- [Changelog](https://github.com/plynx-team/plynx/blob/master/CHANGELOG.md)
+- [Guide: Creating a Workflow](https://github.com/plynx-team/plynx/blob/main/docs/guides/create_workflow.md)
+- [Guide: Authoring a Node Pack](https://github.com/plynx-team/plynx/blob/main/docs/guides/author_pack.md)
+- [Guide: Debugging a Failed Node](https://github.com/plynx-team/plynx/blob/main/docs/guides/debug_failed_node.md)
+- [User Agent Reference](https://github.com/plynx-team/plynx/blob/main/docs/AGENT_GUIDE.md)
+- [Changelog](https://github.com/plynx-team/plynx/blob/main/CHANGELOG.md)
 
 ## License
 
