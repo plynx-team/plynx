@@ -626,3 +626,25 @@ def ui_cmd(port: int, no_browser: bool, host: str = "127.0.0.1") -> None:
     if not no_browser:
         webbrowser.open(url)
     uvicorn.run(app, host=host, port=port, log_level="info")
+
+
+def _find_agent_guide() -> Path | None:
+    """Locate bundled ``AGENT_GUIDE.md`` in wheel or editable repo layout."""
+    pkg_guide = Path(__file__).resolve().parent.parent / "AGENT_GUIDE.md"
+    if pkg_guide.is_file():
+        return pkg_guide
+    repo_root = Path(__file__).resolve().parents[5]
+    repo_guide = repo_root / "docs" / "AGENT_GUIDE.md"
+    if repo_guide.is_file():
+        return repo_guide
+    return None
+
+
+@main.command("agent-guide")
+def agent_guide_cmd() -> None:
+    """Print the self-contained PLynx reference guide for AI coding agents."""
+    guide_path = _find_agent_guide()
+    if guide_path is None:
+        click.echo("error: AGENT_GUIDE.md not found in installation", err=True)
+        sys.exit(1)
+    click.echo(guide_path.read_text(encoding="utf-8"), nl=False)

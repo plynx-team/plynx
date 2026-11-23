@@ -27,6 +27,7 @@ build-backend = "hatchling.build"
 artifacts = [
     "src/plynx/static/**",
     "src/plynx/builtin_packs/**",
+    "src/plynx/AGENT_GUIDE.md",
 ]
 
 [tool.hatch.build.targets.sdist]

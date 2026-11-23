@@ -22,6 +22,19 @@ class CustomBuildHook(BuildHookInterface):  # type: ignore[misc]
             return
 
         root = Path(self.root)
+        force_include: dict[str, str] = build_data.setdefault("force_include", {})
+
+        # Bundle docs/AGENT_GUIDE.md so `plynx agent-guide` works in wheel installs.
+        in_pkg_guide = root / "src" / "plynx" / "AGENT_GUIDE.md"
+        repo_guide = root.parent.parent / "docs" / "AGENT_GUIDE.md"
+        if not in_pkg_guide.is_file() and repo_guide.is_file():
+            guide_dest = (
+                "src/plynx/AGENT_GUIDE.md"
+                if self.target_name == "sdist"
+                else "plynx/AGENT_GUIDE.md"
+            )
+            force_include[str(repo_guide)] = guide_dest
+
         # When building a wheel from an unpacked sdist, standard_io is already inside src/plynx.
         in_pkg = root / "src" / "plynx" / "builtin_packs" / "standard_io"
         if in_pkg.is_dir():
@@ -36,7 +49,6 @@ class CustomBuildHook(BuildHookInterface):  # type: ignore[misc]
             if self.target_name == "sdist"
             else "plynx/builtin_packs/standard_io"
         )
-        force_include: dict[str, str] = build_data.setdefault("force_include", {})
         for path in sorted(repo_pack.rglob("*")):
             if not path.is_file():
                 continue

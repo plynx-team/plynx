@@ -147,7 +147,7 @@ Goal: `pip install plynx` or `uv tool install plynx` works cleanly inside any ex
   - Compress `docs/UI_STYLE.md` (~60 lines of invariants, no copied `:root` CSS) and trim empty v1-diff table in `docs/TODO.md`.
   - **Accept:** Every command, config key, and endpoint in `PROTOCOL.md` and `ARCHITECTURE.md` matches the codebase.
 
-- [ ] **R5.2 Rewrite `README.md`, user/agent guides, and add doc-snippet tests.**
+- [x] **R5.2 Rewrite `README.md`, user/agent guides, and add doc-snippet tests.**
   - Rewrite `README.md` concisely: accurate Quickstart that works for `uvx`/`pip` installed users (`plynx init` + inline or starter workflow), accurate cache description (file bytes, not AST), accurate op list.
   - Merge `docs/PACK_RULES.md` + `docs/guides/author_pack.md` into one accurate, concise guide (fix broken class-attribute `Op` example, document `Directory`, `Literal`, `Range`, `Media`, `ALLOW_EXTRA_INPUTS`, `plynx ops --json`).
   - Rewrite `docs/guides/create_workflow.md` (fix `stages:` mapping schema, `--set` vs `--input`, remove nonexistent `--approve`) and `docs/guides/debug_failed_node.md` (accurate `run-node` output).

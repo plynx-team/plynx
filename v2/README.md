@@ -1,174 +1,135 @@
 # PLynx v2
 
-**PLynx v2** is a domain-agnostic, local-first platform for building and running reproducible workflows (DAGs).
-
-PLynx combines the simplicity of declarative YAML workflows, the power of isolated Python Node Packs, content-addressed caching, human-in-the-loop checkpoints, and an interactive modern web UI.
-
----
+**PLynx** is a local-first workflow engine for building and running reproducible DAGs. Workflows are plain YAML; operations are plain Python (`Op` or `@op`) running in isolated `uv` environments. Outputs are content-addressed and cached locally in `.plynx/`.
 
 ## Highlights
 
-* **Local-First & Fast**: Zero daemon or database setup required. Runs purely against local files, SQLite, and a content-addressed blob store in `.plynx/`.
-* **Isolated Node Execution**: Operations run in isolated virtual environments managed by `uv`, ensuring reproducible dependencies per pack without conflict.
-* **Deterministic Caching**: Fine-grained content-addressed caching keyed by op AST source code, `uv.lock`, inputs, parameters, and checkpoint answers.
-* **Human-in-the-Loop**: Interactive `checkpoint()` prompts let nodes pause execution for user decisions, questions, or approval gates, then resume seamlessly.
-* **Modern Web UI**: Switch between a sequential Stepper view and an interactive React Flow DAG editor with live SSE logs, artifact previews, and drag-and-drop wiring.
-* **Isolated Scratch Debugging**: Re-run and reproduce failing node attempts in a temporary scratch directory with `plynx run-node <node_dir>`.
-
----
+- **Local-First**: Runs against local files, SQLite (WAL), and a content-addressed blob store in `.plynx/`. No database server or daemon required.
+- **Isolated Environments**: Custom Node Packs run in isolated `uv` virtual environments with pinned `uv.lock` dependencies. Built-in `standard_io` ops run with stdlib only.
+- **Content-Addressed Caching**: Cache keys hash the op entrypoint, op source file bytes, pack `uv.lock`, input file/directory hashes, scalar parameters, and checkpoint answers, with automatic early cutoff.
+- **Human-in-the-Loop**: `checkpoint()` prompts and stage approval gates (`require_approval: true`) pause runs for terminal or web UI input and resume cleanly.
+- **Web UI**: Stepper view and editable React Flow DAG canvas with live SSE logs, run inspection, and artifact previews.
+- **Scratch Debugging**: Reproduce and fix any failed node in an isolated scratch copy with `plynx run-node <node_dir>`, then resume with `plynx resume <run_id>`.
 
 ## Installation
 
-### Run directly with `uvx` (No installation needed)
+Prerequisites: Python **3.11+** and [uv](https://docs.astral.sh/uv/) (required for isolated third-party Node Packs).
 
 ```bash
+# Run directly without installing
 uvx plynx --help
-uvx plynx ui
-```
 
-### Install using `uv` or `pip`
-
-```bash
-# Using uv (recommended)
+# Install globally with uv (recommended)
 uv tool install plynx
 
-# Or with pip into a virtual environment
+# Or install with pip
 pip install plynx
 ```
 
-### Prerequisites
-
-* Python **3.11+**
-* [uv](https://docs.astral.sh/uv/) (recommended package installer and environment runner)
-
----
-
 ## Quickstart
 
-### 1. Validate a Workflow
-
-Statically validate workflow DAG structure, wiring ports, and pack requirements:
+Initialize a workspace in any directory:
 
 ```bash
-plynx validate examples/workflows/foo_or_woo.yaml
+mkdir my-project && cd my-project
+plynx init
 ```
 
-### 2. Run a Workflow
+Create a starter workflow `workflows/hello.yaml`:
 
-Execute a workflow directly in your terminal:
-
-```bash
-plynx run --answer pick.cp_0=foo examples/workflows/foo_or_woo.yaml
+```yaml
+version: 1
+name: hello
+stages:
+  ask:
+    title: "1. Ask"
+  greet:
+    title: "2. Greet"
+nodes:
+  pick:
+    op: standard_io/interactive:AskChoice
+    stage: ask
+    inputs:
+      question: "Pick a greeting:"
+      options_csv: "Hello, Welcome"
+  echo:
+    op: standard_io/demo:Echo
+    stage: greet
+    inputs:
+      text: $pick.choice
 ```
 
-For interactive checkpoint prompts, omit `--answer` to answer directly from your terminal:
+Validate and run it:
 
 ```bash
-plynx run examples/workflows/foo_or_woo.yaml
-```
+# 1. Static validation (no code executed)
+plynx validate workflows/hello.yaml
 
-### 3. Inspect Runs
+# 2. Run interactively (prompts in terminal) or pass answers non-interactively
+plynx run --answer pick.cp_0=Hello workflows/hello.yaml
 
-List recent workflow runs:
-
-```bash
+# 3. Inspect runs and available operations
 plynx runs
-```
+plynx ops
 
-Inspect the detailed state, parameters, and node statuses of a specific run:
-
-```bash
-plynx runs <run_id>
-```
-
-### 4. Start the Web UI
-
-Launch the local PLynx web server (bound to `127.0.0.1:8080`) and open your browser:
-
-```bash
+# 4. Launch the local web UI (http://127.0.0.1:8080)
 plynx ui
-```
 
-### 5. Clean Old Runs (Garbage Collection)
-
-Reclaim disk space by pruning old unpinned runs, orphaned cache entries, and unreferenced blobs:
-
-```bash
+# 5. Prune old unpinned runs and unreferenced blobs
 plynx clean --days 7
 ```
 
----
+## Built-in Operations (`standard_io`)
 
-## Curated Showcase Workflows
+The `plynx` wheel ships with **13 stdlib-only operations** in `standard_io`:
 
-PLynx includes production-grade reference workflows in `examples/workflows/`, complete with interactive `.layout.json` sidecars:
+- **`Core / Text & Data`**: `Echo`, `Concat`, `TemplateFormat`, `MathOp`, `JsonExtract`, `JsonMerge`, `CsvSummary`
+- **`Core / Files`**: `ReadText`, `WriteText`, `ListDirectory`, `BundleDirectory`, `MarkdownReport`
+- **`Core / Interactive`**: `AskChoice`
 
-| Workflow | Category Focus | Highlights |
-| :--- | :--- | :--- |
-| [`interactive_wizard_staged.yaml`](examples/workflows/interactive_wizard_staged.yaml) | `Core / Interactive` | Multi-step interactive survey with idempotent `checkpoint()` replay, human-in-the-loop stage approval gate (`require_approval: true`), string template formatting, and Markdown report generation. |
-| [`data_bundle_pipeline.yaml`](examples/workflows/data_bundle_pipeline.yaml) | `Core / Data & Files` | Full type-coverage data pipeline across `int`, `float`, `bool`, `dict`, `list`, `CsvFile`, `JsonFile`, `Directory`, and `MarkdownFile`. Combines CSV ingestion, math calculations, JSON merging, and directory bundling. |
-| [`generative_art_studio.yaml`](examples/workflows/generative_art_studio.yaml) | `Image` | Procedural digital art pipeline generating Mandelbrot fractals, geometric vector waves, edge enhancement filters, studio presentation cards, and media metadata auditing. |
-| [`midi_groove_studio.yaml`](examples/workflows/midi_groove_studio.yaml) | `Audio` | Cross-pack music composition pipeline combining Roman numeral chord progression (`vi - IV - I - V`), a 16-step ASCII drum/bass sequencer, MIDI merger, piano-roll visualizer, analog `PolySynth`, 808 `DrumSynth`, multi-track `AudioMixer`, and Pedalboard mastering. |
-| [`bach_prelude_c_major.yaml`](examples/workflows/bach_prelude_c_major.yaml) | `Audio` | Classical physical modeling: J.S. Bach Prelude I (BWV 846) MIDI score, concert grand acoustic piano synthesis, Spotify Pedalboard spatial effects (tone filter, chorus, delay, reverb), studio limiter, and waveform visualizer. |
-| [`podcast_producer_macos.yaml`](examples/workflows/podcast_producer_macos.yaml) | `Audio / Voice` | Automated podcast producer composing macOS native speech synthesis (`say`), lo-fi Rhodes chord progression, automatic sidechain audio ducking mixer, waveform visualizer, and Markdown show notes. *(macOS only)* |
+Run `plynx ops` (or `plynx ops --json`) in any workspace to list all built-in and custom operations with their full port schemas.
 
----
+## Examples (Repository Only)
 
-## Built-in Operation Categories
+This repository includes optional demo packs (`examples/custom_packs/`: `media_studio`, `pedalboard_studio`, `podcast_studio`) and showcase workflows in `examples/workflows/`:
 
-PLynx v2 features 40+ built-in operations organized into **8 cohesive categories**:
+| Workflow | Focus |
+| :--- | :--- |
+| [`foo_or_woo.yaml`](examples/workflows/foo_or_woo.yaml) | Minimal 2-node checkpoint workflow using `standard_io`. |
+| [`interactive_wizard_staged.yaml`](examples/workflows/interactive_wizard_staged.yaml) | Multi-stage interactive survey with `require_approval: true` and Markdown report. |
+| [`data_bundle_pipeline.yaml`](examples/workflows/data_bundle_pipeline.yaml) | Data pipeline covering CSV, JSON, math, directory bundling, and Markdown output. |
+| [`generative_art_studio.yaml`](examples/workflows/generative_art_studio.yaml) | Procedural image generation (Mandelbrot, geometric patterns, filters, metadata). |
+| [`midi_groove_studio.yaml`](examples/workflows/midi_groove_studio.yaml) | Multi-track MIDI sequencing, synthesis, mixing, and mastering. |
+| [`bach_prelude_c_major.yaml`](examples/workflows/bach_prelude_c_major.yaml) | Acoustic piano synthesis and Pedalboard spatial effects. |
+| [`podcast_producer_macos.yaml`](examples/workflows/podcast_producer_macos.yaml) | macOS speech synthesis (`say`), sidechain ducking, and show notes. *(macOS only)* |
 
-* **`Core / Text & Data`**: `Echo`, `Concat`, `TemplateFormat`, `MathOp`, `JsonExtract`, `JsonMerge`, `CsvSummary`
-* **`Core / Files`**: `ReadText`, `WriteText`, `ListDirectory`, `BundleDirectory`, `MarkdownReport`
-* **`Core / Interactive`**: `AskChoice`, `AskFooOrWoo`, `MultiStepQuestionnaire`, `SecretCodeChallenge`
-* **`Audio / Score`**: `BachPreludeScore`, `ChordProgressionScore`, `StepSequencer`, `MidiMerge` *(all output `MidiFile`)*
-* **`Audio / Synth & Voice`**: `AcousticPianoSynth`, `PolySynth`, `DrumSynth`, `ToneSynth`, `TextToSpeech` *(macOS only)*
-* **`Audio / Effects & Mixing`**: `AudioMixer` *(multi-track with dynamic ducking)*, `PedalboardToneFilter`, `PedalboardChorus`, `PedalboardDelay`, `PedalboardReverb`, `PedalboardMastering`, `AudioEchoFilter`
-* **`Image`**: `MandelbrotFractal`, `GeometricPattern`, `ImageFilterOp`, `CardOrPoster`
-* **`Inspect & Visualize`**: `AudioWaveformVisualizer`, `MidiPianoRoll`, `AudioStats`, `MediaMetadataInspector`, `ShowNotesGenerator`
+## AI Coding Agents
 
----
-
-## Development Setup
-
-To build and run PLynx from source:
+PLynx ships a self-contained reference for AI coding agents. From any workspace, print it with:
 
 ```bash
-# 1. Clone repository and navigate to v2
-git clone https://github.com/plynx-team/plynx.git
-cd plynx/v2
-
-# 2. Sync workspace dependencies
-uv sync
-
-# 3. Build UI assets
-cd ui
-npm ci
-npm run build
-cd ..
-
-# 4. Run tests and linting
-uv run ruff check
-uv run ruff format --check
-uv run mypy
-uv run pytest
-
-# 5. Build wheels
-uv run python scripts/build.py
+plynx agent-guide
 ```
-
----
 
 ## Documentation
 
-* [Architecture & Invariants](docs/ARCHITECTURE.md)
-* [Protocol & Schema Specifications](docs/PROTOCOL.md)
-* [Pack Rules & Best Practices](docs/PACK_RULES.md)
-* [Guide: Creating a Workflow](docs/guides/create_workflow.md)
-* [Guide: Authoring a Node Pack](docs/guides/author_pack.md)
-* [Guide: Debugging with `run-node`](docs/guides/debug_failed_node.md)
+- [Guide: Creating a Workflow](docs/guides/create_workflow.md)
+- [Guide: Authoring a Node Pack](docs/guides/author_pack.md)
+- [Guide: Debugging a Failed Node](docs/guides/debug_failed_node.md)
+- [User Agent Reference](docs/AGENT_GUIDE.md)
+- [Architecture & Invariants](docs/ARCHITECTURE.md)
+- [Protocol & Schema Specifications](docs/PROTOCOL.md)
 
----
+## Development Setup
+
+```bash
+git clone https://github.com/plynx-team/plynx.git
+cd plynx/v2
+uv sync
+cd ui && npm ci && npm run build && cd ..
+uv run ruff check && uv run ruff format --check && uv run mypy && uv run pytest
+uv run python scripts/build.py
+```
 
 ## License
 

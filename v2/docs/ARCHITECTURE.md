@@ -156,7 +156,7 @@ One process owns a run at a time (`RUNS.owner_pid`). Other processes (browser, s
 ## Key behaviors
 
 - **Cache key:** `sha256(op_entrypoint + file_sha256 + uv_lock_sha256 + inputs_hash + params_hash)`. Exact canonicalization in PROTOCOL.md. Identical output bytes end the cascade (early cutoff).
-- **Checkpoints:** `self.checkpoint(...)` raises an interrupt on first call. The child writes `checkpoint.json` and exits 10. After an answer, the node is re-run from the top and the call returns the stored answer. See [PACK_RULES.md](PACK_RULES.md) for the idempotency rule. A checkpoint answer is not remembered between fresh runs in v2.0.0.
+- **Checkpoints:** `self.checkpoint(...)` raises an interrupt on first call. The child writes `checkpoint.json` and exits 10. After an answer, the node is re-run from the top and the call returns the stored answer. See [guides/author_pack.md](guides/author_pack.md) for the idempotency rule. A checkpoint answer is not remembered between fresh runs in v2.0.0.
 - **Stage gates:** `require_approval: true` pauses the run after all nodes of the stage reach `SUCCESS`, before any node of a later stage starts.
 - **Failure:** a failed node blocks only its dependents. Independent branches finish. The run ends `FAILED`.
 - **Cancel / timeout:** the whole process tree is killed. POSIX: `os.killpg`. Windows: `taskkill /T /F`. Both inside `procgroup.py`.

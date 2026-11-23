@@ -92,6 +92,7 @@ def test_declarative_uv_build_bundles_static_and_standard_io_without_staging(
 
     assert "plynx/static/index.html" in names
     assert any(n.startswith("plynx/static/assets/") for n in names)
+    assert "plynx/AGENT_GUIDE.md" in names
     assert "plynx/builtin_packs/standard_io/pyproject.toml" in names
     assert "plynx/builtin_packs/standard_io/src/standard_io/__init__.py" in names
     assert "plynx/builtin_packs/standard_io/src/standard_io/demo.py" in names
@@ -125,6 +126,7 @@ def test_build_script_creates_wheels_with_static_and_builtin_packs(tmp_path: Pat
 
     assert "plynx/static/index.html" in names
     assert any(n.startswith("plynx/static/assets/") for n in names)
+    assert "plynx/AGENT_GUIDE.md" in names
     assert "plynx/builtin_packs/standard_io/pyproject.toml" in names
     assert "plynx/builtin_packs/standard_io/src/standard_io/__init__.py" in names
     assert "plynx/builtin_packs/standard_io/src/standard_io/demo.py" in names

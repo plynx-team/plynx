@@ -248,7 +248,7 @@ cache_key = sha256("\n".join([
 
 - `inputs_hash` = sha256 of canonical JSON (sorted keys, separators `,` `:`, no ASCII escaping) of `{port: sha256 | tree_sha256}` for every file and directory port (from a reference or a literal path).
 - `params_hash` = same canonical JSON of `{port: value}` for every scalar port, plus `"__checkpoint_answers__": {...}` when answers exist.
-- Not covered, by design: other files in the pack (shared helpers), environment variables, time, network. Rule in `PACK_RULES.md`. Escape hatch: `plynx run --no-cache`.
+- Not covered, by design: other files in the pack (shared helpers), environment variables, time, network. Rule in `guides/author_pack.md`. Escape hatch: `plynx run --no-cache`.
 - Lookup happens only in fresh runs and only for `CACHEABLE = True` ops. A miss with a missing blob is a miss, never an error.
 - Early cutoff falls out of the formula: downstream keys depend on output hashes, not on upstream keys.
 
@@ -369,6 +369,7 @@ Server binds `127.0.0.1` (or loopback host). CORS allows only the Vite dev origi
 | `plynx ops [--json]` | list registered operations (table or full JSON schemas) |
 | `plynx clean [--days 14] [--dry-run]` | mark-and-sweep garbage collection of old unpinned runs and unreferenced blobs |
 | `plynx ui [--port 8080] [--host 127.0.0.1] [--no-browser]` | start the server on loopback host and open the UI |
+| `plynx agent-guide` | print the self-contained User Agent Reference (`AGENT_GUIDE.md`) to stdout |
 
 `plynx run` options: `--set node.port=value` (repeatable, scalar), `--input node.port=path` (repeatable, file or directory), `--answers file.json` (`{ "node.cp_n": "value" }`), `--answer node.cp_n=value` (repeatable), `--concurrency N`, `--non-interactive` (also when `CI=true`), `--no-cache`.
 

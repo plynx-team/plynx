@@ -1,92 +1,48 @@
-# Guide: Debug a Failed Node with `plynx run-node`
+# Guide: Debugging a Failed Node with `plynx run-node`
 
-When a workflow node fails, PLynx records the run state in SQLite, logs stdout/stderr, and preserves the node attempt directory. You can reproduce, inspect, and fix the failure locally using `plynx run-node`.
+When a node fails, PLynx records the run state in `.plynx/plynx.db`, saves stdout/stderr logs, and keeps the node's input manifest and directory on disk. You can reproduce and fix the failure in isolation using `plynx run-node`, then continue the run with `plynx resume`.
 
----
+## 1. Inspect the Failure
 
-## 1. Inspecting the Failure
-
-When a run fails:
-
-```bash
-$ plynx run workflows/pipeline.yaml
-ingest SUCCESS
-transform RUNNING
-transform FAILED
-publish BLOCKED
-Run failed with exit code 1.
-```
-
-Check the run state and node status:
+Check the run status and read the failing node's logs:
 
 ```bash
 plynx runs
 plynx runs <run_id>
+
+# Inspect captured logs
+cat .plynx/runs/<run_id>/logs/<node_id>.stdout.log
+cat .plynx/runs/<run_id>/logs/<node_id>.stderr.log
 ```
 
-Inspect stdout and stderr logs for the failed node:
+## 2. Reproduce in Scratch with `plynx run-node`
+
+Each attempted node has a directory at `.plynx/runs/<run_id>/nodes/<node_id>/` containing `inputs.json`, materialized read-only inputs under `inputs/`, and `workdir/`:
 
 ```bash
-# Log files are saved under .plynx/runs/<run_id>/logs/
-cat .plynx/runs/<run_id>/logs/transform.stderr.log
+plynx run-node .plynx/runs/<run_id>/nodes/<node_id>
 ```
 
----
+What `plynx run-node` does:
 
-## 2. Using `plynx run-node`
+1. Copies `<node_dir>` into a temporary scratch directory.
+2. Reads the op identifier from `workflow.snapshot.yaml` (or pass `--op <pack>/<module>:<Name>` explicitly if debugging a standalone directory).
+3. Executes the op in its pack environment with the exact recorded `inputs.json`.
+4. Streams the child's stdout and stderr directly to your terminal and exits with the child's exit code (`0` on success, `1` on exception, `10` on checkpoint interrupt).
+5. Leaves `.plynx/plynx.db`, `events.jsonl`, logs, and the original `<node_dir>` completely untouched.
 
-Each node has its own directory under `.plynx/runs/<run_id>/nodes/<node_id>/`:
+## 3. Fix and Verify
 
-```text
-.plynx/runs/20261118_120000_a1b2c3/
-└── nodes/
-    └── transform/
-        ├── inputs.json
-        ├── workdir/
-        └── ...
-```
+1. Edit the op's Python source file to fix the bug.
+2. Re-run `plynx run-node .plynx/runs/<run_id>/nodes/<node_id>`.
+3. Verify the command exits `0` (check `$?`) with the expected stdout/stderr output.
 
-`plynx run-node` re-runs that node in an isolated scratch copy without touching the original run directory or SQLite database:
+## 4. Resume the Workflow
 
-```bash
-plynx run-node .plynx/runs/20261118_120000_a1b2c3/nodes/transform
-```
-
-PLynx will:
-1. Copy the attempt directory to a temporary scratch directory.
-2. Spawn the op in its pack environment with the exact inputs recorded in `inputs.json`.
-3. Print stdout and stderr (including the full Python traceback) directly to your terminal.
-
----
-
-## 3. Fixing the Bug and Verifying
-
-1. Open the source file of the failing operation in your editor.
-2. Fix the bug (e.g. correct a typo, add a missing exception check, or fix data parsing).
-3. Re-run `plynx run-node`:
-
-```bash
-plynx run-node .plynx/runs/20261118_120000_a1b2c3/nodes/transform
-```
-
-Once `plynx run-node` succeeds, it will print:
-```text
-OK: node attempt succeeded
-outputs:
-  result: ...
-```
-
----
-
-## 4. Resuming the Workflow
-
-Now resume the original workflow run using `plynx resume`:
+Once the fix is verified, resume the original run:
 
 ```bash
 plynx resume <run_id>
 ```
 
-PLynx will:
-* Detect that upstream nodes (e.g. `ingest`) succeeded and reuse their outputs from SQLite/CAS.
-* Re-run only `transform` and downstream nodes (e.g. `publish`).
-* Complete the workflow to `SUCCESS`.
+PLynx reuses all already-completed upstream node outputs from the run and executes only the failed node and its downstream dependents.

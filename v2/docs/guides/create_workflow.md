@@ -1,133 +1,128 @@
-# Guide: Create a Workflow
+# Guide: Creating a Workflow
 
-A PLynx workflow is a declarative YAML document specifying a directed acyclic graph (DAG) of operations. By convention, canonical reference examples live in `examples/workflows/` (tracked in git), while local user workflows live in `workflows/` (gitignored).
+A PLynx workflow is a declarative YAML file describing a directed acyclic graph (DAG) of operations. Place workflows in `workflows/` (or any directory listed under `workflows:` in `plynx.yaml`).
 
----
-
-## 1. Minimal Workflow Example
+## 1. Minimal Workflow
 
 Create `workflows/greet.yaml`:
 
 ```yaml
 version: 1
-name: "Greeting Workflow"
-
+name: Greeting Workflow
 nodes:
   generate:
-    op: "standard_io/demo:Echo"
+    op: standard_io/demo:Echo
     inputs:
       text: "Hello from PLynx!"
-
   shout:
-    op: "standard_io/text:Concat"
+    op: standard_io/text:Concat
     inputs:
-      a: "$generate.text"
+      a: $generate.text
       b: " Welcome aboard."
 ```
 
-### Key Elements:
-* **`version: 1`**: PLynx workflow schema version.
-* **`nodes`**: Map of unique node IDs (e.g. `generate`, `shout`).
-* **`op`**: Op reference formatted as `<pack>/<module>:<OpName>`.
-* **`inputs`**:
-  * **Literal values**: Direct strings, integers, floats, booleans, lists, or dicts.
-  * **Wiring references**: References formatted as `$<node_id>.<port_name>` connecting an upstream output to a downstream input.
+Key fields:
 
----
+- **`version: 1`**: Workflow schema version (required).
+- **`nodes`**: Mapping of node IDs (`^[a-z][a-z0-9_]*$`) to node definitions.
+- **`op`**: Operation identifier in `<pack>/<module>:<Name>` format. Run `plynx ops` to list available ops.
+- **`inputs`**: Mapping of port names to values:
+  - **Wiring reference**: `$<node_id>.<output_name>` (or `{ from_node: <node_id>, output: <output_name> }`).
+  - **Literal**: Any YAML scalar, list, or mapping. For `Path` or `Directory` ports, a string literal is a workspace-relative path.
+  - **Escaped `$`**: Prefix a literal string starting with `$` using `$$` (e.g. `$$HOME` evaluates to `$HOME`).
 
-## 2. Unbound Run Inputs
+## 2. Unbound Run Inputs (`--set` vs `--input`)
 
-If an input port is not wired to an upstream node and has no default value, it becomes an **unbound run input**:
+Any required input port omitted from `inputs:` (and without a default in the op definition) becomes an **unbound run input**:
 
 ```yaml
 version: 1
-name: "Parametrized Workflow"
-
+name: Parametrized Workflow
 nodes:
-  process:
-    op: "standard_io/demo:Echo"
+  read_doc:
+    op: standard_io/demo:ReadText
+    inputs: {}
+  prefix_doc:
+    op: standard_io/text:Concat
     inputs:
-      # 'text' is not specified here -> prompted at run time
+      b: $read_doc.text
 ```
 
-When running:
-* Pass via CLI: `plynx run --input process.text="Custom Value" workflows/parametrized.yaml`
-* Or via Web UI form at `http://127.0.0.1:8080`.
+Supply unbound inputs at runtime:
 
----
+- **Scalars (`str`, `int`, `float`, `bool`, JSON)**: use `--set node.port=value`.
+- **Files and directories (`Path`, `Directory`)**: use `--input node.port=path`.
+
+```bash
+plynx run \
+  --input read_doc.path=notes.txt \
+  --set prefix_doc.a="Summary: " \
+  workflows/parametrized.yaml
+```
+
+If an unbound input is omitted in interactive mode, PLynx prompts for it in the terminal (or in the Web UI before/during the stage). In `--non-interactive` mode, missing inputs pause the run with exit code `2`.
 
 ## 3. Stages and Approval Gates
 
-Workflows can group nodes into sequential stages and enforce human approval before advancing:
+Group nodes into ordered stages using the top-level `stages:` mapping and assign each node via `stage: <stage_id>`. Edges must stay within the same stage or point to a later stage.
+
+Set `require_approval: true` on a stage to pause the run after all nodes in that stage succeed, before any later stage begins:
 
 ```yaml
 version: 1
-name: "Staged Workflow"
-
+name: Staged Workflow
 stages:
-  - id: prepare
-    name: "Data Preparation"
-    nodes:
-      step1:
-        op: "standard_io/demo:Echo"
-        inputs:
-          text: "prepped"
-
-  - id: publish
-    name: "Production Publish"
+  prepare:
+    title: "1. Prepare"
     require_approval: true
-    nodes:
-      step2:
-        op: "standard_io/text:Concat"
-        inputs:
-          a: "$step1.text"
-          b: " published"
+  publish:
+    title: "2. Publish"
+nodes:
+  step1:
+    op: standard_io/demo:Echo
+    stage: prepare
+    inputs:
+      text: prepped
+  step2:
+    op: standard_io/text:Concat
+    stage: publish
+    inputs:
+      a: $step1.text
+      b: " published"
 ```
 
-When `require_approval: true` is set, all nodes in `prepare` must finish successfully, and PLynx will pause in `WAITING_FOR_USER` state until approved:
-* CLI: `plynx run --approve <stage_id> ...` or during resume: `plynx resume --approve <stage_id> <run_id>`
-* REST / UI: Click **Approve & Continue** in the Stepper view.
+Resolving a stage approval gate:
 
----
+- **CLI (interactive)**: `plynx run` and `plynx resume` prompt in the terminal to approve or cancel when the stage finishes.
+- **CLI (non-interactive / CI)**: `plynx run --non-interactive` exits with code `2` (`WAITING_FOR_USER`).
+- **Web UI / REST**: Click **Approve & Continue** in the Stepper view, or call `POST /api/v1/runs/{run_id}/stages/{stage_id}/approve`.
 
-## 4. Validating Workflows
+## 4. Validating and Running
 
-Always validate workflows statically before executing:
+Always validate statically before running:
 
 ```bash
 plynx validate workflows/greet.yaml
 ```
 
-Validation verifies:
-1. Syntax and schema correctness.
-2. Cycle detection (must be a valid DAG).
-3. Op existence in installed/discovered Node Packs.
-4. Input and output port wiring and type compatibility.
-5. Stage direction constraints (edges cannot wire backward across stages).
-6. Missing `uv.lock` files in discovered packs.
+Static validation checks YAML schema, DAG cycles, op existence, port wiring, type/media compatibility, stage ordering, and missing `uv.lock` files.
 
----
+Run, inspect, and view in the UI:
 
-## 5. Running Workflows
-
-### Run in-process:
 ```bash
+# Run in-process
 plynx run workflows/greet.yaml
-```
 
-### Run with non-interactive mode (for CI or automated pipelines):
-```bash
+# Run non-interactively (exits 2 if blocked on checkpoint or stage gate)
 plynx run --non-interactive workflows/greet.yaml
-```
 
-### Inspect runs:
-```bash
+# Bypass cache (e.g. after editing a shared helper module)
+plynx run --no-cache workflows/greet.yaml
+
+# List runs or inspect one run
 plynx runs
 plynx runs <run_id>
-```
 
-### Open UI:
-```bash
+# Launch local Web UI (http://127.0.0.1:8080)
 plynx ui
 ```
-Open `http://127.0.0.1:8080` in your browser to view the Stepper and Graph views, edit wiring visually, and inspect artifacts.
