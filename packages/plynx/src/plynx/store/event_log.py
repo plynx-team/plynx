@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import sys
 import time
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
@@ -28,7 +29,7 @@ def _file_lock(lock_path: Path, *, timeout: float = 10.0) -> Iterator[None]:
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     handle = lock_path.open("a+b")
     try:
-        if os.name == "nt":
+        if sys.platform == "win32":
             import msvcrt
 
             handle.seek(0, os.SEEK_END)
@@ -39,7 +40,7 @@ def _file_lock(lock_path: Path, *, timeout: float = 10.0) -> Iterator[None]:
             while True:
                 handle.seek(0)
                 try:
-                    msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)  # type: ignore[attr-defined]
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
                     break
                 except OSError:
                     if time.monotonic() >= deadline:
@@ -64,12 +65,12 @@ def _file_lock(lock_path: Path, *, timeout: float = 10.0) -> Iterator[None]:
         try:
             yield
         finally:
-            if os.name == "nt":
+            if sys.platform == "win32":
                 import msvcrt
 
                 handle.seek(0)
                 with contextlib.suppress(OSError):
-                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)  # type: ignore[attr-defined]
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
             else:
                 import fcntl
 

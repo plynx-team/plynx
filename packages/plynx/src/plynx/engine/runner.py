@@ -45,7 +45,7 @@ def _acquire_env_file_lock(lock_path: Path) -> BinaryIO:
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     handle = lock_path.open("a+b")
     try:
-        if os.name == "nt":
+        if sys.platform == "win32":
             import msvcrt
 
             handle.seek(0, os.SEEK_END)
@@ -55,7 +55,7 @@ def _acquire_env_file_lock(lock_path: Path) -> BinaryIO:
             while True:
                 handle.seek(0)
                 try:
-                    msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)  # type: ignore[attr-defined]
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
                     break
                 except OSError:
                     time.sleep(0.05)
@@ -72,12 +72,12 @@ def _acquire_env_file_lock(lock_path: Path) -> BinaryIO:
 def _release_env_file_lock(handle: BinaryIO) -> None:
     """Release and close a file lock acquired by ``_acquire_env_file_lock``."""
     try:
-        if os.name == "nt":
+        if sys.platform == "win32":
             import msvcrt
 
             handle.seek(0)
             with contextlib.suppress(OSError):
-                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)  # type: ignore[attr-defined]
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
         else:
             import fcntl
 
