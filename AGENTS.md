@@ -12,9 +12,9 @@ Instructions for AI coding agents working on the PLynx codebase.
 
 ## Read First
 
-1. [docs/RELEASE_PLAN.md](docs/RELEASE_PLAN.md) — active checklist to ship `v2.0.0`. Do the first unchecked task unless told otherwise.
-2. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — module boundaries, invariants, non-goals.
-3. [docs/PROTOCOL.md](docs/PROTOCOL.md) — exact wire formats, YAML schema, REST API, CLI, SQLite tables.
+1. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — module boundaries, invariants, non-goals.
+2. [docs/PROTOCOL.md](docs/PROTOCOL.md) — exact wire formats, YAML schema, REST API, CLI, SQLite tables.
+3. [docs/AGENT_GUIDE.md](docs/AGENT_GUIDE.md) — authoring and debugging reference for workflows and operations.
 
 ## Code Structure
 
@@ -73,4 +73,3 @@ uv run pytest tests/test_wheel.py
 1. Acceptance criteria for the task pass.
 2. All checks above pass.
 3. Matching docs (`README.md`, `PROTOCOL.md`, `ARCHITECTURE.md`, guides, or `AGENTS.md`) are updated if behavior or structure changed.
-4. Task checkbox in `docs/RELEASE_PLAN.md` is ticked in the same commit.
