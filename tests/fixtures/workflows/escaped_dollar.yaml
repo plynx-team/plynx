@@ -1,0 +1,12 @@
+version: 1
+name: escaped_dollar
+nodes:
+  echo:
+    op: standard_io/demo:Echo
+    inputs:
+      price: "$$100"
+      not_ref: "$$pick.choice"
+      single_dollar: "$$"
+      mapping_ref:
+        from_node: pick
+        output: choice

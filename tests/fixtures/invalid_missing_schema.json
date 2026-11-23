@@ -1,0 +1,8 @@
+{
+  "inputs": {
+    "a": {
+      "kind": "scalar",
+      "value": "hello"
+    }
+  }
+}

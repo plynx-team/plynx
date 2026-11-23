@@ -1,0 +1,20 @@
+version: 1
+name: foo_or_woo
+concurrency: 4
+stages:
+  ask:
+    title: 1. Ask
+  print: {}
+nodes:
+  pick:
+    op: standard_io/interactive:AskChoice
+    title: Pick one
+    stage: ask
+    inputs:
+      question: foo or woo?
+      options_csv: "foo, woo"
+  echo:
+    op: standard_io/demo:Echo
+    stage: print
+    inputs:
+      text: $pick.choice

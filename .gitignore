@@ -1,20 +1,26 @@
-.coverage
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .DS_Store
-.gitignore.swp
-build
-data/
-db/.DS_Store
+
+# Generated build output
 dist/
-docs/_build/
-graph/.DS_Store
+build/
 node_modules/
-plynx.egg-info/
-web/.DS_Store
-web/static/bower_components/
-*.pyc
-venv
-.venv
-uv.lock
-ui/report.20200526.173030.25.0.001.json
-.idea
-.kb/
+packages/plynx/src/plynx/static/
+packages/plynx/src/plynx/builtin_packs/
+test-results/
+playwright-report/
+
+# Runtime state and secrets
+.plynx/
+.env
+custom_packs/*
+!custom_packs/.gitkeep
+
+# User runtime workflows (examples/workflows/ are tracked reference examples)
+workflows/*
+!workflows/.gitkeep

@@ -1,0 +1,68 @@
+[project]
+name = "plynx"
+version = "2.0.0"
+description = "Local-first workflow engine, CLI, and web UI for reproducible YAML/Python DAGs."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.11"
+authors = [{ name = "Ivan Khomyakov" }]
+keywords = ["workflow", "dag", "pipeline", "reproducible", "local-first", "plynx"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Build Tools",
+]
+dependencies = [
+    "click>=8.1",
+    "fastapi>=0.110",
+    "plynx-sdk>=2.0.0,<3.0.0",
+    "pydantic>=2.7",
+    "python-multipart>=0.0.9",
+    "ruamel.yaml>=0.18",
+    "uvicorn>=0.30",
+]
+
+[project.urls]
+Homepage = "https://github.com/plynx-team/plynx"
+Repository = "https://github.com/plynx-team/plynx"
+Issues = "https://github.com/plynx-team/plynx/issues"
+Changelog = "https://github.com/plynx-team/plynx/blob/master/CHANGELOG.md"
+Documentation = "https://github.com/plynx-team/plynx#documentation"
+
+[project.scripts]
+plynx = "plynx.cli:main"
+
+[tool.uv.sources]
+plynx-sdk = { workspace = true }
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+artifacts = [
+    "src/plynx/static/**",
+    "src/plynx/builtin_packs/**",
+    "src/plynx/AGENT_GUIDE.md",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/plynx/**",
+    "hatch_build.py",
+    "pyproject.toml",
+    "README.md",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/plynx"]
+
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"

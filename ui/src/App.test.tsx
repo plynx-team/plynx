@@ -1,84 +1,78 @@
-import React, { act } from 'react';
-import { createRoot } from 'react-dom/client';
-import { MemoryRouter } from 'react-router-dom';
-import { describe, it, expect } from 'vitest';
-import App from './App';
-import cookie from './cookie';
-import { generateObjectId, utcTimeToLocal } from './utils';
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, waitFor, cleanup, act } from "@testing-library/react";
+import { App } from "./App";
+import * as client from "./api/client";
 
-(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
-const ROUTER_FUTURE = {
-  v7_startTransition: true,
-  v7_relativeSplatPath: true,
-};
-
-describe('PLynx UI', () => {
-  it('renders login route without crashing', async () => {
-    const container = document.createElement('div');
-    document.body.appendChild(container);
-    const root = createRoot(container);
-
-    await act(async () => {
-      root.render(
-        <MemoryRouter initialEntries={['/login']} future={ROUTER_FUTURE}>
-          <App />
-        </MemoryRouter>
-      );
-    });
-
-    expect(container.querySelector('.App')).not.toBeNull();
-    expect(container.textContent).toContain('Please sign in to continue');
-
-    await act(async () => {
-      root.unmount();
-    });
-    container.remove();
+describe("App component shell", () => {
+  beforeEach(() => {
+    vi.spyOn(client, "fetchRuns").mockResolvedValue({ runs: [] });
+    vi.spyOn(client, "fetchWorkflows").mockResolvedValue([
+      {
+        path: "examples/workflows/foo_or_woo.yaml",
+        name: "Foo or Woo Demo",
+        stage_count: 2,
+      },
+    ]);
   });
 
-  it('renders 404 route without crashing', async () => {
-    const container = document.createElement('div');
-    document.body.appendChild(container);
-    const root = createRoot(container);
+  it("renders Navbar and default WorkflowPicker view", async () => {
+    window.location.hash = "";
+    render(<App />);
 
-    await act(async () => {
-      root.render(
-        <MemoryRouter initialEntries={['/unknown-route']} future={ROUTER_FUTURE}>
-          <App />
-        </MemoryRouter>
-      );
+    expect(screen.getByText("PLynx")).toBeDefined();
+    expect(screen.getAllByText("Runs").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Workflows").length).toBeGreaterThan(0);
+
+    await waitFor(() => {
+      expect(screen.getByText("Foo or Woo Demo")).toBeDefined();
     });
-
-    expect(container.textContent).toContain('404: not found');
-
-    await act(async () => {
-      root.unmount();
-    });
-    container.remove();
   });
 
-  it('saves, loads, and removes JSON and string cookies', () => {
-    cookie.save('test_user', { username: 'alice', policies: ['IS_ADMIN'] }, { path: '/' });
-    expect(cookie.load('test_user')).toEqual({ username: 'alice', policies: ['IS_ADMIN'] });
+  it("switches to Runs view on hash change", async () => {
+    window.location.hash = "#/runs";
+    render(<App />);
 
-    cookie.save('access_token', 'abc123', { path: '/' });
-    expect(cookie.load('access_token')).toBe('abc123');
-
-    cookie.remove('test_user', { path: '/' });
-    cookie.remove('access_token', { path: '/' });
-    expect(cookie.load('test_user')).toBeUndefined();
-    expect(cookie.load('access_token')).toBeUndefined();
+    await waitFor(() => {
+      expect(screen.getByText("No runs found")).toBeDefined();
+    });
   });
 
-  it('generates valid 24-hex ObjectIds and formats UTC timestamps', () => {
-    const id1 = generateObjectId();
-    const id2 = generateObjectId();
-    expect(id1).toMatch(/^[0-9a-f]{24}$/);
-    expect(id2).toMatch(/^[0-9a-f]{24}$/);
-    expect(id1).not.toBe(id2);
+  it("switches to RunDetail view when visiting a run URL", async () => {
+    vi.spyOn(client, "fetchRunState").mockResolvedValue({
+      id: "run-target-999",
+      workflow_path: "examples/workflows/foo_or_woo.yaml",
+      workflow_sha256: "hash123",
+      status: "RUNNING",
+      run_inputs: {},
+      cancel_requested: false,
+      pinned: false,
+      created_at: 1700000000,
+      nodes: {
+        n1: {
+          node_id: "n1",
+          status: "RUNNING",
+          cache_hit: false,
+          attempt: 1,
+        },
+      },
+      checkpoints: [],
+      stage_gates: {},
+    });
+    vi.spyOn(client, "subscribeRunEvents").mockReturnValue(() => {});
 
-    expect(utcTimeToLocal('2026-01-15T12:30:45')).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
-    expect(utcTimeToLocal('2026-01-15T12:30:45.123456+00:00')).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
-    expect(utcTimeToLocal('2026-01-15 12:30:45')).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+    act(() => {
+      window.location.hash = "#/runs/run-target-999";
+    });
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("run-target-999").length).toBeGreaterThan(0);
+      expect(screen.getByText("n1")).toBeDefined();
+    });
   });
 });

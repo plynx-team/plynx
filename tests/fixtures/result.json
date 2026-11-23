@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "status": "SUCCESS",
+  "cache_key": "…",
+  "cache_hit": false,
+  "started_at": 1731800000.1,
+  "finished_at": 1731800001.4,
+  "outputs": {
+    "text": {
+      "kind": "scalar",
+      "value": "hello "
+    },
+    "report": {
+      "kind": "file",
+      "sha256": "…",
+      "size_bytes": 10,
+      "media": "text/markdown",
+      "filename": "report.md"
+    },
+    "frames": {
+      "kind": "directory",
+      "tree_sha256": "…",
+      "entries": [
+        {
+          "path": "0001.png",
+          "sha256": "…",
+          "size_bytes": 99
+        }
+      ]
+    }
+  }
+}

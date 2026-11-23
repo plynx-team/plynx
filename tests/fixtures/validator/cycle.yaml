@@ -1,0 +1,11 @@
+version: 1
+name: cycle
+nodes:
+  node_a:
+    op: standard_io/demo:Echo
+    inputs:
+      text: $node_b.text
+  node_b:
+    op: standard_io/demo:Echo
+    inputs:
+      text: $node_a.text

@@ -1,0 +1,9 @@
+version: 1
+name: unknown_output
+nodes:
+  pick:
+    op: standard_io/interactive:AskChoice
+  echo_bad_out:
+    op: standard_io/demo:Echo
+    inputs:
+      text: $pick.no_such_output

@@ -1,0 +1,115 @@
+import { describe, expect, it, afterEach } from "vitest";
+import { render, screen, fireEvent, act, cleanup } from "@testing-library/react";
+import { RouterProvider, useRouter, Link, matchRoute, parseHash } from "./Router";
+
+afterEach(() => {
+  cleanup();
+});
+
+function DummyPage() {
+  const { currentPath, navigate } = useRouter();
+  return (
+    <div>
+      <span data-testid="current-path">{currentPath}</span>
+      <Link to="/workflows" activeClassName="is-active">
+        Workflows Link
+      </Link>
+      <button onClick={() => navigate("/runs/run-123")}>Go to run 123</button>
+    </div>
+  );
+}
+
+describe("matchRoute", () => {
+  it("matches exact paths", () => {
+    expect(matchRoute("/runs", "/runs")).toEqual({ matched: true, params: {} });
+    expect(matchRoute("/workflows", "/runs")).toEqual({ matched: false, params: {} });
+  });
+
+  it("extracts path parameters", () => {
+    const res = matchRoute("/runs/:id", "/runs/run-abc");
+    expect(res).toEqual({ matched: true, params: { id: "run-abc" } });
+  });
+
+  it("matches catch-all paths with :path*", () => {
+    const res = matchRoute("/workflows/:path*", "/workflows/sub/my_wf.yaml");
+    expect(res).toEqual({
+      matched: true,
+      params: { path: "sub/my_wf.yaml" },
+    });
+
+    // 2-segment root-level workflow like /editor/foo.yaml
+    const rootRes = matchRoute("/editor/:path*", "/editor/foo.yaml");
+    expect(rootRes).toEqual({
+      matched: true,
+      params: { path: "foo.yaml" },
+    });
+
+    // Decodes URI-encoded segments in wildcard path
+    const encodedRes = matchRoute("/editor/:path*", "/editor/my%20dir/my%20wf.yaml");
+    expect(encodedRes).toEqual({
+      matched: true,
+      params: { path: "my dir/my wf.yaml" },
+    });
+  });
+});
+
+describe("Router and Link component", () => {
+  it("renders with default route /workflows", () => {
+    window.location.hash = "";
+    render(
+      <RouterProvider>
+        <DummyPage />
+      </RouterProvider>,
+    );
+    expect(screen.getByTestId("current-path").textContent).toBe("/workflows");
+  });
+
+  it("updates path on navigation button click", () => {
+    render(
+      <RouterProvider>
+        <DummyPage />
+      </RouterProvider>,
+    );
+    const btn = screen.getByText("Go to run 123");
+    fireEvent.click(btn);
+    expect(window.location.hash).toBe("#/runs/run-123");
+  });
+
+  it("handles Link click and active classes", () => {
+    render(
+      <RouterProvider>
+        <DummyPage />
+      </RouterProvider>,
+    );
+    const link = screen.getByText("Workflows Link");
+    fireEvent.click(link);
+    expect(window.location.hash).toBe("#/workflows");
+  });
+
+  it("updates path when hash changes externally", () => {
+    render(
+      <RouterProvider>
+        <DummyPage />
+      </RouterProvider>,
+    );
+    act(() => {
+      window.location.hash = "#/workflows";
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+    expect(screen.getByTestId("current-path").textContent).toBe("/workflows");
+  });
+
+  it("parses hash with query parameters into pathname and queryParams", () => {
+    const res = parseHash("#/editor/sample.yaml?view=graph&run_id=run-1");
+    expect(res.pathname).toBe("/editor/sample.yaml");
+    expect(res.search).toBe("?view=graph&run_id=run-1");
+    expect(res.queryParams).toEqual({
+      view: "graph",
+      run_id: "run-1",
+    });
+
+    const empty = parseHash("");
+    expect(empty.pathname).toBe("/workflows");
+    expect(empty.queryParams).toEqual({});
+  });
+});

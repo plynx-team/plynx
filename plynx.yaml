@@ -1,0 +1,6 @@
+# PLynx workspace configuration for development repository
+workflows:
+  - workflows
+  - examples/workflows
+packs:
+  - examples/custom_packs

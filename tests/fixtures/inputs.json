@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "inputs": {
+    "a": {
+      "kind": "scalar",
+      "value": "hello"
+    },
+    "cfg": {
+      "kind": "scalar",
+      "value": {
+        "k": 1
+      }
+    },
+    "doc": {
+      "kind": "file",
+      "path": "inputs/doc/resume.pdf",
+      "sha256": "…",
+      "size_bytes": 1234
+    },
+    "frames": {
+      "kind": "directory",
+      "path": "inputs/frames",
+      "tree_sha256": "…"
+    }
+  },
+  "checkpoint_answers": {
+    "cp_0": "foo"
+  }
+}

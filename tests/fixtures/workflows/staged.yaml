@@ -1,0 +1,24 @@
+version: 1
+name: staged_approval_demo
+description: "Demo workflow with a stage approval gate"
+concurrency: 2
+stages:
+  stage_1:
+    title: "1. Preparation"
+    require_approval: true
+  stage_2:
+    title: "2. Execution"
+    require_approval: false
+nodes:
+  step_1:
+    op: standard_io/demo:Echo
+    title: "Prepare data"
+    stage: stage_1
+    inputs:
+      text: "ready"
+  step_2:
+    op: standard_io/demo:Echo
+    title: "Execute task"
+    stage: stage_2
+    inputs:
+      text: $step_1.text

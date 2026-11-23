@@ -1,0 +1,7 @@
+version: 1
+name: bad_top_key
+coordinates:
+  x: 10
+nodes:
+  pick:
+    op: standard_io/demo:AskFooOrWoo

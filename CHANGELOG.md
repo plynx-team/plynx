@@ -4,13 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## Unreleased
+## [2.0.0] - 2026-11-22
 
-The roadmap will be posted here [Project](https://github.com/plynx-team/plynx/projects).
+Complete ground-up rewrite as a local-first, code-first workflow engine. Legacy PLynx v1 (`v1.12.1`) is preserved on the `legacy/v1` branch.
 
-Please join the discussions in the [Discord](https://discord.gg/ZC3wY2J).
+### Added
+- **Zero-dependency SDK (`plynx-sdk`)**: Define operations as plain Python `Op` subclasses or `@op`-decorated functions with typed ports (`Path`, `Directory`, `Literal`, `Range`, `Media`), `ALLOW_EXTRA_INPUTS`, and interactive `checkpoint()` calls.
+- **YAML Workflows & Static Validation**: Human-readable, Git-friendly YAML DAGs with named stages, deferred stage inputs, stage approval gates (`require_approval: true`), and static AST-based validation (`plynx validate`).
+- **Local-First Engine & Content-Addressed Storage**: `graphlib` + `asyncio` scheduler backed by SQLite (WAL), append-only `events.jsonl`, and content-addressed blob storage in `.plynx/` with automatic early cutoff and `plynx clean` GC.
+- **Isolated `uv` Environments**: Custom Node Packs execute in per-pack isolated `uv` virtual environments with cross-process lockfiles; built-in `standard_io` ops run directly with stdlib only.
+- **Built-in `standard_io` Pack**: 13 cross-platform, stdlib-only operations covering text, data, files, and interactive prompts.
+- **CLI**: `plynx init`, `validate`, `run`, `resume`, `run-node` (isolated scratch debugging), `runs`, `ops`, `clean`, `ui`, and `agent-guide`.
+- **Web UI**: React + TypeScript + Vite application bundled in the `plynx` wheel featuring Stepper view, editable React Flow DAG canvas, live SSE logs, unified run snapshot inspector, and artifact previewers.
 
-### Recent releases
+### Removed
+- MongoDB, Flask, Docker/Kubernetes runtime stack, user accounts/OAuth, cloud storage backends, and distributed worker servers.
+
+### Legacy v1 releases
 
 ## [1.9.8] - 2022-12-24
 

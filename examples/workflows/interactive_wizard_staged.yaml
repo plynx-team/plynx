@@ -1,0 +1,44 @@
+version: 1
+name: interactive_wizard_staged
+description: "Interactive onboarding wizard demonstrating AskChoice with stage approval gates, TemplateFormat, and MarkdownReport."
+stages:
+  input_stage:
+    title: "1. User Survey & Questionnaire"
+    require_approval: false
+  review_gate:
+    title: "2. Manager Approval Gate"
+    require_approval: true
+  report_stage:
+    title: "3. Final Onboarding Report"
+    require_approval: false
+nodes:
+  choice:
+    op: standard_io/interactive:AskChoice
+    title: "Project Category Selection"
+    stage: input_stage
+    inputs:
+      question: "Select your project category:"
+      options_csv: "Machine Learning, Web Automation, Audio Production, Data Analytics"
+  role_choice:
+    op: standard_io/interactive:AskChoice
+    title: "Project Role Selection"
+    stage: input_stage
+    inputs:
+      question: "Select your primary role:"
+      options_csv: "Data Scientist, Software Engineer, DevOps Engineer, Researcher"
+  format_summary:
+    op: standard_io/data:TemplateFormat
+    title: "Format Profile Summary"
+    stage: review_gate
+    inputs:
+      template: "Project Category: {category}\nUser Role: {role}"
+      category: $choice.choice
+      role: $role_choice.choice
+  final_report:
+    op: standard_io/files:MarkdownReport
+    title: "Compile Onboarding Report"
+    stage: report_stage
+    inputs:
+      title: "Project Onboarding Summary"
+      body: $format_summary.text
+      filename: "onboarding_report.md"

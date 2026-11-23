@@ -1,0 +1,7 @@
+version: 1
+name: unknown_op
+nodes:
+  bad_op_node:
+    op: standard_io/demo:NonExistentOp
+    inputs:
+      text: "hello"

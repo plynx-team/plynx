@@ -1,3 +1,64 @@
-[build-system]
-requires = ["setuptools>=68.0", "wheel"]
-build-backend = "setuptools.build_meta"
+[project]
+name = "plynx-workspace"
+version = "2.0.0"
+description = "Development workspace for PLynx v2 (not published)."
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "httpx>=0.27",
+    "media-studio",
+    "mypy>=1.10",
+    "pedalboard-studio",
+    "plynx",
+    "plynx-sdk",
+    "podcast-studio",
+    "pytest>=8",
+    "ruff>=0.5",
+    "standard-io",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev"]
+
+[tool.uv.workspace]
+members = ["packages/*", "builtin_packs/*", "examples/custom_packs/*"]
+
+[tool.uv.sources]
+media-studio = { workspace = true }
+pedalboard-studio = { workspace = true }
+plynx = { workspace = true }
+plynx-sdk = { workspace = true }
+podcast-studio = { workspace = true }
+standard-io = { workspace = true }
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["ui", ".plynx", "docs"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+files = ["packages", "builtin_packs", "examples/custom_packs", "scripts", "tests"]
+explicit_package_bases = true
+mypy_path = [
+    "packages/plynx-sdk/src",
+    "packages/plynx/src",
+    "builtin_packs/standard_io/src",
+    "examples/custom_packs/media_studio/src",
+    "examples/custom_packs/podcast_studio/src",
+    "examples/custom_packs/pedalboard_studio/src",
+]
+exclude = ["tests/fixtures/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"

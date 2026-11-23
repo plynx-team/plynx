@@ -1,0 +1,5 @@
+timestamp,region,service,requests,latency_ms
+2026-11-20T12:00:00Z,us-east,auth,14200,12.4
+2026-11-20T12:01:00Z,us-east,api,98200,45.2
+2026-11-20T12:02:00Z,us-west,db,31400,8.7
+2026-11-20T12:03:00Z,eu-west,cache,88400,2.1

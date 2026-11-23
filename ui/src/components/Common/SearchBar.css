@@ -1,8 +1,0 @@
-.SearchBar {
-  display: inline-flex;
-  width: 100%;
-}
-
-.SearchBar > .Bar {
-  width: 100%;
-}
