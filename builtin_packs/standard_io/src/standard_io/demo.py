@@ -50,7 +50,7 @@ class WriteText(Op):
         out_path = Path(filename)
         if out_path.is_absolute() or ".." in out_path.parts or len(out_path.parts) != 1:
             raise ValueError(f"filename must be a single relative file name, got {filename!r}")
-        out_path.write_text(text, encoding="utf-8")
+        out_path.write_text(text, encoding="utf-8", newline="\n")
         return {"file": out_path}
 
 

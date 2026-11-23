@@ -716,7 +716,7 @@ def test_node_logs_endpoint_and_sse_batching(tmp_path: Path) -> None:
     stdout_file = logs_dir / "worker.stdout.log"
 
     initial_lines = [f"line {i}\n" for i in range(3000)]
-    stdout_file.write_text("".join(initial_lines), encoding="utf-8")
+    stdout_file.write_text("".join(initial_lines), encoding="utf-8", newline="\n")
 
     app = create_app(tmp_path)
 
@@ -764,7 +764,7 @@ def test_node_logs_endpoint_and_sse_batching(tmp_path: Path) -> None:
             await asyncio.sleep(0.05)
 
             # Write remaining 7,000 lines (3000..9999) in bursts
-            with open(stdout_file, "a", encoding="utf-8") as f:
+            with open(stdout_file, "a", encoding="utf-8", newline="\n") as f:
                 for i in range(3000, 10000):
                     f.write(f"line {i}\n")
                     if i % 1000 == 0:
@@ -908,6 +908,7 @@ nodes:
       options_csv: "foo, woo"
 """,
         encoding="utf-8",
+        newline="\n",
     )
 
     orig_bytes = wf_file.read_bytes()

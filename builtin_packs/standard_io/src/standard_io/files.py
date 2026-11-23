@@ -50,7 +50,9 @@ class ListDirectory(Op):
             "file_count": len(rel_filenames),
             "filenames": rel_filenames,
         }
-        manifest_path.write_text(json.dumps(manifest_data, indent=2), encoding="utf-8")
+        manifest_path.write_text(
+            json.dumps(manifest_data, indent=2), encoding="utf-8", newline="\n"
+        )
 
         return {
             "file_count": len(rel_filenames),
@@ -148,7 +150,7 @@ class MarkdownReport(Op):
                 lines.append(f"- **{key}**: {value}")
             lines.append("")
 
-        out_path.write_text("\n".join(lines), encoding="utf-8")
+        out_path.write_text("\n".join(lines), encoding="utf-8", newline="\n")
         return {"report": out_path}
 
 

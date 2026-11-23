@@ -182,7 +182,7 @@ class JsonMerge(Op):
             )
 
         merged = {**a, **b}
-        out_path.write_text(json.dumps(merged, indent=2), encoding="utf-8")
+        out_path.write_text(json.dumps(merged, indent=2), encoding="utf-8", newline="\n")
         return {"merged": merged, "file": out_path}
 
 
@@ -225,7 +225,7 @@ class CsvSummary(Op):
             "column_count": column_count,
             "column_names": column_names,
         }
-        stats_path.write_text(json.dumps(stats_data, indent=2), encoding="utf-8")
+        stats_path.write_text(json.dumps(stats_data, indent=2), encoding="utf-8", newline="\n")
 
         cols_list = (
             "\n".join(f"- `{col}`" for col in column_names) if column_names else "- *(none)*"
@@ -238,7 +238,7 @@ class CsvSummary(Op):
             f"{cols_list}\n"
         )
         summary_path = Path("summary.md")
-        summary_path.write_text(summary_content, encoding="utf-8")
+        summary_path.write_text(summary_content, encoding="utf-8", newline="\n")
 
         return {
             "row_count": row_count,
