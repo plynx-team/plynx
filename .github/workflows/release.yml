@@ -1,4 +1,4 @@
-name: v2 Release (PyPI)
+name: Release (PyPI)
 
 on:
   push:
@@ -18,9 +18,6 @@ jobs:
     permissions:
       id-token: write  # Required for PyPI Trusted Publishing (OIDC)
       contents: read
-    defaults:
-      run:
-        working-directory: v2
 
     steps:
       - name: Checkout repository
@@ -43,17 +40,17 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: v2/ui/package-lock.json
+          cache-dependency-path: ui/package-lock.json
 
       - name: Sync workspace dependencies
         run: uv sync
 
       - name: Install UI dependencies
-        working-directory: v2/ui
+        working-directory: ui
         run: npm ci
 
       - name: Build UI static assets
-        working-directory: v2/ui
+        working-directory: ui
         run: npm run build
 
       - name: Build distributions for plynx-sdk and plynx
@@ -79,12 +76,12 @@ jobs:
       - name: Publish plynx-sdk to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: v2/dist/sdk/
+          packages-dir: dist/sdk/
           repository-url: ${{ inputs.test_pypi && 'https://test.pypi.org/legacy/' || '' }}
 
       # --- 2. Publish plynx (engine, server, UI, and built-in standard_io) ---
       - name: Publish plynx to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: v2/dist/plynx/
+          packages-dir: dist/plynx/
           repository-url: ${{ inputs.test_pypi && 'https://test.pypi.org/legacy/' || '' }}

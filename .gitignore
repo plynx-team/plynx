@@ -1,6 +1,3 @@
-# Tracked in v2 even though the legacy root .gitignore ignores it.
-!uv.lock
-
 .venv/
 __pycache__/
 *.py[cod]

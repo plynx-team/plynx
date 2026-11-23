@@ -1,4 +1,4 @@
-# PLynx v2
+# PLynx
 
 **PLynx** is a local-first workflow engine for building and running reproducible DAGs. Workflows are plain YAML; operations are plain Python (`Op` or `@op`) running in isolated `uv` environments. Outputs are content-addressed and cached locally in `.plynx/`.
 
@@ -124,7 +124,7 @@ plynx agent-guide
 
 ```bash
 git clone https://github.com/plynx-team/plynx.git
-cd plynx/v2
+cd plynx
 uv sync
 cd ui && npm ci && npm run build && cd ..
 uv run ruff check && uv run ruff format --check && uv run mypy && uv run pytest

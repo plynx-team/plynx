@@ -6,14 +6,14 @@ Rigid reference. No philosophy. Exact formats are in [PROTOCOL.md](PROTOCOL.md).
 
 A local-first workflow engine. A workflow is a static DAG in `workflow.yaml`. Each node runs as a separate OS process inside an isolated `uv` environment. Outputs are content-addressed and cached. A browser UI shows the DAG as a Stepper (default) or an editable Graph. Single user. No database server.
 
-## Directory layout (v2 root)
+## Directory layout
 
 ```text
 AGENTS.md
 pyproject.toml            uv workspace (members: packages/*, builtin_packs/*)
 uv.lock
 docs/                     these instructions
-scripts/                  repo tooling (check_legacy_untouched.py, gen_ts_types.py)
+scripts/                  repo tooling (build.py, gen_ts_types.py)
 tests/                    end-to-end tests (cross-package)
 examples/                 sample workspace: plynx.yaml, workflows/, custom_packs/
 packages/
@@ -178,4 +178,4 @@ One process owns a run at a time (`RUNS.owner_pid`). Other processes (browser, s
 | 7 | CLI is `click`. UI uses Tailwind and native React state with no component library. |
 | 8 | Exit 137 is dropped. Engine-initiated kill is `CANCELED`. Other non-zero exits or signals are `FAILED`. |
 | 9 | `plynx run --no-cache` exists as the escape hatch for the cache-key blind spot (shared helper edits). |
-| 10 | CI runs on Linux, macOS, Windows. Provider: GitHub Actions workflow added as `.github/workflows/v2-*.yml` (the only allowed file outside `v2/`, add-only). |
+| 10 | CI runs on Linux, macOS, Windows via GitHub Actions (`.github/workflows/ci.yml`). |

@@ -1,7 +1,6 @@
-# AGENTS.md (PLynx v2)
+# AGENTS.md (PLynx)
 
-Instructions for AI coding agents working on the PLynx v2 codebase.
-`v2/` is the active project root until Phase 9 promotion. Legacy v1 files one level up are read-only reference.
+Instructions for AI coding agents working on the PLynx codebase.
 
 ## Philosophy
 
@@ -16,7 +15,6 @@ Instructions for AI coding agents working on the PLynx v2 codebase.
 1. [docs/RELEASE_PLAN.md](docs/RELEASE_PLAN.md) — active checklist to ship `v2.0.0`. Do the first unchecked task unless told otherwise.
 2. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — module boundaries, invariants, non-goals.
 3. [docs/PROTOCOL.md](docs/PROTOCOL.md) — exact wire formats, YAML schema, REST API, CLI, SQLite tables.
-4. [docs/WORKFLOW.md](docs/WORKFLOW.md) — git workflow, legacy isolation, and Phase 9 promotion steps.
 
 ## Code Structure
 
@@ -33,13 +31,11 @@ Instructions for AI coding agents working on the PLynx v2 codebase.
 - `builtin_packs/` — core domain-agnostic packs shipped in the `plynx` wheel (`standard_io` only).
 - `examples/` — optional demo packs (`examples/custom_packs/`) and showcase workflows (`examples/workflows/`).
 - `ui/` — React + TypeScript + Vite web app (Stepper + Graph editor + Run inspector). Builds into `packages/plynx/src/plynx/static/`.
-- `scripts/` — `gen_ts_types.py`, `build.py`, `check_legacy_untouched.py`.
+- `scripts/` — `gen_ts_types.py`, `build.py`.
 - `tests/` — pytest unit, integration, e2e, and wheel smoke tests.
 
 ## Hard Rules
 
-- **Root is `v2/` (until Phase 9).** Run all commands from `v2/`. Never write paths containing `v2/` or `../`.
-- **Do not touch legacy (until Phase 9).** Never modify files outside `v2/` (except `.github/workflows/v2-*.yml`). Verify with `uv run python scripts/check_legacy_untouched.py`.
 - **Keep dependencies light.** `plynx-sdk` must have zero third-party dependencies. Core `plynx` keeps only lightweight CLI/HTTP/YAML packages. Heavy libraries belong only in isolated Node Packs.
 - **No test code in production packages.** Test fakes and demo fixtures live in `tests/`, never in `packages/plynx/src/`.
 - **Cross-platform.** Support Linux, macOS, and Windows. Use `pathlib`, POSIX forward slashes in manifests/outputs, no OS-specific shell commands in core or built-in packs.
@@ -49,7 +45,7 @@ Instructions for AI coding agents working on the PLynx v2 codebase.
 
 ## Verification (Before Every Commit)
 
-Run from `v2/`:
+Run from the repository root:
 
 ```bash
 uv run ruff check
@@ -57,7 +53,6 @@ uv run ruff format --check
 uv run mypy
 uv run pytest
 uv run python scripts/gen_ts_types.py --check
-uv run python scripts/check_legacy_untouched.py
 ```
 
 If `ui/` changed:
