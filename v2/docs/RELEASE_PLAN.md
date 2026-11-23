@@ -155,7 +155,7 @@ Goal: `pip install plynx` or `uv tool install plynx` works cleanly inside any ex
   - Add `tests/test_docs_snippets.py` that parses and validates the YAML/Python code blocks in docs/guides so drift breaks CI.
   - **Accept:** `tests/test_docs_snippets.py` passes; a fresh agent session can create, validate, and run a workflow in a blank repo using only the installed CLI + agent guide.
 
-- [ ] **R5.3 Fix CI pipeline (`v2-ci.yml`).**
+- [x] **R5.3 Fix CI pipeline (`v2-ci.yml`).**
   - Build UI assets before running `tests/test_wheel.py` (or exclude `test_wheel.py` from the pre-build pytest run so clean checkouts do not fail).
   - Add Playwright E2E job and `scripts/gen_ts_types.py --check`.
   - Verify green CI on Linux, macOS, and Windows (including the wheel-execution smoke test from R0.1).
