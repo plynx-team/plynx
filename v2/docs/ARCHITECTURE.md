@@ -29,27 +29,36 @@ packages/
   plynx/                  engine, CLI, server
     pyproject.toml
     src/plynx/
-      cli/                click commands: run, validate, resume, run-node, clean, ui
+      cli/                click commands: run, validate, resume, run-node, runs, ops, clean, ui, init
       workflow/           workflow.yaml models (pydantic), loader, writer, validator
-      registry/           static AST extraction, registry cache
+      registry/           static AST extraction, registry cache, workspace discovery
       engine/             scheduler, executor, runner, procgroup
       store/              SQLite access, run directories, event log
       cas/                blob store, hashing, cache key, GC
-      server/             FastAPI app, REST, SSE
+      server/             FastAPI app, routes (ops, runs, workflows), state, REST, SSE
+      config.py           plynx.yaml workspace config loader
       api_models.py       pydantic models for REST/SSE (source of TypeScript types)
       static/             built UI (generated, gitignored)
 ui/                       React + TypeScript + Vite
   src/
     api/                  generated types + REST/SSE client
+    components/           common UI components, PortInput, SearchBar, FeatherIcon
+    graph/                React Flow editor, palette, inspector, nodes
     stepper/              Stepper view, stage cards, checkpoint cards
-    graph/                React Flow editor, palette, inspector
     previewers/           artifact previewers
+    router/               view router and navigation
 builtin_packs/            Node Packs shipped with plynx (tracked)
   standard_io/            pyproject.toml, src/standard_io/ (stdlib-only, bundled in wheel)
 custom_packs/             user packs (gitignored, .gitkeep tracked) — only in workspaces
 ```
 
-A **workspace** is a user project directory. Its root is the nearest ancestor containing a `.plynx/` directory. Workspace layout:
+A **workspace** is a user project directory. Its root is discovered by scanning upward for:
+1. Nearest ancestor containing `.plynx/` or `plynx.yaml`.
+2. Nearest ancestor containing `.git/`.
+3. Nearest ancestor containing `pyproject.toml` (excluding `custom_packs/`).
+4. Falling back to the working directory.
+
+Workspace layout:
 
 ```text
 plynx.yaml                optional config
@@ -72,12 +81,12 @@ custom_packs/                   user packs (searched after the packs shipped ins
 | Python | >= 3.11. Windows, macOS, Linux. |
 | Packaging | `uv` workspace. Dist names `plynx` and `plynx-sdk`, version `2.0.0`. |
 | SDK dependencies | stdlib only. Wire models are `dataclasses`. |
-| Engine dependencies | `pydantic>=2` (workflow, REST, SSE models), `fastapi`, `uvicorn`, `click`, `ruamel.yaml` (round-trip YAML writes). |
+| Engine dependencies | `pydantic>=2` (workflow, REST, SSE models), `fastapi`, `uvicorn`, `click`, `ruamel.yaml` (round-trip YAML writes), `python-multipart` (file uploads). |
 | Scheduling | `graphlib.TopologicalSorter` + `asyncio` + `asyncio.Semaphore(concurrency)`. |
 | Child processes | `uv run` (or `sys.executable -B` for stdlib-only built-in packs), one per node attempt, in its own process group. |
 | State | SQLite (WAL) via stdlib `sqlite3`, called through `asyncio.to_thread`. |
 | Lint / types / tests | `ruff`, `mypy --strict`, `pytest`. |
-| UI | Vite, React, TypeScript strict, Tailwind, `@xyflow/react`, `dagre`, TanStack Query. No component library. **(proposed)** |
+| UI | Vite, React, TypeScript strict, Tailwind, `@xyflow/react`, `dagre`. No component library. |
 | UI types | Generated from the pydantic JSON Schema (`scripts/gen_ts_types.py`). Never hand-written. |
 
 ## Invariants
@@ -152,13 +161,11 @@ One process owns a run at a time (`RUNS.owner_pid`). Other processes (browser, s
 - **Failure:** a failed node blocks only its dependents. Independent branches finish. The run ends `FAILED`.
 - **Cancel / timeout:** the whole process tree is killed. POSIX: `os.killpg`. Windows: `taskkill /T /F`. Both inside `procgroup.py`.
 - **First run:** the engine emits `BUILDING_ENVIRONMENT` while `uv` creates an environment.
-- **Environments:** `UV_PROJECT_ENVIRONMENT=.plynx/envs/<pack>-<hash(pyproject+lock)>`, and `uv run --frozen`. Stdlib-only built-in packs (`standard_io`) run directly with `sys.executable -B`, `PYTHONPATH` pointing to the pack source, and `PYTHONDONTWRITEBYTECODE=1` so packs inside `site-packages` stay read-only. **(proposed)**
+- **Environments:** `UV_PROJECT_ENVIRONMENT=.plynx/envs/<pack>-<hash(pyproject+lock)>`, and `uv run --frozen`. Stdlib-only built-in packs (`standard_io`) run directly with `sys.executable -B`, `PYTHONPATH` pointing to the pack source, and `PYTHONDONTWRITEBYTECODE=1` so packs inside `site-packages` stay read-only.
 - **Pack code reuse:** one pack is one `uv` project; ops in a pack share helpers.
 - **Op definition:** a class (`Op`) or a function (`@op`). Both produce the same registry schema. Metadata must be literals so static AST reading works. See PROTOCOL.md "Op declaration subset".
 
-## Decisions marked (proposed)
-
-Confirm or change each. Until then they stand.
+## Architectural decisions
 
 | # | Decision |
 |---|---|
@@ -168,7 +175,7 @@ Confirm or change each. Until then they stand.
 | 4 | Node inputs are materialized as read-only hard links (or copies) under `inputs/<port>/<original_filename>` so file extensions survive. |
 | 5 | Directories are stored as a tree of file blobs and rebuilt on demand. |
 | 6 | `events.jsonl` per run is the SSE source. SQLite polling is the cross-process bus. |
-| 7 | CLI is `click`. UI uses Tailwind and TanStack Query with no component library. |
+| 7 | CLI is `click`. UI uses Tailwind and native React state with no component library. |
 | 8 | Exit 137 is dropped. Engine-initiated kill is `CANCELED`. Other non-zero exits or signals are `FAILED`. |
 | 9 | `plynx run --no-cache` exists as the escape hatch for the cache-key blind spot (shared helper edits). |
 | 10 | CI runs on Linux, macOS, Windows. Provider: GitHub Actions workflow added as `.github/workflows/v2-*.yml` (the only allowed file outside `v2/`, add-only). |

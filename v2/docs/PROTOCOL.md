@@ -49,10 +49,10 @@ Rules:
 - No coordinates, no sizes, no UI fields. Unknown top-level or node keys are a validation error.
 - YAML is read and written with `ruamel.yaml` so comments and key order survive UI edits.
 
-Layout sidecar `workflows/.<name>.layout.json` (UI-owned, engine ignores it, copied into the run snapshot):
+Layout sidecar `workflows/.<name>.layout.json` (UI-owned, engine ignores it, copied into the run snapshot; viewport coordinates are stored locally in the client):
 
 ```json
-{ "schema": 1, "nodes": { "pick": { "x": 0, "y": 0 } }, "viewport": { "x": 0, "y": 0, "zoom": 1 } }
+{ "schema": 1, "nodes": { "pick": { "x": 0, "y": 0 } } }
 ```
 
 ## 3. Op declaration subset (static AST extraction)
@@ -286,6 +286,10 @@ CREATE TABLE cache_index (
 );
 ```
 
+Gate kinds:
+- `approval`: Opened when all nodes in a stage with `require_approval: true` reach `SUCCESS`. Pauses execution before any later stage begins. Approved via `POST /runs/{id}/stages/{stage_id}/approve` (or terminal prompt).
+- `input`: Opened dynamically when prior stages have finished and the stage has unbound run inputs. Pauses execution until values are supplied via `POST /runs/{id}/stages/{stage_id}/inputs` or `approve` with inputs (or terminal prompt).
+
 An answer is written with `UPDATE checkpoints SET answer=?, answered_at=? WHERE ... AND answer IS NULL`. Zero rows changed means someone else answered first.
 
 ## 8. Run directory
@@ -324,62 +328,64 @@ Blob store: `.plynx/cache/blobs/<first 2 hex>/<sha256>`, mode read-only. Link or
 
 SSE (`GET /api/v1/runs/{run_id}/stream`): frames `id: <seq>`, `event: <type>`, `data: <json>`. `Last-Event-ID` resumes after that `seq`. `node_log` frames have no `id`. A client opening a page first calls `GET /runs/{id}` (full state from SQLite) and `GET .../logs/...` (history), then connects the stream.
 
-## 10. REST (`/api/v1`, JSON, loopback only, no auth)
+## 10. REST (JSON, loopback only, no auth; mounted at `/api/v1` and root `/`)
 
 | Method and path | Purpose |
 |---|---|
 | `GET /health` | `{ "status": "ok", "version": "2.0.0" }` |
-| `GET /ops` | registry entries |
-| `GET /workflows` | list of workflow paths with name and stage count |
-| `GET /workflows/{path}` | `{ workflow, layout }` |
+| `GET /ops` | list of registered operations (`OpEntry`) |
+| `GET /workflows` | list of workflow paths with name and stage count (`WorkflowListItem`) |
+| `GET /workflows/{path}` | `{ workflow, layout }` (`WorkflowDocument`) |
 | `PUT /workflows/{path}` | save `{ workflow, layout }` (YAML round-trip, layout sidecar) |
-| `POST /workflows/validate` | body `{ workflow }`, returns `{ issues: [{ severity, node_id?, message }] }` |
-| `GET /workflows/{path}/inputs` | run inputs still unbound: `[{ node_id, name, type, media, required, default, stage_id }]` |
-| `POST /uploads` | multipart file. Returns `{ path }` (workspace-relative, under `.plynx/uploads/`) |
-| `POST /runs` | `{ workflow_path, inputs: { "node.name": value }, no_cache? }` returns `{ run_id }` |
-| `GET /runs` | list, newest first, `?limit&cursor` |
-| `GET /runs/{id}` | full state: run, nodes, open checkpoints, stage gates, run inputs |
+| `POST /workflows/validate` | body `{ workflow }`, returns `{ issues: [{ severity, message, node_id?, port_name?, stage_id? }] }` |
+| `GET /workflows/{path}/inputs` | run inputs still unbound: `[{ node_id, name, type, media, required, default, stage_id, options, min, max, step, description }]` (`WorkflowInputSpec`) |
+| `POST /uploads` | multipart file upload. Returns `{ path }` (workspace-relative, under `.plynx/uploads/`) |
+| `POST /runs` | `{ workflow_path, inputs?: { "node.name": value }, no_cache?: bool, concurrency?: int }`, returns `{ run_id }` |
+| `GET /runs` | list runs, newest first, `?limit=50&cursor=...&workflow_path=...`, returns `{ runs: [...], next_cursor: ... }` |
+| `GET /runs/{id}` | full state: run, nodes, open checkpoints, stage gates, run inputs (`RunState`) |
 | `POST /runs/{id}/cancel` | request cancel |
-| `POST /runs/{id}/resume` | take ownership and continue |
-| `POST /runs/{id}/checkpoints/{node_id}/{checkpoint_id}/answer` | `{ answer }` |
-| `POST /runs/{id}/stages/{stage_id}/approve` | approve gate (optional `{ inputs }`) |
-| `POST /runs/{id}/stages/{stage_id}/inputs` | submit deferred stage inputs and resolve its `input` gate |
-| `GET /runs/{id}/stream` | SSE (section 9) |
+| `POST /runs/{id}/resume` | take ownership and continue run, returns `{ run_id }` |
+| `POST /runs/{id}/checkpoints/{node_id}/{checkpoint_id}/answer` | `{ answer: string }` |
+| `POST /runs/{id}/stages/{stage_id}/approve` | approve stage gate (optional body `{ inputs?: { "node.name": value } }`) |
+| `POST /runs/{id}/stages/{stage_id}/inputs` | submit deferred stage inputs (body `{ inputs: { "node.name": value } }`) and resolve its `input` gate |
+| `GET /runs/{id}/stream` | SSE (section 9, supports `?last_event_id=N&initial_log_offset=N` or `Last-Event-ID` header) |
 | `GET /runs/{id}/nodes/{node_id}/logs/{stream}?offset=0` | `text/plain`, header `X-Next-Offset` |
 | `GET /runs/{id}/nodes/{node_id}/outputs/{name}` | blob download, `Content-Type` from `media` |
-| `POST /clean` | `{ days, dry_run }` returns reclaimed counts |
+| `POST /clean` | body `{ days?: int, dry_run?: bool }`, returns `{ runs_deleted, cache_entries_deleted, blobs_deleted, bytes_reclaimed }` |
 
 Errors: HTTP status plus `{ "error": { "code": "snake_case", "message": "…" } }`.
-Server binds `127.0.0.1`. CORS allows only the Vite dev origin (`http://localhost:3000`) in dev mode.
+Server binds `127.0.0.1` (or loopback host). CORS allows only the Vite dev origins (`http://localhost:3000`, `http://127.0.0.1:3000`) in dev mode.
 
 ## 11. CLI
 
 | Command | Behavior |
 |---|---|
-| `plynx init [dir]` | create `.plynx/`, `.gitignore` entries, empty `custom_packs/.gitkeep` |
+| `plynx init [target_dir]` | create `.plynx/`, `workflows/.gitkeep`, `custom_packs/.gitkeep`, `plynx.yaml`, `.gitignore` entries |
 | `plynx validate <workflow>` | static check, no code executed. Exit 0 ok, 1 issues |
 | `plynx run <workflow> [options]` | run in-process with `LocalExecutor` |
-| `plynx resume <run_id> [--answer node.cp_n=value] [--non-interactive]` | continue a failed or waiting run |
-| `plynx run-node <node_dir>` | re-run one node attempt in a scratch copy. Streams output to the terminal. Does not touch SQLite |
-| `plynx runs [--limit N]` | list runs |
-| `plynx ops [--json]` | list registry |
-| `plynx clean [--days 14] [--dry-run]` | mark and sweep blobs, delete old unpinned runs |
-| `plynx ui [--port 8080] [--no-browser]` | start the server and open the UI |
+| `plynx resume <run_id> [options]` | continue a failed, canceled, or waiting run, reusing completed node outputs |
+| `plynx run-node <node_dir> [--op <op>]` | re-run one node attempt from `node_dir` in a scratch copy without touching SQLite (reads op from snapshot if omitted) |
+| `plynx runs [run_id] [--limit N]` | list recent runs or inspect one run by full ID or unique prefix |
+| `plynx ops [--json]` | list registered operations (table or full JSON schemas) |
+| `plynx clean [--days 14] [--dry-run]` | mark-and-sweep garbage collection of old unpinned runs and unreferenced blobs |
+| `plynx ui [--port 8080] [--host 127.0.0.1] [--no-browser]` | start the server on loopback host and open the UI |
 
-`plynx run` options: `--set node.name=value` (repeatable, scalar), `--input node.name=path` (repeatable, file or directory), `--answers file.json` (`{ "node.cp_n": "value" }`), `--answer node.cp_n=value`, `--concurrency N`, `--non-interactive` (also when `CI=true`), `--no-cache`.
+`plynx run` options: `--set node.port=value` (repeatable, scalar), `--input node.port=path` (repeatable, file or directory), `--answers file.json` (`{ "node.cp_n": "value" }`), `--answer node.cp_n=value` (repeatable), `--concurrency N`, `--non-interactive` (also when `CI=true`), `--no-cache`.
 
-Exit codes of `run` and `resume`: `0` success, `1` failed, `2` blocked on a checkpoint or stage approval in non-interactive mode, `130` canceled. Interactive mode prompts in the terminal: numbered options `[1-N]`, or text when `allow_freeform`.
+`plynx resume` options: `--answers file.json` (`{ "node.cp_n": "value" }`), `--answer node.cp_n=value` (repeatable), `--concurrency N`, `--non-interactive`.
+
+Exit codes of `run` and `resume`: `0` success, `1` failed, `2` blocked on a checkpoint or stage gate in non-interactive mode, `130` canceled. Interactive mode prompts in the terminal: numbered options `[1-N]`, or text when `allow_freeform`.
 
 ## 12. `plynx.yaml` (optional)
 
 ```yaml
-workflows: workflows                 # default
-packs: [custom_packs]               # default, searched in order, after the packs shipped in the plynx wheel
+workflows: workflows                 # default: "workflows" (or list of directories: ["workflows"])
+packs: [custom_packs]               # default: [], searched in order, after the packs shipped in the plynx wheel
                                      # (in the v2 repo, `builtin_packs/` is added automatically)
-db: .plynx/plynx.db                  # default
-concurrency: 4                       # default: os.cpu_count()
-env_passthrough: ["*"]               # default: inherit all; or a list of names
-cache: { max_size: 10GB }            # optional LRU budget for blobs
+db: .plynx/plynx.db                  # default: ".plynx/plynx.db"
+concurrency: 4                       # default: None (falls back to os.cpu_count())
+env_passthrough: ["*"]               # default: inherit all; or a list of specific env var names
+cache: { max_size: 10GB }            # optional LRU budget for blobs (e.g. "10GB", 10737418240)
 ```
 
 Concurrency precedence: `--concurrency` > `workflow.yaml` > `plynx.yaml` > `os.cpu_count()`.

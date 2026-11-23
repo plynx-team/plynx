@@ -141,7 +141,7 @@ Goal: `pip install plynx` or `uv tool install plynx` works cleanly inside any ex
 
 ## Phase R5: Docs, README, User-Agent Guide & CI (P1)
 
-- [ ] **R5.1 Sync and trim living technical docs.**
+- [x] **R5.1 Sync and trim living technical docs.**
   - Update `docs/PROTOCOL.md` to match actual REST API, CLI, gate kinds, and `plynx.yaml` keys.
   - Update `docs/ARCHITECTURE.md`: remove `(proposed)` tags, remove TanStack Query, fix workspace root rule, directory tree, and deps (`python-multipart`).
   - Compress `docs/UI_STYLE.md` (~60 lines of invariants, no copied `:root` CSS) and trim empty v1-diff table in `docs/TODO.md`.

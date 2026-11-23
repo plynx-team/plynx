@@ -1,230 +1,46 @@
-# UI Style & Layout Specification (PLynx v2)
+# UI Style & Invariants (PLynx v2)
 
-Rigid visual and interaction contract for `ui/`. All components must conform to this specification. Never use Tailwind `slate-*` or `emerald-*` defaults; use the neutral dark gray & Photoshop-blue tokens and docked desktop IDE layout defined below.
+Visual, interaction, and styling invariants for `ui/`.
 
----
+## 1. Design Tokens & Theme
 
-## 1. Design Tokens & Typography (`ui/src/index.css`)
+- **Tokens**: Defined in `ui/src/index.css`. Photoshop-inspired neutral dark gray (`--bg-app: #1e1e1e`, `--bg-canvas: #232323`, `--bg-panel: #2b2b2b`) and blue accents (`--color-primary: #2680eb`). Never use default Tailwind `slate-*` or `emerald-*`.
+- **Typography**: Sans-serif (`var(--font-sans)`, Source Sans Pro / system fallback) for general UI; Monospace (`var(--font-mono)`, IBM Plex Mono) for technical IDs, run IDs, and code.
+- **Scrollbars**: Custom 8px rounded scrollbars styled with `var(--bg-app)` and `var(--border-default)`.
 
-Include the legacy v1 CSS custom properties verbatim in `:root`:
+## 2. Icons & Assets
 
-```css
-:root {
-  --font-sans: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'IBM Plex Mono', monospace;
-  --font-size-sm: 12px;
-  --font-size-base: 14px;
-  --font-size-lg: 16px;
-  --font-weight-regular: 400;
-  --font-weight-semibold: 600;
+- **Icons**: Render via typed `<FeatherIcon name="..." size={16} />` from `feather-icons` package with `stroke="currentColor"`. No static SVG icon files or `img` icon tags.
+- **Brand Assets**: Only `logo.png` and `favicon.png` under `ui/public/`.
 
-  /* Photoshop-inspired Gray & Blue Theme */
-  --bg-app: #1e1e1e;
-  --bg-canvas: #232323;
-  --bg-header: #262626;
-  --bg-panel: #2b2b2b;
-  --bg-panel-secondary: #242424;
-  --bg-card: #333333;
-  --bg-card-hover: #3e3e3e;
-  --bg-button: #303030;
-  --bg-button-hover: #3d3d3d;
+## 3. Application Shell & Top Navigation
 
-  --border-subtle: #363636;
-  --border-default: #404040;
-  --border-strong: #525252;
+- **Layout**: Full-viewport desktop IDE (`100vh`, flex column, `overflow: hidden`, no outer padding or centered wrappers).
+- **Header (`.Header`)**: Fixed 40px bar with logo, navigation links (`Workflows`, `Runs`), and subtle bottom border.
+- **Control Panel (`.control-panel`)**: 40px toolbar with segmented view toggles (`Graph`, `Stepper`, `Runs`) and action buttons (`Save`, `Run`, `Auto Layout`, etc.).
 
-  --color-primary: #2680eb;
-  --color-primary-hover: #3d91f5;
-  --color-primary-active: #1b6cd4;
-  --color-primary-selected: #244b7a;
-  --color-primary-subtle: rgba(38, 128, 235, 0.18);
+## 4. Unified Workspace (3-Pane Docked Layout)
 
-  --text-primary: #ebebeb;
-  --text-secondary: #b0b0b0;
-  --text-tertiary: #787878;
+- **Left Dock (250px)**: Two collapsible accordion sections:
+  - *Runs & Mode* (`RunsHistoryPane`): Pinned `Working Draft` at top, followed by paginated runs of the workflow.
+  - *Operations* (`.hub-panel`): Search input, stage selector, and draggable operation cards. Collapses automatically in Run Inspection mode.
+- **Center Workspace**:
+  - *Editor Mode*: Clean blueprint canvas (`var(--bg-canvas)`), neutral headers, draggable nodes.
+  - *Run Inspection Mode*: Read-only snapshot overlay with inset status border, HUD banner (`Inspecting Run #<id>`), run diffs (`NOT IN RUN`, `DIFF`), and collapsible logs drawer.
+- **Right Dock (300px, `.PropertiesBar`)**:
+  - Workflow properties when nothing is selected; selected node properties (title, op ID, markdown docs, input controls, output links, and inline artifact previews) when a node is selected.
 
-  /* Status Colors */
-  --color-status-success: #38c172;
-  --color-status-ready: #48bb78;
-  --color-status-running: #00d8ff;
-  --color-status-in-queue: #ffa726;
-  --color-status-failed: #f44336;
-  --color-status-canceled: #d946ef;
-  --color-status-created: #b0b0b0;
-  --color-status-static: #ecc94b;
+## 5. Graph Canvas & Node Cards
 
-  /* Semantic Feedback */
-  --color-success: #38c172;
-  --color-warning: #ffa726;
-  --color-error: #f44336;
-  --color-info: #00d8ff;
-}
-```
+- **Canvas**: React Flow with `#232323` background, `#383838` grid dots, subtle dashed stage group frames (`StageGroupNode`), and bottom-left watermark.
+- **Node Cards (`.flow-node`)**: 240px wide, rounded corners (10px), status-tinted Blender-style header with status icon, rotating border glow animation when `RUNNING`, socket zone (type-colored circular handle dots), and pill widget zone for unwired inputs.
 
-### Base Element Rules
-- `html, body, #root`: `height: 100%; max-height: 100%; margin: 0; background-color: var(--bg-app); color: var(--text-primary); font-family: var(--font-sans); font-size: var(--font-size-base);`
-- `input, select, textarea`: `border: 1px solid var(--border-default); border-radius: 2px; background-color: var(--bg-panel-secondary); color: var(--text-primary); font-family: var(--font-sans);`
-- Scrollbars: `8px` width/height, track `var(--bg-app)`, thumb `var(--border-default)` (hover `var(--border-strong)`), `border-radius: 4px`.
+## 6. Stepper View, Checkpoints & Gates
 
----
+- **Stepper**: Scrollable stages with progress bar, completion counts, and status-highlighted node rows.
+- **Prompts**: Checkpoint and Stage Approval cards with distinct left accent borders, clear question text, and action buttons.
 
-## 2. Icons & Static Assets (`feather-icons` + `ui/public/`)
+## 7. List Pages & Modals
 
-- **Icons (`feather-icons`)**:
-  - Use the `feather-icons` package and a typed `<FeatherIcon name="..." size={16} />` component (ported from legacy `ui/src/components/Common/Icon.tsx` and recorded in `docs/LEGACY_MAP.md`).
-  - Do **not** copy static `/icons/*.svg` files or render icons with `<img src="/icons/...">`. Render inline `<svg>` via `FeatherIcon` so `stroke="currentColor"` inherits button/port text and hover colors natively.
-  - Standard Feather icon mappings:
-    - Toolbar view toggles: `sliders` (Stepper), `grid` (Graph), `list` (Runs)
-    - Toolbar actions: `save` (Save), `check-square` (Validate), `shuffle` / `layout` (Rearrange), `play` (Run), `copy` (Duplicate), `trash-2` / `x` (Delete / Cancel), `rotate-ccw` (Resume / Refresh)
-    - Port & media types: `file-text` (`str` / text), `hash` (`int` / `float`), `toggle-left` (`bool`), `code` (`dict` / `list` / json), `file` (`file`), `folder` (`directory`), `image` (image media), `help-circle` (help tooltip), `eye` (Preview), `link-2` (Bind/Unbind reference), `search` (Search)
-- **Brand Assets (`ui/public/`)**:
-  - Copy only `ui/public/logo.png` and `ui/public/favicon.png` from legacy `ui/public/` (and record in `docs/LEGACY_MAP.md`).
-
----
-
-## 3. Application Shell & Top Header (`.Header`)
-
-Full-viewport desktop IDE layout (`display: flex; flex-direction: column; height: 100vh; overflow: hidden`). No centered `max-w-*` page wrapper or outer page padding.
-
-- **Top Header (`.Header`)**:
-  - `height: 40px; flex-shrink: 0; background-color: var(--bg-header); border-bottom: 1px solid var(--border-subtle); padding: 0 12px;`
-  - Left logo (`/logo.png`, `height: 28px`, links to `/workflows`) + navigation links (`Workflows`, `Runs`) separated by `18px` vertical `1px solid var(--border-default)` dividers (`.separator`). Default route `/` lands on `/workflows`.
-  - Navigation items (`.Item`): full `40px` height, `padding: 0 14px`, `border-bottom: 3px solid transparent`.
-    - Hover: `color: var(--text-primary); border-bottom-color: var(--border-strong);`
-    - Active: `color: var(--color-primary); border-bottom-color: var(--color-primary);` (regular font-weight 400 to prevent tab width changes and layout shifting).
-
----
-
-## 4. Sub-Header Control Panel Toolbar (`.control-panel` & `.control-button`)
-
-Every primary view (`ListPage` and Unified `WorkflowEditor` / `RunDetail`) renders an edge-to-edge `.control-panel` directly beneath `.Header`:
-
-- **`.control-panel`**:
-  - `min-height: 40px; background-color: var(--bg-panel); padding: 4px 8px; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 4px;`
-- **`.control-button`**:
-  - `height: 32px; padding: 4px 10px; gap: 6px; border-radius: 3px; background-color: var(--bg-button); border: 1px solid var(--border-default); color: var(--text-primary); font-size: 14px;`
-  - Contains `16x16` `<FeatherIcon name="..." size={16} />` + `.control-button-text`.
-  - Hover: `background-color: var(--bg-button-hover); border-color: var(--border-strong);`
-  - Active: `background-color: var(--color-primary); border-color: var(--color-primary);`
-  - Selected (`.selected`): `background-color: var(--color-primary-selected); border-color: var(--color-primary);`
-- **Segmented View Toggles (`.control-toggle`)**:
-  - Adjacent `.control-button` items with `margin: 0; border-radius: 0` (`first` has `4px 0 0 4px`, `last` has `0 4px 4px 0`).
-- **Vertical Divider (`.control-separator`)**:
-  - `1px` vertical bar `#444`, `margin: 6px 8px`.
-
----
-
-## 5. Unified Workflow & Run Workspace
-
-Clicking a workflow in `/workflows` opens the unified Workflow-Centric workspace directly:
-- **Control Panel Toolbar**:
-  - View mode toggle group (`.control-toggle`): **`Graph`** (`grid`) | **`Stepper`** (`sliders`) | **`Runs`** (`list`, filtered to runs of this workflow).
-  - Separator.
-  - Action buttons: **`Save`** (`save`, with dirty indicator), **`Run Workflow`** (`play`), **`Auto Layout`** (`layout`), plus **`Duplicate Node`** (`copy`) / **`Delete Node`** (`trash-2`) when a node/edge is selected.
-  - When clicking **`Run Workflow`**, launching a run stays inside the Workflow workspace, automatically selects the new run in the Left Dock Runs accordion, and streams live SSE events (`node_status`, `node_log`, checkpoints, stage gates) onto the canvas in real time.
-- **3-Pane Docked Workspace (`flex: 1; min-height: 0; display: flex; flex-direction: row; overflow: hidden`)**:
-  1. **Left Docked Accordion Sidebar (`.left-dock`, fixed `width: 250px` — zero horizontal layout shift)**:
-     - Contains two collapsible accordion sections with smooth CSS transitions (`180ms ease-out`):
-       - **Top Accordion — `Runs & Mode` (`RunsHistoryPane`)**:
-         - Always displays the pinned **`[ ✎ Working Draft (Editor) ]`** row at the top.
-         - Below it displays runs for this workflow (with animated spinning indicator on `RUNNING` runs, status badge, relative time/duration, and `< Prev | 1/N | Next >` pagination).
-         - In **Editor Mode** (`selectedRunId === null`), shows a compact preview (pinned `Working Draft` + latest 2–3 runs) so Operations below has full space.
-         - In **Run Inspection Mode** (`selectedRunId !== null`), `Runs & Mode` smoothly expands (`flex: 1`) while `Operations` collapses to its header bar.
-       - **Bottom Accordion — `Operations` (`.hub-panel`)**:
-         - Collapsible header bar (`Operations`). Expanded by default in Editor Mode; automatically collapses when a run is selected (and can be toggled manually or auto-expands when returning to `Working Draft`).
-         - Top search input (`/` or `Cmd+K`) + target stage selector + collapsible category tree with compact draggable `.hub-item-node` cards.
-  2. **Center Workspace (`flex: 1; min-width: 0; display: flex; flex-direction: column; transition: background-color 180ms ease-out`)**:
-     - **Editor Mode (`selectedRunId === null`) — Clean Blueprint**:
-       - Standard canvas background (`var(--bg-canvas)`, `#161616`). Nodes render with neutral dark gray headers (`#2b2b2b`) and no run statuses.
-     - **Run Inspection Mode (`selectedRunId !== null`) — Read-Only Snapshot Overlay (in both `Graph` and `Stepper` views)**:
-       - Smoothly transitions to a darker inspection background (`#0d0f13`) with a `2px` status-tinted inset frame and a top HUD banner (`Inspecting Run #<id> [STATUS]` + `Cancel`/`Resume` actions + primary **`[ ✎ Return to Editor ]`** button).
-       - In the Workflow Workspace, renders the **Current Editor Nodes** overlaid with the selected run's statuses/outputs/logs and clear **Run Diff indicators** (`NOT IN RUN` crossed out with diagonal slash line and dimmed opacity when an operation did not exist in that run; `NEW` highlighted with bright cyan border when an operation ran in that run but is absent from the current workflow; `DIFF` when inputs or `op` changed). (By contrast, the standalone `/runs/<id>` route renders the run's frozen `workflow_snapshot` without referencing the up-to-date editor graph.)
-       - **Run Diff Philosophy (Run as Newer)**: When comparing a selected Run against the current Workflow Editor, the editor workflow acts as the baseline blueprint and the selected run acts as the **newer execution instance**. Diffs follow standard git diff visual convention:
-         - Base / Old (Editor): `- Editor` rendered in red (`#ff8a80`).
-         - Newer / Applied (Run): `+ Run` rendered in teal/green (`#80cbc4`).
-         - Inspector Header: Displays **`Run Changes vs. Editor`** answering "what was executed in this run compared to the workflow blueprint?".
-     - Bottom area (when viewing a run with a selected node): **Collapsible Logs Drawer** docked to the bottom edge of the center pane.
-  3. **Right Docked Sidebar — Properties Bar (`.PropertiesBar`, `width: 300px; min-width: 300px`)**:
-     - `background-color: var(--bg-panel); border-left: 1px solid var(--border-subtle); padding: 5px; overflow-y: auto;`
-     - When no node is selected: shows **`Properties of <Workflow Name>`** (workflow title, description, concurrency, stages summary, latest run summary).
-     - When a node is selected: shows **`Properties of <Node Title>`** with `.PropertiesBox` sections:
-       - **Metadata & Stage**: Title, Stage selector, Op ID (`<pack>/<module>:<Op>`).
-       - **Description (Markdown)**: Formatted Markdown description rendered via `MarkdownPreviewer`.
-       - **Inputs / Parameters**: `.PropertiesBoxContent` (`background-color: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 5px;`) containing `.ParameterItem` rows (`display: grid; grid-template-columns: 38% 1fr; margin: 5px 0; align-items: center;`) with literal widgets and reference bind/unbind controls.
-       - **Outputs & Inline Previews**: `.OutputItem` rows (`display: grid; grid-template-columns: 42% 58%; padding: 2px 0;`) with `.OutputItemPreview` (`color: var(--color-primary)`) opening `ArtifactPreviewDialog`, plus an **inline live output preview box** directly below each completed output port inside the `PropertiesBar`.
-
----
-
-## 6. Graph Canvas & Node Cards (`.flow-node` — Blender / Photoshop Node Style)
-
-- **Canvas**:
-  - `background-color: var(--bg-canvas)` (`#232323`).
-  - React Flow `<Background color="#383838" gap={16} size={1.5} />`.
-  - Controls button background `#2b2b2b`, border `#444`, hover `#444`, text `#eee`.
-  - MiniMap background `#1e1e1e`, mask `rgba(30, 30, 30, 0.6)`, node fill `#666`.
-  - Default edges: `strokeWidth: 4px; stroke: #777; stroke-opacity: 0.7;`. Selected edge: `stroke: var(--color-primary) !important; stroke-opacity: 0.95;`.
-  - Bottom-left watermark (`.BackgroundLabels`): fixed/absolute at `bottom: 16px`, `pointer-events: none`, `.Title` `font-size: 26px; color: rgba(235, 235, 235, 0.75);`.
-  - Stage group frames (`StageGroupNode`): subtle border (`1px dashed #3c3c3c`), translucent header (`rgba(38, 38, 38, 0.75)`), non-intrusive so node dragging and selection match legacy v1 feel.
-- **Node Card (`.flow-node`)**:
-  - `width: 240px`, `border: 2px solid #3c3c3c`, `border-radius: 10px`, `background-color: #2a2a2a`, `user-select: none`.
-  - Selected state: `border: 2px solid var(--color-primary)` (`#2680eb`).
-  - **Blender-Style Header (`.flow-node-header`)**:
-    - `border-top-left-radius: 8px; border-top-right-radius: 8px; border-bottom: 1px solid #383838; min-height: 28px; padding: 6px 8px 4px 8px;`
-    - Full header bar color encodes execution status + left status icon (`check-circle` for `SUCCESS`, spinning `loader` for `RUNNING`/`BUILDING_ENVIRONMENT`, `help-circle` for `WAITING_FOR_USER`, `alert-circle` for `FAILED`, `slash` for `CANCELED`/`BLOCKED`, `cpu` for idle) + `zap` bolt icon for cache hits. No text status pill crowding the title.
-    - Status-tinted header background:
-      - `PENDING` / `BUILDING_ENVIRONMENT`: `rgba(70, 70, 70, 0.75)`
-      - `RUNNING`: `rgba(0, 75, 85, 0.85)`
-      - `WAITING_FOR_USER`: `rgba(140, 95, 30, 0.8)`
-      - `SUCCESS`: `rgba(25, 85, 45, 0.85)`
-      - `FAILED`: `rgba(110, 20, 20, 0.85)`
-      - `CANCELED` / `BLOCKED`: `rgba(75, 25, 75, 0.75)`
-  - **Running Border Glow Animation**:
-    - When node status is `RUNNING` or `BUILDING_ENVIRONMENT`, render the rotating conic-gradient border glow (`--color-status-running: #00d8ff`, `animation: border 2s linear infinite` with `filter: blur(10px)` on `::after`).
-  - **Expandable Multiline / Markdown Description Section**:
-    - Hidden when description is empty. When present, a compact chevron toggle in the node card expands/collapses a formatted Markdown description block (`MarkdownPreviewer`) directly below the header.
-  - **Body (`.flow-node-body`) — ComfyUI / Blender Two-Zone Socket & Pill Widget Layout**:
-    - **Top Two-Column Socket Zone (`.flow-node-sockets`)**:
-      - Left column: Input sockets (`.flow-node-socket-row.input`) with **type-colored circular `10px` Handle dots** (`getPortIconColor(port.type)`).
-      - Right column: Output sockets (`.flow-node-socket-row.output`) with port name, a compact inline `eye` icon button on the same row when the output artifact is ready, and **type-colored circular `10px` Handle dots**.
-    - **Bottom Pill Widget Zone (`.flow-node-widgets`)**:
-      - Every **unwired input port** renders in a ComfyUI sunken pill row (`.comfy-widget-pill`, `background-color: #1c1c1c; border: 1px solid #383838; border-radius: 12px;`) with the port icon + label on the left and the editable value (`str`, `int`, `float`, `bool`, enum `options`, `file`/`directory`) on the right, plus an inline expand toggle (`maximize-2` / `minimize-2`) that switches the pill into a recessed multiline prompt/JSON editor (`.comfy-widget-multiline`).
-
----
-
-## 7. Stepper View, Checkpoints & Stage Approvals
-
-- **Stepper Container**:
-  - Scrollable inside the center workspace (`background-color: var(--bg-canvas); padding: 12px;`).
-  - Compact overall progress bar in a `.PropertiesBoxContent`-styled header bar (`background-color: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 8px 12px;`).
-- **Stage Panels (`StageCard`)**:
-  - `background-color: var(--bg-panel); border: 1px solid var(--border-subtle); border-radius: 4px;`
-  - Header bar (`background-color: var(--bg-header); border-bottom: 1px solid var(--border-subtle); padding: 6px 10px;`) with stage title, completion counter, and `.status-badge`.
-  - Node rows (`NodeRow`): `.list-item` style (`background-color: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 4px; padding: 6px 10px; margin: 3px 0;`), highlighting with `border-color: var(--color-primary); background-color: var(--color-primary-selected);` when selected.
-- **Checkpoint Card & Stage Approval Card**:
-  - `background-color: var(--bg-panel); border: 1px solid var(--color-primary); border-left: 4px solid var(--color-warning); border-radius: 4px; padding: 10px 12px;`
-  - Option buttons use `.control-button` with primary action highlighted in `var(--color-primary)`.
-
----
-
-## 8. List Pages (`/workflows` and `/runs`) & Preview Dialog
-
-- **List Pages (`.ListPage`)**:
-  - Top `.control-panel` with `<SearchBar />` + filter/action `.control-button` items.
-  - Scrollable `.list` container (`background-color: var(--bg-panel); flex: 1; overflow: auto; border: 1px solid var(--border-subtle);`).
-  - `.list-header` grid row (`color: var(--text-secondary); font-weight: 600; border-bottom: 1px solid var(--border-default); margin: 3px; padding: 5px;`).
-  - `.list-item` grid rows (`background-color: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: 4px; margin: 3px; padding: 8px 10px; transition: all 0.1s ease-in;`).
-    - Hover: `background-color: var(--bg-card-hover); border-color: var(--border-strong);`
-    - Active: `background-color: var(--color-primary-selected); border-color: var(--color-primary);`
-  - Status column uses `.status-badge.<STATUS>` (`border: 1px solid var(--border-default); border-radius: 5px; background-color: var(--bg-card); padding: 1px 6px; font-weight: 600;`).
-  - **Column Typography Standards (Uniform across `/workflows`, `/runs`, and Workflow Runs tab)**:
-    - Base grid row & header: `font-family: var(--font-sans); font-size: var(--font-size-base);` (14px).
-    - **Primary Title / Entity Column** (Workflow name in `/workflows`, Workflow in `/runs`):
-      `font-family: var(--font-sans); font-size: var(--font-size-base); font-weight: 600;` accompanied by a `15px` Feather icon tinted with `var(--color-primary)`.
-    - **Status Badges**:
-      Uses `.status-badge.<STATUS>` (`font-family: var(--font-sans); font-size: var(--font-size-sm); font-weight: 600;`).
-    - **Technical Identifiers & Paths** (Run ID in `/runs`, file Path in `/workflows`):
-      `font-family: var(--font-mono); font-size: var(--font-size-sm);` (12px IBM Plex Mono) with `color: var(--text-secondary)` (or primary blue link for Run ID).
-    - **Secondary Data Columns** (Duration, Created timestamps):
-      `font-family: var(--font-sans); font-size: var(--font-size-sm); color: var(--text-secondary);`.
-- **Preview Modal (`ArtifactPreviewDialog`)**:
-  - Matches legacy `PreviewDialog.css`: dark panel window (`background-color: var(--bg-panel); border: 1px solid var(--border-strong)`), `.preview-note-banner` (`background-color: var(--bg-card); border-left: 3px solid var(--color-primary)`), `.preview-download-button`, and `.preview-content-box` (`background-color: var(--bg-canvas); font-family: var(--font-mono)`).
+- **List Pages (`/workflows`, `/runs`)**: Search bar, table headers, monospace run IDs/paths, and status badges.
+- **Preview Modal (`ArtifactPreviewDialog`)**: Dark panel with note banner, download button, and monospace preview content.

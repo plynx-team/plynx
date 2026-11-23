@@ -23,9 +23,3 @@ Deferred by the owner. None of this is in v2.0.0. Do not start it without being 
 - WebMIDI / Strudel and RealSense / OAK-D verticals. Keep artifacts binary-friendly meanwhile.
 - Multi-user storage abstraction.
 
-## Intentional differences from v1
-
-Add rows when v2 deliberately behaves differently from the legacy code.
-
-| Area | v1 | v2 | Reason |
-|---|---|---|---|
