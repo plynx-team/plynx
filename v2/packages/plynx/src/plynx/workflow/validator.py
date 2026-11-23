@@ -104,8 +104,13 @@ def get_unbound_run_inputs(
                         name=port.name,
                         type=port.type,
                         media=port.media,
+                        options=port.options,
+                        min=port.min,
+                        max=port.max,
+                        step=port.step,
                         required=port.required,
                         default=port.default,
+                        description=port.description,
                         stage_id=node.stage,
                     )
                 )

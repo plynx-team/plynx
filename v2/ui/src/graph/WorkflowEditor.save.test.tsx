@@ -213,4 +213,41 @@ describe("WorkflowEditor save, layout sidecar, and dirty indicator (Task 6.12)",
     expect(screen.queryByTestId("dirty-indicator")).not.toBeInTheDocument();
     expect(screen.getByTestId("btn-save-workflow")).not.toHaveClass("control-button-primary");
   });
+
+  it("aborts Save & Run when handleSave fails", async () => {
+    vi.mocked(client.fetchWorkflow).mockResolvedValue(INITIAL_DOC);
+    vi.mocked(client.fetchOps).mockResolvedValue(OPS);
+    vi.mocked(client.saveWorkflow).mockRejectedValue(
+      new Error("Disk full"),
+    );
+
+    render(
+      <RouterProvider>
+        <WorkflowEditor workflowPath="examples/workflows/foo_or_woo.yaml" />
+      </RouterProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("mock-graph-view")).toBeInTheDocument();
+    });
+
+    // Make dirty
+    fireEvent.click(screen.getByTestId("drag-pick"));
+    expect(screen.getByTestId("dirty-indicator")).toBeInTheDocument();
+
+    // Click Run Workflow -> opens unsaved changes confirm dialog
+    fireEvent.click(screen.getByTestId("btn-run-workflow"));
+    expect(screen.getByTestId("unsaved-run-confirm-dialog")).toBeInTheDocument();
+
+    // Click Save & Run -> save fails
+    fireEvent.click(screen.getByTestId("btn-save-and-run"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("save-error-banner")).toHaveTextContent("Disk full");
+    });
+
+    // Confirm dialog should NOT have closed and run modal should NOT have opened
+    expect(screen.getByTestId("unsaved-run-confirm-dialog")).toBeInTheDocument();
+    expect(screen.queryByTestId("run-inputs-form")).not.toBeInTheDocument();
+  });
 });

@@ -395,11 +395,17 @@ export function buildGraphElements(
     nodes: nodesDef,
     stages: stagesDef,
   };
-  const dagrePositions = computeDagrePositions(
-    effectiveWf,
-    opsMap,
-    options.measuredDimensions,
-  );
+
+  // Only run Dagre layout when at least one node lacks saved coordinates
+  const needsDagre = Object.keys(nodesDef).some((nodeId) => {
+    const saved =
+      layout?.nodes?.[nodeId] ?? runState?.layout_snapshot?.nodes?.[nodeId];
+    return !(saved && typeof saved.x === "number" && typeof saved.y === "number");
+  });
+
+  const dagrePositions = needsDagre
+    ? computeDagrePositions(effectiveWf, opsMap, options.measuredDimensions)
+    : {};
   const absolutePositions: Record<string, NodePosition> = {};
 
   for (const nodeId of Object.keys(nodesDef)) {

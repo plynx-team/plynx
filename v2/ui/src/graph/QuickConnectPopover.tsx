@@ -270,7 +270,7 @@ export function QuickConnectPopover({
                 className={`w-full text-left px-2.5 py-1.5 rounded flex items-center justify-between transition-colors ${
                   isSelected
                     ? "bg-[rgba(38,128,235,0.22)] text-[var(--text-primary)]"
-                    : "hover:bg-[var(--bg-hover)] text-[var(--text-secondary)]"
+                    : "hover:bg-[var(--bg-button-hover)] text-[var(--text-secondary)]"
                 }`}
               >
                 <div className="min-w-0 pr-2">

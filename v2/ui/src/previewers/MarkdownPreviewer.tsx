@@ -4,6 +4,20 @@ export interface MarkdownPreviewerProps {
   content: string;
 }
 
+function isAllowedLinkUrl(url: string): boolean {
+  const trimmed = url.trim();
+  try {
+    const parsed = new URL(trimmed);
+    return (
+      parsed.protocol === "http:" ||
+      parsed.protocol === "https:" ||
+      parsed.protocol === "mailto:"
+    );
+  } catch {
+    return false;
+  }
+}
+
 function renderInline(text: string): React.ReactNode {
   // Simple regex-based inline parser
   const parts: Array<React.ReactNode> = [];
@@ -44,17 +58,21 @@ function renderInline(text: string): React.ReactNode {
       const splitIdx = token.indexOf("](");
       const linkText = token.slice(1, splitIdx);
       const linkUrl = token.slice(splitIdx + 2, -1);
-      parts.push(
-        <a
-          key={match.index}
-          href={linkUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="text-[var(--color-primary-hover)] underline hover:text-[var(--color-primary)]"
-        >
-          {linkText}
-        </a>,
-      );
+      if (isAllowedLinkUrl(linkUrl)) {
+        parts.push(
+          <a
+            key={match.index}
+            href={linkUrl.trim()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[var(--color-primary-hover)] underline hover:text-[var(--color-primary)]"
+          >
+            {linkText}
+          </a>,
+        );
+      } else {
+        parts.push(<span key={match.index}>{linkText}</span>);
+      }
     }
 
     lastIndex = regex.lastIndex;

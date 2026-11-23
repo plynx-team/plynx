@@ -87,4 +87,22 @@ describe("computeWorkflowRunDiff (Task 6.19)", () => {
     expect(diff.nodes.old_node.status).toBe("new_in_run");
     expect(diff.removedNodeIds).toEqual(["old_node"]);
   });
+
+  it("does not treat runtime run_inputs for unbound ports as workflow edits", () => {
+    const wf: Workflow = {
+      version: 1,
+      name: "Unbound Inputs Demo",
+      nodes: {
+        step1: {
+          op: "builtin/demo:echo",
+          inputs: {},
+        },
+      },
+    };
+    const run = makeBaseRun(wf, { "step1.text": "runtime value", "step1.count": 5 });
+    const diff = computeWorkflowRunDiff(wf, run);
+    expect(diff.hasChanges).toBe(false);
+    expect(diff.nodes.step1.status).toBe("unchanged");
+    expect(Object.keys(diff.nodes.step1.changedInputs)).toHaveLength(0);
+  });
 });

@@ -7,6 +7,7 @@ import {
   getPortIconName,
   type FeatherIconName,
 } from "../components/FeatherIcon";
+import { PortInput } from "../components/PortInput";
 import { MarkdownPreviewer } from "../previewers/MarkdownPreviewer";
 import {
   extractNodeRef,
@@ -306,9 +307,9 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
             {unwiredInputs.map((port) => {
               const inputDiff = nodeDiff?.changedInputs?.[port.name];
               const diffTitle = inputDiff
-                ? `Changed in run (Editor: ${JSON.stringify(
-                    inputDiff.editorValue ?? null,
-                  )} → Run: ${JSON.stringify(inputDiff.runValue ?? null)})`
+                ? `Modified in editor (Run: ${JSON.stringify(
+                    inputDiff.runValue ?? null,
+                  )} → Editor: ${JSON.stringify(inputDiff.editorValue ?? null)})`
                 : undefined;
               const rawVal = spec.inputs?.[port.name];
               const effectiveVal =
@@ -416,85 +417,18 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
                   </span>
 
                   <div className="flex items-center justify-end gap-1 flex-1 min-w-0">
-                    {port.type === "bool" ? (
-                      <label className="flex items-center gap-1 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          data-testid={`node-input-${nodeId}-${port.name}`}
-                          disabled={readOnly}
-                          checked={Boolean(effectiveVal)}
-                          onChange={(e) =>
-                            onLiteralChange?.(
-                              nodeId,
-                              port.name,
-                              e.target.checked,
-                            )
-                          }
-                          className="!w-3.5 !h-3.5"
-                        />
-                        <span
-                          className="font-mono text-[11px]"
-                          style={{ color: "var(--text-primary)" }}
-                        >
-                          {effectiveVal ? "true" : "false"}
-                        </span>
-                      </label>
-                    ) : port.options && port.options.length > 0 ? (
-                      <select
-                        data-testid={`node-input-${nodeId}-${port.name}`}
-                        disabled={readOnly}
-                        value={String(effectiveVal)}
-                        onChange={(e) =>
-                          onLiteralChange?.(nodeId, port.name, e.target.value)
-                        }
-                      >
-                        {port.options.map((opt) => (
-                          <option key={String(opt)} value={String(opt)}>
-                            {String(opt)}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        data-testid={`node-input-${nodeId}-${port.name}`}
-                        type={
-                          port.type === "int" || port.type === "float"
-                            ? "number"
-                            : "text"
-                        }
-                        disabled={readOnly}
-                        placeholder={
-                          port.default !== null && port.default !== undefined
-                            ? String(port.default)
-                            : port.name
-                        }
-                        value={rawString}
-                        onChange={(e) => {
-                          const raw = e.target.value;
-                          if (raw === "") {
-                            onLiteralChange?.(nodeId, port.name, undefined);
-                            return;
-                          }
-                          if (port.type === "int") {
-                            const parsed = parseInt(raw, 10);
-                            onLiteralChange?.(
-                              nodeId,
-                              port.name,
-                              Number.isNaN(parsed) ? raw : parsed,
-                            );
-                          } else if (port.type === "float") {
-                            const parsed = parseFloat(raw);
-                            onLiteralChange?.(
-                              nodeId,
-                              port.name,
-                              Number.isNaN(parsed) ? raw : parsed,
-                            );
-                          } else {
-                            onLiteralChange?.(nodeId, port.name, raw);
-                          }
-                        }}
-                      />
-                    )}
+                    <PortInput
+                      port={port}
+                      value={rawVal !== undefined ? rawVal : effectiveVal === "" ? undefined : effectiveVal}
+                      readOnly={readOnly}
+                      compact={true}
+                      showPresets={false}
+                      allowListEditor={false}
+                      testId={`node-input-${nodeId}-${port.name}`}
+                      onChange={(nextVal) =>
+                        onLiteralChange?.(nodeId, port.name, nextVal)
+                      }
+                    />
 
                     {isMultilineCapable &&
                       !(port.options && port.options.length > 0) && (

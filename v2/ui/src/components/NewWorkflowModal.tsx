@@ -246,7 +246,7 @@ export function NewWorkflowModal({
               type="button"
               data-testid="btn-cancel-new-workflow"
               onClick={onClose}
-              className="px-3 py-1.5 rounded text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+              className="px-3 py-1.5 rounded text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-button-hover)] transition-colors"
             >
               Cancel
             </button>

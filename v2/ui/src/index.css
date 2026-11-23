@@ -2,8 +2,8 @@
 @import "@xyflow/react/dist/style.css";
 
 :root {
-  --font-sans: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'IBM Plex Mono', monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
   --font-size-sm: 12px;
   --font-size-base: 14px;
   --font-size-lg: 16px;
@@ -54,6 +54,7 @@
   --color-info: #00d8ff;
 }
 
+@layer components {
 html,
 body,
 #root {
@@ -1164,7 +1165,7 @@ textarea:read-only {
 }
 
 .flow-node.is-not-in-run .flow-node-header {
-  background-color: rgba(45, 45, 45, 0.85) !important;
+  background-color: rgba(45, 45, 45, 0.85);
 }
 
 .flow-node.is-not-in-run .flow-title-text {
@@ -1200,7 +1201,7 @@ textarea:read-only {
 }
 
 .flow-node.is-new-in-run .flow-node-header {
-  background-color: rgba(35, 40, 45, 0.85) !important;
+  background-color: rgba(35, 40, 45, 0.85);
 }
 
 .flow-node.is-new-in-run .flow-title-text {
@@ -1219,7 +1220,7 @@ textarea:read-only {
 }
 
 .flow-node.is-new-in-run .node-diff-badge.new-in-run {
-  opacity: 1 !important;
+  opacity: 1;
 }
 
 .hub-list-header {
@@ -1489,4 +1490,5 @@ textarea:read-only {
   max-height: 70vh;
   overflow: auto;
   box-sizing: border-box;
+}
 }

@@ -38,35 +38,36 @@ async function stopProcess(proc: ChildProcess | null, signal: NodeJS.Signals = "
 }
 
 test.describe("PLynx UI Smoke Test", () => {
-  test("Task 6.1: renders navbar and navigates between Runs and Workflows", async ({ page }) => {
-    // 1. Visit root
+  test("Task 6.1: renders navbar and navigates between Workflows and Runs", async ({ page }) => {
+    // 1. Visit root (defaults to Workflows)
     await page.goto("/");
 
     // 2. Navbar is rendered
     await expect(page.locator("header")).toBeVisible();
-    await expect(page.getByRole("link", { name: "PLynx v2.0" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "PLynx" })).toBeVisible();
 
-    // 3. Default view is Runs
-    await expect(page.getByRole("heading", { name: "Runs" })).toBeVisible();
-    await expect(page.getByPlaceholder("Filter by run ID or workflow...")).toBeVisible();
-
-    // 4. Click Workflows nav link
-    await page.getByRole("link", { name: "Workflows" }).click();
-    await expect(page).toHaveURL(/.*#\/workflows/);
-    await expect(page.getByRole("heading", { name: "Workflows" })).toBeVisible();
-
-    // 5. Check that workflows discovered in workspace are displayed
+    // 3. Default view is Workflows
+    await expect(
+      page.getByPlaceholder("Search workflows by name or file path..."),
+    ).toBeVisible();
     await expect(page.getByText("examples/workflows/foo_or_woo.yaml")).toBeVisible();
 
-    // 6. Click "Runs" nav link to return
-    await page.getByRole("link", { name: "Runs" }).click();
+    // 4. Click Runs nav link
+    await page.getByRole("link", { name: "Runs", exact: true }).click();
     await expect(page).toHaveURL(/.*#\/runs/);
-    await expect(page.getByRole("heading", { name: "Runs" })).toBeVisible();
+    await expect(page.getByPlaceholder("Filter by run ID or workflow...")).toBeVisible();
+
+    // 5. Click Workflows nav link to return
+    await page.getByRole("link", { name: "Workflows", exact: true }).click();
+    await expect(page).toHaveURL(/.*#\/workflows/);
+    await expect(
+      page.getByTestId("workflow-card-examples/workflows/foo_or_woo.yaml"),
+    ).toBeVisible();
   });
 
   test("Task 6.2 - 6.5 & 6.7: launches workflow, interacts with Stepper, Checkpoint card, Logs panel, and Previews", async ({ page }) => {
     await page.goto("/#/workflows");
-    await expect(page.getByRole("heading", { name: "Workflows" })).toBeVisible();
+    await expect(page.getByText("examples/workflows/foo_or_woo.yaml")).toBeVisible();
 
     // Click "Run" on the foo_or_woo workflow
     const fooCard = page.getByTestId("workflow-card-examples/workflows/foo_or_woo.yaml");
@@ -81,13 +82,11 @@ test.describe("PLynx UI Smoke Test", () => {
     await page.getByRole("button", { name: "Start Run" }).click();
 
     // Navigates to /runs/<run_id>
-    await expect(page).toHaveURL(/.*#\/runs\/[0-9a-f-]+/);
-    await expect(page.getByText("Workflow: examples/workflows/foo_or_woo.yaml")).toBeVisible();
+    await expect(page).toHaveURL(/.*#\/runs\/[0-9a-zA-Z_-]+/);
 
     // Task 6.3: Stepper view elements are visible
-    await expect(page.getByText("Workflow Stages (Stepper)")).toBeVisible();
     await expect(page.getByText("Overall Progress")).toBeVisible();
-    await expect(page.getByText("1. Ask")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "1. Ask" })).toBeVisible();
     const pickNode = page.getByText("pick", { exact: true });
     await expect(pickNode).toBeVisible();
 
@@ -103,6 +102,7 @@ test.describe("PLynx UI Smoke Test", () => {
 
     // Checkpoint card disappears on checkpoint_resolved!
     await expect(checkpointCard).not.toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId("run-status-badge")).toHaveText("SUCCESS", { timeout: 10000 });
 
     // Task 6.4: Click node row to open Logs panel
     await pickNode.click();
@@ -114,21 +114,19 @@ test.describe("PLynx UI Smoke Test", () => {
     await page.getByRole("button", { name: "Close logs" }).click();
     await expect(page.getByTestId("logs-panel")).not.toBeVisible();
 
-    // Task 6.7: When pick node completes with SUCCESS, select it and preview output
-    await expect(page.getByText("pick", { exact: true })).toBeVisible();
+    // Task 6.7: Preview output via NodeInspector
     await pickNode.click();
-    const previewBtn = page.getByRole("button", { name: "Preview Output" });
-    if (await previewBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await previewBtn.click();
-      await expect(page.getByTestId("artifact-preview-dialog")).toBeVisible();
-      await page.getByRole("button", { name: "Close dialog" }).click();
-      await expect(page.getByTestId("artifact-preview-dialog")).not.toBeVisible();
-    }
+    const previewBtn = page.getByTestId("inspector-preview-output-choice");
+    await expect(previewBtn).toBeVisible({ timeout: 5000 });
+    await previewBtn.click();
+    await expect(page.getByTestId("artifact-preview-dialog")).toBeVisible();
+    await page.getByRole("button", { name: "Close dialog" }).click();
+    await expect(page.getByTestId("artifact-preview-dialog")).not.toBeVisible();
   });
 
   test("Task 6.6: handles Stage approval card with Approve & Continue", async ({ page }) => {
     await page.goto("/#/workflows");
-    await expect(page.getByRole("heading", { name: "Workflows" })).toBeVisible();
+    await expect(page.getByText("examples/workflows/staged.yaml")).toBeVisible();
 
     // Click "Run" on the staged workflow
     const stagedCard = page.getByTestId("workflow-card-examples/workflows/staged.yaml");
@@ -137,7 +135,7 @@ test.describe("PLynx UI Smoke Test", () => {
 
     // Launch the run
     await page.getByRole("button", { name: "Start Run" }).click();
-    await expect(page).toHaveURL(/.*#\/runs\/[0-9a-f-]+/);
+    await expect(page).toHaveURL(/.*#\/runs\/[0-9a-zA-Z_-]+/);
 
     // Wait for stage gate approval card to appear
     const gateCard = page.getByTestId("stage-approval-card-stage_1");
@@ -204,10 +202,10 @@ test.describe("PLynx UI Smoke Test", () => {
     await expect(page.getByTestId("workflow-editor")).toBeVisible();
     await expect(page.getByTestId("op-palette")).toBeVisible();
 
-    // Ops grouped by CATEGORY (Demo, Files, Text / Basic)
-    await expect(page.getByTestId("palette-category-Demo")).toBeVisible();
-    await expect(page.getByTestId("palette-category-Files")).toBeVisible();
-    await expect(page.getByTestId("palette-category-Text / Basic")).toBeVisible();
+    // Ops grouped by CATEGORY (Core / Files, Core / Interactive, Core / Text & Data)
+    await expect(page.getByTestId("palette-category-Core / Files")).toBeVisible();
+    await expect(page.getByTestId("palette-category-Core / Interactive")).toBeVisible();
+    await expect(page.getByTestId("palette-category-Core / Text & Data")).toBeVisible();
 
     // Focus palette search with '/' shortcut
     await page.keyboard.press("/");
@@ -257,7 +255,7 @@ test.describe("PLynx UI Smoke Test", () => {
     await expect(page.getByTestId("graph-node-echo")).toBeVisible();
 
     // 1. Backward stage edge: echo (stage print) -> pick (stage ask) rejected visibly
-    await dragHandle("handle-out-echo-text", "handle-in-pick-prompt");
+    await dragHandle("handle-out-echo-text", "handle-in-pick-question");
     await expect(page.getByTestId("wire-error-banner")).toBeVisible();
     await expect(page.getByTestId("wire-error-banner")).toContainText("Backward stage edge");
 
@@ -283,12 +281,12 @@ test.describe("PLynx UI Smoke Test", () => {
     await expect(page.getByTestId("graph-node-pick")).toBeVisible();
     await expect(page.getByTestId("graph-node-echo")).toBeVisible();
 
-    // 1. Select 'pick' and edit its literal 'prompt' input
+    // 1. Select 'pick' and edit its literal 'question' input
     await page.getByTestId("graph-node-pick").click();
-    const promptInput = page.getByTestId("inspector-input-prompt");
-    await expect(promptInput).toHaveValue("foo or woo?");
-    await promptInput.fill("choose wisely?");
-    await expect(promptInput).toHaveValue("choose wisely?");
+    const questionInput = page.getByTestId("inspector-input-question");
+    await expect(questionInput).toHaveValue("foo or woo?");
+    await questionInput.fill("choose wisely?");
+    await expect(questionInput).toHaveValue("choose wisely?");
 
     // 2. Select 'echo', unbind '$pick.choice', verify literal widget appears, then re-bind '$pick.choice'
     await page.getByTestId("graph-node-echo").click();
@@ -300,28 +298,41 @@ test.describe("PLynx UI Smoke Test", () => {
     await page.getByTestId("inspector-bind-text").selectOption("pick.choice");
     await expect(page.getByTestId("inspector-ref-text")).toHaveText("$pick.choice");
     await expect(page.locator('[data-id="pick.choice->echo.text"]')).toHaveCount(1);
-
-    // 3. Preview output artifact of completed 'echo' node from latest run in Node Inspector
-    const previewBtn = page.getByTestId("inspector-preview-output-text");
-    await expect(previewBtn).toBeVisible({ timeout: 5000 });
-    await previewBtn.click();
-    const dialog = page.getByTestId("artifact-preview-dialog");
-    await expect(dialog).toBeVisible();
-    await expect(dialog).toContainText("foo");
-    await dialog.getByRole("button", { name: "Close dialog" }).click();
-    await expect(dialog).not.toBeVisible();
   });
 
-  test("Task 6.12: saves workflow via PUT /workflows with layout sidecar and dirty indicator, surviving reload", async ({ page }) => {
+  test("Task 6.12: saves a temporary workflow via PUT /workflows with layout sidecar and dirty indicator, surviving reload without mutating examples", async ({ page }) => {
     const workspaceRoot = path.dirname(process.cwd());
-    const wfFile = path.join(workspaceRoot, "examples", "workflows", "foo_or_woo.yaml");
-    const sidecarFile = path.join(workspaceRoot, "examples", "workflows", ".foo_or_woo.layout.json");
-    const originalYaml = fs.readFileSync(wfFile, "utf-8");
-    const hadSidecar = fs.existsSync(sidecarFile);
-    const originalSidecar = hadSidecar ? fs.readFileSync(sidecarFile, "utf-8") : null;
+    const tmpName = `__e2e_save_test_${Date.now()}`;
+    const relPath = `examples/workflows/${tmpName}.yaml`;
+    const wfFile = path.join(workspaceRoot, "examples", "workflows", `${tmpName}.yaml`);
+    const sidecarFile = path.join(workspaceRoot, "examples", "workflows", `.${tmpName}.layout.json`);
+
+    const initialYaml = `version: 1
+name: ${tmpName}
+stages:
+  ask:
+    title: "1. Ask"
+    require_approval: false
+  print:
+    title: "2. Print"
+    require_approval: false
+nodes:
+  pick:
+    op: standard_io/interactive:AskChoice
+    stage: ask
+    inputs:
+      question: "foo or woo?"
+      options_csv: "foo, woo"
+  echo:
+    op: standard_io/demo:Echo
+    stage: print
+    inputs:
+      text: "$pick.choice"
+`;
+    fs.writeFileSync(wfFile, initialYaml, "utf-8");
 
     try {
-      await page.goto("/#/editor/examples/workflows/foo_or_woo.yaml");
+      await page.goto(`/#/editor/${relPath}`);
       await expect(page.getByTestId("graph-node-pick")).toBeVisible();
 
       // Initially clean (not dirty)
@@ -329,8 +340,8 @@ test.describe("PLynx UI Smoke Test", () => {
 
       // Edit a literal -> dirty indicator appears
       await page.getByTestId("graph-node-pick").click();
-      const promptInput = page.getByTestId("inspector-input-prompt");
-      await promptInput.fill("foo or woo saved?");
+      const questionInput = page.getByTestId("inspector-input-question");
+      await questionInput.fill("foo or woo saved?");
       await expect(page.getByTestId("dirty-indicator")).toBeVisible();
       await expect(page.getByTestId("dirty-indicator")).toContainText("Unsaved changes");
 
@@ -348,27 +359,29 @@ test.describe("PLynx UI Smoke Test", () => {
       await expect(page.getByTestId("dirty-indicator")).not.toBeVisible({ timeout: 5000 });
       await expect(page.getByTestId("save-status")).toHaveText("Saved");
 
-      // Layout sidecar exists on disk with schema: 1 and coordinates
+      // Layout sidecar exists on disk with schema: 1, node coordinates, and NO viewport
       expect(fs.existsSync(sidecarFile)).toBe(true);
       const parsedSidecar = JSON.parse(fs.readFileSync(sidecarFile, "utf-8")) as {
         schema: number;
         nodes: Record<string, { x: number; y: number }>;
+        viewport?: unknown;
       };
       expect(parsedSidecar.schema).toBe(1);
       expect(parsedSidecar.nodes.pick).toBeDefined();
       expect(parsedSidecar.nodes.echo).toBeDefined();
+      expect(parsedSidecar.viewport).toBeUndefined();
 
-      // Reload page -> edited prompt and clean state survive from YAML + sidecar
+      // Reload page -> edited question and clean state survive from YAML + sidecar
       await page.reload();
       await expect(page.getByTestId("graph-node-pick")).toBeVisible();
       await expect(page.getByTestId("dirty-indicator")).not.toBeVisible();
       await page.getByTestId("graph-node-pick").click();
-      await expect(page.getByTestId("inspector-input-prompt")).toHaveValue("foo or woo saved?");
+      await expect(page.getByTestId("inspector-input-question")).toHaveValue("foo or woo saved?");
     } finally {
-      fs.writeFileSync(wfFile, originalYaml, "utf-8");
-      if (hadSidecar && originalSidecar !== null) {
-        fs.writeFileSync(sidecarFile, originalSidecar, "utf-8");
-      } else if (fs.existsSync(sidecarFile)) {
+      if (fs.existsSync(wfFile)) {
+        fs.unlinkSync(wfFile);
+      }
+      if (fs.existsSync(sidecarFile)) {
         fs.unlinkSync(sidecarFile);
       }
     }

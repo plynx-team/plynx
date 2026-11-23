@@ -19,27 +19,16 @@ import type {
   OutputPortSpec,
   RunState,
   RunSummary,
+  Viewport,
   Workflow,
   WorkflowLayout,
 } from "../api/types.gen";
-import {
-  ControlButton,
-  ControlPanel,
-  ControlSeparator,
-} from "../components/ControlPanel";
+import { ControlButton } from "../components/ControlPanel";
 import { FeatherIcon } from "../components/FeatherIcon";
-import { LogsPanel } from "../components/LogsPanel";
-import { RunInputsForm } from "../components/RunInputsForm";
-import {
-  formatDuration,
-  formatTimestamp,
-  runStatusBadgeClasses,
-} from "../components/RunList";
+import { RunInspector } from "../components/RunInspector";
+import { runStatusBadgeClasses } from "../components/RunList";
 import { RunsHistoryPane } from "../components/RunsHistoryPane";
-import { ArtifactPreviewDialog } from "../previewers/ArtifactPreviewDialog";
 import { useRouter } from "../router/Router";
-import { CheckpointCard } from "../stepper/CheckpointCard";
-import { StageApprovalCard } from "../stepper/StageApprovalCard";
 import { StepperView } from "../stepper/StepperView";
 import { GraphView, type WireDropOnPaneEvent } from "./GraphView";
 import {
@@ -48,11 +37,8 @@ import {
   getOrderedStageIds,
   resolveNodePorts,
 } from "./layout";
-import { parseHandleId } from "./types";
-import {
-  QuickConnectPopover,
-  type QuickConnectDropData,
-} from "./QuickConnectPopover";
+import { inputHandleId, outputHandleId, parseHandleId } from "./types";
+import type { QuickConnectDropData } from "./QuickConnectPopover";
 import {
   addNodeToWorkflow,
   addStageToWorkflow,
@@ -64,7 +50,6 @@ import {
   ensureLayout,
   prepareWorkflowForSave,
   reorderStagesInWorkflow,
-  toSnakeCaseId,
   updateStageInWorkflow,
 } from "./mutations";
 import {
@@ -82,8 +67,10 @@ import {
 import { OpPalette } from "./OpPalette";
 import { computeWorkflowRunDiff } from "./runDiff";
 import { validateConnection } from "./validation";
+import { WorkflowEditorModals } from "./WorkflowEditorModals";
+import { WorkflowEditorToolbar } from "./WorkflowEditorToolbar";
 
-export type EditorViewMode = "graph" | "stepper" | "runs";
+export type EditorViewMode = "graph" | "stepper";
 
 const TERMINAL_RUN_STATUSES = new Set(["SUCCESS", "FAILED", "CANCELED"]);
 
@@ -93,6 +80,35 @@ function serializeSnapshot(
 ): string {
   const nodes = layout?.nodes ?? {};
   return JSON.stringify({ workflow, nodes });
+}
+
+function readLocalViewport(workflowPath: string): Viewport | null {
+  try {
+    const raw = window.localStorage.getItem(`plynx:viewport:${workflowPath}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<Viewport>;
+    if (
+      typeof parsed.x === "number" &&
+      typeof parsed.y === "number" &&
+      typeof parsed.zoom === "number"
+    ) {
+      return { x: parsed.x, y: parsed.y, zoom: parsed.zoom };
+    }
+  } catch {
+    // Ignore storage access errors
+  }
+  return null;
+}
+
+function writeLocalViewport(workflowPath: string, viewport: Viewport): void {
+  try {
+    window.localStorage.setItem(
+      `plynx:viewport:${workflowPath}`,
+      JSON.stringify(viewport),
+    );
+  } catch {
+    // Ignore storage access errors
+  }
 }
 
 function isEditableElement(target: EventTarget | null): boolean {
@@ -106,18 +122,23 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   const { navigate, queryParams } = useRouter();
   const getInitialViewMode = (): EditorViewMode => {
     const v = queryParams?.view;
-    if (v === "graph" || v === "runs" || v === "stepper") {
+    if (v === "graph" || v === "stepper") {
       return v;
     }
-    return "stepper";
+    return "graph";
   };
   const [viewMode, setViewMode] = useState<EditorViewMode>(getInitialViewMode);
   const [workflow, setWorkflow] = useState<Workflow | null>(null);
   const [layout, setLayout] = useState<WorkflowLayout | null>(null);
   const [history, setHistory] = useState<WorkflowHistory | null>(null);
+  const historyRef = useRef<WorkflowHistory | null>(null);
   const lastTextEditTimeRef = useRef<number>(0);
   const workflowRef = useRef<Workflow | null>(null);
   const layoutRef = useRef<WorkflowLayout | null>(null);
+
+  useEffect(() => {
+    historyRef.current = history;
+  }, [history]);
 
   useEffect(() => {
     workflowRef.current = workflow;
@@ -134,9 +155,12 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   const [fitViewTrigger, setFitViewTrigger] = useState<number>(0);
   const [ops, setOps] = useState<Array<OpEntry>>([]);
   const [workflowRuns, setWorkflowRuns] = useState<Array<RunSummary>>([]);
+  const [runsNextCursor, setRunsNextCursor] = useState<string | null>(null);
+  const [runsLoadingMore, setRunsLoadingMore] = useState<boolean>(false);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(
     () => queryParams?.run_id || null,
   );
+  const [runSubSeq, setRunSubSeq] = useState<number>(0);
   const isInspectingRun = selectedRunId !== null;
   const [selectedRun, setSelectedRun] = useState<RunState | null>(null);
   const [runsCollapsed, setRunsCollapsed] = useState<boolean>(false);
@@ -209,27 +233,44 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         for (const op of opEntries) {
           map[op.id] = op;
         }
-        const initialLayout = ensureLayout(doc.workflow, doc.layout, map);
+        const localViewport = readLocalViewport(workflowPath);
+        const initialLayout = ensureLayout(
+          doc.workflow,
+          localViewport
+            ? {
+                schema: 1,
+                nodes: doc.layout?.nodes ?? {},
+                viewport: localViewport,
+              }
+            : doc.layout,
+          map,
+        );
         const stageIds = getOrderedStageIds(doc.workflow);
+        const initialHistory = createHistory({
+          workflow: doc.workflow,
+          layout: initialLayout,
+        });
         workflowRef.current = doc.workflow;
         layoutRef.current = initialLayout;
+        historyRef.current = initialHistory;
         setWorkflow(doc.workflow);
         setLayout(initialLayout);
-        setHistory(createHistory({ workflow: doc.workflow, layout: initialLayout }));
+        setHistory(initialHistory);
         setSavedSnapshot(serializeSnapshot(doc.workflow, initialLayout));
-        setHasSavedViewport(Boolean(doc.layout?.viewport));
+        setHasSavedViewport(Boolean(localViewport ?? doc.layout?.viewport));
         setOps(opEntries);
         setTargetStage(stageIds[stageIds.length - 1] ?? DEFAULT_STAGE_ID);
         setLoading(false);
 
         if (typeof fetchRuns === "function") {
-          fetchRuns()
+          fetchRuns({ workflowPath, limit: 50 })
             .then((list) => {
               if (!active) return;
               const matches = list.runs.filter(
                 (r) => r.workflow_path === workflowPath,
               );
               setWorkflowRuns(matches);
+              setRunsNextCursor(list.next_cursor ?? null);
             })
             .catch(() => {});
         }
@@ -325,6 +366,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         } else {
           lastTextEditTimeRef.current = 0;
         }
+        historyRef.current = updated;
         return updated;
       });
     },
@@ -336,50 +378,50 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
 
   const handleUndo = useCallback(() => {
     if (isInspectingRun) return;
-    setHistory((curr) => {
-      if (!curr) return null;
-      const res = undoHistory(curr);
-      if (!res) return curr;
-      workflowRef.current = res.restored.workflow;
-      layoutRef.current = res.restored.layout;
-      setWorkflow(res.restored.workflow);
-      setLayout((prevLayout) => ({
-        ...res.restored.layout,
-        viewport: prevLayout?.viewport ?? res.restored.layout.viewport,
-      }));
-      setSelectedNodeId((prev) =>
-        prev && res.restored.workflow.nodes?.[prev] ? prev : undefined,
-      );
-      setSelectedStageId((prev) =>
-        prev && res.restored.workflow.stages?.[prev] ? prev : undefined,
-      );
-      setSelectedEdgeId(undefined);
-      return res.history;
-    });
+    const curr = historyRef.current;
+    if (!curr) return;
+    const res = undoHistory(curr);
+    if (!res) return;
+    historyRef.current = res.history;
+    workflowRef.current = res.restored.workflow;
+    layoutRef.current = res.restored.layout;
+    setHistory(res.history);
+    setWorkflow(res.restored.workflow);
+    setLayout((prevLayout) => ({
+      ...res.restored.layout,
+      viewport: prevLayout?.viewport ?? res.restored.layout.viewport,
+    }));
+    setSelectedNodeId((prev) =>
+      prev && res.restored.workflow.nodes?.[prev] ? prev : undefined,
+    );
+    setSelectedStageId((prev) =>
+      prev && res.restored.workflow.stages?.[prev] ? prev : undefined,
+    );
+    setSelectedEdgeId(undefined);
   }, [isInspectingRun]);
 
   const handleRedo = useCallback(() => {
     if (isInspectingRun) return;
-    setHistory((curr) => {
-      if (!curr) return null;
-      const res = redoHistory(curr);
-      if (!res) return curr;
-      workflowRef.current = res.restored.workflow;
-      layoutRef.current = res.restored.layout;
-      setWorkflow(res.restored.workflow);
-      setLayout((prevLayout) => ({
-        ...res.restored.layout,
-        viewport: prevLayout?.viewport ?? res.restored.layout.viewport,
-      }));
-      setSelectedNodeId((prev) =>
-        prev && res.restored.workflow.nodes?.[prev] ? prev : undefined,
-      );
-      setSelectedStageId((prev) =>
-        prev && res.restored.workflow.stages?.[prev] ? prev : undefined,
-      );
-      setSelectedEdgeId(undefined);
-      return res.history;
-    });
+    const curr = historyRef.current;
+    if (!curr) return;
+    const res = redoHistory(curr);
+    if (!res) return;
+    historyRef.current = res.history;
+    workflowRef.current = res.restored.workflow;
+    layoutRef.current = res.restored.layout;
+    setHistory(res.history);
+    setWorkflow(res.restored.workflow);
+    setLayout((prevLayout) => ({
+      ...res.restored.layout,
+      viewport: prevLayout?.viewport ?? res.restored.layout.viewport,
+    }));
+    setSelectedNodeId((prev) =>
+      prev && res.restored.workflow.nodes?.[prev] ? prev : undefined,
+    );
+    setSelectedStageId((prev) =>
+      prev && res.restored.workflow.stages?.[prev] ? prev : undefined,
+    );
+    setSelectedEdgeId(undefined);
   }, [isInspectingRun]);
 
   const handleAddStage = useCallback(
@@ -413,7 +455,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
 
   const handleDeleteStageRequest = useCallback(
     (stageId: string) => {
-      if (!workflow) return;
+      if (!workflow || isInspectingRun) return;
       const memberNodeIds = Object.keys(workflow.nodes ?? {}).filter(
         (nid) => (workflow.nodes?.[nid]?.stage || DEFAULT_STAGE_ID) === stageId,
       );
@@ -434,14 +476,22 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         setDeleteStageChoice("reassign");
       }
     },
-    [workflow, layout, opsMap, selectedStageId, targetStage, commitStateChange],
+    [isInspectingRun, workflow, layout, opsMap, selectedStageId, targetStage, commitStateChange],
   );
 
   const handleConfirmDeleteStage = useCallback(() => {
     if (!workflow || !stageToDelete) return;
+    const remainingStages = getOrderedStageIds(workflow).filter(
+      (sid) => sid !== stageToDelete,
+    );
+    if (remainingStages.length === 0) {
+      setStageToDelete(null);
+      return;
+    }
+    const reassignToStageId = remainingStages[0];
     const res = deleteStageFromWorkflow(workflow, layout, stageToDelete, {
       deleteNodes: deleteStageChoice === "delete",
-      reassignToStageId: DEFAULT_STAGE_ID,
+      reassignToStageId,
       opsMap,
     });
     commitStateChange(res.workflow, res.layout);
@@ -504,6 +554,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   );
 
   const handleDuplicateSelected = useCallback(() => {
+    if (isInspectingRun) return;
     const currentWf = workflowRef.current;
     const currentLayout = layoutRef.current;
     if (!currentWf || !selectedNodeId) return;
@@ -516,9 +567,10 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     if (!result) return;
     commitStateChange(result.workflow, result.layout);
     setSelectedNodeId(result.nodeId);
-  }, [selectedNodeId, opsMap, commitStateChange]);
+  }, [isInspectingRun, selectedNodeId, opsMap, commitStateChange]);
 
   const handleDeleteSelected = useCallback(() => {
+    if (isInspectingRun) return;
     const currentWf = workflowRef.current;
     const currentLayout = layoutRef.current;
     if (!currentWf || !selectedNodeId) return;
@@ -532,7 +584,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     setSelectedNodeId(undefined);
     setSelectedEdgeId(undefined);
     setWireError(null);
-  }, [selectedNodeId, opsMap, commitStateChange]);
+  }, [isInspectingRun, selectedNodeId, opsMap, commitStateChange]);
 
   const handleConnect = useCallback(
     (connection: Connection) => {
@@ -637,27 +689,40 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         opsMap,
       });
 
-      // Connect edge
-      let nextWf: Workflow;
-      if (data.handleType === "source") {
-        // Wire: origin (output) -> new node (input)
-        nextWf = connectEdgeInWorkflow(
-          added.workflow,
-          data.originNodeId,
-          data.originPortName,
-          added.nodeId,
-          portName,
-        );
-      } else {
-        // Wire: new node (output) -> origin (input)
-        nextWf = connectEdgeInWorkflow(
-          added.workflow,
-          added.nodeId,
-          portName,
-          data.originNodeId,
-          data.originPortName,
-        );
+      // Validate connection before committing
+      const proposedConnection: Connection =
+        data.handleType === "source"
+          ? {
+              source: data.originNodeId,
+              sourceHandle: outputHandleId(data.originPortName),
+              target: added.nodeId,
+              targetHandle: inputHandleId(portName),
+            }
+          : {
+              source: added.nodeId,
+              sourceHandle: outputHandleId(portName),
+              target: data.originNodeId,
+              targetHandle: inputHandleId(data.originPortName),
+            };
+      const validation = validateConnection(
+        proposedConnection,
+        added.workflow,
+        opsMap,
+      );
+      if (!validation.valid) {
+        setWireError(validation.reason);
+        return;
       }
+      setWireError(null);
+
+      // Connect edge
+      const nextWf = connectEdgeInWorkflow(
+        added.workflow,
+        validation.sourceNodeId,
+        validation.sourcePort,
+        validation.targetNodeId,
+        validation.targetPort,
+      );
 
       commitStateChange(nextWf, added.layout);
       setSelectedNodeId(added.nodeId);
@@ -666,6 +731,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   );
 
   const handleDeleteSelectedEdge = useCallback(() => {
+    if (isInspectingRun) return;
     const currentWf = workflowRef.current;
     if (!currentWf || !selectedEdgeId) return;
     const arrowIdx = selectedEdgeId.indexOf("->");
@@ -683,7 +749,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     commitStateChange(nextWf);
     setSelectedEdgeId(undefined);
     setWireError(null);
-  }, [selectedEdgeId, commitStateChange]);
+  }, [isInspectingRun, selectedEdgeId, commitStateChange]);
 
   const handleUpdateNodeSpec = useCallback(
     (
@@ -725,10 +791,10 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   const syncUrlParams = useCallback(
     (newView: EditorViewMode, newRunId: string | null) => {
       const params = new URLSearchParams();
-      if (newView === "graph" || newView === "runs") {
+      if (newView === "stepper") {
         params.set("view", newView);
-      } else if (newView === "stepper" && (newRunId || queryParams?.view === "stepper")) {
-        params.set("view", "stepper");
+      } else if (newView === "graph" && (newRunId || queryParams?.view === "graph")) {
+        params.set("view", "graph");
       }
       if (newRunId) {
         params.set("run_id", newRunId);
@@ -753,29 +819,50 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
       setSelectedRunId(nextRunId);
       setSelectedEdgeId(undefined);
       setSelectedStageId(undefined);
-      let nextView = viewMode;
       if (nextRunId !== null) {
         setOpsCollapsed(true);
         setRunsCollapsed(false);
-        if (viewMode === "runs") {
-          nextView = "stepper";
-          setViewMode("stepper");
-        }
       } else {
         setSelectedRun(null);
         setOpsCollapsed(false);
       }
-      syncUrlParams(nextView, nextRunId);
+      syncUrlParams(viewMode, nextRunId);
     },
     [viewMode, syncUrlParams],
   );
 
+  const handleLoadMoreRuns = useCallback(async () => {
+    if (!runsNextCursor || runsLoadingMore || typeof fetchRuns !== "function") {
+      return;
+    }
+    try {
+      setRunsLoadingMore(true);
+      const list = await fetchRuns({
+        workflowPath,
+        limit: 50,
+        cursor: runsNextCursor,
+      });
+      setWorkflowRuns((prev) => {
+        const seen = new Set(prev.map((r) => r.id));
+        const nextItems = list.runs.filter(
+          (r) => r.workflow_path === workflowPath && !seen.has(r.id),
+        );
+        return [...prev, ...nextItems];
+      });
+      setRunsNextCursor(list.next_cursor ?? null);
+    } catch {
+      // ignore
+    } finally {
+      setRunsLoadingMore(false);
+    }
+  }, [runsNextCursor, runsLoadingMore, workflowPath]);
+
   useEffect(() => {
     const v = queryParams?.view;
-    if (v === "graph" || v === "runs" || v === "stepper") {
+    if (v === "graph" || v === "stepper") {
       setViewMode(v);
     } else if (!v) {
-      setViewMode("stepper");
+      setViewMode("graph");
     }
 
     const targetRunId = queryParams?.run_id || null;
@@ -885,7 +972,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
       active = false;
       unsubscribe?.();
     };
-  }, [selectedRunId]);
+  }, [selectedRunId, runSubSeq]);
 
   const handlePreviewNodeOutput = useCallback(
     (nodeId: string, output: OutputPortSpec) => {
@@ -939,6 +1026,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   >({});
 
   const handleAutoLayout = useCallback(() => {
+    if (isInspectingRun) return;
     const currentWf = workflowRef.current;
     if (!currentWf) return;
     const positions = computeDagrePositions(
@@ -953,16 +1041,16 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     };
     commitStateChange(currentWf, nextLayout);
     setFitViewTrigger((c) => c + 1);
-  }, [opsMap, commitStateChange]);
+  }, [isInspectingRun, opsMap, commitStateChange]);
 
   const isDirty = useMemo(() => {
     if (savedSnapshot === null || !workflow) return false;
     return serializeSnapshot(workflow, layout) !== savedSnapshot;
   }, [savedSnapshot, workflow, layout]);
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(async (): Promise<boolean> => {
     const currentWf = workflowRef.current;
-    if (!currentWf || saving) return;
+    if (!currentWf || saving) return false;
     const currentLayout = layoutRef.current;
     const finalLayout = ensureLayout(currentWf, currentLayout, opsMap);
     try {
@@ -970,7 +1058,10 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
       setSaveError(null);
       const savedDoc = await saveWorkflow(workflowPath, {
         workflow: prepareWorkflowForSave(currentWf),
-        layout: finalLayout,
+        layout: {
+          schema: 1,
+          nodes: finalLayout.nodes,
+        },
       });
       const normalizedLayout = ensureLayout(
         savedDoc.workflow,
@@ -984,8 +1075,10 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
       setSavedSnapshot(serializeSnapshot(savedDoc.workflow, normalizedLayout));
       setHasSavedViewport(true);
       setLastSavedAt(Date.now());
+      return true;
     } catch (err: unknown) {
       setSaveError(err instanceof Error ? err.message : String(err));
+      return false;
     } finally {
       setSaving(false);
     }
@@ -1064,13 +1157,24 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         return;
       }
 
+      if (isEditableElement(event.target)) return;
+
+      const isModalOpen = Boolean(
+        showRunModal ||
+          showUnsavedRunConfirm ||
+          previewTarget ||
+          stageToDelete ||
+          showAddStageModal ||
+          (typeof document !== "undefined" && document.querySelector('[role="dialog"]')),
+      );
+      if (isModalOpen) return;
+
       if (event.key === "Escape" && selectedRunId !== null) {
         event.preventDefault();
         handleSelectRun(null);
         return;
       }
 
-      if (isEditableElement(event.target)) return;
       if (selectedRunId !== null) return;
 
       // Undo: Cmd+Z (Mac) or Ctrl+Z (Win/Linux) without Shift
@@ -1135,6 +1239,11 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     selectedStageId,
     stageIds,
     selectedRunId,
+    showRunModal,
+    showUnsavedRunConfirm,
+    previewTarget,
+    stageToDelete,
+    showAddStageModal,
     handleSelectRun,
     handleSave,
     handleUndo,
@@ -1169,6 +1278,17 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     }
   }, [selectedRunId]);
 
+  const handleStageApproved = useCallback(async () => {
+    if (!selectedRunId || typeof fetchRunState !== "function") return;
+    try {
+      const updated = await fetchRunState(selectedRunId);
+      setSelectedRun(updated);
+      setRunSubSeq((s) => s + 1);
+    } catch {
+      // ignore
+    }
+  }, [selectedRunId]);
+
   const handleResumeActiveRun = useCallback(async () => {
     if (!selectedRunId || typeof resumeRun !== "function") return;
     try {
@@ -1176,6 +1296,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
       await resumeRun(selectedRunId);
       const updated = await fetchRunState(selectedRunId);
       setSelectedRun(updated);
+      setRunSubSeq((s) => s + 1);
     } catch {
       // ignore
     } finally {
@@ -1183,205 +1304,49 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     }
   }, [selectedRunId]);
 
-  const syntheticRunState = useMemo<RunState>(() => {
-    if (activeRunState) return activeRunState;
-    const nodes: RunState["nodes"] = {};
-    for (const nodeId of Object.keys(workflow?.nodes ?? {})) {
-      nodes[nodeId] = {
-        node_id: nodeId,
-        status: "PENDING",
-        cache_hit: false,
-        attempt: 0,
-      };
-    }
-    return {
-      id: "draft",
-      workflow_path: workflowPath,
-      workflow_sha256: "",
-      status: "RUNNING",
-      run_inputs: {},
-      cancel_requested: false,
-      pinned: false,
-      created_at: Date.now() / 1000,
-      nodes,
-      checkpoints: [],
-      stage_gates: {},
-    };
-  }, [activeRunState, workflow, workflowPath]);
-
   return (
     <div
       data-testid="workflow-editor"
       className="flex flex-1 min-h-0 flex-col overflow-hidden"
     >
-      {/* Top Control Panel Toolbar (Legacy v1 Editor style) */}
-      <ControlPanel>
-        <div className="control-toggle" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={viewMode === "stepper"}
-            onClick={() => handleToggleViewMode("stepper")}
-            className={`control-button first ${
-              viewMode === "stepper" ? "selected" : ""
-            }`}
-          >
-            <FeatherIcon name="sliders" size={14} />
-            <span className="control-button-text">Stepper</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={viewMode === "graph"}
-            onClick={() => handleToggleViewMode("graph")}
-            className={`control-button ${
-              viewMode === "graph" ? "selected" : ""
-            }`}
-          >
-            <FeatherIcon name="grid" size={14} />
-            <span className="control-button-text">Graph</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={viewMode === "runs"}
-            onClick={() => handleToggleViewMode("runs")}
-            className={`control-button last ${
-              viewMode === "runs" ? "selected" : ""
-            }`}
-          >
-            <FeatherIcon name="list" size={14} />
-            <span className="control-button-text">
-              Runs ({workflowRuns.length})
-            </span>
-          </button>
-        </div>
-
-        <ControlSeparator />
-
-        <ControlButton
-          icon="save"
-          text={saving ? "Saving..." : "Save"}
-          data-testid="btn-save-workflow"
-          variant={isDirty ? "primary" : "default"}
-          disabled={!workflow || saving}
-          onClick={() => void handleSave()}
-        />
-
-        <ControlButton
-          icon="rotate-ccw"
-          text="Undo"
-          data-testid="btn-undo"
-          disabled={!canUndo}
-          onClick={handleUndo}
-          title="Undo (Ctrl+Z / ⌘Z)"
-        />
-
-        <ControlButton
-          icon="rotate-cw"
-          text="Redo"
-          data-testid="btn-redo"
-          disabled={!canRedo}
-          onClick={handleRedo}
-          title="Redo (Ctrl+Shift+Z / ⌘⇧Z)"
-        />
-
-        <ControlButton
-          icon="play"
-          text="Run Workflow"
-          data-testid="btn-run-workflow"
-          variant="primary"
-          onClick={() => {
-            if (isDirty) {
-              setShowUnsavedRunConfirm(true);
-            } else {
-              setRunWithoutSaving(false);
-              setShowRunModal(true);
-            }
-          }}
-        />
-
-        <ControlButton
-          icon="layout"
-          text="Auto Layout"
-          data-testid="btn-auto-layout"
-          disabled={!workflow}
-          onClick={handleAutoLayout}
-        />
-
-        <ControlButton
-          icon="layers"
-          text="+ Stage"
-          data-testid="btn-add-stage"
-          disabled={!workflow || isInspectingRun}
-          onClick={() => {
-            setShowAddStageModal(true);
-            setNewStageModalTitle("");
-            setNewStageModalRequireApproval(false);
-          }}
-        />
-
-        <ControlSeparator />
-
-        <ControlButton
-          icon="copy"
-          text="Duplicate Node"
-          data-testid="btn-duplicate-node"
-          disabled={!selectedNodeId}
-          onClick={handleDuplicateSelected}
-        />
-
-        <ControlButton
-          icon="trash-2"
-          text="Delete Node"
-          data-testid="btn-delete-node"
-          variant="danger"
-          disabled={!selectedNodeId}
-          onClick={handleDeleteSelected}
-        />
-
-        {selectedStageId && (
-          <ControlButton
-            icon="trash-2"
-            text="Delete Stage"
-            data-testid="btn-delete-stage-toolbar"
-            variant="danger"
-            disabled={stageIds.length <= 1 || isInspectingRun}
-            onClick={() => handleDeleteStageRequest(selectedStageId)}
-          />
-        )}
-
-        {selectedEdgeId && (
-          <ControlButton
-            icon="scissors"
-            text="Disconnect Edge"
-            data-testid="btn-delete-edge"
-            onClick={handleDeleteSelectedEdge}
-          />
-        )}
-
-        <div className="ml-auto flex items-center gap-2.5 pr-2 text-xs">
-          <span
-            className="font-mono truncate max-w-[260px]"
-            style={{ color: "var(--text-secondary)" }}
-            title={workflowPath}
-          >
-            {workflow?.name || workflowPath}
-          </span>
-          {isDirty ? (
-            <span
-              data-testid="dirty-indicator"
-              className="status-badge WAITING"
-            >
-              Unsaved changes
-            </span>
-          ) : lastSavedAt ? (
-            <span data-testid="save-status" className="status-badge READY">
-              Saved
-            </span>
-          ) : null}
-        </div>
-      </ControlPanel>
+      {/* Top Control Panel Toolbar */}
+      <WorkflowEditorToolbar
+        viewMode={viewMode}
+        onToggleViewMode={handleToggleViewMode}
+        workflow={workflow}
+        workflowPath={workflowPath}
+        saving={saving}
+        isDirty={isDirty}
+        isInspectingRun={isInspectingRun}
+        lastSavedAt={lastSavedAt}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        selectedNodeId={selectedNodeId}
+        selectedStageId={selectedStageId}
+        selectedEdgeId={selectedEdgeId}
+        stageCount={stageIds.length}
+        onSave={() => void handleSave()}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        onRunClick={() => {
+          if (isDirty) {
+            setShowUnsavedRunConfirm(true);
+          } else {
+            setRunWithoutSaving(false);
+            setShowRunModal(true);
+          }
+        }}
+        onAutoLayout={handleAutoLayout}
+        onOpenAddStage={() => {
+          setShowAddStageModal(true);
+          setNewStageModalTitle("");
+          setNewStageModalRequireApproval(false);
+        }}
+        onDuplicateNode={handleDuplicateSelected}
+        onDeleteNode={handleDeleteSelected}
+        onDeleteStage={handleDeleteStageRequest}
+        onDeleteEdge={handleDeleteSelectedEdge}
+      />
 
       {error && (
         <div
@@ -1469,6 +1434,9 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
               hasUnsavedChanges={isDirty}
               fullHeight={viewMode !== "graph" || isInspectingRun}
               pageSize={viewMode !== "graph" || isInspectingRun ? 12 : 6}
+              hasMore={Boolean(runsNextCursor)}
+              loadingMore={runsLoadingMore}
+              onLoadMore={() => void handleLoadMoreRuns()}
             />
             {viewMode === "graph" && !isInspectingRun && (
               <OpPalette
@@ -1576,179 +1544,101 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
               </div>
             )}
 
-            {/* Open Checkpoints & Stage Approvals for the Selected Run (Graph view overlay only; Stepper view renders them inside its stage cards) */}
-            {isInspectingRun && selectedRun && viewMode === "graph" && (
+            {isInspectingRun && selectedRun?.error && (
               <div
-                className="absolute top-11 left-3 right-3 z-20 space-y-2 pointer-events-none empty:hidden max-h-[40vh] overflow-y-auto"
+                data-testid="run-error-banner"
+                className="px-3 py-1.5 text-xs flex items-center gap-1.5 shrink-0"
+                style={{
+                  borderBottom: "1px solid var(--color-error)",
+                  backgroundColor: "rgba(244, 67, 54, 0.15)",
+                  color: "#ff8a80",
+                }}
               >
-                {Object.values(selectedRun.stage_gates)
-                  .filter((g) => g.status === "WAITING")
-                  .map((gate) => (
-                    <div key={gate.stage_id} className="pointer-events-auto">
-                      <StageApprovalCard
-                        runId={selectedRun.id}
-                        stageId={gate.stage_id}
-                        gateState={gate}
-                        stageTitle={
-                          workflow.stages?.[gate.stage_id]?.title ||
-                          gate.stage_id
-                        }
-                      />
-                    </div>
-                  ))}
-                {selectedRun.checkpoints
-                  .filter((cp) => cp.answer === null || cp.answer === undefined)
-                  .map((cp) => (
-                    <div
-                      key={`${cp.node_id}.${cp.checkpoint_id}`}
-                      className="pointer-events-auto"
-                    >
-                      <CheckpointCard
-                        runId={selectedRun.id}
-                        checkpoint={cp}
-                      />
-                    </div>
-                  ))}
+                <FeatherIcon name="alert-triangle" size={12} />
+                <span className="font-semibold">Error:</span> {selectedRun.error}
               </div>
             )}
 
-            <div
-              className={`flex-1 min-h-0 ${
-                viewMode === "graph" ? "overflow-hidden h-full" : "overflow-y-auto"
-              }`}
-            >
-              {viewMode === "graph" ? (
-                <GraphView
-                  workflow={workflow}
-                  layout={layout}
-                  runState={activeRunState}
-                  runDiff={runDiff}
-                  ops={ops}
-                  selectedNodeId={selectedNodeId}
-                  onSelectNode={handleSelectNode}
-                  selectedEdgeId={selectedEdgeId}
-                  onSelectEdge={setSelectedEdgeId}
-                  selectedStageId={selectedStageId}
-                  onSelectStage={handleSelectStage}
-                  onDeleteStage={handleDeleteStageRequest}
-                  readOnly={isInspectingRun}
-                  onConnect={handleConnect}
-                  onNodeDragStop={handleNodeDragStop}
-                  onStageDragStop={handleStageDragStop}
-                  onDropOp={handleDropOp}
-                  onWireDropOnPane={handleWireDropOnPane}
-                  onLiteralChange={handleInlineLiteralChange}
-                  onPreviewOutput={handlePreviewNodeOutput}
-                  onMeasuredDimensionsChange={(dims) => {
-                    measuredDimsRef.current = dims;
-                  }}
-                  hasSavedViewport={hasSavedViewport}
-                  fitViewTrigger={fitViewTrigger}
-                  heightClassName="h-full"
-                />
-              ) : viewMode === "stepper" ? (
-                <StepperView
-                  runState={syntheticRunState}
-                  workflowDoc={{ workflow, layout }}
-                  runDiff={runDiff}
-                  selectedNodeId={selectedNodeId}
-                  onSelectNode={handleSelectNode}
-                />
-              ) : (
-                <div className="list h-full">
-                  <div
-                    className="list-header"
-                    style={{
-                      gridTemplateColumns:
-                        "minmax(200px, 1.5fr) 150px 120px 180px 110px",
-                    }}
-                  >
-                    <div className="list-field">Run ID</div>
-                    <div className="list-field">Status</div>
-                    <div className="list-field">Duration</div>
-                    <div className="list-field">Created</div>
-                    <div className="list-field">View</div>
-                  </div>
-                  {workflowRuns.length === 0 ? (
-                    <div
-                      className="p-8 text-center text-xs"
-                      style={{ color: "var(--text-tertiary)" }}
-                    >
-                      No runs recorded for this workflow yet. Click{" "}
-                      <strong>Run Workflow</strong> to launch one.
-                    </div>
-                  ) : (
-                    workflowRuns.map((run) => (
-                      <div
-                        key={run.id}
-                        onClick={() => handleSelectRun(run.id)}
-                        className={`list-item ${
-                          selectedRunId === run.id ? "selected" : ""
-                        }`}
-                        style={{
-                          gridTemplateColumns:
-                            "minmax(200px, 1.5fr) 150px 120px 180px 110px",
-                        }}
-                      >
-                        <div
-                          className="list-field font-mono text-xs font-semibold"
-                          style={{ color: "var(--color-primary)" }}
-                        >
-                          {run.id}
-                        </div>
-                        <div className="list-field">
-                          <span className={runStatusBadgeClasses(run.status)}>
-                            {run.status}
-                          </span>
-                        </div>
-                        <div
-                          className="list-field text-xs"
-                          style={{ color: "var(--text-secondary)" }}
-                        >
-                          {formatDuration(run.started_at, run.finished_at)}
-                        </div>
-                        <div
-                          className="list-field text-xs"
-                          style={{ color: "var(--text-secondary)" }}
-                        >
-                          {formatTimestamp(run.created_at)}
-                        </div>
-                        <div className="list-field">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/runs/${run.id}`);
-                            }}
-                            className="control-button !h-6 !min-h-6 !px-2 !text-xs"
-                          >
-                            <FeatherIcon name="external-link" size={11} />
-                            <span>Snapshot</span>
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Bottom Docked Logs Drawer if a node is selected while inspecting a run */}
-            {selectedNodeId && activeRunState && (
-              <LogsPanel
-                runId={activeRunState.id}
-                nodeId={selectedNodeId}
-                onClose={() => setSelectedNodeId(undefined)}
+            {isInspectingRun && selectedRun ? (
+              <RunInspector
+                runState={selectedRun}
+                viewMode={viewMode}
+                ops={ops}
+                opsMap={opsMap}
+                editorWorkflow={workflow}
+                fallbackLayout={layout}
+                runDiff={runDiff}
+                selectedNodeId={selectedNodeId}
+                onSelectNode={handleSelectNode}
+                onPreviewArtifact={setPreviewTarget}
+                onApproved={handleStageApproved}
+                showNodeInspector={false}
               />
+            ) : (
+              <div
+                className={`flex-1 min-h-0 ${
+                  viewMode === "graph"
+                    ? "overflow-hidden h-full"
+                    : "overflow-y-auto"
+                }`}
+              >
+                {viewMode === "graph" ? (
+                  <GraphView
+                    workflow={workflow}
+                    layout={layout}
+                    runState={null}
+                    runDiff={null}
+                    ops={ops}
+                    selectedNodeId={selectedNodeId}
+                    onSelectNode={handleSelectNode}
+                    selectedEdgeId={selectedEdgeId}
+                    onSelectEdge={setSelectedEdgeId}
+                    selectedStageId={selectedStageId}
+                    onSelectStage={handleSelectStage}
+                    onDeleteStage={handleDeleteStageRequest}
+                    readOnly={false}
+                    onConnect={handleConnect}
+                    onNodeDragStop={handleNodeDragStop}
+                    onStageDragStop={handleStageDragStop}
+                    onDropOp={handleDropOp}
+                    onWireDropOnPane={handleWireDropOnPane}
+                    onViewportChange={(vp) => {
+                      writeLocalViewport(workflowPath, vp);
+                    }}
+                    onLiteralChange={handleInlineLiteralChange}
+                    onPreviewOutput={handlePreviewNodeOutput}
+                    onMeasuredDimensionsChange={(dims) => {
+                      measuredDimsRef.current = dims;
+                    }}
+                    hasSavedViewport={hasSavedViewport}
+                    fitViewTrigger={fitViewTrigger}
+                    heightClassName="h-full"
+                  />
+                ) : (
+                  <StepperView
+                    runState={null}
+                    workflowDoc={{ workflow, layout }}
+                    runDiff={null}
+                    selectedNodeId={selectedNodeId}
+                    onSelectNode={handleSelectNode}
+                    opsMap={opsMap}
+                    onApproved={handleStageApproved}
+                  />
+                )}
+              </div>
             )}
           </div>
 
           {/* Right Docked PropertiesBar */}
           <NodeInspector
             nodeId={selectedNodeId}
-            selectedStageId={selectedStageId}
+            selectedStageId={isInspectingRun ? undefined : selectedStageId}
             onSelectStage={handleSelectStage}
-            workflow={workflow}
+            workflow={
+              isInspectingRun && selectedRun?.workflow_snapshot
+                ? selectedRun.workflow_snapshot
+                : workflow
+            }
             opsMap={opsMap}
             runState={activeRunState}
             nodeDiff={
@@ -1767,367 +1657,82 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         </div>
       ) : null}
 
-      {showUnsavedRunConfirm && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          data-testid="unsaved-run-confirm-dialog"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
-        >
-          <div
-            className="w-full max-w-md rounded border border-[#404040] bg-[#242424] shadow-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-[#3c3c3c] px-4 py-3">
-              <div className="flex items-center gap-2">
-                <FeatherIcon
-                  name="alert-triangle"
-                  size={16}
-                  style={{ color: "var(--color-warning, #ffa726)" }}
-                />
-                <h3 className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>
-                  Unsaved Changes
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowUnsavedRunConfirm(false)}
-                className="p-1 rounded hover:bg-[#3c3c3c]"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                <FeatherIcon name="x" size={14} />
-              </button>
-            </div>
-
-            <div className="p-4 space-y-3 text-xs" style={{ color: "var(--text-secondary)" }}>
-              <p>
-                You have unsaved changes in this workflow. How would you like to launch the run?
-              </p>
-              <div className="rounded p-2.5 bg-[#1a1a1a] border border-[#333] space-y-1">
-                <div>
-                  <strong className="text-[var(--text-primary)]">Save & Run:</strong> Saves your current workflow to disk and executes it.
-                </div>
-                <div>
-                  <strong className="text-[var(--text-primary)]">Run Without Saving:</strong> Keeps the file on disk untouched, but executes your in-memory editor workflow.
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 border-t border-[#3c3c3c] bg-[#1e1e1e] px-4 py-2.5">
-              <button
-                type="button"
-                data-testid="btn-cancel-unsaved-run"
-                onClick={() => setShowUnsavedRunConfirm(false)}
-                className="control-button !h-7 !px-3 text-xs"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                data-testid="btn-run-without-saving"
-                onClick={() => {
-                  setShowUnsavedRunConfirm(false);
-                  setRunWithoutSaving(true);
-                  setShowRunModal(true);
-                }}
-                className="control-button !h-7 !px-3 text-xs"
-              >
-                Run Without Saving
-              </button>
-              <button
-                type="button"
-                data-testid="btn-save-and-run"
-                onClick={async () => {
-                  setShowUnsavedRunConfirm(false);
-                  await handleSave();
-                  setRunWithoutSaving(false);
-                  setShowRunModal(true);
-                }}
-                className="control-button primary !h-7 !px-3 text-xs font-semibold"
-              >
-                Save & Run
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showRunModal && (
-        <RunInputsForm
-          workflowPath={workflowPath}
-          asModal={true}
-          inMemoryWorkflow={runWithoutSaving ? workflow : undefined}
-          inMemoryLayout={runWithoutSaving ? layout : undefined}
-          opsMap={opsMap}
-          onClose={() => setShowRunModal(false)}
-          onRunStarted={(newRunId) => {
-            setShowRunModal(false);
-            const now = Date.now() / 1000;
-            setWorkflowRuns((prev) => [
-              {
-                id: newRunId,
-                workflow_path: workflowPath,
-                workflow_sha256: "",
-                status: "RUNNING",
-                cancel_requested: false,
-                pinned: false,
-                created_at: now,
-                started_at: now,
-              },
-              ...prev.filter((r) => r.id !== newRunId),
-            ]);
-            handleSelectRun(newRunId);
-            if (typeof fetchRuns === "function") {
-              fetchRuns()
-                .then((list) => {
-                  const matches = list.runs.filter(
-                    (r) => r.workflow_path === workflowPath,
-                  );
-                  if (matches.length > 0) {
-                    setWorkflowRuns(matches);
-                  }
-                })
-                .catch(() => {});
-            }
-          }}
-        />
-      )}
-
-      {previewTarget && (
-        <ArtifactPreviewDialog
-          title={previewTarget.title}
-          url={previewTarget.url}
-          filename={previewTarget.filename}
-          mediaType={previewTarget.mediaType}
-          onClose={() => setPreviewTarget(null)}
-        />
-      )}
-
-      {/* Add Stage Modal */}
-      {showAddStageModal && (
-        <div
-          data-testid="modal-add-stage"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          onClick={() => setShowAddStageModal(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-lg p-5 shadow-xl space-y-4"
-            style={{
-              backgroundColor: "var(--bg-panel)",
-              border: "1px solid var(--border-default)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <FeatherIcon
-                name="layers"
-                size={16}
-                style={{ color: "var(--color-primary)" }}
-              />
-              <span>Add Stage</span>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="block text-[var(--text-secondary)] mb-1">
-                  Stage Title
-                </label>
-                <input
-                  type="text"
-                  data-testid="modal-input-stage-title"
-                  placeholder="e.g. Processing"
-                  value={newStageModalTitle}
-                  onChange={(e) => setNewStageModalTitle(e.target.value)}
-                  className="w-full px-2 py-1.5 text-xs rounded"
-                  autoFocus
-                />
-              </div>
-
-              <label className="flex items-start gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  data-testid="modal-checkbox-stage-gate"
-                  checked={newStageModalRequireApproval}
-                  onChange={(e) =>
-                    setNewStageModalRequireApproval(e.target.checked)
-                  }
-                  className="mt-0.5 rounded"
-                />
-                <div>
-                  <span
-                    className="font-semibold block"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    Require approval (Stage Gate)
-                  </span>
-                  <span
-                    className="text-[11px] block"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    Pauses run execution before downstream stages begin.
-                  </span>
-                </div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#3c3c3c]">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAddStageModal(false);
-                  setNewStageModalTitle("");
-                  setNewStageModalRequireApproval(false);
-                }}
-                className="control-button"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                data-testid="modal-btn-create-stage"
-                disabled={!newStageModalTitle.trim()}
-                onClick={() => {
-                  const title = newStageModalTitle.trim();
-                  const slug = toSnakeCaseId(title);
-                  handleAddStage(slug, title, {
-                    requireApproval: newStageModalRequireApproval,
-                  });
-                  setShowAddStageModal(false);
-                  setNewStageModalTitle("");
-                  setNewStageModalRequireApproval(false);
-                }}
-                className="control-button primary"
-              >
-                Create Stage
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Stage with Operations Confirmation Modal */}
-      {stageToDelete && (
-        <div
-          data-testid="modal-delete-stage"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-          onClick={() => setStageToDelete(null)}
-        >
-          <div
-            className="w-full max-w-md rounded-lg p-5 shadow-xl space-y-4"
-            style={{
-              backgroundColor: "var(--bg-panel)",
-              border: "1px solid var(--border-default)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <FeatherIcon
-                name="alert-triangle"
-                size={16}
-                style={{ color: "var(--color-warning)" }}
-              />
-              <span>
-                Delete Stage:{" "}
-                {workflow?.stages?.[stageToDelete]?.title || stageToDelete}
-              </span>
-            </div>
-
-            <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
-              This stage contains{" "}
-              <strong className="text-[var(--text-primary)]">
-                {
-                  Object.values(workflow?.nodes ?? {}).filter(
-                    (n) => (n.stage || DEFAULT_STAGE_ID) === stageToDelete,
-                  ).length
-                }{" "}
-                operations
-              </strong>
-              . Choose what to do with them:
-            </p>
-
-            <div className="space-y-2 text-xs">
-              <label className="flex items-start gap-2 p-2.5 rounded bg-[#242424] border border-[#3c3c3c] cursor-pointer">
-                <input
-                  type="radio"
-                  name="delete-stage-choice"
-                  value="reassign"
-                  checked={deleteStageChoice === "reassign"}
-                  onChange={() => setDeleteStageChoice("reassign")}
-                  className="mt-0.5"
-                />
-                <div>
-                  <span
-                    className="font-semibold block"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    Keep operations and move to Workflow (main - Default)
-                  </span>
-                  <span
-                    className="text-[11px] block"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    Operations and their connections will be retained in the
-                    default stage.
-                  </span>
-                </div>
-              </label>
-
-              <label className="flex items-start gap-2 p-2.5 rounded bg-[#242424] border border-[#3c3c3c] cursor-pointer">
-                <input
-                  type="radio"
-                  name="delete-stage-choice"
-                  value="delete"
-                  checked={deleteStageChoice === "delete"}
-                  onChange={() => setDeleteStageChoice("delete")}
-                  className="mt-0.5"
-                />
-                <div>
-                  <span
-                    className="font-semibold block"
-                    style={{ color: "var(--color-error)" }}
-                  >
-                    Delete operations along with the stage
-                  </span>
-                  <span
-                    className="text-[11px] block"
-                    style={{ color: "var(--text-secondary)" }}
-                  >
-                    All operations in this stage and their incoming/outgoing
-                    wires will be deleted.
-                  </span>
-                </div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#3c3c3c]">
-              <button
-                type="button"
-                onClick={() => setStageToDelete(null)}
-                className="control-button"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                data-testid="btn-confirm-delete-stage"
-                onClick={handleConfirmDeleteStage}
-                className="control-button danger"
-              >
-                Confirm Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {quickConnectData && (
-        <QuickConnectPopover
-          data={quickConnectData}
-          ops={ops}
-          onSelect={handleQuickConnectSelect}
-          onClose={() => setQuickConnectData(null)}
-        />
-      )}
+      <WorkflowEditorModals
+        workflowPath={workflowPath}
+        workflow={workflow}
+        layout={layout}
+        ops={ops}
+        opsMap={opsMap}
+        showUnsavedRunConfirm={showUnsavedRunConfirm}
+        onCloseUnsavedRunConfirm={() => setShowUnsavedRunConfirm(false)}
+        onRunWithoutSaving={() => {
+          setShowUnsavedRunConfirm(false);
+          setRunWithoutSaving(true);
+          setShowRunModal(true);
+        }}
+        onSaveAndRun={async () => {
+          const saved = await handleSave();
+          if (!saved) return;
+          setShowUnsavedRunConfirm(false);
+          setRunWithoutSaving(false);
+          setShowRunModal(true);
+        }}
+        showRunModal={showRunModal}
+        runWithoutSaving={runWithoutSaving}
+        onCloseRunModal={() => setShowRunModal(false)}
+        onRunStarted={(newRunId) => {
+          setShowRunModal(false);
+          const now = Date.now() / 1000;
+          setWorkflowRuns((prev) => [
+            {
+              id: newRunId,
+              workflow_path: workflowPath,
+              workflow_sha256: "",
+              status: "RUNNING",
+              cancel_requested: false,
+              pinned: false,
+              created_at: now,
+              started_at: now,
+            },
+            ...prev.filter((r) => r.id !== newRunId),
+          ]);
+          handleSelectRun(newRunId);
+          if (typeof fetchRuns === "function") {
+            fetchRuns({ workflowPath, limit: 50 })
+              .then((list) => {
+                const matches = list.runs.filter(
+                  (r) => r.workflow_path === workflowPath,
+                );
+                if (matches.length > 0) {
+                  setWorkflowRuns(matches);
+                  setRunsNextCursor(list.next_cursor ?? null);
+                }
+              })
+              .catch(() => {});
+          }
+        }}
+        previewTarget={previewTarget}
+        onClosePreview={() => setPreviewTarget(null)}
+        showAddStageModal={showAddStageModal}
+        newStageModalTitle={newStageModalTitle}
+        newStageModalRequireApproval={newStageModalRequireApproval}
+        onChangeNewStageTitle={setNewStageModalTitle}
+        onChangeNewStageRequireApproval={setNewStageModalRequireApproval}
+        onCloseAddStageModal={() => {
+          setShowAddStageModal(false);
+          setNewStageModalTitle("");
+          setNewStageModalRequireApproval(false);
+        }}
+        onCreateStage={handleAddStage}
+        stageToDelete={stageToDelete}
+        deleteStageChoice={deleteStageChoice}
+        onChangeDeleteStageChoice={setDeleteStageChoice}
+        onCloseDeleteStage={() => setStageToDelete(null)}
+        onConfirmDeleteStage={handleConfirmDeleteStage}
+        quickConnectData={quickConnectData}
+        onQuickConnectSelect={handleQuickConnectSelect}
+        onCloseQuickConnect={() => setQuickConnectData(null)}
+      />
     </div>
   );
 }

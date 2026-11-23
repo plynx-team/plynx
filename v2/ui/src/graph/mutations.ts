@@ -169,7 +169,7 @@ export function addNodeToWorkflow(
       ...baseLayout.nodes,
       [nodeId]: pos,
     },
-    viewport: { ...baseLayout.viewport },
+    viewport: baseLayout.viewport ? { ...baseLayout.viewport } : undefined,
   };
 
   return { workflow: nextWorkflow, layout: nextLayout, nodeId };
@@ -230,7 +230,7 @@ export function duplicateNodeInWorkflow(
         y: Math.round(sourcePos.y + 140),
       },
     },
-    viewport: { ...baseLayout.viewport },
+    viewport: baseLayout.viewport ? { ...baseLayout.viewport } : undefined,
   };
 
   return { workflow: nextWorkflow, layout: nextLayout, nodeId };
@@ -280,7 +280,7 @@ export function deleteNodeFromWorkflow(
     layout: {
       schema: 1,
       nodes: nextLayoutNodes,
-      viewport: { ...baseLayout.viewport },
+      viewport: baseLayout.viewport ? { ...baseLayout.viewport } : undefined,
     },
   };
 }

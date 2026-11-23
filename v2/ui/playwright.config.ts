@@ -11,7 +11,7 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: "cd .. && /Users/khaxis/.local/bin/uv run plynx ui --no-browser --port 8088",
+    command: `cd .. && ${process.env.UV_BIN || "uv"} run plynx ui --no-browser --port 8088`,
     url: "http://127.0.0.1:8088/health",
     reuseExistingServer: !process.env.CI,
     timeout: 30000,

@@ -13,6 +13,8 @@ vi.mock("../api/client", () => ({
   fetchRunState: vi.fn(),
   saveWorkflow: vi.fn(),
   createRun: vi.fn().mockResolvedValue({ run_id: "test-run-id" }),
+  resumeRun: vi.fn().mockResolvedValue({ run_id: "test-run-id" }),
+  subscribeRunEvents: vi.fn().mockReturnValue(() => {}),
 }));
 
 import * as client from "../api/client";
@@ -459,7 +461,7 @@ describe("WorkflowEditor palette & node operations (Task 6.9)", () => {
       });
     });
 
-    it("defaults to Stepper view mode when visiting without view param and updates URL on tab toggle", async () => {
+    it("defaults to Graph view mode when visiting without view param and updates URL on tab toggle", async () => {
       window.location.hash = "#/editor/examples/workflows/sample.yaml";
       vi.mocked(client.fetchWorkflow).mockResolvedValue(MOCK_DOC);
       vi.mocked(client.fetchOps).mockResolvedValue(MOCK_OPS);
@@ -470,21 +472,20 @@ describe("WorkflowEditor palette & node operations (Task 6.9)", () => {
         </RouterProvider>,
       );
 
-      // In default Stepper view, Stepper tab is selected
+      // In default Graph view, Graph tab is selected and graph node is rendered
       await waitFor(() => {
-        const stepperTab = screen.getByRole("tab", { name: "Stepper" });
-        expect(stepperTab).toHaveAttribute("aria-selected", "true");
-      });
-      // Graph node is not in the document while in Stepper view
-      expect(screen.queryByTestId("graph-node-echo")).not.toBeInTheDocument();
-
-      // Clicking Graph tab switches to Graph view and updates URL hash
-      const graphTab = screen.getByRole("tab", { name: "Graph" });
-      fireEvent.click(graphTab);
-
-      await waitFor(() => {
+        const graphTab = screen.getByRole("tab", { name: "Graph" });
+        expect(graphTab).toHaveAttribute("aria-selected", "true");
         expect(screen.getByTestId("graph-node-echo")).toBeInTheDocument();
-        expect(window.location.hash).toBe("#/editor/examples/workflows/sample.yaml?view=graph");
+      });
+
+      // Clicking Stepper tab switches to Stepper view and updates URL hash
+      const stepperTab = screen.getByRole("tab", { name: "Stepper" });
+      fireEvent.click(stepperTab);
+
+      await waitFor(() => {
+        expect(screen.queryByTestId("graph-node-echo")).not.toBeInTheDocument();
+        expect(window.location.hash).toBe("#/editor/examples/workflows/sample.yaml?view=stepper");
       });
     });
 
@@ -527,6 +528,123 @@ describe("WorkflowEditor palette & node operations (Task 6.9)", () => {
           "data-node-status",
           "SUCCESS",
         );
+      });
+    });
+
+    it("disables mutating toolbar buttons and renders error banner in Run Inspection mode", async () => {
+      window.location.hash = "#/editor/examples/workflows/sample.yaml?view=graph&run_id=20261120-120000-failed";
+      vi.mocked(client.fetchWorkflow).mockResolvedValue(MOCK_DOC);
+      vi.mocked(client.fetchOps).mockResolvedValue(MOCK_OPS);
+
+      const failedRun = {
+        id: "20261120-120000-failed",
+        workflow_path: "examples/workflows/sample.yaml",
+        workflow_sha256: "sha1",
+        status: "FAILED" as const,
+        error: "Fatal execution crash in echo node",
+        run_inputs: {},
+        cancel_requested: false,
+        pinned: false,
+        created_at: 1700000000,
+        nodes: {
+          echo: {
+            node_id: "echo",
+            status: "FAILED" as const,
+            cache_hit: false,
+            attempt: 1,
+            error: "Process exited with 1",
+          },
+        },
+        checkpoints: [
+          {
+            node_id: "echo",
+            checkpoint_id: "cp1",
+            question: "Is this open?",
+            allow_freeform: false,
+            created_at: 1700000000,
+            answered_at: null,
+          },
+          {
+            node_id: "echo",
+            checkpoint_id: "cp2",
+            question: "Already answered?",
+            allow_freeform: false,
+            answer: "yes",
+            created_at: 1700000000,
+            answered_at: 1700000002,
+          },
+        ],
+        stage_gates: {},
+      };
+
+      vi.mocked(client.fetchRunState)
+        .mockResolvedValueOnce(failedRun)
+        .mockResolvedValue({ ...failedRun, status: "RUNNING" as const });
+
+      render(
+        <RouterProvider>
+          <WorkflowEditor workflowPath="examples/workflows/sample.yaml" />
+        </RouterProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("run-mode-hud")).toBeInTheDocument();
+      });
+
+      // Run-level error banner
+      const errBanner = screen.getByTestId("run-error-banner");
+      expect(errBanner).toHaveTextContent("Fatal execution crash in echo node");
+
+      // Mutating buttons are disabled in run inspection mode
+      expect(screen.getByTestId("btn-save-workflow")).toBeDisabled();
+      expect(screen.getByTestId("btn-auto-layout")).toBeDisabled();
+
+      // Open checkpoint cp1 is shown, answered checkpoint cp2 is not shown
+      expect(screen.getByText("Is this open?")).toBeInTheDocument();
+      expect(screen.queryByText("Already answered?")).not.toBeInTheDocument();
+
+      // Resume run triggers re-subscription
+      const resumeBtn = screen.getByRole("button", { name: "Resume Run" });
+      fireEvent.click(resumeBtn);
+
+      await waitFor(() => {
+        expect(client.resumeRun).toHaveBeenCalledWith("20261120-120000-failed");
+        expect(client.subscribeRunEvents).toHaveBeenCalled();
+      });
+    });
+
+    it("scopes Escape key handler so it does not exit run inspection when modal is open", async () => {
+      window.location.hash = "#/editor/examples/workflows/sample.yaml?view=graph&run_id=20261120-120000-run1";
+      vi.mocked(client.fetchWorkflow).mockResolvedValue(MOCK_DOC);
+      vi.mocked(client.fetchOps).mockResolvedValue(MOCK_OPS);
+      vi.mocked(client.fetchRunState).mockResolvedValue({
+        id: "20261120-120000-run1",
+        workflow_path: "examples/workflows/sample.yaml",
+        workflow_sha256: "sha1",
+        status: "RUNNING",
+        run_inputs: {},
+        cancel_requested: false,
+        pinned: false,
+        created_at: 1700000000,
+        nodes: {},
+        checkpoints: [],
+        stage_gates: {},
+      });
+
+      render(
+        <RouterProvider>
+          <WorkflowEditor workflowPath="examples/workflows/sample.yaml" />
+        </RouterProvider>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("run-mode-hud")).toBeInTheDocument();
+      });
+
+      // Press Escape without modal -> exits run inspection
+      fireEvent.keyDown(window, { key: "Escape" });
+      await waitFor(() => {
+        expect(screen.queryByTestId("run-mode-hud")).not.toBeInTheDocument();
       });
     });
   });

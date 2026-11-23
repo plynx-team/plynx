@@ -156,7 +156,7 @@ class WorkflowLayout(BaseModel):
 
     schema_version: Literal[1] = Field(default=1, alias="schema")
     nodes: dict[str, NodePosition] = Field(default_factory=dict)
-    viewport: Viewport = Field(default_factory=Viewport)
+    viewport: Viewport | None = None
 
 
 class RunState(BaseModel):
@@ -477,8 +477,13 @@ class WorkflowInputSpec(BaseModel):
     name: str
     type: PortType
     media: str | None = None
+    options: list[str | int] | None = None
+    min: int | float | None = None
+    max: int | float | None = None
+    step: int | float | None = None
     required: bool
     default: Any = None
+    description: str | None = None
     stage_id: str
 
 

@@ -322,7 +322,7 @@ describe("NodeInspector component (Task 6.11)", () => {
     expect(titleInput).toBeDisabled();
   });
 
-  it("renders modified diff with Run as newer (- Editor baseline, + Run target)", () => {
+  it("renders modified diff with Editor as newer (- Run baseline, + Editor current)", () => {
     const modifiedDiff = {
       nodeId: "rich",
       status: "modified" as const,
@@ -349,11 +349,11 @@ describe("NodeInspector component (Task 6.11)", () => {
     );
 
     expect(screen.getByTestId("inspector-node-diff")).toBeDefined();
-    expect(screen.getByText("Run Changes vs. Editor")).toBeDefined();
-    expect(screen.getByText("- Editor op: pack/mod:RichOp")).toBeDefined();
-    expect(screen.getByText("+ Run op: pack/mod:RichOpV2")).toBeDefined();
-    expect(screen.getByText('- Editor: "fast"')).toBeDefined();
-    expect(screen.getByText('+ Run: "accurate"')).toBeDefined();
+    expect(screen.getByText("Editor Changes vs. Run")).toBeDefined();
+    expect(screen.getByText("- Run op: pack/mod:RichOpV2")).toBeDefined();
+    expect(screen.getByText("+ Editor op: pack/mod:RichOp")).toBeDefined();
+    expect(screen.getByText('- Run: "accurate"')).toBeDefined();
+    expect(screen.getByText('+ Editor: "fast"')).toBeDefined();
   });
 
   it("inspects a selected stage, allows editing title and toggling approval gate", () => {

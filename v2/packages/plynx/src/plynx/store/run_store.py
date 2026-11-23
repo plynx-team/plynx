@@ -174,6 +174,20 @@ class RunStore:
                     raise StoreVersionError(
                         f"Unknown database version {version}: delete `.plynx/plynx.db`"
                     )
+                else:
+                    cols = {
+                        str(r["name"])
+                        for r in conn.execute("PRAGMA table_info(stage_gates);").fetchall()
+                    }
+                    if cols and "kind" not in cols:
+                        conn.execute(
+                            "ALTER TABLE stage_gates ADD COLUMN kind TEXT NOT NULL DEFAULT 'approval';"
+                        )
+                    if cols:
+                        conn.execute(
+                            "CREATE UNIQUE INDEX IF NOT EXISTS idx_stage_gates_run_stage_kind "
+                            "ON stage_gates (run_id, stage_id, kind);"
+                        )
                 conn.execute("COMMIT;")
             except BaseException:
                 conn.execute("ROLLBACK;")
@@ -904,32 +918,35 @@ class RunStore:
         *,
         limit: int = 50,
         cursor: str | None = None,
+        workflow_path: str | None = None,
     ) -> list[RunSummary]:
-        """Return runs ordered newest first."""
+        """Return runs ordered newest first, optionally filtered by ``workflow_path``."""
         with self._connect() as conn:
+            clauses: list[str] = []
+            params: list[Any] = []
+
+            if workflow_path:
+                clauses.append("workflow_path = ?")
+                params.append(workflow_path)
+
             if cursor:
                 cursor_row = conn.execute(
                     "SELECT created_at, id FROM runs WHERE id = ?",
                     (cursor,),
                 ).fetchone()
-                if cursor_row is not None:
-                    c_created_at = float(cursor_row["created_at"])
-                    c_id = str(cursor_row["id"])
-                    rows = conn.execute(
-                        """
-                        SELECT * FROM runs
-                        WHERE created_at < ? OR (created_at = ? AND id < ?)
-                        ORDER BY created_at DESC, id DESC LIMIT ?
-                        """,
-                        (c_created_at, c_created_at, c_id, limit),
-                    ).fetchall()
-                else:
-                    rows = []
-            else:
-                rows = conn.execute(
-                    "SELECT * FROM runs ORDER BY created_at DESC, id DESC LIMIT ?",
-                    (limit,),
-                ).fetchall()
+                if cursor_row is None:
+                    return []
+                c_created_at = float(cursor_row["created_at"])
+                c_id = str(cursor_row["id"])
+                clauses.append("(created_at < ? OR (created_at = ? AND id < ?))")
+                params.extend([c_created_at, c_created_at, c_id])
+
+            where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+            params.append(limit)
+            rows = conn.execute(
+                f"SELECT * FROM runs {where_sql} ORDER BY created_at DESC, id DESC LIMIT ?",
+                tuple(params),
+            ).fetchall()
         return [
             RunSummary(
                 id=str(r["id"]),

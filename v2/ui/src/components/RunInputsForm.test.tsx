@@ -244,4 +244,91 @@ describe("RunInputsForm component", () => {
       });
     });
   });
+
+  it("handles required bool input without validation failure when false", async () => {
+    const boolInputs: Array<WorkflowInputSpec> = [
+      {
+        node_id: "step1",
+        name: "flag",
+        type: "bool",
+        required: true,
+        default: null,
+        stage_id: "s1",
+      },
+    ];
+    vi.spyOn(client, "fetchWorkflowInputs").mockResolvedValue(boolInputs);
+
+    const { container } = render(
+      <RouterProvider>
+        <RunInputsForm workflowPath="workflows/bool.yaml" />
+      </RouterProvider>,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector("#input-step1\\.flag")).toBeDefined();
+    });
+
+    const submitBtn = screen.getByRole("button", { name: "Start Run" });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(client.createRun).toHaveBeenCalledWith({
+        workflow_path: "workflows/bool.yaml",
+        inputs: {
+          "step1.flag": false,
+        },
+        no_cache: false,
+      });
+    });
+  });
+
+  it("rejects invalid json inputs with an error and submits valid json", async () => {
+    const jsonInputs: Array<WorkflowInputSpec> = [
+      {
+        node_id: "step1",
+        name: "config",
+        type: "json",
+        required: true,
+        default: null,
+        stage_id: "s1",
+      },
+    ];
+    vi.spyOn(client, "fetchWorkflowInputs").mockResolvedValue(jsonInputs);
+
+    render(
+      <RouterProvider>
+        <RunInputsForm workflowPath="workflows/json.yaml" />
+      </RouterProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Enter JSON object or array...")).toBeDefined();
+    });
+
+    const textarea = screen.getByPlaceholderText("Enter JSON object or array...");
+    // Enter invalid JSON
+    fireEvent.change(textarea, { target: { value: "{ invalid json: " } });
+
+    const submitBtn = screen.getByRole("button", { name: "Start Run" });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText("Invalid JSON for config")).toBeDefined();
+    });
+    expect(client.createRun).not.toHaveBeenCalled();
+
+    // Now enter valid JSON
+    fireEvent.change(textarea, { target: { value: '{"key": "value", "count": 42}' } });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(client.createRun).toHaveBeenCalledWith({
+        workflow_path: "workflows/json.yaml",
+        inputs: {
+          "step1.config": { key: "value", count: 42 },
+        },
+        no_cache: false,
+      });
+    });
+  });
 });

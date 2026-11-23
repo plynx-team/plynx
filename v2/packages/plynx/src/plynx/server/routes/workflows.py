@@ -275,7 +275,7 @@ async def save_workflow_endpoint(
     if body.layout is not None:
         sidecar_json = (
             json.dumps(
-                body.layout.model_dump(mode="json", by_alias=True),
+                body.layout.model_dump(mode="json", by_alias=True, exclude={"viewport"}),
                 indent=2,
             )
             + "\n"

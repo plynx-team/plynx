@@ -13,14 +13,21 @@ describe("LogsPanel component (Task 6.4)", () => {
   let sseCallback: ((event: RunEvent) => void) | null = null;
 
   beforeEach(() => {
-    vi.spyOn(client, "fetchNodeLogs").mockResolvedValue({
-      lines: [
-        "Starting node attempt 1...",
-        "\x1b[32mBuild environment ready\x1b[0m",
-        "Executing command: echo hello",
-      ],
-      offset: 120,
-    });
+    vi.spyOn(client, "fetchNodeLogs").mockImplementation(
+      async (_runId, _nodeId, _offset, stream = "stdout") => {
+        if (stream === "stderr") {
+          return { lines: [], offset: 0 };
+        }
+        return {
+          lines: [
+            "Starting node attempt 1...",
+            "\x1b[32mBuild environment ready\x1b[0m",
+            "Executing command: echo hello",
+          ],
+          offset: 120,
+        };
+      },
+    );
 
     vi.spyOn(client, "subscribeRunEvents").mockImplementation((_runId, cb) => {
       sseCallback = cb;
@@ -89,6 +96,46 @@ describe("LogsPanel component (Task 6.4)", () => {
 
     expect(screen.getByText("Executing command: echo hello")).toBeDefined();
     expect(screen.queryByText("Starting node attempt 1...")).toBeNull();
+
+    // Verify original line number (3) is preserved instead of reset to 1
+    const lineNumSpan = screen.getByText("3");
+    expect(lineNumSpan).toBeDefined();
+    expect(screen.queryByText("1")).toBeNull();
+  });
+
+  it("fetches both stdout and stderr history via REST", async () => {
+    vi.spyOn(client, "fetchNodeLogs").mockImplementation(
+      async (_runId, _nodeId, _offset, stream = "stdout") => {
+        if (stream === "stderr") {
+          return { lines: ["Error line from stderr"], offset: 50 };
+        }
+        return {
+          lines: ["Standard output line"],
+          offset: 100,
+        };
+      },
+    );
+
+    render(<LogsPanel runId="run-100" nodeId="echo_node" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Standard output line")).toBeDefined();
+      expect(screen.getByText("Error line from stderr")).toBeDefined();
+    });
+  });
+
+  it("subscribes to SSE stream without logOffset option to avoid duplicate connection bug", async () => {
+    const subscribeSpy = vi.spyOn(client, "subscribeRunEvents");
+    render(<LogsPanel runId="run-100" nodeId="echo_node" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Starting node attempt 1...")).toBeDefined();
+    });
+
+    expect(subscribeSpy).toHaveBeenCalledWith("run-100", expect.any(Function));
+    // Verify no options object with logOffset was passed
+    const lastCall = subscribeSpy.mock.calls[0];
+    expect(lastCall[3]).toBeUndefined();
   });
 
   it("triggers download of accumulated logs", async () => {

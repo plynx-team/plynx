@@ -36,6 +36,20 @@ describe("matchRoute", () => {
       matched: true,
       params: { path: "sub/my_wf.yaml" },
     });
+
+    // 2-segment root-level workflow like /editor/foo.yaml
+    const rootRes = matchRoute("/editor/:path*", "/editor/foo.yaml");
+    expect(rootRes).toEqual({
+      matched: true,
+      params: { path: "foo.yaml" },
+    });
+
+    // Decodes URI-encoded segments in wildcard path
+    const encodedRes = matchRoute("/editor/:path*", "/editor/my%20dir/my%20wf.yaml");
+    expect(encodedRes).toEqual({
+      matched: true,
+      params: { path: "my dir/my wf.yaml" },
+    });
   });
 });
 

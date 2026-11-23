@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchNodeLogs, subscribeRunEvents } from "../api/client";
 import type { NodeLogEvent } from "../api/types.gen";
 import { parseAnsi, stripAnsi } from "../utils/ansi";
@@ -28,10 +28,16 @@ export function LogsPanel({ runId, nodeId, onClose }: LogsPanelProps) {
     setError(null);
     setLines([]);
 
-    fetchNodeLogs(runId, nodeId, 0)
-      .then((res) => {
+    Promise.all([
+      fetchNodeLogs(runId, nodeId, 0, "stdout"),
+      fetchNodeLogs(runId, nodeId, 0, "stderr").catch(() => ({
+        lines: [],
+        offset: 0,
+      })),
+    ])
+      .then(([stdoutRes, stderrRes]) => {
         if (!active) return;
-        setLines(res.lines);
+        setLines([...stdoutRes.lines, ...stderrRes.lines]);
         setLoading(false);
 
         unsubscribe = subscribeRunEvents(
@@ -45,8 +51,6 @@ export function LogsPanel({ runId, nodeId, onClose }: LogsPanelProps) {
               }
             }
           },
-          undefined,
-          { logOffset: res.offset },
         );
       })
       .catch((err: unknown) => {
@@ -93,11 +97,18 @@ export function LogsPanel({ runId, nodeId, onClose }: LogsPanelProps) {
     }
   };
 
-  const filteredLines = filterQuery.trim()
-    ? lines.filter((line) =>
-        line.toLowerCase().includes(filterQuery.toLowerCase()),
-      )
-    : lines;
+  const allIndexedLines = useMemo(
+    () => lines.map((line, idx) => ({ line, originalIndex: idx + 1 })),
+    [lines],
+  );
+
+  const filteredLines = useMemo(() => {
+    if (!filterQuery.trim()) return allIndexedLines;
+    const q = filterQuery.toLowerCase();
+    return allIndexedLines.filter(({ line }) =>
+      line.toLowerCase().includes(q),
+    );
+  }, [allIndexedLines, filterQuery]);
 
   return (
     <div data-testid="logs-panel" className="logs-drawer">
@@ -219,18 +230,18 @@ export function LogsPanel({ runId, nodeId, onClose }: LogsPanelProps) {
             </p>
           ) : (
             <div className="space-y-0.5">
-              {filteredLines.map((line, idx) => {
+              {filteredLines.map(({ line, originalIndex }) => {
                 const segments = parseAnsi(line);
                 return (
                   <div
-                    key={idx}
+                    key={originalIndex}
                     className="flex items-start gap-2.5 px-1 hover:bg-[#262626]"
                   >
                     <span
                       className="w-7 shrink-0 text-right text-[10px] select-none"
                       style={{ color: "var(--text-tertiary)" }}
                     >
-                      {idx + 1}
+                      {originalIndex}
                     </span>
                     <div className="flex-1 whitespace-pre-wrap break-all">
                       {segments.map((seg, sIdx) => (

@@ -35,8 +35,27 @@ export async function fetchOps(): Promise<Array<OpEntry>> {
   return (await response.json()) as Array<OpEntry>;
 }
 
-export async function fetchRuns(): Promise<RunListResponse> {
-  const response = await fetch("/api/v1/runs");
+export interface FetchRunsOptions {
+  limit?: number;
+  cursor?: string;
+  workflowPath?: string;
+}
+
+export async function fetchRuns(
+  options?: FetchRunsOptions,
+): Promise<RunListResponse> {
+  const params = new URLSearchParams();
+  if (options?.limit !== undefined) {
+    params.set("limit", String(options.limit));
+  }
+  if (options?.cursor) {
+    params.set("cursor", options.cursor);
+  }
+  if (options?.workflowPath) {
+    params.set("workflow_path", options.workflowPath);
+  }
+  const qs = params.toString();
+  const response = await fetch(`/api/v1/runs${qs ? `?${qs}` : ""}`);
   if (!response.ok) {
     throw new Error(`Failed to fetch runs (${response.status})`);
   }
@@ -270,6 +289,14 @@ export interface SubscribeRunEventsOptions {
   logOffset?: number;
 }
 
+interface SharedSubscription {
+  source: EventSource;
+  listeners: Set<(event: RunEvent) => void>;
+  errorListeners: Set<(err: Event) => void>;
+}
+
+const sharedSubscriptions = new Map<string, SharedSubscription>();
+
 export function subscribeRunEvents(
   runId: string,
   onEvent: (event: RunEvent) => void,
@@ -284,18 +311,49 @@ export function subscribeRunEvents(
   const url = `/api/v1/runs/${encodeURIComponent(runId)}/stream${
     query ? `?${query}` : ""
   }`;
-  const source = new EventSource(url);
-  const handleMessage = (ev: MessageEvent<string>) => {
-    const parsed = JSON.parse(ev.data) as RunEvent;
-    onEvent(parsed);
-  };
-  for (const eventName of EVENT_TYPES) {
-    source.addEventListener(eventName, handleMessage as EventListener);
+
+  let sub = sharedSubscriptions.get(url);
+  if (!sub) {
+    const source = new EventSource(url);
+    const listeners = new Set<(event: RunEvent) => void>();
+    const errorListeners = new Set<(err: Event) => void>();
+
+    const handleMessage = (ev: MessageEvent<string>) => {
+      const parsed = JSON.parse(ev.data) as RunEvent;
+      for (const listener of listeners) {
+        listener(parsed);
+      }
+    };
+
+    for (const eventName of EVENT_TYPES) {
+      source.addEventListener(eventName, handleMessage as EventListener);
+    }
+
+    source.onerror = (err: Event) => {
+      for (const errorListener of errorListeners) {
+        errorListener(err);
+      }
+    };
+
+    sub = { source, listeners, errorListeners };
+    sharedSubscriptions.set(url, sub);
   }
+
+  sub.listeners.add(onEvent);
   if (onError) {
-    source.onerror = onError;
+    sub.errorListeners.add(onError);
   }
+
   return () => {
-    source.close();
+    const currentSub = sharedSubscriptions.get(url);
+    if (!currentSub) return;
+    currentSub.listeners.delete(onEvent);
+    if (onError) {
+      currentSub.errorListeners.delete(onError);
+    }
+    if (currentSub.listeners.size === 0) {
+      currentSub.source.close();
+      sharedSubscriptions.delete(url);
+    }
   };
 }

@@ -108,7 +108,7 @@ Goal: `pip install plynx` or `uv tool install plynx` works cleanly inside any ex
 
 ## Phase R4: UI Logical Fixes, Consolidation & Cleanup (P1/P2)
 
-- [ ] **R4.1 Fix broken UI flows & routing bugs.**
+- [x] **R4.1 Fix broken UI flows & routing bugs.**
   - Fix `Router.tsx` 2-segment `:path*` bug (root-level workflows like `/editor/foo.yaml` fail to open) and decode URI segments.
   - Fix default editor experience: open `/editor/<path>` (and newly created workflows from `NewWorkflowModal`) in Graph view when editing, or make Stepper vs Graph mode crystal clear (never fabricate a fake `"RUNNING"` `"draft"` run state with `0%` progress in editor mode).
   - Fix `WorkflowEditor` live run bugs:
@@ -123,13 +123,13 @@ Goal: `pip install plynx` or `uv tool install plynx` works cleanly inside any ex
   - Remove hardcoded `/outputs/text` in `RunDetail.tsx`, fix `MarkdownPreviewer` link URL sanitization (`http:`/`https:`/`mailto:` only), and fix `RunInputsForm` required `bool` and invalid `json` handling.
   - **Accept:** Vitest tests cover every fixed bug above (no mocked-away false positives).
 
-- [ ] **R4.2 Unify Run Snapshot Inspection & fix `runDiff.ts`.**
+- [x] **R4.2 Unify Run Snapshot Inspection & fix `runDiff.ts`.**
   - Decide one clear model: Run Inspection mode renders the run's actual `workflow_snapshot` + `layout_snapshot` (read-only), not the live editor file. Reuse one shared `RunInspector` component between `/runs/:id` and the in-editor Run Inspection view (eliminate diverged `RunDetail.tsx` vs `WorkflowEditor.tsx` run views, and remove the redundant third Runs tab if `RunsHistoryPane` + `/runs` suffice).
   - Fix `runDiff.ts` false positives: do not treat runtime `run_inputs` for unbound ports as workflow edits; align diff direction (`+`/`-`) with the HUD banner copy; compute `StepperView` progress from snapshot nodes only.
   - Wire pagination (`limit`/`cursor` + `workflow_path` filter) on `GET /runs` so runs past #50 are not silently lost.
   - **Accept:** Launching an unmodified workflow with unbound inputs shows zero diff; inspecting an older run renders its true `workflow_snapshot`.
 
-- [ ] **R4.3 Decompose UI monoliths, unify widgets, and clean up CSS & E2E tests.**
+- [x] **R4.3 Decompose UI monoliths, unify widgets, and clean up CSS & E2E tests.**
   - Consolidate the 4 input widget implementations (`LiteralWidget`, `WorkflowNode`, `RunInputsForm`, `StageApprovalCard`) into one shared `PortInput` component; extend backend `WorkflowInputSpec` with `options`/`min`/`max`/`step`/`description`; remove the invalid `"Custom value..."` option for strict `Literal` ports.
   - Split `WorkflowEditor.tsx` (2,133 LOC) and `NodeInspector.tsx` (1,496 LOC) into focused components; fix React impure-updater undo/redo, node-switch key leak (`${nodeId}-${port.name}`), `Create & Move` stale slug, stage deletion reassign validation, Quick-Connect validation, and stop re-running Dagre on every render.
   - Stop storing mutable `viewport` in tracked `.layout.json` sidecars (keep viewport in `localStorage` or omit from git diffs).

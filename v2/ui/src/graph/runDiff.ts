@@ -52,26 +52,13 @@ function valuesEqual(a: unknown, b: unknown): boolean {
   );
 }
 
-function resolveSnapshotInput(
-  nodeId: string,
-  portName: string,
-  snapNode: NodeSpec,
-  runInputs: Record<string, unknown> | undefined,
-): unknown {
-  const qualifiedKey = `${nodeId}.${portName}`;
-  if (runInputs && qualifiedKey in runInputs) {
-    return runInputs[qualifiedKey];
-  }
-  return snapNode.inputs?.[portName];
-}
-
 /**
- * Compare a selected Run against the current Editor workflow.
+ * Compare the current Editor workflow against a selected Run's workflow snapshot.
  *
- * Diff Philosophy (Run as Newer):
- * The Editor workflow serves as the baseline blueprint (- Editor, red).
- * The selected Run serves as the newer execution instance (+ Run, teal/green).
- * This answers: "What values/operations were executed in this run compared to the workflow?"
+ * Diff Philosophy (Editor as Newer, matching "Editor modified since this run"):
+ * The Run snapshot serves as the older baseline (- Run, red).
+ * The current Editor workflow serves as the newer modified state (+ Editor, teal/green).
+ * Runtime ``run_inputs`` supplied for unbound ports are NOT treated as workflow edits.
  */
 export function computeWorkflowRunDiff(
   editorWorkflow: Workflow | null | undefined,
@@ -98,8 +85,6 @@ export function computeWorkflowRunDiff(
     }
   }
 
-  const runInputs = runState.run_inputs;
-
   const nodes: Record<string, NodeDiff> = {};
   let hasChanges = false;
 
@@ -122,24 +107,11 @@ export function computeWorkflowRunDiff(
       ...Object.keys(editorNode.inputs ?? {}),
       ...Object.keys(snapNode.inputs ?? {}),
     ]);
-    if (runInputs) {
-      const prefix = `${nodeId}.`;
-      for (const k of Object.keys(runInputs)) {
-        if (k.startsWith(prefix)) {
-          allPortKeys.add(k.slice(prefix.length));
-        }
-      }
-    }
 
     const changedInputs: Record<string, InputDiffEntry> = {};
     for (const portName of allPortKeys) {
       const editorValue = editorNode.inputs?.[portName];
-      const runValue = resolveSnapshotInput(
-        nodeId,
-        portName,
-        snapNode,
-        runInputs,
-      );
+      const runValue = snapNode.inputs?.[portName];
       if (!valuesEqual(editorValue, runValue)) {
         changedInputs[portName] = {
           portName,

@@ -531,11 +531,9 @@ function GraphCanvasInner({
           }
         }}
         onPaneClick={() => {
-          if (!readOnly) {
-            onSelectNode?.(undefined);
-            onSelectEdge?.(undefined);
-            onSelectStage?.(undefined);
-          }
+          onSelectNode?.(undefined);
+          onSelectEdge?.(undefined);
+          onSelectStage?.(undefined);
         }}
         onNodeDragStop={(_event, node) => {
           if (isStageGroupId(node.id)) {

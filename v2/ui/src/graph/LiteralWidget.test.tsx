@@ -9,8 +9,8 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("LiteralWidget component (Task 3.1)", () => {
-  it("renders preset suggestions and allows one-click filling for options parameter", () => {
+describe("LiteralWidget / PortInput component", () => {
+  it("renders strict Literal dropdown with presets and no Custom value option", () => {
     const onChange = vi.fn();
     const port: InputPortSpec = {
       name: "chord_progression",
@@ -32,50 +32,25 @@ describe("LiteralWidget component (Task 3.1)", () => {
       />,
     );
 
-    // Preset buttons are rendered
-    const presetBtn = screen.getByTestId("inspector-input-chord_progression-preset-ii - V - I");
+    // Dropdown renders strict options without "Custom value..."
+    const select = screen.getByTestId("inspector-input-chord_progression");
+    expect(select.tagName).toBe("SELECT");
+    expect(screen.queryByText("Custom value...")).toBeNull();
+    expect(
+      screen.queryByTestId("inspector-input-chord_progression-custom-toggle"),
+    ).toBeNull();
+
+    // Preset buttons are rendered and clickable
+    const presetBtn = screen.getByTestId(
+      "inspector-input-chord_progression-preset-ii - V - I",
+    );
     expect(presetBtn).toBeInTheDocument();
     fireEvent.click(presetBtn);
 
     expect(onChange).toHaveBeenCalledWith("ii - V - I");
   });
 
-  it("toggles to custom value input and allows typing custom values", () => {
-    const onChange = vi.fn();
-    const port: InputPortSpec = {
-      name: "chord_progression",
-      type: "str",
-      media: null,
-      options: ["I - V - vi - IV", "ii - V - I"],
-      min: null,
-      max: null,
-      step: null,
-      required: false,
-      default: "I - V - vi - IV",
-    };
-
-    render(
-      <LiteralWidget
-        port={port}
-        value="I - V - vi - IV"
-        onChange={onChange}
-      />,
-    );
-
-    // Toggle to custom value
-    const toggleBtn = screen.getByTestId("inspector-input-chord_progression-custom-toggle");
-    expect(toggleBtn).toHaveTextContent("Custom value");
-    fireEvent.click(toggleBtn);
-
-    // Input is now a text field
-    const input = screen.getByTestId("inspector-input-chord_progression");
-    expect(input.tagName).toBe("INPUT");
-    fireEvent.change(input, { target: { value: "vi - IV - I - V" } });
-
-    expect(onChange).toHaveBeenCalledWith("vi - IV - I - V");
-  });
-
-  it("auto-enables custom mode when value is not in options", () => {
+  it("preserves legacy out-of-range option as disabled fallback while keeping select strict", () => {
     const onChange = vi.fn();
     const port: InputPortSpec = {
       name: "chord_progression",
@@ -97,10 +72,9 @@ describe("LiteralWidget component (Task 3.1)", () => {
       />,
     );
 
-    // Should render as an input, not a select
-    const input = screen.getByTestId("inspector-input-chord_progression");
-    expect(input.tagName).toBe("INPUT");
-    expect(input).toHaveValue("vi - IV - I - V");
+    const select = screen.getByTestId("inspector-input-chord_progression");
+    expect(select.tagName).toBe("SELECT");
+    expect(screen.getByText("vi - IV - I - V (invalid)")).toBeInTheDocument();
   });
 
   it("renders structured string-list editor for JSON arrays and supports add/edit/remove", () => {
@@ -182,6 +156,8 @@ describe("LiteralWidget component (Task 3.1)", () => {
     expect(modeToggle).toHaveTextContent("List editor");
     fireEvent.click(modeToggle);
 
-    expect(screen.getByTestId("inspector-input-config-list-container")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("inspector-input-config-list-container"),
+    ).toBeInTheDocument();
   });
 });

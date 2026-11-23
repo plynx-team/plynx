@@ -201,4 +201,23 @@ describe("StepperView component (Task 6.3)", () => {
     const progressHeader = screen.getByText("Overall Progress").closest(".transition-opacity");
     expect(progressHeader?.className).toContain("opacity-40");
   });
+
+  it("renders clear draft mode banner when runState is null without fabricating a fake RUNNING run state", () => {
+    render(
+      <StepperView
+        runState={null}
+        workflowDoc={mockWorkflowDoc}
+      />,
+    );
+
+    // Shows Draft banner instead of fake "Overall Progress" or "RUNNING"
+    expect(screen.getByTestId("stepper-draft-banner")).toBeDefined();
+    expect(screen.getByText("Workflow Draft (Not Running)")).toBeDefined();
+    expect(screen.queryByText("Overall Progress")).toBeNull();
+    expect(screen.queryByText("RUNNING")).toBeNull();
+
+    // Renders defined stages in draft mode
+    expect(screen.getByText("1. Ingest Stage")).toBeDefined();
+    expect(screen.getByText("2. Processing Stage")).toBeDefined();
+  });
 });

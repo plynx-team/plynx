@@ -241,9 +241,15 @@ async def list_runs(
     state: ServerStateDep,
     limit: int = Query(default=50, ge=1, le=500),
     cursor: str | None = Query(default=None),
+    workflow_path: str | None = Query(default=None),
 ) -> RunListResponse:
     """Return recent runs ordered newest first."""
-    items = await asyncio.to_thread(state.store.list_runs, limit=limit + 1, cursor=cursor)
+    items = await asyncio.to_thread(
+        state.store.list_runs,
+        limit=limit + 1,
+        cursor=cursor,
+        workflow_path=workflow_path,
+    )
     if len(items) > limit:
         return RunListResponse(runs=items[:limit], next_cursor=items[limit - 1].id)
     return RunListResponse(runs=items, next_cursor=None)

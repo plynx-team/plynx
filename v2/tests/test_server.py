@@ -368,6 +368,7 @@ def test_read_workflows_and_workflow_by_path(tmp_path: Path) -> None:
             assert "pick" in doc.workflow.nodes
             assert doc.layout is not None
             assert doc.layout.nodes["pick"].x == 10.0
+            assert doc.layout.viewport is not None
             assert doc.layout.viewport.zoom == 1.5
 
             # API v1 prefix
@@ -937,13 +938,13 @@ nodes:
             saved_bytes = wf_file.read_bytes()
             assert saved_bytes == orig_bytes
 
-            # Verify layout sidecar written
+            # Verify layout sidecar written without mutable viewport
             sidecar = wf_dir / ".foo_or_woo.layout.json"
             assert sidecar.is_file()
             sidecar_data = json.loads(sidecar.read_text(encoding="utf-8"))
             assert sidecar_data["schema"] == 1
             assert sidecar_data["nodes"]["pick"]["x"] == 100.5
-            assert sidecar_data["viewport"]["zoom"] == 1.5
+            assert "viewport" not in sidecar_data
 
             # 3. Reject invalid workflow without touching the file
             current_bytes = wf_file.read_bytes()
@@ -1640,5 +1641,73 @@ nodes:
         store = RunStore(tmp_path)
         assert store.is_cancel_requested(run_id) is True
         assert len(app.state.background_tasks) == 0
+
+    asyncio.run(_test())
+
+
+def test_list_runs_pagination_and_workflow_path_filter(tmp_path: Path) -> None:
+    """GET /runs supports limit, cursor, and workflow_path filtering."""
+    store = RunStore(tmp_path)
+    wf_a_ids: list[str] = []
+    for _idx in range(5):
+        rid = store.create_run(
+            workflow_path="workflows/a.yaml",
+            workflow_bytes=b"version: 1\nnodes: {}\n",
+            node_ids=[],
+        )
+        wf_a_ids.append(rid)
+        time.sleep(0.002)
+    store.create_run(
+        workflow_path="workflows/b.yaml",
+        workflow_bytes=b"version: 1\nnodes: {}\n",
+        node_ids=[],
+    )
+
+    app = create_app(tmp_path)
+
+    async def _test() -> None:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            # Filter by workflow_path with limit=2
+            r1 = await client.get(
+                "/runs",
+                params={"workflow_path": "workflows/a.yaml", "limit": 2},
+            )
+            assert r1.status_code == 200
+            d1 = r1.json()
+            assert len(d1["runs"]) == 2
+            assert all(r["workflow_path"] == "workflows/a.yaml" for r in d1["runs"])
+            assert d1["next_cursor"] is not None
+
+            # Fetch second page using cursor
+            r2 = await client.get(
+                "/runs",
+                params={
+                    "workflow_path": "workflows/a.yaml",
+                    "limit": 2,
+                    "cursor": d1["next_cursor"],
+                },
+            )
+            assert r2.status_code == 200
+            d2 = r2.json()
+            assert len(d2["runs"]) == 2
+            assert d2["next_cursor"] is not None
+
+            # Fetch final page
+            r3 = await client.get(
+                "/runs",
+                params={
+                    "workflow_path": "workflows/a.yaml",
+                    "limit": 2,
+                    "cursor": d2["next_cursor"],
+                },
+            )
+            assert r3.status_code == 200
+            d3 = r3.json()
+            assert len(d3["runs"]) == 1
+            assert d3["next_cursor"] is None
+
+            collected = [r["id"] for r in d1["runs"] + d2["runs"] + d3["runs"]]
+            assert set(collected) == set(wf_a_ids)
 
     asyncio.run(_test())

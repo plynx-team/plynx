@@ -38,7 +38,9 @@ export function runStatusBadgeClasses(status: RunStatus): string {
 export function RunList() {
   const { navigate } = useRouter();
   const [runs, setRuns] = useState<ReadonlyArray<RunSummary>>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -47,12 +49,31 @@ export function RunList() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetchRuns();
+      const res = await fetchRuns({ limit: 50 });
       setRuns(res.runs);
+      setNextCursor(res.next_cursor ?? null);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMoreRuns = async () => {
+    if (!nextCursor || loadingMore) return;
+    try {
+      setLoadingMore(true);
+      setError(null);
+      const res = await fetchRuns({ limit: 50, cursor: nextCursor });
+      setRuns((prev) => {
+        const seen = new Set(prev.map((r) => r.id));
+        return [...prev, ...res.runs.filter((r) => !seen.has(r.id))];
+      });
+      setNextCursor(res.next_cursor ?? null);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -224,6 +245,17 @@ export function RunList() {
               </div>
             </Link>
           ))
+        )}
+        {nextCursor && (
+          <div className="p-3 text-center">
+            <ControlButton
+              icon="chevron-down"
+              text={loadingMore ? "Loading..." : "Load More Runs"}
+              data-testid="btn-load-more-runs"
+              disabled={loadingMore}
+              onClick={() => void loadMoreRuns()}
+            />
+          </div>
         )}
       </div>
     </div>

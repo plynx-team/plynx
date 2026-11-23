@@ -13,6 +13,9 @@ export interface RunsHistoryPaneProps {
   pageSize?: number;
   hasUnsavedChanges?: boolean;
   fullHeight?: boolean;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 function getRunStatusIcon(status: RunStatus): {
@@ -53,6 +56,9 @@ export function RunsHistoryPane({
   pageSize = 10,
   hasUnsavedChanges = false,
   fullHeight = false,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
 }: RunsHistoryPaneProps) {
   const [page, setPage] = useState<number>(0);
   const [showAllInEditMode, setShowAllInEditMode] = useState<boolean>(false);
@@ -303,6 +309,19 @@ export function RunsHistoryPane({
               style={{ color: "var(--text-tertiary)" }}
             >
               Show fewer
+            </button>
+          )}
+
+          {hasMore && onLoadMore && (
+            <button
+              type="button"
+              data-testid="runs-load-more-btn"
+              disabled={loadingMore}
+              onClick={onLoadMore}
+              className="w-full py-1 text-center text-[11px] rounded hover:bg-white/5 disabled:opacity-40"
+              style={{ color: "var(--color-primary)" }}
+            >
+              {loadingMore ? "Loading older runs…" : "Load older runs…"}
             </button>
           )}
         </div>

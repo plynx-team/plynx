@@ -289,7 +289,7 @@ export interface Viewport {
 export interface WorkflowLayout {
   schema: 1;
   nodes: Record<string, NodePosition>;
-  viewport: Viewport;
+  viewport?: Viewport | null;
 }
 
 /** Response body for ``GET /health``. */
@@ -334,8 +334,13 @@ export interface WorkflowInputSpec {
   name: string;
   type: "str" | "int" | "float" | "bool" | "json" | "file" | "directory";
   media?: string | null;
+  options?: Array<string | number> | null;
+  min?: number | null;
+  max?: number | null;
+  step?: number | null;
   required: boolean;
   default: unknown;
+  description?: string | null;
   stage_id: string;
 }
 

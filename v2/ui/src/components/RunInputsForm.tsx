@@ -4,7 +4,6 @@ import {
   fetchOps,
   fetchWorkflow,
   fetchWorkflowInputs,
-  uploadFile,
 } from "../api/client";
 import type {
   OpEntry,
@@ -17,13 +16,11 @@ import { getOrderedStageIds } from "../graph/layout";
 import { useRouter } from "../router/Router";
 import { ControlButton, ControlPanel, ControlSeparator } from "./ControlPanel";
 import { FeatherIcon } from "./FeatherIcon";
+import { PortInput } from "./PortInput";
 
 interface InputValueState {
   value: unknown;
   rawText: string;
-  isUploading?: boolean;
-  uploadedPath?: string;
-  uploadFileName?: string;
 }
 
 export function extractUnboundInputs(
@@ -43,8 +40,13 @@ export function extractUnboundInputs(
           name: port.name,
           type: port.type,
           media: port.media ?? null,
+          options: port.options ?? null,
+          min: port.min ?? null,
+          max: port.max ?? null,
+          step: port.step ?? null,
           required: port.required,
           default: port.default ?? null,
+          description: port.description ?? null,
           stage_id: node.stage || "main",
         });
       }
@@ -123,15 +125,21 @@ export function RunInputsForm({
           for (const spec of inputSpecs) {
             const key = `${spec.node_id}.${spec.name}`;
             const defaultValue =
-              spec.default !== undefined && spec.default !== null
-                ? spec.default
-                : "";
+              spec.type === "bool"
+                ? typeof spec.default === "boolean"
+                  ? spec.default
+                  : false
+                : spec.default !== undefined && spec.default !== null
+                  ? spec.default
+                  : "";
             initialValues[key] = {
               value: defaultValue,
               rawText:
-                typeof defaultValue === "object"
-                  ? JSON.stringify(defaultValue)
-                  : String(defaultValue),
+                spec.type === "bool"
+                  ? String(defaultValue)
+                  : typeof defaultValue === "object"
+                    ? JSON.stringify(defaultValue)
+                    : String(defaultValue),
             };
           }
           setFormValues(initialValues);
@@ -161,15 +169,21 @@ export function RunInputsForm({
         for (const spec of inputSpecs) {
           const key = `${spec.node_id}.${spec.name}`;
           const defaultValue =
-            spec.default !== undefined && spec.default !== null
-              ? spec.default
-              : "";
+            spec.type === "bool"
+              ? typeof spec.default === "boolean"
+                ? spec.default
+                : false
+              : spec.default !== undefined && spec.default !== null
+                ? spec.default
+                : "";
           initialValues[key] = {
             value: defaultValue,
             rawText:
-              typeof defaultValue === "object"
-                ? JSON.stringify(defaultValue)
-                : String(defaultValue),
+              spec.type === "bool"
+                ? String(defaultValue)
+                : typeof defaultValue === "object"
+                  ? JSON.stringify(defaultValue)
+                  : String(defaultValue),
           };
         }
         setFormValues(initialValues);
@@ -186,28 +200,19 @@ export function RunInputsForm({
     };
   }, [workflowPath, inMemoryWorkflow, inMemoryLayout, opsMap]);
 
-  const handleScalarChange = (key: string, rawVal: string, type: string) => {
-    let parsedVal: unknown = rawVal;
-    if (type === "int") {
-      const num = parseInt(rawVal, 10);
-      parsedVal = isNaN(num) ? "" : num;
-    } else if (type === "float") {
-      const num = parseFloat(rawVal);
-      parsedVal = isNaN(num) ? "" : num;
-    } else if (type === "json") {
-      try {
-        parsedVal = JSON.parse(rawVal);
-      } catch {
-        parsedVal = rawVal;
-      }
-    }
-
+  const handlePortChange = (key: string, nextVal: unknown, nextRaw?: string) => {
     setFormValues((prev) => ({
       ...prev,
       [key]: {
-        ...prev[key],
-        value: parsedVal,
-        rawText: rawVal,
+        value: nextVal,
+        rawText:
+          nextRaw !== undefined
+            ? nextRaw
+            : nextVal === undefined || nextVal === null
+              ? ""
+              : typeof nextVal === "object"
+                ? JSON.stringify(nextVal)
+                : String(nextVal),
       },
     }));
 
@@ -217,63 +222,6 @@ export function RunInputsForm({
         delete next[key];
         return next;
       });
-    }
-  };
-
-  const handleBoolChange = (key: string, checked: boolean) => {
-    setFormValues((prev) => ({
-      ...prev,
-      [key]: {
-        ...prev[key],
-        value: checked,
-        rawText: String(checked),
-      },
-    }));
-  };
-
-  const handleFileUpload = async (key: string, file: File) => {
-    setFormValues((prev) => ({
-      ...prev,
-      [key]: {
-        ...prev[key],
-        isUploading: true,
-        uploadFileName: file.name,
-      },
-    }));
-
-    try {
-      const res = await uploadFile(file);
-      setFormValues((prev) => ({
-        ...prev,
-        [key]: {
-          ...prev[key],
-          isUploading: false,
-          value: res.path,
-          rawText: res.path,
-          uploadedPath: res.path,
-        },
-      }));
-      if (validationErrors[key]) {
-        setValidationErrors((prev) => {
-          const next = { ...prev };
-          delete next[key];
-          return next;
-        });
-      }
-    } catch (err: unknown) {
-      setFormValues((prev) => ({
-        ...prev,
-        [key]: {
-          ...prev[key],
-          isUploading: false,
-        },
-      }));
-      setValidationErrors((prev) => ({
-        ...prev,
-        [key]: `Upload failed: ${
-          err instanceof Error ? err.message : String(err)
-        }`,
-      }));
     }
   };
 
@@ -304,21 +252,35 @@ export function RunInputsForm({
       const isInitialStage =
         stage === initialStageId || orderedStageIds.length <= 1;
 
-      // Only require inputs for the initial stage at run launch time. Later stages prompt just-in-time.
-      if (spec.required && isInitialStage) {
-        if (
-          val === undefined ||
-          val === null ||
-          val === "" ||
-          (spec.type === "json" && state.rawText.trim() === "")
-        ) {
+      if (spec.type === "json") {
+        const raw = state ? state.rawText.trim() : "";
+        if (spec.required && isInitialStage && !raw) {
           errors[key] = `${spec.name} is required`;
           continue;
         }
-      }
+        if (raw) {
+          try {
+            finalInputs[key] = JSON.parse(raw);
+          } catch {
+            errors[key] = `Invalid JSON for ${spec.name}`;
+            continue;
+          }
+        }
+      } else if (spec.type === "bool") {
+        const boolVal = typeof val === "boolean" ? val : Boolean(val);
+        finalInputs[key] = boolVal;
+      } else {
+        // Only require inputs for the initial stage at run launch time. Later stages prompt just-in-time.
+        if (spec.required && isInitialStage) {
+          if (val === undefined || val === null || val === "") {
+            errors[key] = `${spec.name} is required`;
+            continue;
+          }
+        }
 
-      if (val !== undefined && val !== "") {
-        finalInputs[key] = val;
+        if (val !== undefined && val !== "") {
+          finalInputs[key] = val;
+        }
       }
     }
 
@@ -516,175 +478,18 @@ export function RunInputsForm({
                               </div>
                             </div>
 
-                            {spec.type === "file" ||
-                            spec.type === "directory" ? (
-                              <div className="space-y-1.5">
-                                <div
-                                  onDragOver={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                  }}
-                                  onDrop={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    const files = e.dataTransfer.files;
-                                    if (files.length > 0) {
-                                      void handleFileUpload(key, files[0]);
-                                    }
-                                  }}
-                                  className="flex flex-col items-center justify-center rounded border border-dashed p-3 text-center cursor-pointer"
-                                  style={{
-                                    borderColor: "var(--border-strong)",
-                                    backgroundColor:
-                                      "var(--bg-panel-secondary)",
-                                  }}
-                                  onClick={() => {
-                                    const el = document.getElementById(
-                                      `file-upload-${key}`,
-                                    ) as HTMLInputElement | null;
-                                    el?.click();
-                                  }}
-                                >
-                                  <input
-                                    id={`file-upload-${key}`}
-                                    type="file"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                      if (
-                                        e.target.files &&
-                                        e.target.files.length > 0
-                                      ) {
-                                        void handleFileUpload(
-                                          key,
-                                          e.target.files[0],
-                                        );
-                                      }
-                                    }}
-                                  />
-                                  {state.isUploading ? (
-                                    <span
-                                      className="text-xs"
-                                      style={{ color: "var(--color-info)" }}
-                                    >
-                                      Uploading {state.uploadFileName}...
-                                    </span>
-                                  ) : state.uploadedPath ? (
-                                    <div
-                                      className="text-xs flex items-center gap-1.5"
-                                      style={{ color: "var(--color-success)" }}
-                                    >
-                                      <span>&check;</span>
-                                      <span>
-                                        Uploaded: {state.uploadFileName} (
-                                        {state.uploadedPath})
-                                      </span>
-                                    </div>
-                                  ) : (
-                                    <>
-                                      <p className="text-xs font-medium">
-                                        Drop {spec.type} here, or click to
-                                        browse
-                                      </p>
-                                      {spec.default !== undefined &&
-                                        spec.default !== null && (
-                                          <p
-                                            className="mt-0.5 text-[11px]"
-                                            style={{
-                                              color: "var(--text-tertiary)",
-                                            }}
-                                          >
-                                            Default: {String(spec.default)}
-                                          </p>
-                                        )}
-                                    </>
-                                  )}
-                                </div>
-                                <input
-                                  id={`input-${key}`}
-                                  type="text"
-                                  placeholder="Or enter path / upload path manually..."
-                                  value={state.rawText}
-                                  onChange={(e) =>
-                                    handleScalarChange(
-                                      key,
-                                      e.target.value,
-                                      "str",
-                                    )
-                                  }
-                                  className="w-full px-2 py-1 text-xs font-mono"
-                                />
-                              </div>
-                            ) : spec.type === "bool" ? (
-                              <div className="flex items-center gap-2 pt-0.5">
-                                <input
-                                  id={`input-${key}`}
-                                  type="checkbox"
-                                  checked={Boolean(state.value)}
-                                  onChange={(e) =>
-                                    handleBoolChange(key, e.target.checked)
-                                  }
-                                  className="h-3.5 w-3.5"
-                                />
-                                <span
-                                  className="text-xs"
-                                  style={{ color: "var(--text-secondary)" }}
-                                >
-                                  Enable (default:{" "}
-                                  {String(Boolean(spec.default))})
-                                </span>
-                              </div>
-                            ) : spec.type === "json" ? (
-                              <textarea
-                                id={`input-${key}`}
-                                rows={3}
-                                placeholder={
-                                  spec.default !== undefined &&
-                                  spec.default !== null
-                                    ? JSON.stringify(spec.default)
-                                    : "Enter JSON object or array..."
-                                }
-                                value={state.rawText}
-                                onChange={(e) =>
-                                  handleScalarChange(
-                                    key,
-                                    e.target.value,
-                                    "json",
-                                  )
-                                }
-                                className="w-full p-2 font-mono text-xs"
-                              />
-                            ) : (
-                              <input
-                                id={`input-${key}`}
-                                type={
-                                  spec.type === "int" || spec.type === "float"
-                                    ? "number"
-                                    : "text"
-                                }
-                                step={
-                                  spec.type === "int"
-                                    ? "1"
-                                    : spec.type === "float"
-                                    ? "any"
-                                    : undefined
-                                }
-                                placeholder={
-                                  spec.default !== undefined &&
-                                  spec.default !== null
-                                    ? `Default: ${String(spec.default)}`
-                                    : "Enter value..."
-                                }
-                                value={state.rawText}
-                                onChange={(e) =>
-                                  handleScalarChange(
-                                    key,
-                                    e.target.value,
-                                    spec.type,
-                                  )
-                                }
-                                className="w-full px-2 py-1 text-xs"
-                              />
-                            )}
+                            <PortInput
+                              id={`input-${key}`}
+                              port={spec}
+                              value={state.value}
+                              rawText={state.rawText}
+                              onChange={(val, raw) =>
+                                handlePortChange(key, val, raw)
+                              }
+                              fileDropZone={true}
+                              allowListEditor={false}
+                              showPresets={false}
+                            />
 
                             {hasError && (
                               <p

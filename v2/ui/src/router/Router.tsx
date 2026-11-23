@@ -70,24 +70,37 @@ export function matchRoute(
   const patternParts = pattern.split("/").filter(Boolean);
   const actualParts = actualPath.split("/").filter(Boolean);
 
-  if (patternParts.length !== actualParts.length) {
-    // Special case for wildcard or catch-all if last part is :path+
-    if (patternParts.length > 0 && patternParts[patternParts.length - 1] === ":path*") {
-      const prefixParts = patternParts.slice(0, -1);
-      if (actualParts.length >= prefixParts.length) {
-        let matched = true;
-        for (let i = 0; i < prefixParts.length; i++) {
-          if (prefixParts[i] !== actualParts[i]) {
-            matched = false;
-            break;
-          }
-        }
-        if (matched) {
-          const rest = actualParts.slice(prefixParts.length).join("/");
-          return { matched: true, params: { path: rest } };
-        }
+  const lastPatternPart =
+    patternParts.length > 0 ? patternParts[patternParts.length - 1] : "";
+  const isWildcard = lastPatternPart.endsWith("*");
+
+  if (isWildcard) {
+    const prefixParts = patternParts.slice(0, -1);
+    if (actualParts.length < prefixParts.length) {
+      return { matched: false, params: {} };
+    }
+    const params: Record<string, string> = {};
+    for (let i = 0; i < prefixParts.length; i++) {
+      const p = prefixParts[i];
+      const a = actualParts[i];
+      if (p.startsWith(":")) {
+        params[p.slice(1)] = decodeURIComponent(a);
+      } else if (p !== a) {
+        return { matched: false, params: {} };
       }
     }
+    const wildcardParamName = lastPatternPart.startsWith(":")
+      ? lastPatternPart.slice(1, -1)
+      : "path";
+    const rest = actualParts
+      .slice(prefixParts.length)
+      .map((seg) => decodeURIComponent(seg))
+      .join("/");
+    params[wildcardParamName] = rest;
+    return { matched: true, params };
+  }
+
+  if (patternParts.length !== actualParts.length) {
     return { matched: false, params: {} };
   }
 
