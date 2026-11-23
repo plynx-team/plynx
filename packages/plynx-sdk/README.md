@@ -41,9 +41,9 @@ class PickOption(Op):
 
 ## Documentation
 
-- [Guide: Authoring a Node Pack](https://github.com/plynx-team/plynx/blob/master/docs/guides/author_pack.md)
+- [Guide: Authoring a Node Pack](https://github.com/plynx-team/plynx/blob/main/docs/guides/author_pack.md)
 - [PLynx Repository](https://github.com/plynx-team/plynx)
-- [Changelog](https://github.com/plynx-team/plynx/blob/master/CHANGELOG.md)
+- [Changelog](https://github.com/plynx-team/plynx/blob/main/CHANGELOG.md)
 
 ## License
 
