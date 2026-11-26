@@ -34,7 +34,7 @@ export function NodeRow({
   return (
     <div
       onClick={() => onSelect?.(nodeId)}
-      className={`list-item !block ${isSelected ? "selected" : ""} ${
+      className={`list-row !block ${isSelected ? "selected" : ""} ${
         isNotInRun ? "opacity-60" : ""
       }`}
     >

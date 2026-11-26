@@ -85,15 +85,10 @@ export function WorkflowPicker() {
       )}
 
       <div className="list">
-        <div
-          className="list-header"
-          style={{
-            gridTemplateColumns: "minmax(200px, 1.5fr) 120px minmax(220px, 2fr) 210px",
-          }}
-        >
+        <div className="list-header workflow-list-grid">
           <div className="list-field">Title</div>
-          <div className="list-field">Stages</div>
           <div className="list-field">Path</div>
+          <div className="list-field">Stages</div>
           <div className="list-field text-right">Actions</div>
         </div>
 
@@ -127,11 +122,7 @@ export function WorkflowPicker() {
               key={wf.path}
               to={`/editor/${wf.path}?view=stepper`}
               data-testid={`workflow-card-${wf.path}`}
-              className="list-item"
-              style={{
-                gridTemplateColumns:
-                  "minmax(200px, 1.5fr) 120px minmax(220px, 2fr) 210px",
-              }}
+              className="list-row workflow-list-grid"
             >
               <div className="list-field flex items-center gap-2 font-semibold">
                 <FeatherIcon
@@ -142,17 +133,17 @@ export function WorkflowPicker() {
                 <span>{wf.name}</span>
               </div>
 
-              <div className="list-field">
-                <span className="status-badge READY">
-                  {wf.stage_count} {wf.stage_count === 1 ? "stage" : "stages"}
-                </span>
-              </div>
-
               <div
                 className="list-field font-mono text-xs"
                 style={{ color: "var(--text-secondary)" }}
               >
                 {wf.path}
+              </div>
+
+              <div className="list-field">
+                <span className="status-badge READY">
+                  {wf.stage_count} {wf.stage_count === 1 ? "stage" : "stages"}
+                </span>
               </div>
 
               <div

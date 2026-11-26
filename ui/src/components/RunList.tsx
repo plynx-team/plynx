@@ -147,18 +147,13 @@ export function RunList() {
       )}
 
       <div className="list">
-        <div
-          className="list-header"
-          style={{
-            gridTemplateColumns:
-              "minmax(180px, 1.5fr) 150px minmax(200px, 1.5fr) 110px 180px",
-          }}
-        >
+        <div className="list-header run-list-grid">
           <div className="list-field">Workflow</div>
           <div className="list-field">Status</div>
           <div className="list-field">Run ID</div>
           <div className="list-field">Duration</div>
           <div className="list-field">Created</div>
+          <div className="list-field text-right">Actions</div>
         </div>
 
         {loading ? (
@@ -200,11 +195,8 @@ export function RunList() {
             <Link
               key={run.id}
               to={`/runs/${run.id}`}
-              className="list-item"
-              style={{
-                gridTemplateColumns:
-                  "minmax(180px, 1.5fr) 150px minmax(200px, 1.5fr) 110px 180px",
-              }}
+              data-testid={`run-card-${run.id}`}
+              className="list-row run-list-grid"
             >
               <div className="list-field flex items-center gap-2 font-semibold">
                 <FeatherIcon
@@ -242,6 +234,22 @@ export function RunList() {
                 style={{ color: "var(--text-secondary)" }}
               >
                 {formatTimestamp(run.created_at)}
+              </div>
+
+              <div
+                className="flex items-center justify-end"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  navigate(`/runs/${run.id}`);
+                }}
+              >
+                <ControlButton
+                  icon="eye"
+                  text="View"
+                  data-testid={`view-run-${run.id}`}
+                  onClick={() => navigate(`/runs/${run.id}`)}
+                />
               </div>
             </Link>
           ))
