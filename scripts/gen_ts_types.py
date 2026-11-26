@@ -16,6 +16,8 @@ from typing import Any
 
 from plynx.api_models import (
     AgentProvider,
+    AgentTurnModel,
+    AgentTurnsResponse,
     AgentTurnStatus,
     AnswerCheckpointRequest,
     ApiErrorDetail,
@@ -30,6 +32,7 @@ from plynx.api_models import (
     CreateRunResponse,
     EventType,
     GraphEditPolicy,
+    GraphPatchModel,
     HealthResponse,
     InputPortSpec,
     LogStream,
@@ -71,7 +74,7 @@ from plynx.api_models import (
     WorkflowLayout,
     WorkflowListItem,
 )
-from plynx.workflow.models import NodeRef, NodeSpec, Stage, Workflow
+from plynx.workflow.models import NodeRef, NodeSpec, Stage, Workflow, WorkflowAgentConfig
 from pydantic import BaseModel, TypeAdapter
 from pydantic.json_schema import models_json_schema
 
@@ -82,6 +85,7 @@ SCHEMA_MODELS: tuple[type[BaseModel], ...] = (
     NodeRef,
     Stage,
     NodeSpec,
+    WorkflowAgentConfig,
     Workflow,
     NodeRunState,
     CheckpointQuestionState,
@@ -123,6 +127,9 @@ SCHEMA_MODELS: tuple[type[BaseModel], ...] = (
     AnswerCheckpointRequest,
     CleanRequest,
     CleanResponse,
+    GraphPatchModel,
+    AgentTurnModel,
+    AgentTurnsResponse,
     StageApproveRequest,
     StageInputsRequest,
     ApiErrorDetail,
@@ -216,7 +223,12 @@ def _is_nullable(prop_schema: Mapping[str, Any]) -> bool:
 def _render_interface(name: str, def_schema: Mapping[str, Any]) -> str:
     properties: Mapping[str, Any] = def_schema.get("properties", {})
     required_set = set(def_schema.get("required", []))
-    is_request_or_spec = name.endswith("Request") or name in ("Workflow", "NodeSpec", "Stage")
+    is_request_or_spec = name.endswith("Request") or name in (
+        "Workflow",
+        "WorkflowAgentConfig",
+        "NodeSpec",
+        "Stage",
+    )
 
     lines: list[str] = []
     description = def_schema.get("description")

@@ -157,4 +157,66 @@ describe("LogsPanel component (Task 6.4)", () => {
     expect(createUrlSpy).toHaveBeenCalled();
     expect(revokeUrlSpy).toHaveBeenCalledWith("blob:mock-url");
   });
+
+  it("renders Agent Turns tab with turn records from agent_turns.json (FEAT-AGT-1b)", async () => {
+    vi.spyOn(client, "fetchNodeAgentTurns").mockResolvedValue({
+      schema: 1,
+      turns: [
+        {
+          turn_index: 0,
+          provider: "cursor",
+          model: "gpt-5",
+          session_id: "chat_abc123",
+          status: "needs_input",
+          prompt_summary: "Compare CV against job description...",
+          questions: [
+            {
+              id: "role",
+              header: "Track",
+              question: "Target track?",
+              options: ["ML", "Backend"],
+              multi_select: false,
+              allow_freeform: false,
+            },
+          ],
+          user_answers: { role: "ML" },
+          started_at: 1000,
+          finished_at: 1004.25,
+        },
+        {
+          turn_index: 1,
+          provider: "cursor",
+          model: "gpt-5",
+          session_id: "chat_abc123",
+          status: "completed",
+          prompt_summary: "Compare CV against job description...",
+          outputs: { match_score: 92 },
+          questions: [],
+          started_at: 1010,
+          finished_at: 1012.5,
+        },
+      ],
+    });
+
+    render(<LogsPanel runId="run-100" nodeId="agent_node" />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("logs-tab-agent_turns").textContent).toContain(
+        "Agent Turns (2)",
+      );
+    });
+
+    fireEvent.click(screen.getByTestId("logs-tab-agent_turns"));
+
+    expect(screen.getByTestId("agent-turn-card-0")).toBeDefined();
+    expect(screen.getByTestId("agent-turn-status-0").textContent).toBe(
+      "needs_input",
+    );
+    expect(screen.getByText("Target track?")).toBeDefined();
+    expect(screen.getByText("Answer: ML")).toBeDefined();
+    expect(screen.getByTestId("agent-turn-card-1")).toBeDefined();
+    expect(screen.getByTestId("agent-turn-status-1").textContent).toBe(
+      "completed",
+    );
+  });
 });

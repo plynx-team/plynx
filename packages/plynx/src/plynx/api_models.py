@@ -418,6 +418,7 @@ class InputPortSpec(BaseModel):
     type: PortType
     media: str | None = None
     options: list[str | int] | None = None
+    suggestions: list[str] | None = None
     min: int | float | None = None
     max: int | float | None = None
     step: int | float | None = None
@@ -447,6 +448,7 @@ class OpEntry(BaseModel):
     module: str
     name: str
     kind: Literal["class", "function"]
+    agent_role: Literal["agent", "validator"] | None = None
     title: str
     category: str = "Uncategorized"
     cacheable: bool = True
@@ -524,6 +526,7 @@ class WorkflowInputSpec(BaseModel):
     type: PortType
     media: str | None = None
     options: list[str | int] | None = None
+    suggestions: list[str] | None = None
     min: int | float | None = None
     max: int | float | None = None
     step: int | float | None = None
@@ -549,6 +552,8 @@ class CreateRunRequest(BaseModel):
     workflow_path: str
     inputs: dict[str, Any] = Field(default_factory=dict)
     no_cache: bool = False
+    agent_provider: AgentProvider | None = None
+    agent_model: str | None = None
     workflow: Workflow | None = None
     layout: WorkflowLayout | None = None
 
@@ -612,6 +617,44 @@ class CleanResponse(BaseModel):
     deleted_runs: int = 0
     deleted_blobs: int = 0
     reclaimed_bytes: int = 0
+
+
+class GraphPatchModel(BaseModel):
+    """Proposed dynamic DAG patch inside an agent turn."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str
+    add_nodes: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    rewire_inputs: dict[str, dict[str, Any]] = Field(default_factory=dict)
+
+
+class AgentTurnModel(BaseModel):
+    """Single recorded coding-agent turn from ``agent_turns.json``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    turn_index: int
+    provider: AgentProvider
+    model: str = ""
+    session_id: str | None = None
+    status: AgentTurnStatus
+    prompt_summary: str = ""
+    outputs: dict[str, Any] | None = None
+    questions: list[CheckpointQuestionState] = Field(default_factory=list)
+    user_answers: dict[str, str | list[str]] | None = None
+    graph_patch: GraphPatchModel | None = None
+    started_at: float
+    finished_at: float
+
+
+class AgentTurnsResponse(BaseModel):
+    """Response body for ``GET /runs/{id}/nodes/{node_id}/agent-turns``."""
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    schema_version: Literal[1] = Field(default=1, alias="schema")
+    turns: list[AgentTurnModel] = Field(default_factory=list)
 
 
 class ApiErrorDetail(BaseModel):

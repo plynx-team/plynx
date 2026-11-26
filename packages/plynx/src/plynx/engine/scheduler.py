@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from plynx_sdk.protocol import (
+    AgentProvider,
     CheckpointAnswer,
     CheckpointManifest,
     CheckpointQuestion,
@@ -97,6 +98,8 @@ class SchedulerOptions:
     answers: dict[str, CheckpointAnswer] = field(default_factory=dict)
     non_interactive: bool = False
     no_cache: bool = False
+    agent_provider: AgentProvider | str | None = None
+    agent_model: str | None = None
     poll_interval: float = 0.2
     cancel_event: asyncio.Event | None = None
     checkpoint_callback: CheckpointCallback | None = None
@@ -148,7 +151,9 @@ class _RunExecution:
         for nid, spec in workflow.nodes.items():
             self.stage_nodes.setdefault(spec.stage, []).append(nid)
 
+        ws_cfg = load_workspace_config(scheduler.store.workspace_root)
         self.semaphore = asyncio.Semaphore(concurrency)
+        self.agent_semaphore = asyncio.Semaphore(max(ws_cfg.agent_concurrency, 1))
         self.running_tasks: dict[asyncio.Task[tuple[str, bool]], str] = {}
         self.gate_tasks: dict[
             asyncio.Task[tuple[str, StageGateKind, bool]],
@@ -533,7 +538,12 @@ class _RunExecution:
     async def _run_node_attempt(self, nid: str, node_dir: Path) -> tuple[bool, bool]:
         """Run one attempt for ``nid``. Returns ``(finished, mark_done)``."""
         spec = self.workflow.nodes[nid]
-        async with self.semaphore:
+        op_entry = self.scheduler.registry.get(spec.op)
+        is_agent_op = bool(op_entry is not None and op_entry.agent_role is not None)
+        agent_guard: contextlib.AbstractAsyncContextManager[Any] = (
+            self.agent_semaphore if is_agent_op else contextlib.nullcontext()
+        )
+        async with self.semaphore, agent_guard:
             if self.cancel_event.is_set():
                 await self._emit_node_status(
                     nid,
@@ -554,6 +564,7 @@ class _RunExecution:
                     self.completed_outputs,
                     self.opts,
                     self.resolved_answers,
+                    self.workflow,
                 )
             except (
                 FileNotFoundError,
@@ -578,7 +589,6 @@ class _RunExecution:
                 node_dir / "inputs.json",
                 inputs_manifest.to_json(),
             )
-            op_entry = self.scheduler.registry.get(spec.op)
             is_cacheable = op_entry.cacheable if op_entry is not None else True
             cache_key = self.scheduler._compute_node_cache_key(nid, spec, inputs_manifest)
 
@@ -1069,12 +1079,29 @@ class Scheduler:
         base_opts = options or SchedulerOptions()
         merged_inputs = dict(existing_state.run_inputs)
         merged_inputs.update(base_opts.run_inputs)
+        if base_opts.agent_provider is not None:
+            prov_str = (
+                base_opts.agent_provider.value
+                if isinstance(base_opts.agent_provider, AgentProvider)
+                else str(base_opts.agent_provider)
+            )
+            merged_inputs["__agent_provider__"] = prov_str
+        if base_opts.agent_model is not None:
+            merged_inputs["__agent_model__"] = base_opts.agent_model
+        if base_opts.agent_provider is not None or base_opts.agent_model is not None:
+            await asyncio.to_thread(
+                self.store.update_run_inputs,
+                resolved_id,
+                merged_inputs,
+            )
         merged_opts = SchedulerOptions(
             concurrency=base_opts.concurrency,
             run_inputs=merged_inputs,
             answers=dict(base_opts.answers),
             non_interactive=base_opts.non_interactive,
             no_cache=base_opts.no_cache,
+            agent_provider=base_opts.agent_provider,
+            agent_model=base_opts.agent_model,
             poll_interval=base_opts.poll_interval,
             cancel_event=base_opts.cancel_event,
             checkpoint_callback=base_opts.checkpoint_callback,
@@ -1104,6 +1131,32 @@ class Scheduler:
     ) -> RunState:
         """Schedule and run ``workflow``, writing statuses and events to ``self.store``."""
         opts = options or SchedulerOptions()
+        effective_run_inputs = dict(opts.run_inputs)
+        if opts.agent_provider is not None:
+            prov_str = (
+                opts.agent_provider.value
+                if isinstance(opts.agent_provider, AgentProvider)
+                else str(opts.agent_provider)
+            )
+            effective_run_inputs["__agent_provider__"] = prov_str
+        if opts.agent_model is not None:
+            effective_run_inputs["__agent_model__"] = opts.agent_model
+        if effective_run_inputs != opts.run_inputs:
+            opts = SchedulerOptions(
+                concurrency=opts.concurrency,
+                run_inputs=effective_run_inputs,
+                answers=dict(opts.answers),
+                non_interactive=opts.non_interactive,
+                no_cache=opts.no_cache,
+                agent_provider=opts.agent_provider,
+                agent_model=opts.agent_model,
+                poll_interval=opts.poll_interval,
+                cancel_event=opts.cancel_event,
+                checkpoint_callback=opts.checkpoint_callback,
+                stage_approval_callback=opts.stage_approval_callback,
+                stage_inputs_callback=opts.stage_inputs_callback,
+                on_node_status=opts.on_node_status,
+            )
         ws_concurrency = load_workspace_config(self.store.workspace_root).concurrency
         concurrency = (
             opts.concurrency or workflow.concurrency or ws_concurrency or (os.cpu_count() or 1)
@@ -1166,10 +1219,13 @@ class Scheduler:
         completed_outputs: Mapping[str, Mapping[str, ResultValue | OutputValue]],
         opts: SchedulerOptions,
         resolved_answers: Mapping[str, CheckpointAnswer],
+        workflow: Workflow | None = None,
     ) -> InputsManifest:
         dst_node_dir = self.store.node_dir(run_id, node_id)
         state = self.store.get_run_state(run_id)
         db_checkpoints = state.checkpoints if state is not None else None
+        wf_prov = workflow.agent.provider if workflow is not None and workflow.agent else None
+        wf_model = workflow.agent.model if workflow is not None and workflow.agent else None
         return materialize_inputs(
             node_id=node_id,
             spec=spec,
@@ -1181,6 +1237,10 @@ class Scheduler:
             run_inputs=opts.run_inputs,
             answers=resolved_answers,
             db_checkpoints=db_checkpoints,
+            workflow_agent_provider=wf_prov,
+            workflow_agent_model=wf_model,
+            cli_agent_provider=opts.agent_provider,
+            cli_agent_model=opts.agent_model,
         )
 
     def _compute_node_cache_key(

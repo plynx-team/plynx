@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import BinaryIO, Final
 
 from plynx_sdk.protocol import (
+    AgentProvider,
     CheckpointManifest,
     OutputsManifest,
     ProtocolError,
@@ -281,6 +282,16 @@ class LocalExecutor:
                 self.workspace_root / ".plynx" / "envs" / f"{pack_name}-{env_hash}"
             ).resolve()
             child_env = self._build_child_env(env_dir)
+        ws_cfg = await asyncio.to_thread(load_workspace_config, self.workspace_root)
+        if ws_cfg.agent_custom_command and "PLYNX_AGENT_CUSTOM_COMMAND" not in child_env:
+            child_env["PLYNX_AGENT_CUSTOM_COMMAND"] = ws_cfg.agent_custom_command
+        if (
+            ws_cfg.agent_provider != AgentProvider.DEFAULT
+            and "PLYNX_AGENT_PROVIDER" not in child_env
+        ):
+            child_env["PLYNX_AGENT_PROVIDER"] = ws_cfg.agent_provider.value
+        if ws_cfg.agent_model and "PLYNX_AGENT_MODEL" not in child_env:
+            child_env["PLYNX_AGENT_MODEL"] = ws_cfg.agent_model
         return direct_python, env_dir, child_env
 
     async def _ensure_environment(

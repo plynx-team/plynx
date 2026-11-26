@@ -20,10 +20,12 @@ packages/
   plynx-sdk/              stdlib-only. Imported inside node environments.
     pyproject.toml
     src/plynx_sdk/
-      __init__.py         exports Op, op, warn, Media, Range, Directory, checkpoint types, protocol enums
+      __init__.py         exports Op, AgentOp, StageValidatorOp, op, warn, Media, Range, Directory, checkpoint types, protocol enums
       op.py               Op base class and @op decorator
+      agent.py            AgentOp, StageValidatorOp, turn schema generation, output materialization, agent_turns.json
+      adapters.py         non-interactive CLI coding harness adapters (claude, cursor-agent, codex, gemini, opencode, goose, aider, custom, mock)
       types.py            semantic media aliases (PdfFile, AudioWav, ...)
-      protocol.py         IPC manifest dataclasses (inputs/outputs/checkpoint) and StrEnum constants
+      protocol.py         IPC manifest dataclasses (inputs/outputs/checkpoint/agent_turns/graph_patch) and StrEnum constants
       harness.py          child entrypoint: python -m plynx_sdk.harness
       checkpoint.py       CheckpointInterrupt, checkpoint() / checkpoint_batch() replay logic
       anomaly.py          warn() per-attempt warning collection
@@ -144,7 +146,7 @@ One process owns a run at a time (`RUNS.owner_pid`). Other processes (browser, s
 - Distributed workers, worker server, `launch` implementation.
 - Recursive sub-graphs, `include:`, templates, hubs, a node database.
 - Dynamic fan-out (`map:`). Batching happens inside Python nodes with `Directory` or lists of paths.
-- `AgentOp`, agent CLI adapters, MCP server. They are in [TODO.md](TODO.md).
+- MCP server. It is in [TODO.md](TODO.md).
 - API key vault, model selector, marketplace, `plynx pack install`.
 - Tauri or desktop packaging.
 - Real-time streaming or audio DSP inside the engine.

@@ -43,12 +43,19 @@ export interface NodeSpec {
   inputs?: Record<string, unknown>;
 }
 
+/** Workflow-level default agent provider and model. */
+export interface WorkflowAgentConfig {
+  provider?: AgentProvider;
+  model?: string;
+}
+
 /** Top-level ``workflow.yaml`` model. */
 export interface Workflow {
   version?: 1;
   name?: string;
   description?: string;
   concurrency?: number | null;
+  agent?: WorkflowAgentConfig | null;
   stages?: Record<string, Stage>;
   nodes?: Record<string, NodeSpec>;
 }
@@ -259,6 +266,7 @@ export interface InputPortSpec {
   type: "str" | "int" | "float" | "bool" | "json" | "file" | "directory";
   media?: string | null;
   options?: Array<string | number> | null;
+  suggestions?: Array<string> | null;
   min?: number | null;
   max?: number | null;
   step?: number | null;
@@ -282,6 +290,7 @@ export interface OpEntry {
   module: string;
   name: string;
   kind: "class" | "function";
+  agent_role?: "agent" | "validator" | null;
   title: string;
   category: string;
   cacheable: boolean;
@@ -358,6 +367,7 @@ export interface WorkflowInputSpec {
   type: "str" | "int" | "float" | "bool" | "json" | "file" | "directory";
   media?: string | null;
   options?: Array<string | number> | null;
+  suggestions?: Array<string> | null;
   min?: number | null;
   max?: number | null;
   step?: number | null;
@@ -377,6 +387,8 @@ export interface CreateRunRequest {
   workflow_path: string;
   inputs?: Record<string, unknown>;
   no_cache?: boolean;
+  agent_provider?: AgentProvider | null;
+  agent_model?: string | null;
   workflow?: Workflow | null;
   layout?: WorkflowLayout | null;
 }
@@ -409,6 +421,35 @@ export interface CleanResponse {
   deleted_runs: number;
   deleted_blobs: number;
   reclaimed_bytes: number;
+}
+
+/** Proposed dynamic DAG patch inside an agent turn. */
+export interface GraphPatchModel {
+  reason: string;
+  add_nodes: Record<string, Record<string, unknown>>;
+  rewire_inputs: Record<string, Record<string, unknown>>;
+}
+
+/** Single recorded coding-agent turn from ``agent_turns.json``. */
+export interface AgentTurnModel {
+  turn_index: number;
+  provider: AgentProvider;
+  model: string;
+  session_id?: string | null;
+  status: AgentTurnStatus;
+  prompt_summary: string;
+  outputs?: Record<string, unknown> | null;
+  questions: Array<CheckpointQuestionState>;
+  user_answers?: Record<string, string | Array<string>> | null;
+  graph_patch?: GraphPatchModel | null;
+  started_at: number;
+  finished_at: number;
+}
+
+/** Response body for ``GET /runs/{id}/nodes/{node_id}/agent-turns``. */
+export interface AgentTurnsResponse {
+  schema: 1;
+  turns: Array<AgentTurnModel>;
 }
 
 /** Request body for ``POST /runs/{id}/stages/{stage_id}/approve``. */

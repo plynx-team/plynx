@@ -1,4 +1,5 @@
 import type {
+  AgentTurnsResponse,
   AnswerCheckpointRequest,
   CreateRunRequest,
   CreateRunResponse,
@@ -271,6 +272,23 @@ export async function fetchNodeLogs(
     ? text.split(/\r?\n/).filter((line, idx, arr) => !(idx === arr.length - 1 && line === ""))
     : [];
   return { lines, offset: nextOffset };
+}
+
+export async function fetchNodeAgentTurns(
+  runId: string,
+  nodeId: string,
+): Promise<AgentTurnsResponse> {
+  const response = await fetch(
+    `/api/v1/runs/${encodeURIComponent(runId)}/nodes/${encodeURIComponent(
+      nodeId,
+    )}/agent-turns`,
+  );
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch agent turns for node ${nodeId} (${response.status})`,
+    );
+  }
+  return (await response.json()) as AgentTurnsResponse;
 }
 
 export async function uploadFile(file: File): Promise<UploadResponse> {

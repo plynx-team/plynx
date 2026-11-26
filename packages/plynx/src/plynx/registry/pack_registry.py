@@ -18,7 +18,7 @@ from plynx.config import load_workspace_config
 from plynx.registry.extractor import extract_ops_from_file
 from plynx.store.run_store import atomic_write_text
 
-CACHE_SCHEMA_VERSION = 2
+CACHE_SCHEMA_VERSION = 3
 
 
 def find_workspace_root(start: Path | None = None) -> Path:
@@ -340,6 +340,21 @@ class PackRegistry:
             ):
                 del cached_files[cached_rel]
                 cache_dirty = True
+
+        # Attach workspace agent.models suggestions (if configured in plynx.yaml) to AgentOp model ports
+        ws_cfg = load_workspace_config(self.workspace_root)
+        if ws_cfg.agent_models:
+            model_suggestions = list(ws_cfg.agent_models)
+            for op_id, op_entry in list(self._ops.items()):
+                if op_entry.agent_role is None:
+                    continue
+                updated_inputs = [
+                    port.model_copy(update={"suggestions": model_suggestions})
+                    if port.name == "model" and port.type == "str"
+                    else port
+                    for port in op_entry.inputs
+                ]
+                self._ops[op_id] = op_entry.model_copy(update={"inputs": updated_inputs})
 
         if cache_dirty:
             manifest = {

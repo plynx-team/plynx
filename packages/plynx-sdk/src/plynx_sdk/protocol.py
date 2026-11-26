@@ -11,6 +11,7 @@ import math
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from datetime import datetime
 from enum import StrEnum
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import Any, Final, Literal, TypeVar
@@ -75,6 +76,21 @@ class AgentProvider(StrEnum):
     AIDER = "aider"
     CUSTOM = "custom"
     MOCK = "mock"
+
+
+AgentProviderLiteral = Literal[
+    "default",
+    "claude",
+    "cursor",
+    "codex",
+    "gemini",
+    "opencode",
+    "goose",
+    "aider",
+    "custom",
+    "mock",
+]
+AGENT_PROVIDER_VALUES: Final[tuple[str, ...]] = tuple(p.value for p in AgentProvider)
 
 
 def _check_keys(
@@ -1228,18 +1244,388 @@ class CheckpointManifest:
         return cls.from_dict(_loads_json_object(raw, context="CheckpointManifest"))
 
 
+def _validate_flexible_timestamp(value: object, *, field_name: str, context: str) -> float:
+    """Validate a UTC float timestamp (also accepting ISO-8601 strings on read)."""
+    if isinstance(value, str) and value.strip():
+        iso = value.strip()
+        if iso.endswith("Z"):
+            iso = iso[:-1] + "+00:00"
+        try:
+            dt = datetime.fromisoformat(iso)
+        except ValueError as exc:
+            raise ProtocolError(
+                f"{context}: '{field_name}' must be a float timestamp or ISO-8601 string"
+            ) from exc
+        return float(dt.timestamp())
+    return _validate_timestamp(value, field_name=field_name, context=context)
+
+
+@dataclass
+class GraphPatchPayload:
+    """Proposed dynamic DAG patch emitted by an ``AgentOp`` or ``StageValidatorOp``."""
+
+    reason: str
+    add_nodes: dict[str, dict[str, JsonValue]] = field(default_factory=dict)
+    rewire_inputs: dict[str, dict[str, JsonValue]] = field(default_factory=dict)
+    schema: int = SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        self.validate()
+
+    def validate(self) -> None:
+        """Validate this ``GraphPatchPayload``."""
+        _validate_schema(self.schema, context="GraphPatchPayload")
+        _validate_non_empty_str(self.reason, field_name="reason", context="GraphPatchPayload")
+        if not isinstance(self.add_nodes, dict):
+            raise ProtocolError("GraphPatchPayload: 'add_nodes' must be a dict")
+        for nid, spec in self.add_nodes.items():
+            _validate_port_name(nid, context="GraphPatchPayload.add_nodes")
+            if not isinstance(spec, dict):
+                raise ProtocolError(
+                    f"GraphPatchPayload.add_nodes[{nid!r}]: node spec must be an object"
+                )
+            _validate_json_value(spec, context=f"GraphPatchPayload.add_nodes[{nid!r}]")
+        if not isinstance(self.rewire_inputs, dict):
+            raise ProtocolError("GraphPatchPayload: 'rewire_inputs' must be a dict")
+        for nid, ports in self.rewire_inputs.items():
+            _validate_port_name(nid, context="GraphPatchPayload.rewire_inputs")
+            if not isinstance(ports, dict):
+                raise ProtocolError(
+                    f"GraphPatchPayload.rewire_inputs[{nid!r}]: port map must be an object"
+                )
+            for port_name, val in ports.items():
+                _validate_port_name(
+                    port_name,
+                    context=f"GraphPatchPayload.rewire_inputs[{nid!r}]",
+                )
+                _validate_json_value(
+                    val,
+                    context=f"GraphPatchPayload.rewire_inputs[{nid!r}][{port_name!r}]",
+                )
+
+    def to_dict(self, *, include_schema: bool = True) -> dict[str, Any]:
+        """Convert to a validated JSON-ready dictionary."""
+        self.validate()
+        out: dict[str, Any] = {}
+        if include_schema:
+            out["schema"] = self.schema
+        out["reason"] = self.reason
+        out["add_nodes"] = {k: dict(v) for k, v in self.add_nodes.items()}
+        out["rewire_inputs"] = {k: dict(v) for k, v in self.rewire_inputs.items()}
+        return out
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> GraphPatchPayload:
+        """Validate and construct from a dictionary."""
+        if not isinstance(data, Mapping):
+            raise ProtocolError("GraphPatchPayload: expected an object")
+        _check_keys(
+            data,
+            required={"reason"},
+            optional={"schema", "add_nodes", "rewire_inputs"},
+            context="GraphPatchPayload",
+        )
+        schema = data.get("schema", SCHEMA_VERSION)
+        _validate_schema(schema, context="GraphPatchPayload")
+
+        raw_add = data.get("add_nodes", {})
+        add_nodes: dict[str, dict[str, JsonValue]] = {}
+        if isinstance(raw_add, list):
+            for item in raw_add:
+                if not isinstance(item, Mapping) or "id" not in item:
+                    raise ProtocolError(
+                        "GraphPatchPayload: list items in 'add_nodes' must be objects with 'id'"
+                    )
+                nid = str(item["id"])
+                add_nodes[nid] = {k: v for k, v in item.items() if k != "id"}
+        elif isinstance(raw_add, Mapping):
+            for nid, spec in raw_add.items():
+                if not isinstance(spec, Mapping):
+                    raise ProtocolError(f"GraphPatchPayload.add_nodes[{nid!r}]: expected an object")
+                add_nodes[str(nid)] = dict(spec)
+        else:
+            raise ProtocolError("GraphPatchPayload: 'add_nodes' must be an object or list")
+
+        raw_rewire = data.get("rewire_inputs", {})
+        if not isinstance(raw_rewire, Mapping):
+            raise ProtocolError("GraphPatchPayload: 'rewire_inputs' must be an object")
+        rewire_inputs: dict[str, dict[str, JsonValue]] = {}
+        for key, val in raw_rewire.items():
+            key_str = str(key)
+            if "." in key_str and not isinstance(val, Mapping):
+                nid, _, port = key_str.partition(".")
+                rewire_inputs.setdefault(nid, {})[port] = val
+            elif isinstance(val, Mapping):
+                rewire_inputs[key_str] = {str(pk): pv for pk, pv in val.items()}
+            else:
+                raise ProtocolError(
+                    f"GraphPatchPayload.rewire_inputs[{key_str!r}]: expected port mapping"
+                )
+
+        return cls(
+            reason=data["reason"],
+            add_nodes=add_nodes,
+            rewire_inputs=rewire_inputs,
+            schema=schema,
+        )
+
+    def to_json(self) -> str:
+        """Serialize to a validated JSON string."""
+        return _dumps_json(self.to_dict(include_schema=True))
+
+    @classmethod
+    def from_json(cls, raw: str | bytes) -> GraphPatchPayload:
+        """Deserialize and validate from a JSON string or UTF-8 bytes."""
+        return cls.from_dict(_loads_json_object(raw, context="GraphPatchPayload"))
+
+
+@dataclass
+class AgentTurnRecord:
+    """One recorded coding-agent turn inside ``agent_turns.json``."""
+
+    turn_index: int
+    provider: AgentProvider
+    status: AgentTurnStatus
+    started_at: float
+    finished_at: float
+    model: str = ""
+    session_id: str | None = None
+    prompt_summary: str = ""
+    outputs: dict[str, JsonValue] | None = None
+    questions: list[CheckpointQuestion] = field(default_factory=list)
+    user_answers: dict[str, AnswerValue] | None = None
+    graph_patch: GraphPatchPayload | None = None
+
+    def __post_init__(self) -> None:
+        if isinstance(self.provider, str) and not isinstance(self.provider, AgentProvider):
+            try:
+                self.provider = AgentProvider(self.provider)
+            except ValueError as exc:
+                raise ProtocolError(f"AgentTurnRecord: invalid provider {self.provider!r}") from exc
+        if isinstance(self.status, str) and not isinstance(self.status, AgentTurnStatus):
+            try:
+                self.status = AgentTurnStatus(self.status)
+            except ValueError as exc:
+                raise ProtocolError(f"AgentTurnRecord: invalid status {self.status!r}") from exc
+        self.started_at = _validate_flexible_timestamp(
+            self.started_at, field_name="started_at", context="AgentTurnRecord"
+        )
+        self.finished_at = _validate_flexible_timestamp(
+            self.finished_at, field_name="finished_at", context="AgentTurnRecord"
+        )
+        self.validate()
+
+    def validate(self) -> None:
+        """Validate this ``AgentTurnRecord``."""
+        _validate_non_negative_int(
+            self.turn_index, field_name="turn_index", context="AgentTurnRecord"
+        )
+        if not isinstance(self.provider, AgentProvider):
+            raise ProtocolError(f"AgentTurnRecord: invalid provider {self.provider!r}")
+        if not isinstance(self.status, AgentTurnStatus):
+            raise ProtocolError(f"AgentTurnRecord: invalid status {self.status!r}")
+        if not isinstance(self.model, str):
+            raise ProtocolError("AgentTurnRecord: 'model' must be a str")
+        if self.session_id is not None and not isinstance(self.session_id, str):
+            raise ProtocolError("AgentTurnRecord: 'session_id' must be a str or None")
+        if not isinstance(self.prompt_summary, str):
+            raise ProtocolError("AgentTurnRecord: 'prompt_summary' must be a str")
+        start = _validate_timestamp(
+            self.started_at, field_name="started_at", context="AgentTurnRecord"
+        )
+        end = _validate_timestamp(
+            self.finished_at, field_name="finished_at", context="AgentTurnRecord"
+        )
+        if end < start:
+            raise ProtocolError(
+                "AgentTurnRecord: 'finished_at' cannot be earlier than 'started_at'"
+            )
+        if self.outputs is not None:
+            if not isinstance(self.outputs, dict):
+                raise ProtocolError("AgentTurnRecord: 'outputs' must be an object or None")
+            _validate_json_value(self.outputs, context="AgentTurnRecord.outputs")
+        if not isinstance(self.questions, list):
+            raise ProtocolError("AgentTurnRecord: 'questions' must be a list")
+        for q in self.questions:
+            if not isinstance(q, CheckpointQuestion):
+                raise ProtocolError(
+                    "AgentTurnRecord: every item in 'questions' must be a CheckpointQuestion"
+                )
+            q.validate()
+        if self.user_answers is not None:
+            if not isinstance(self.user_answers, dict):
+                raise ProtocolError("AgentTurnRecord: 'user_answers' must be a dict or None")
+            _validate_checkpoint_answer(self.user_answers, context="AgentTurnRecord.user_answers")
+        if self.graph_patch is not None:
+            if not isinstance(self.graph_patch, GraphPatchPayload):
+                raise ProtocolError(
+                    "AgentTurnRecord: 'graph_patch' must be a GraphPatchPayload or None"
+                )
+            self.graph_patch.validate()
+
+        if self.status == AgentTurnStatus.NEEDS_INPUT and not self.questions:
+            raise ProtocolError(
+                "AgentTurnRecord: 'questions' must be non-empty when status is 'needs_input'"
+            )
+        if self.status == AgentTurnStatus.PROPOSE_PATCH and self.graph_patch is None:
+            raise ProtocolError(
+                "AgentTurnRecord: 'graph_patch' is required when status is 'propose_patch'"
+            )
+        if self.status == AgentTurnStatus.COMPLETED and self.outputs is None:
+            raise ProtocolError("AgentTurnRecord: 'outputs' is required when status is 'completed'")
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to a validated JSON-ready dictionary."""
+        self.validate()
+        out: dict[str, Any] = {
+            "turn_index": self.turn_index,
+            "provider": self.provider.value,
+            "model": self.model,
+            "session_id": self.session_id,
+            "status": self.status.value,
+            "prompt_summary": self.prompt_summary,
+            "started_at": self.started_at,
+            "finished_at": self.finished_at,
+        }
+        if self.outputs is not None:
+            out["outputs"] = dict(self.outputs)
+        if self.questions:
+            out["questions"] = [q.to_dict() for q in self.questions]
+        if self.user_answers is not None:
+            out["user_answers"] = dict(self.user_answers)
+        if self.graph_patch is not None:
+            out["graph_patch"] = self.graph_patch.to_dict(include_schema=False)
+        return out
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> AgentTurnRecord:
+        """Validate and construct from a dictionary."""
+        if not isinstance(data, Mapping):
+            raise ProtocolError("AgentTurnRecord: expected an object")
+        _check_keys(
+            data,
+            required={"turn_index", "provider", "status", "started_at", "finished_at"},
+            optional={
+                "model",
+                "session_id",
+                "prompt_summary",
+                "outputs",
+                "questions",
+                "user_answers",
+                "graph_patch",
+            },
+            context="AgentTurnRecord",
+        )
+        raw_questions = data.get("questions", [])
+        if not isinstance(raw_questions, list):
+            raise ProtocolError("AgentTurnRecord: 'questions' must be a list")
+        raw_patch = data.get("graph_patch")
+        patch = GraphPatchPayload.from_dict(raw_patch) if raw_patch is not None else None
+        raw_outputs = data.get("outputs")
+        if raw_outputs is not None and not isinstance(raw_outputs, Mapping):
+            raise ProtocolError("AgentTurnRecord: 'outputs' must be an object or null")
+        raw_answers = data.get("user_answers")
+        if raw_answers is not None and not isinstance(raw_answers, Mapping):
+            raise ProtocolError("AgentTurnRecord: 'user_answers' must be an object or null")
+
+        return cls(
+            turn_index=data["turn_index"],
+            provider=data["provider"],
+            model=data.get("model", ""),
+            session_id=data.get("session_id"),
+            status=data["status"],
+            prompt_summary=data.get("prompt_summary", ""),
+            outputs=dict(raw_outputs) if raw_outputs is not None else None,
+            questions=[CheckpointQuestion.from_dict(q) for q in raw_questions],
+            user_answers=dict(raw_answers) if raw_answers is not None else None,
+            graph_patch=patch,
+            started_at=data["started_at"],
+            finished_at=data["finished_at"],
+        )
+
+
+@dataclass
+class AgentTurnsManifest:
+    """``agent_turns.json`` written inside ``nodes/<node_id>/`` for 0-token checkpoint replay."""
+
+    turns: list[AgentTurnRecord] = field(default_factory=list)
+    schema: int = SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        self.validate()
+
+    def validate(self) -> None:
+        """Validate this ``AgentTurnsManifest``."""
+        _validate_schema(self.schema, context="AgentTurnsManifest")
+        if not isinstance(self.turns, list):
+            raise ProtocolError("AgentTurnsManifest: 'turns' must be a list")
+        for idx, turn in enumerate(self.turns):
+            if not isinstance(turn, AgentTurnRecord):
+                raise ProtocolError(
+                    "AgentTurnsManifest: every item in 'turns' must be an AgentTurnRecord"
+                )
+            turn.validate()
+            if turn.turn_index != idx:
+                raise ProtocolError(
+                    f"AgentTurnsManifest: expected turn_index {idx}, got {turn.turn_index}"
+                )
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to a validated JSON-ready dictionary."""
+        self.validate()
+        return {
+            "schema": self.schema,
+            "turns": [t.to_dict() for t in self.turns],
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> AgentTurnsManifest:
+        """Validate and construct from a dictionary."""
+        if not isinstance(data, Mapping):
+            raise ProtocolError("AgentTurnsManifest: expected an object")
+        _check_keys(
+            data,
+            required={"turns"},
+            optional={"schema"},
+            context="AgentTurnsManifest",
+        )
+        schema = data.get("schema", SCHEMA_VERSION)
+        _validate_schema(schema, context="AgentTurnsManifest")
+        raw_turns = data["turns"]
+        if not isinstance(raw_turns, list):
+            raise ProtocolError("AgentTurnsManifest: 'turns' must be a list")
+        return cls(
+            turns=[AgentTurnRecord.from_dict(item) for item in raw_turns],
+            schema=schema,
+        )
+
+    def to_json(self) -> str:
+        """Serialize to a validated JSON string."""
+        return _dumps_json(self.to_dict())
+
+    @classmethod
+    def from_json(cls, raw: str | bytes) -> AgentTurnsManifest:
+        """Deserialize and validate from a JSON string or UTF-8 bytes."""
+        return cls.from_dict(_loads_json_object(raw, context="AgentTurnsManifest"))
+
+
 __all__ = [
+    "AGENT_PROVIDER_VALUES",
     "MAX_SCALAR_BYTES",
     "SCHEMA_VERSION",
     "SINGLE_QUESTION_ID",
     "AgentProvider",
+    "AgentProviderLiteral",
+    "AgentTurnRecord",
     "AgentTurnStatus",
+    "AgentTurnsManifest",
     "AnswerValue",
     "CheckpointAnswer",
     "CheckpointManifest",
     "CheckpointQuestion",
     "DirectoryEntry",
     "GraphEditPolicy",
+    "GraphPatchPayload",
     "InputDirectoryValue",
     "InputFileValue",
     "InputValue",

@@ -10,6 +10,7 @@ from typing import Protocol
 import pytest
 from plynx_sdk.protocol import (
     MAX_SCALAR_BYTES,
+    AgentTurnsManifest,
     CheckpointManifest,
     DirectoryEntry,
     InputDirectoryValue,
@@ -44,6 +45,7 @@ MANIFEST_FIXTURES: list[tuple[str, type[_ManifestType]]] = [
     ("outputs.json", OutputsManifest),
     ("result.json", ResultManifest),
     ("checkpoint.json", CheckpointManifest),
+    ("agent_turns.json", AgentTurnsManifest),
 ]
 
 

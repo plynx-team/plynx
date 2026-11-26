@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **`AgentOp`, `StageValidatorOp`, & Coding Harness Adapters (`FEAT-AGT-1b`)**:
+  - `AgentTurnsManifest` (`nodes/<node_id>/agent_turns.json`) for 0-token replay across `checkpoint_batch()` restarts, exposed at `GET /runs/{id}/nodes/{node_id}/agent-turns` and rendered in the Web UI **"Agent Turns"** log drawer tab.
+  - `AgentOp` (Choice A inherited `run()` and Choice B explicit `run()` + `self.agent_turn()`) and `StageValidatorOp` in `plynx-sdk`, discovered in `<1ms` by the static AST extractor (`ALLOW_EXTRA_INPUTS = True` by default).
+  - Auto-generated JSON Schema envelope (`workdir/turn_schema.json`), universal `workdir/turn_output.json` file-out contract with stdout fallback, and automatic file output materialization (`MarkdownFile`, `JsonFile`, `TextFile`, `CsvFile`, `Path`).
+  - Modular non-interactive CLI adapters (`claude`, `cursor-agent`, `codex`, `gemini`, `opencode`, `goose`, `aider`, `custom`, and offline `mock`) with `stdin=DEVNULL`, explicit `--resume <session_id>`, `agent_concurrency` semaphore, and 4-level `provider`/`model` resolution (`plynx.yaml` -> `workflow.yaml` -> CLI `--agent-provider`/`--agent-model` -> node input port / `--set`) plus `<datalist>` model suggestions.
 - **Protocol enums**: `AgentTurnStatus`, `GraphEditPolicy`, `ValidatorMode`, and `AgentProvider` (`enum.StrEnum`) in `plynx_sdk.protocol`.
 - **`self.warn()` / `plynx_sdk.warn()`**: non-fatal per-node warnings recorded in `outputs.json` and `result.json` (`warnings`).
 - **Batch checkpoints**: `self.checkpoint_batch([...])` asks several questions (radio, checkbox, or freeform) in one pause. Supported by the REST answer endpoint (`answers`), SSE `node_checkpoint` (`questions`), CLI `--answers` / `--answer node.cp_n.question_id=value`, terminal prompts, and the Stepper / run inspector checkpoint card (**Submit Answers**).

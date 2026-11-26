@@ -18,6 +18,9 @@ version: 1
 name: foo_or_woo               # optional, default: file stem
 description: ""                # optional
 concurrency: 4                 # optional
+agent:                         # optional workflow-level agent defaults
+  provider: default            # AgentProvider
+  model: ""                    # optional model override
 stages:                        # optional
   ask:
     title: "1. Ask"            # optional, default: stage id
@@ -110,10 +113,11 @@ def concat(a: str, b: str = " ") -> ConcatOut:
   - Optionals: `X | None` / `Optional[X]` of any of the above.
 - Defaults are literals. Port names are `snake_case`.
 - Variadic operations: An op can declare `ALLOW_EXTRA_INPUTS = True` (class form) or `@op(..., allow_extra_inputs=True)` (function form). Variadic inputs are declared via typed keyword arguments `**extra: <Type>` (e.g. `**tracks: AudioWav`). When enabled, the workflow engine accepts arbitrary named input ports matching `<Type>`.
-- Inheritance from a custom base class or computed metadata is not supported in v2.0.0.
+- Agent operations (`AgentOp` and `StageValidatorOp` subclasses): Default `ALLOW_EXTRA_INPUTS = True` and `agent_role = "agent" | "validator"`. Subclasses may omit `def run()` (Choice A), inheriting `prompt_file: MarkdownFile | None = None`, `prompt: str = ""`, `provider: AgentProviderLiteral = "default"`, `model: str = ""`, and `**extra: Any`, or declare an explicit `def run(...)` (Choice B) with mandatory typed ports alongside standard agent ports. Inheritance from any base class outside `Op`, `AgentOp`, and `StageValidatorOp` or computed metadata is not supported.
 
 Port type vocabulary (`type`): `str`, `int`, `float`, `bool`, `json` (`dict` or `list`), `file` (`Path`), `directory` (`Directory`).
 - `options`: list of allowed scalar literals for `Literal[...]`, or `null`.
+- `suggestions`: optional list of freeform autocomplete strings (e.g. `plynx.yaml` `agent.models` on `AgentOp` `model` ports), or `null`.
 - `min`, `max`, `step`: numeric bounds for `Range(...)`, or `null`.
 - `media`: MIME string or `null`. A `file` port with `media` accepts a wire from a `file` output with the same `media` or `null`.
 
@@ -230,6 +234,44 @@ The engine hashes each output, moves it into the blob store, and writes:
 - `plynx_sdk.checkpoint_batch(questions) -> dict[str, str | list[str]]` (also `self.checkpoint_batch(...)`) asks several questions in one pause. Each item is a `CheckpointQuestion` or a dict with `id` (required, `[A-Za-z_][A-Za-z0-9_]*`, unique, `default` is reserved), `question` (required), `header` (default `""`), `options` (default `[]`), `multi_select` (default `false`), `allow_freeform` (default `true`). The top-level `question` is `""` and `options` is `null`. The answer maps every question id to a `str` (`multi_select: false`) or a `list[str]` (`multi_select: true`). Every question must be answered, unknown ids are rejected, and when a question has `options` and `allow_freeform` is false each value must be one of the options.
 - `questions` is optional when reading a manifest. A manifest without it (written by v2.0.0) is read as one `default` question built from the top-level fields.
 
+### `agent_turns.json` (`AgentOp` / `StageValidatorOp` writes inside `nodes/<node_id>/`)
+
+```json
+{
+  "schema": 1,
+  "turns": [
+    {
+      "turn_index": 0,
+      "provider": "cursor",
+      "model": "gpt-5",
+      "session_id": "chat_abc123",
+      "status": "needs_input",
+      "prompt_summary": "Compare CV against job description...",
+      "started_at": 1731800000.1,
+      "finished_at": 1731800008.4,
+      "questions": [
+        {
+          "id": "role",
+          "header": "",
+          "question": "Target track?",
+          "options": [
+            "ML",
+            "Backend"
+          ],
+          "multi_select": false,
+          "allow_freeform": true
+        }
+      ],
+      "user_answers": {
+        "role": "ML"
+      }
+    }
+  ]
+}
+```
+
+Before executing Turn `k`, `AgentOp` consults `agent_turns.json`. If Turn `k` is already recorded (e.g. replaying `run()` after a `checkpoint_batch()` exit `10`), `AgentOp` returns the recorded turn in 0 tokens, reads the stored checkpoint answer from `inputs.json`, and resumes Turn `k+1` via `--resume <session_id>`. Before each turn, `AgentOp` writes `workdir/turn_schema.json` and reads `workdir/turn_output.json` (falling back to CLI `stdout` JSON).
+
 ### Child exit codes
 
 | Exit | Files | Node status |
@@ -325,7 +367,7 @@ An answer is written with `UPDATE checkpoints SET answer=?, answered_at=? WHERE 
   logs/<node_id>.stdout.log   append-only; "--- attempt N ---" line between attempts
   logs/<node_id>.stderr.log
   nodes/<node_id>/
-    inputs.json  checkpoint.json  outputs.json  result.json
+    inputs.json  checkpoint.json  agent_turns.json  outputs.json  result.json
     inputs/<port>/<filename>
     workdir/
 ```
@@ -362,7 +404,7 @@ SSE (`GET /api/v1/runs/{run_id}/stream`): frames `id: <seq>`, `event: <type>`, `
 | `POST /workflows/validate` | body `{ workflow }`, returns `{ issues: [{ severity, message, node_id?, port_name?, stage_id? }] }` |
 | `GET /workflows/{path}/inputs` | run inputs still unbound: `[{ node_id, name, type, media, required, default, stage_id, options, min, max, step, description }]` (`WorkflowInputSpec`) |
 | `POST /uploads` | multipart file upload. Returns `{ path }` (workspace-relative, under `.plynx/uploads/`) |
-| `POST /runs` | `{ workflow_path, inputs?: { "node.name": value }, no_cache?: bool, concurrency?: int }`, returns `{ run_id }` |
+| `POST /runs` | `{ workflow_path, inputs?: { "node.name": value }, no_cache?: bool, agent_provider?: AgentProvider, agent_model?: str }`, returns `{ run_id }` |
 | `GET /runs` | list runs, newest first, `?limit=50&cursor=...&workflow_path=...`, returns `{ runs: [...], next_cursor: ... }` |
 | `GET /runs/{id}` | full state: run, nodes, open checkpoints, stage gates, run inputs (`RunState`) |
 | `POST /runs/{id}/cancel` | request cancel |
@@ -372,6 +414,7 @@ SSE (`GET /api/v1/runs/{run_id}/stream`): frames `id: <seq>`, `event: <type>`, `
 | `POST /runs/{id}/stages/{stage_id}/inputs` | submit deferred stage inputs (body `{ inputs: { "node.name": value } }`) and resolve its `input` gate |
 | `GET /runs/{id}/stream` | SSE (section 9, supports `?last_event_id=N&initial_log_offset=N` or `Last-Event-ID` header) |
 | `GET /runs/{id}/nodes/{node_id}/logs/{stream}?offset=0` | `text/plain`, header `X-Next-Offset` |
+| `GET /runs/{id}/nodes/{node_id}/agent-turns` | `{ schema: 1, turns: [...] }` from `nodes/<node_id>/agent_turns.json` (empty list if none) |
 | `GET /runs/{id}/nodes/{node_id}/outputs/{name}` | blob download, `Content-Type` from `media` |
 | `POST /clean` | body `{ days?: int, dry_run?: bool }`, returns `{ runs_deleted, cache_entries_deleted, blobs_deleted, bytes_reclaimed }` |
 
@@ -393,9 +436,9 @@ Server binds `127.0.0.1` (or loopback host). CORS allows only the Vite dev origi
 | `plynx ui [--port 8080] [--host 127.0.0.1] [--no-browser]` | start the server on loopback host and open the UI |
 | `plynx agent-guide` | print the self-contained User Agent Reference (`AGENT_GUIDE.md`) to stdout |
 
-`plynx run` options: `--set node.port=value` (repeatable, scalar), `--input node.port=path` (repeatable, file or directory), `--answers file.json` (`{ "node.cp_n": "value" }`, or `{ "node.cp_n": { "question_id": "value" | ["v1", "v2"] } }` for batch checkpoints), `--answer node.cp_n=value` (repeatable; `--answer node.cp_n.question_id=value` for a batch question, repeat it to build a `multi_select` list), `--concurrency N`, `--non-interactive` (also when `CI=true`), `--no-cache`.
+`plynx run` options: `--set node.port=value` (repeatable, scalar), `--input node.port=path` (repeatable, file or directory), `--answers file.json` (`{ "node.cp_n": "value" }`, or `{ "node.cp_n": { "question_id": "value" | ["v1", "v2"] } }` for batch checkpoints), `--answer node.cp_n=value` (repeatable; `--answer node.cp_n.question_id=value` for a batch question, repeat it to build a `multi_select` list), `--concurrency N`, `--agent-provider <provider>`, `--agent-model <model>`, `--non-interactive` (also when `CI=true`), `--no-cache`.
 
-`plynx resume` options: `--answers file.json` and `--answer` (same forms as `plynx run`), `--concurrency N`, `--non-interactive`.
+`plynx resume` options: `--answers file.json` and `--answer` (same forms as `plynx run`), `--concurrency N`, `--agent-provider <provider>`, `--agent-model <model>`, `--non-interactive`.
 
 Exit codes of `run` and `resume`: `0` success, `1` failed, `2` blocked on a checkpoint or stage gate in non-interactive mode, `130` canceled. Interactive mode prompts in the terminal: numbered options `[1-N]`, or text when `allow_freeform`. A batch checkpoint prompts for each question in order; `multi_select` answers are comma separated.
 
@@ -409,6 +452,13 @@ db: .plynx/plynx.db                  # default: ".plynx/plynx.db"
 concurrency: 4                       # default: None (falls back to os.cpu_count())
 env_passthrough: ["*"]               # default: inherit all; or a list of specific env var names
 cache: { max_size: 10GB }            # optional LRU budget for blobs (e.g. "10GB", 10737418240)
+agent:                               # optional coding-agent settings
+  provider: default                  # AgentProvider (or PLYNX_AGENT_PROVIDER env var)
+  model: ""                          # default model (or PLYNX_AGENT_MODEL env var)
+  agent_concurrency: 2               # max concurrent AgentOp / StageValidatorOp attempts
+  models: []                         # optional autocomplete suggestions for UI <datalist>
+  custom_command: ""                 # command template for AgentProvider.CUSTOM
 ```
 
 Concurrency precedence: `--concurrency` > `workflow.yaml` > `plynx.yaml` > `os.cpu_count()`.
+Agent `provider` / `model` precedence (resolved into `inputs.json` before `plynx-cache-1` cache-key computation): `plynx.yaml` / env -> `workflow.yaml` `agent:` -> CLI `--agent-provider` / `--agent-model` -> explicit non-default node `inputs` -> CLI `--set <node>.provider` / `--set <node>.model`.

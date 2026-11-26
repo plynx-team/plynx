@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter
+from plynx_sdk.protocol import AgentProvider
 from ruamel.yaml import YAML
 
 from plynx.api_models import (
@@ -79,6 +80,13 @@ def workflow_to_dict(wf: Workflow) -> dict[str, Any]:
         out["description"] = wf.description
     if wf.concurrency is not None:
         out["concurrency"] = wf.concurrency
+    if wf.agent is not None and (
+        wf.agent.provider != AgentProvider.DEFAULT or wf.agent.model != ""
+    ):
+        agent_out: dict[str, Any] = {"provider": wf.agent.provider.value}
+        if wf.agent.model:
+            agent_out["model"] = wf.agent.model
+        out["agent"] = agent_out
 
     custom_stages: dict[str, Any] = {}
     for sid, stage in wf.stages.items():

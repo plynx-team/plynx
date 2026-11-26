@@ -1,5 +1,15 @@
 """PLynx SDK: op authoring API and process wire types. Standard library only."""
 
+from plynx_sdk.adapters import AdapterTurnResult, build_provider_command, execute_provider_turn
+from plynx_sdk.agent import (
+    AgentOp,
+    StageValidatorOp,
+    agent_context,
+    generate_turn_schema,
+    load_agent_turns,
+    materialize_turn_outputs,
+    save_agent_turns,
+)
 from plynx_sdk.anomaly import warn
 from plynx_sdk.checkpoint import (
     CheckpointInterrupt,
@@ -9,10 +19,15 @@ from plynx_sdk.checkpoint import (
 )
 from plynx_sdk.op import Op, OpMetadata, op
 from plynx_sdk.protocol import (
+    AGENT_PROVIDER_VALUES,
     AgentProvider,
+    AgentProviderLiteral,
+    AgentTurnRecord,
+    AgentTurnsManifest,
     AgentTurnStatus,
     CheckpointQuestion,
     GraphEditPolicy,
+    GraphPatchPayload,
     ValidatorMode,
 )
 from plynx_sdk.types import (
@@ -32,9 +47,15 @@ from plynx_sdk.types import (
 )
 
 __all__ = [
+    "AGENT_PROVIDER_VALUES",
     "SEMANTIC_MEDIA_ALIASES",
+    "AdapterTurnResult",
+    "AgentOp",
     "AgentProvider",
+    "AgentProviderLiteral",
+    "AgentTurnRecord",
     "AgentTurnStatus",
+    "AgentTurnsManifest",
     "AudioWav",
     "CheckpointInterrupt",
     "CheckpointQuestion",
@@ -42,6 +63,7 @@ __all__ = [
     "Directory",
     "DirectoryMarker",
     "GraphEditPolicy",
+    "GraphPatchPayload",
     "ImageFile",
     "JsonFile",
     "MarkdownFile",
@@ -51,11 +73,19 @@ __all__ = [
     "OpMetadata",
     "PdfFile",
     "Range",
+    "StageValidatorOp",
     "TextFile",
     "ValidatorMode",
+    "agent_context",
+    "build_provider_command",
     "checkpoint",
     "checkpoint_batch",
     "checkpoint_context",
+    "execute_provider_turn",
+    "generate_turn_schema",
+    "load_agent_turns",
+    "materialize_turn_outputs",
     "op",
+    "save_agent_turns",
     "warn",
 ]

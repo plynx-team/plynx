@@ -12,6 +12,7 @@ from typing import Any
 
 import click
 import uvicorn
+from plynx_sdk.protocol import AgentProvider
 from pydantic import ValidationError
 
 from plynx.api_models import NodeStatus, RunStatus
@@ -156,6 +157,9 @@ def validate_cmd(workflow: Path) -> None:
     click.echo(f"OK: {workflow}")
 
 
+_CLI_AGENT_PROVIDER_CHOICES = tuple(p.value for p in AgentProvider if p != AgentProvider.DEFAULT)
+
+
 @main.command("run")
 @click.argument("workflow", type=click.Path(path_type=Path))
 @click.option("set_pairs", "--set", multiple=True, help="Set scalar input (node.port=value).")
@@ -181,6 +185,18 @@ def validate_cmd(workflow: Path) -> None:
 )
 @click.option("--concurrency", type=int, default=None, help="Maximum concurrent nodes.")
 @click.option(
+    "--agent-provider",
+    type=click.Choice(_CLI_AGENT_PROVIDER_CHOICES),
+    default=None,
+    help="Default coding-agent CLI provider for this run.",
+)
+@click.option(
+    "--agent-model",
+    type=str,
+    default=None,
+    help="Default coding-agent model override for this run.",
+)
+@click.option(
     "--non-interactive",
     is_flag=True,
     default=False,
@@ -194,6 +210,8 @@ def run_cmd(
     answers_file: Path | None,
     answer_pairs: tuple[str, ...],
     concurrency: int | None,
+    agent_provider: str | None,
+    agent_model: str | None,
     non_interactive: bool,
     no_cache: bool,
 ) -> None:
@@ -260,6 +278,8 @@ def run_cmd(
             answers=answers,
             non_interactive=effective_non_interactive,
             no_cache=no_cache,
+            agent_provider=agent_provider,
+            agent_model=agent_model,
             cancel_event=cancel_event,
             checkpoint_callback=(
                 None
@@ -321,6 +341,18 @@ def run_cmd(
 )
 @click.option("--concurrency", type=int, default=None, help="Maximum concurrent nodes.")
 @click.option(
+    "--agent-provider",
+    type=click.Choice(_CLI_AGENT_PROVIDER_CHOICES),
+    default=None,
+    help="Override default coding-agent CLI provider when resuming.",
+)
+@click.option(
+    "--agent-model",
+    type=str,
+    default=None,
+    help="Override default coding-agent model when resuming.",
+)
+@click.option(
     "--non-interactive",
     is_flag=True,
     default=False,
@@ -331,6 +363,8 @@ def resume_cmd(
     answers_file: Path | None,
     answer_pairs: tuple[str, ...],
     concurrency: int | None,
+    agent_provider: str | None,
+    agent_model: str | None,
     non_interactive: bool,
 ) -> None:
     """Continue a failed, canceled, or waiting run, reusing completed node outputs."""
@@ -360,6 +394,8 @@ def resume_cmd(
             answers=answers,
             non_interactive=effective_non_interactive,
             no_cache=True,
+            agent_provider=agent_provider,
+            agent_model=agent_model,
             cancel_event=cancel_event,
             checkpoint_callback=(
                 None

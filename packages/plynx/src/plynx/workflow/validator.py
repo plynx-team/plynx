@@ -105,6 +105,7 @@ def get_unbound_run_inputs(
                         type=port.type,
                         media=port.media,
                         options=port.options,
+                        suggestions=port.suggestions,
                         min=port.min,
                         max=port.max,
                         step=port.step,

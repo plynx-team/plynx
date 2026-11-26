@@ -745,3 +745,118 @@ class RootOp(Op):
     deduced_pack, deduced_module, _ = _deduce_pack_and_module(init_file, workspace_root=tmp_path)
     assert deduced_pack == "mypack"
     assert deduced_module == ""
+
+
+def test_extract_agent_op_choice_a_choice_b_and_stage_validator_under_1ms() -> None:
+    """AST extractor discovers Choice A AgentOp, Choice B AgentOp, and StageValidatorOp in <1ms."""
+    import time
+
+    from plynx_sdk.protocol import AGENT_PROVIDER_VALUES
+
+    src = '''
+from typing import Any, TypedDict
+from plynx_sdk import AgentOp, AgentProvider, MarkdownFile, StageValidatorOp, TextFile
+
+
+class ChoiceAPrompt(AgentOp):
+    """Run a domain prompt without overriding run()."""
+
+    TITLE = "Choice A Prompt"
+    CATEGORY = "Agents"
+
+    class Outputs(TypedDict):
+        response: MarkdownFile
+        score: int
+
+
+class ChoiceBCvMatcher(AgentOp):
+    """Compare CV against a job description."""
+
+    TITLE = "CV Matcher"
+    CATEGORY = "Agents / HR"
+
+    class Outputs(TypedDict):
+        verdict: str
+        report: MarkdownFile
+
+    def run(
+        self,
+        cv: MarkdownFile,
+        job_desc: TextFile,
+        prompt_file: MarkdownFile | None = None,
+        prompt: str = "",
+        provider: AgentProvider = AgentProvider.DEFAULT,
+        model: str = "",
+        **extra: Any,
+    ) -> Outputs:
+        return self.run_agent(
+            prompt_file=prompt_file,
+            prompt=prompt,
+            provider=provider,
+            model=model,
+            cv=cv,
+            job_desc=job_desc,
+            **extra,
+        )
+
+
+class IngestSupervisor(StageValidatorOp):
+    """Inspect stage outputs and propose bounded repairs."""
+
+    TITLE = "Ingest Supervisor"
+'''
+    # Warm up and measure AST extraction time
+    extract_ops_from_source(src, pack="standard_io", module="agent")
+    t0 = time.perf_counter()
+    ops = extract_ops_from_source(src, pack="standard_io", module="agent")
+    elapsed_ms = (time.perf_counter() - t0) * 1000.0
+    assert elapsed_ms < 5.0  # Typically ~0.15ms (<1ms target, generous 5ms CI runner guard)
+    assert len(ops) == 3
+
+    choice_a, choice_b, supervisor = ops
+
+    # Choice A
+    assert choice_a.valid is True
+    assert choice_a.agent_role == "agent"
+    assert choice_a.allow_extra_inputs is True
+    assert [p.name for p in choice_a.inputs] == ["prompt_file", "prompt", "provider", "model"]
+    a_inputs = {p.name: p for p in choice_a.inputs}
+    assert a_inputs["prompt_file"].type == "file"
+    assert a_inputs["prompt_file"].media == "text/markdown"
+    assert a_inputs["prompt_file"].required is False
+    assert a_inputs["provider"].options == list(AGENT_PROVIDER_VALUES)
+    assert a_inputs["provider"].default == "default"
+    assert a_inputs["model"].type == "str"
+    assert a_inputs["model"].default == ""
+    assert choice_a.outputs == [
+        OutputPortSpec(name="response", type="file", media="text/markdown"),
+        OutputPortSpec(name="score", type="int"),
+    ]
+
+    # Choice B
+    assert choice_b.valid is True
+    assert choice_b.agent_role == "agent"
+    assert choice_b.allow_extra_inputs is True
+    assert [p.name for p in choice_b.inputs] == [
+        "cv",
+        "job_desc",
+        "prompt_file",
+        "prompt",
+        "provider",
+        "model",
+    ]
+    b_inputs = {p.name: p for p in choice_b.inputs}
+    assert b_inputs["cv"].required is True
+    assert b_inputs["cv"].media == "text/markdown"
+    assert b_inputs["job_desc"].required is True
+    assert b_inputs["job_desc"].media == "text/plain"
+    assert b_inputs["provider"].options == list(AGENT_PROVIDER_VALUES)
+    assert b_inputs["provider"].default == "default"
+
+    # StageValidatorOp
+    assert supervisor.valid is True
+    assert supervisor.agent_role == "validator"
+    assert supervisor.allow_extra_inputs is True
+    assert supervisor.category == "Agents / Validators"
+    assert [p.name for p in supervisor.inputs] == ["prompt_file", "prompt", "provider", "model"]
+    assert supervisor.outputs == [OutputPortSpec(name="summary", type="str")]

@@ -9,15 +9,19 @@ from __future__ import annotations
 import ast
 import inspect
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
+from plynx_sdk.protocol import AGENT_PROVIDER_VALUES, AgentProvider
 from plynx_sdk.types import SEMANTIC_MEDIA_ALIASES
 
 from plynx.api_models import InputPortSpec, OpEntry, OutputPortSpec, PortType
 
 _SNAKE_CASE_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+_AGENT_BASE_CLASSES = ("AgentOp", "StageValidatorOp")
+_SUPPORTED_OP_BASES = ("Op", "AgentOp", "StageValidatorOp")
 
 
 @dataclass(frozen=True)
@@ -60,6 +64,10 @@ def _extract_literal(node: ast.AST) -> Any:
                 raise ValueError("Dict unpacking is not supported in literals")
             res[_extract_literal(k)] = _extract_literal(v)
         return res
+    if isinstance(node, ast.Attribute):
+        owner = _get_name_or_attr(node.value)
+        if owner == "AgentProvider" and node.attr in AgentProvider.__members__:
+            return AgentProvider[node.attr].value
     raise ValueError(f"Expression is not a supported literal: {ast.dump(node)}")
 
 
@@ -152,6 +160,12 @@ def _parse_annotation(
                 media=SEMANTIC_MEDIA_ALIASES[unwrapped.id],
             )
 
+        if unwrapped.id in ("AgentProvider", "AgentProviderLiteral"):
+            return _ParsedAnnotation(
+                port_type="str",
+                options=list(AGENT_PROVIDER_VALUES),
+            )
+
         primitive_map: dict[str, PortType] = {
             "str": "str",
             "int": "int",
@@ -172,6 +186,11 @@ def _parse_annotation(
             return _ParsedAnnotation(
                 port_type="file",
                 media=SEMANTIC_MEDIA_ALIASES[unwrapped.attr],
+            )
+        if unwrapped.attr in ("AgentProvider", "AgentProviderLiteral"):
+            return _ParsedAnnotation(
+                port_type="str",
+                options=list(AGENT_PROVIDER_VALUES),
             )
         if unwrapped.attr == "Path":
             return _ParsedAnnotation(port_type="file")
@@ -267,7 +286,7 @@ def _is_op_candidate_class(node: ast.ClassDef) -> bool:
     """Return whether ``node`` is an attempted PLynx Op class."""
     if any(_get_name_or_attr(base) == "TypedDict" for base in node.bases):
         return False
-    if any(_get_name_or_attr(base) == "Op" for base in node.bases):
+    if any(_get_name_or_attr(base) in _SUPPORTED_OP_BASES for base in node.bases):
         return True
 
     has_run = any(isinstance(item, ast.FunctionDef) and item.name == "run" for item in node.body)
@@ -579,6 +598,48 @@ def _extract_outputs(
     return outputs
 
 
+def _default_agent_input_ports(
+    param_descriptions: Mapping[str, str] | None = None,
+) -> list[InputPortSpec]:
+    """Return the inherited Choice A input ports for ``AgentOp`` / ``StageValidatorOp``."""
+    descs = param_descriptions or {}
+    return [
+        InputPortSpec(
+            name="prompt_file",
+            type="file",
+            media="text/markdown",
+            required=False,
+            default=None,
+            description=descs.get(
+                "prompt_file",
+                "Optional Markdown file with domain instructions.",
+            ),
+        ),
+        InputPortSpec(
+            name="prompt",
+            type="str",
+            required=False,
+            default="",
+            description=descs.get("prompt", "Inline domain instructions."),
+        ),
+        InputPortSpec(
+            name="provider",
+            type="str",
+            options=list(AGENT_PROVIDER_VALUES),
+            required=False,
+            default=AgentProvider.DEFAULT.value,
+            description=descs.get("provider", "Coding agent CLI provider."),
+        ),
+        InputPortSpec(
+            name="model",
+            type="str",
+            required=False,
+            default="",
+            description=descs.get("model", "Optional model identifier override."),
+        ),
+    ]
+
+
 def _extract_class_op(
     class_node: ast.ClassDef,
     *,
@@ -588,11 +649,12 @@ def _extract_class_op(
     module_aliases: dict[str, ast.AST],
     module_typed_dicts: dict[str, ast.ClassDef],
 ) -> OpEntry:
-    """Extract an ``OpEntry`` from an ``Op`` subclass AST node."""
+    """Extract an ``OpEntry`` from an ``Op``, ``AgentOp``, or ``StageValidatorOp`` AST node."""
     title: str | None = None
     category = "Uncategorized"
     cacheable = True
     allow_extra_inputs = False
+    agent_role: Literal["agent", "validator"] | None = None
     inner_typed_dicts: dict[str, ast.ClassDef] = {}
     run_func: ast.FunctionDef | None = None
     op_id = _format_op_id(pack, module, class_node.name)
@@ -602,12 +664,23 @@ def _extract_class_op(
         if (
             not class_node.bases
             or len(class_node.bases) != 1
-            or _get_name_or_attr(class_node.bases[0]) != "Op"
+            or _get_name_or_attr(class_node.bases[0]) not in _SUPPORTED_OP_BASES
         ):
             raise ValueError(
                 "Inheritance from a custom base class is not supported in v2.0.0 "
-                "(must inherit directly from Op)"
+                "(must inherit directly from Op, AgentOp, or StageValidatorOp)"
             )
+
+        base_name = _get_name_or_attr(class_node.bases[0])
+        is_agent_base = base_name in _AGENT_BASE_CLASSES
+        is_validator_base = base_name == "StageValidatorOp"
+        if is_validator_base:
+            agent_role = "validator"
+            category = "Agents / Validators"
+            allow_extra_inputs = True
+        elif is_agent_base:
+            agent_role = "agent"
+            allow_extra_inputs = True
 
         for item in class_node.body:
             if isinstance(item, ast.ClassDef):
@@ -637,7 +710,7 @@ def _extract_class_op(
         if title is None:
             raise ValueError(f"Op class '{class_node.name}' is missing required TITLE attribute")
 
-        if run_func is None:
+        if run_func is None and not is_agent_base:
             raise ValueError(f"Op class '{class_node.name}' must define a 'run' method")
 
         class_doc = ast.get_docstring(class_node)
@@ -660,25 +733,44 @@ def _extract_class_op(
         all_typed_dicts.update(inner_typed_dicts)
 
         has_inner_outputs = "Outputs" in inner_typed_dicts
-        if not has_inner_outputs and run_func.returns is None:
-            raise ValueError(
-                f"Op class '{class_node.name}' has no Outputs TypedDict or return annotation"
+        if run_func is None:
+            inputs = _default_agent_input_ports(param_descriptions)
+            extra_inputs_type = None
+            if has_inner_outputs:
+                outputs = _extract_outputs(
+                    None,
+                    all_typed_dicts,
+                    module_aliases,
+                    allow_default_outputs_typed_dict=True,
+                )
+            elif is_validator_base:
+                outputs = [OutputPortSpec(name="summary", type="str")]
+            else:
+                raise ValueError(
+                    f"Op class '{class_node.name}' has no Outputs TypedDict or return annotation"
+                )
+        else:
+            if not has_inner_outputs and run_func.returns is None and not is_validator_base:
+                raise ValueError(
+                    f"Op class '{class_node.name}' has no Outputs TypedDict or return annotation"
+                )
+            if not has_inner_outputs and run_func.returns is None and is_validator_base:
+                outputs = [OutputPortSpec(name="summary", type="str")]
+            else:
+                outputs = _extract_outputs(
+                    run_func.returns,
+                    all_typed_dicts,
+                    module_aliases,
+                    allow_default_outputs_typed_dict=has_inner_outputs,
+                )
+            inputs, extra_inputs_type = _extract_inputs(
+                run_func.args,
+                is_method=True,
+                owner_name=f"{class_node.name}.run",
+                module_aliases=module_aliases,
+                param_descriptions=param_descriptions,
+                allow_extra_inputs=allow_extra_inputs,
             )
-
-        outputs = _extract_outputs(
-            run_func.returns,
-            all_typed_dicts,
-            module_aliases,
-            allow_default_outputs_typed_dict=has_inner_outputs,
-        )
-        inputs, extra_inputs_type = _extract_inputs(
-            run_func.args,
-            is_method=True,
-            owner_name=f"{class_node.name}.run",
-            module_aliases=module_aliases,
-            param_descriptions=param_descriptions,
-            allow_extra_inputs=allow_extra_inputs,
-        )
 
         return OpEntry(
             id=op_id,
@@ -686,6 +778,7 @@ def _extract_class_op(
             module=module,
             name=class_node.name,
             kind="class",
+            agent_role=agent_role,
             title=title,
             category=category,
             cacheable=cacheable,
@@ -705,6 +798,7 @@ def _extract_class_op(
             module=module,
             name=class_node.name,
             kind="class",
+            agent_role=agent_role,
             title=title or class_node.name,
             category=category,
             cacheable=cacheable,

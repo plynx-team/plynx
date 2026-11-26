@@ -8,6 +8,7 @@ from io import StringIO
 from pathlib import Path
 from typing import Any, Final, Literal
 
+from plynx_sdk.protocol import AgentProvider
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -144,6 +145,15 @@ class NodeSpec(BaseModel):
         return serialized
 
 
+class WorkflowAgentConfig(BaseModel):
+    """Workflow-level default agent provider and model."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    provider: AgentProvider = AgentProvider.DEFAULT
+    model: str = ""
+
+
 class Workflow(BaseModel):
     """Top-level ``workflow.yaml`` model."""
 
@@ -153,6 +163,7 @@ class Workflow(BaseModel):
     name: str = ""
     description: str = ""
     concurrency: int | None = None
+    agent: WorkflowAgentConfig | None = None
     stages: dict[str, Stage] = Field(default_factory=dict)
     nodes: dict[str, NodeSpec] = Field(default_factory=dict)
 

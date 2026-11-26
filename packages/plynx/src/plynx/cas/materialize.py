@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from plynx_sdk.protocol import (
+    AgentProvider,
     CheckpointAnswer,
     InputDirectoryValue,
     InputFileValue,
@@ -27,6 +28,8 @@ from plynx_sdk.protocol import (
 from plynx.api_models import CheckpointState
 from plynx.cas.blob_store import BlobStore, make_writable
 from plynx.cas.ingest import ingest_directory, materialize_directory
+from plynx.config import load_workspace_config, resolve_effective_agent_config
+from plynx.engine.env import load_dotenv_file
 from plynx.registry import OpRegistry
 from plynx.workflow.models import NodeRef, NodeSpec
 
@@ -234,6 +237,10 @@ def materialize_inputs(
     run_inputs: Mapping[str, Any] | None = None,
     answers: Mapping[str, CheckpointAnswer] | None = None,
     db_checkpoints: Sequence[CheckpointState] | None = None,
+    workflow_agent_provider: str | AgentProvider | None = None,
+    workflow_agent_model: str | None = None,
+    cli_agent_provider: str | AgentProvider | None = None,
+    cli_agent_model: str | None = None,
 ) -> InputsManifest:
     """Resolve and materialize all inputs for a node into its ``inputs/`` directory.
 
@@ -290,6 +297,51 @@ def materialize_inputs(
                     blob_store=blob_store,
                     workspace_root=workspace_root,
                 )
+
+    # 2b. 4-level provider & model resolution for AgentOp / StageValidatorOp (before cache key)
+    if op_entry is not None and op_entry.agent_role is not None:
+        ws_cfg = load_workspace_config(workspace_root)
+        merged_env = dict(os.environ)
+        merged_env.update(load_dotenv_file(workspace_root / ".env"))
+
+        bound_node_prov: object = None
+        if "provider" in spec.inputs:
+            prov_in = resolved_inputs.get("provider")
+            bound_node_prov = prov_in.value if isinstance(prov_in, ScalarValue) else None
+
+        bound_node_model: object = None
+        if "model" in spec.inputs:
+            model_in = resolved_inputs.get("model")
+            bound_node_model = model_in.value if isinstance(model_in, ScalarValue) else None
+
+        set_prov = run_inputs.get(f"{node_id}.provider") if run_inputs else None
+        set_model = run_inputs.get(f"{node_id}.model") if run_inputs else None
+
+        eff_cli_prov = (
+            cli_agent_provider
+            if cli_agent_provider is not None
+            else (run_inputs.get("__agent_provider__") if run_inputs else None)
+        )
+        eff_cli_model = (
+            cli_agent_model
+            if cli_agent_model is not None
+            else (run_inputs.get("__agent_model__") if run_inputs else None)
+        )
+
+        eff_provider, eff_model = resolve_effective_agent_config(
+            workspace_config=ws_cfg,
+            workflow_provider=workflow_agent_provider,
+            workflow_model=workflow_agent_model,
+            cli_provider=eff_cli_prov,
+            cli_model=eff_cli_model,
+            node_provider=bound_node_prov,
+            node_model=bound_node_model,
+            set_provider=set_prov,
+            set_model=set_model,
+            env=merged_env,
+        )
+        resolved_inputs["provider"] = ScalarValue(value=eff_provider)
+        resolved_inputs["model"] = ScalarValue(value=eff_model)
 
     # 3. Checkpoint answers
     cp_answers: dict[str, CheckpointAnswer] = {}

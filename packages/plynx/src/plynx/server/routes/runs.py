@@ -13,6 +13,7 @@ from typing import Any
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from plynx_sdk.protocol import (
+    AgentTurnsManifest,
     CheckpointQuestion,
     ProtocolError,
     ResultFileValue,
@@ -23,6 +24,7 @@ from pydantic import ValidationError
 
 from plynx.api_models import (
     SINGLE_QUESTION_ID,
+    AgentTurnsResponse,
     AnswerCheckpointRequest,
     CheckpointState,
     CreateRunRequest,
@@ -336,18 +338,29 @@ async def create_run_endpoint(
         msg = "; ".join(issue.message for issue in errors)
         return error_response(422, "validation_failed", msg)
 
+    initial_inputs = dict(body.inputs)
+    if body.agent_provider is not None:
+        initial_inputs["__agent_provider__"] = body.agent_provider.value
+    if body.agent_model is not None:
+        initial_inputs["__agent_model__"] = body.agent_model
+
     run_id = await asyncio.to_thread(
         state.store.create_run,
         workflow_path=rel_wf,
         workflow_bytes=workflow_bytes,
         layout_bytes=layout_bytes,
         node_ids=list(wf_model.nodes.keys()),
-        run_inputs=body.inputs,
+        run_inputs=initial_inputs,
     )
 
     executor = state.executor_factory(state.workspace_root)
     scheduler = Scheduler(state.store, executor, state.registry)
-    opts = SchedulerOptions(run_inputs=dict(body.inputs), no_cache=body.no_cache)
+    opts = SchedulerOptions(
+        run_inputs=initial_inputs,
+        no_cache=body.no_cache,
+        agent_provider=body.agent_provider,
+        agent_model=body.agent_model,
+    )
     task = asyncio.create_task(
         scheduler.run(
             wf_model,
@@ -717,6 +730,48 @@ async def get_node_output(
         return FileResponse(blob_path, media_type=media_type, filename=filename)
 
     return JSONResponse(content=output_val.to_dict())
+
+
+@router.get("/runs/{run_id}/nodes/{node_id}/agent-turns", response_model=AgentTurnsResponse)
+async def get_node_agent_turns(
+    run_id: str,
+    node_id: str,
+    state: ServerStateDep,
+) -> Any:
+    """Return recorded ``agent_turns.json`` entries for ``node_id`` in ``run_id``."""
+    if not NODE_ID_PATTERN.match(node_id):
+        return error_response(
+            400,
+            "invalid_node_id",
+            f"Node ID {node_id!r} is invalid: must match {NODE_ID_PATTERN.pattern}",
+        )
+
+    resolved_id, err = await state.resolve_run_id_or_error(run_id)
+    if err is not None:
+        return err
+    assert resolved_id is not None
+
+    node_dir = state.store.node_dir(resolved_id, node_id).resolve()
+    try:
+        node_dir.relative_to(state.store.run_dir(resolved_id).resolve())
+    except ValueError:
+        return error_response(
+            400,
+            "invalid_node_id",
+            "Node path must stay inside the run directory",
+        )
+
+    turns_path = node_dir / "agent_turns.json"
+    if not turns_path.is_file():
+        return AgentTurnsResponse(turns=[])
+
+    try:
+        raw_bytes = await asyncio.to_thread(turns_path.read_bytes)
+        manifest = AgentTurnsManifest.from_json(raw_bytes)
+    except Exception as exc:
+        return error_response(500, "agent_turns_parse_error", str(exc))
+
+    return AgentTurnsResponse.model_validate(manifest.to_dict())
 
 
 @router.get("/runs/{run_id}/stream")
