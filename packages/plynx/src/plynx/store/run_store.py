@@ -17,6 +17,7 @@ from typing import Any, Final
 
 from plynx import __version__
 from plynx.api_models import (
+    CheckpointQuestionState,
     CheckpointState,
     NodeRunState,
     NodeStatus,
@@ -28,11 +29,12 @@ from plynx.api_models import (
     StageGateKind,
     StageGateState,
     StageGateStatus,
+    is_batch_checkpoint,
 )
 from plynx.config import load_workspace_config
 from plynx.store.event_log import EventLog
 
-USER_VERSION: Final[int] = 1
+USER_VERSION: Final[int] = 2
 PLYNX_VERSION: Final[str] = __version__
 
 SCHEMA_SQL: Final[str] = """
@@ -46,12 +48,14 @@ CREATE TABLE node_runs (
   run_id TEXT NOT NULL REFERENCES runs(id) ON DELETE CASCADE, node_id TEXT NOT NULL,
   status TEXT NOT NULL, cache_hit INTEGER NOT NULL DEFAULT 0, cache_key TEXT,
   attempt INTEGER NOT NULL DEFAULT 0, exit_code INTEGER, error TEXT,
+  warnings_json TEXT,
   started_at REAL, finished_at REAL, PRIMARY KEY (run_id, node_id)
 );
 CREATE TABLE checkpoints (
   run_id TEXT NOT NULL REFERENCES runs(id) ON DELETE CASCADE, node_id TEXT NOT NULL,
   checkpoint_id TEXT NOT NULL, question TEXT NOT NULL, options_json TEXT,
   allow_freeform INTEGER NOT NULL DEFAULT 0,
+  questions_json TEXT,
   answer TEXT, created_at REAL NOT NULL, answered_at REAL,
   PRIMARY KEY (run_id, node_id, checkpoint_id)
 );
@@ -170,11 +174,33 @@ class RunStore:
                         if cleaned:
                             conn.execute(cleaned)
                     conn.execute(f"PRAGMA user_version = {USER_VERSION};")
-                elif version != USER_VERSION:
+                elif version not in (1, USER_VERSION):
                     raise StoreVersionError(
                         f"Unknown database version {version}: delete `.plynx/plynx.db`"
                     )
                 else:
+                    if version == 1:
+                        # v1 -> v2: batch checkpoint questions and per-node warnings.
+                        cp_cols = {
+                            str(r["name"])
+                            for r in conn.execute("PRAGMA table_info(checkpoints);").fetchall()
+                        }
+                        if cp_cols and "questions_json" not in cp_cols:
+                            conn.execute("ALTER TABLE checkpoints ADD COLUMN questions_json TEXT;")
+                        node_cols = {
+                            str(r["name"])
+                            for r in conn.execute("PRAGMA table_info(node_runs);").fetchall()
+                        }
+                        if node_cols and "warnings_json" not in node_cols:
+                            conn.execute("ALTER TABLE node_runs ADD COLUMN warnings_json TEXT;")
+                        conn.execute(f"PRAGMA user_version = {USER_VERSION};")
+                    else:
+                        node_cols = {
+                            str(r["name"])
+                            for r in conn.execute("PRAGMA table_info(node_runs);").fetchall()
+                        }
+                        if node_cols and "warnings_json" not in node_cols:
+                            conn.execute("ALTER TABLE node_runs ADD COLUMN warnings_json TEXT;")
                     cols = {
                         str(r["name"])
                         for r in conn.execute("PRAGMA table_info(stage_gates);").fetchall()
@@ -328,6 +354,7 @@ class RunStore:
         attempt: int | None = None,
         exit_code: int | None = None,
         error: str | None = None,
+        warnings: Sequence[str] | None = None,
         started_at: float | None = None,
         finished_at: float | None = None,
     ) -> None:
@@ -349,6 +376,9 @@ class RunStore:
         if error is not None:
             sets.append("error = ?")
             params.append(error)
+        if warnings is not None:
+            sets.append("warnings_json = ?")
+            params.append(json.dumps(list(warnings), ensure_ascii=False))
         if started_at is not None:
             sets.append("started_at = ?")
             params.append(started_at)
@@ -366,7 +396,8 @@ class RunStore:
             conn.execute(
                 """
                 UPDATE node_runs
-                SET status = 'PENDING', exit_code = NULL, error = NULL, finished_at = NULL
+                SET status = 'PENDING', exit_code = NULL, error = NULL,
+                    warnings_json = NULL, finished_at = NULL
                 WHERE run_id = ? AND node_id = ?
                 """,
                 (run_id, node_id),
@@ -563,6 +594,7 @@ class RunStore:
         *,
         options: Sequence[str] | None = None,
         allow_freeform: bool = False,
+        questions: Sequence[CheckpointQuestionState] | None = None,
         created_at: float | None = None,
     ) -> CheckpointState:
         """Insert or replace an open checkpoint row in ``checkpoints``."""
@@ -571,17 +603,20 @@ class RunStore:
         options_json = (
             json.dumps(options_list, ensure_ascii=False) if options_list is not None else None
         )
+        question_list = list(questions) if questions is not None else []
+        questions_json = json.dumps([q.model_dump() for q in question_list], ensure_ascii=False)
         with self._connect() as conn:
             conn.execute(
                 """
                 INSERT INTO checkpoints (
                   run_id, node_id, checkpoint_id, question, options_json,
-                  allow_freeform, answer, created_at, answered_at
-                ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?, NULL)
+                  allow_freeform, questions_json, answer, created_at, answered_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, NULL)
                 ON CONFLICT(run_id, node_id, checkpoint_id) DO UPDATE SET
                   question = excluded.question,
                   options_json = excluded.options_json,
-                  allow_freeform = excluded.allow_freeform
+                  allow_freeform = excluded.allow_freeform,
+                  questions_json = excluded.questions_json
                 """,
                 (
                     run_id,
@@ -590,6 +625,7 @@ class RunStore:
                     question,
                     options_json,
                     1 if allow_freeform else 0,
+                    questions_json,
                     now,
                 ),
             )
@@ -599,6 +635,7 @@ class RunStore:
             question=question,
             options=options_list,
             allow_freeform=allow_freeform,
+            questions=question_list,
             answer=None,
             created_at=now,
             answered_at=None,
@@ -637,7 +674,7 @@ class RunStore:
             row = conn.execute(
                 """
                 SELECT node_id, checkpoint_id, question, options_json, allow_freeform,
-                       answer, created_at, answered_at
+                       questions_json, answer, created_at, answered_at
                 FROM checkpoints
                 WHERE run_id = ? AND node_id = ? AND checkpoint_id = ?
                 """,
@@ -845,6 +882,9 @@ class RunStore:
                 attempt=int(r["attempt"]),
                 exit_code=r["exit_code"],
                 error=r["error"],
+                warnings=json.loads(str(r["warnings_json"]))
+                if r["warnings_json"] is not None
+                else [],
                 started_at=r["started_at"],
                 finished_at=r["finished_at"],
             )
@@ -1028,13 +1068,29 @@ class RunStore:
 def _row_to_checkpoint(row: sqlite3.Row) -> CheckpointState:
     raw_opts = row["options_json"]
     options = json.loads(str(raw_opts)) if raw_opts is not None else None
+    raw_questions = row["questions_json"]
+    questions = (
+        [CheckpointQuestionState.model_validate(q) for q in json.loads(str(raw_questions))]
+        if raw_questions is not None
+        else []
+    )
+    answer = row["answer"]
+    answers = None
+    if answer is not None and is_batch_checkpoint(questions):
+        try:
+            decoded = json.loads(str(answer))
+        except json.JSONDecodeError:
+            decoded = None
+        answers = decoded if isinstance(decoded, dict) else None
     return CheckpointState(
         node_id=str(row["node_id"]),
         checkpoint_id=str(row["checkpoint_id"]),
         question=str(row["question"]),
         options=options,
         allow_freeform=bool(row["allow_freeform"]),
-        answer=row["answer"],
+        questions=questions,
+        answer=answer,
+        answers=answers,
         created_at=float(row["created_at"]),
         answered_at=row["answered_at"],
     )

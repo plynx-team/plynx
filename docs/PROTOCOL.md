@@ -173,11 +173,12 @@ Environment: host environment (restricted by `env_passthrough` when set) + `.env
     "doc": { "kind": "file", "path": "inputs/doc/resume.pdf", "sha256": "…", "size_bytes": 1234 },
     "frames": { "kind": "directory", "path": "inputs/frames", "tree_sha256": "…" }
   },
-  "checkpoint_answers": { "cp_0": "foo" }
+  "checkpoint_answers": { "cp_0": "foo", "cp_1": { "role": "ML", "skills": ["python", "sql"] } }
 }
 ```
 
 - `scalar` holds `str | int | float | bool | dict | list`, at most 1 MiB serialized. Larger data must be a file.
+- `checkpoint_answers` values are a `str` for `checkpoint()` and an object `{question_id: str | list[str]}` for `checkpoint_batch()`.
 - Files and directories are materialized read-only (hard link, else copy) under `inputs/<port>/<original_filename>`.
 
 ### `outputs.json` (harness writes, only on success)
@@ -189,11 +190,12 @@ Environment: host environment (restricted by `env_passthrough` when set) + `.env
     "text":   { "kind": "scalar", "value": "hello " },
     "report": { "kind": "file", "path": "workdir/report.md", "media": "text/markdown" },
     "frames": { "kind": "directory", "path": "workdir/frames" }
-  }
+  },
+  "warnings": ["Detected non-English document (lang=fr)"]
 }
 ```
 
-The harness checks that returned keys equal the declared outputs and that paths exist inside `workdir/`.
+The harness checks that returned keys equal the declared outputs and that paths exist inside `workdir/`. `warnings` lists the messages from `self.warn(message)` (or `plynx_sdk.warn(message)` in `@op` functions) in call order. `warn()` is non-fatal: the op keeps running and may still exit 0. The field is optional when reading and defaults to `[]`.
 
 ### `result.json` (engine writes after ingest; the durable record)
 
@@ -207,19 +209,26 @@ The engine hashes each output, moves it into the blob store, and writes:
     "text":   { "kind": "scalar", "value": "hello " },
     "report": { "kind": "file", "sha256": "…", "size_bytes": 10, "media": "text/markdown", "filename": "report.md" },
     "frames": { "kind": "directory", "tree_sha256": "…", "entries": [ { "path": "0001.png", "sha256": "…", "size_bytes": 99 } ] }
-  }
+  },
+  "warnings": ["Detected non-English document (lang=fr)"]
 }
 ```
+
+`warnings` is copied from `outputs.json`, is stored in `CACHE_INDEX.result_json`, and is kept on cache hits.
 
 `tree_sha256` = SHA-256 of the UTF-8 text made of one line `"<sha256> <path>\n"` per entry, sorted by `path`. `result.json` is also what `CACHE_INDEX.result_json` stores.
 
 ### `checkpoint.json` (harness writes on interrupt)
 
 ```json
-{ "schema": 1, "checkpoint_id": "cp_0", "question": "foo or woo?", "options": ["foo", "woo"], "allow_freeform": false }
+{ "schema": 1, "checkpoint_id": "cp_0", "question": "foo or woo?", "options": ["foo", "woo"], "allow_freeform": false, "questions": [ { "id": "default", "header": "", "question": "foo or woo?", "options": ["foo", "woo"], "multi_select": false, "allow_freeform": false } ] }
 ```
 
-`checkpoint_id` is `cp_<n>`, `n` = index of the `checkpoint()` call in this attempt, from 0. The SDK API is `plynx_sdk.checkpoint(question, options=None, allow_freeform=False) -> str`, also available as `self.checkpoint(...)` on `Op`. If `checkpoint_answers` has the id, it returns the answer. Otherwise it writes `checkpoint.json` and raises `CheckpointInterrupt` (a `BaseException`). Answers are strings.
+`checkpoint_id` is `cp_<n>`, `n` = index of the `checkpoint()` or `checkpoint_batch()` call in this attempt, from 0. If `checkpoint_answers` has the id, the call returns the answer. Otherwise it writes `checkpoint.json` and raises `CheckpointInterrupt` (a `BaseException`).
+
+- `plynx_sdk.checkpoint(question, options=None, allow_freeform=False) -> str` (also `self.checkpoint(...)`) asks one question. `questions` holds one item with id `default`, mirrored in the top-level `question`, `options`, and `allow_freeform`. The answer is a string.
+- `plynx_sdk.checkpoint_batch(questions) -> dict[str, str | list[str]]` (also `self.checkpoint_batch(...)`) asks several questions in one pause. Each item is a `CheckpointQuestion` or a dict with `id` (required, `[A-Za-z_][A-Za-z0-9_]*`, unique, `default` is reserved), `question` (required), `header` (default `""`), `options` (default `[]`), `multi_select` (default `false`), `allow_freeform` (default `true`). The top-level `question` is `""` and `options` is `null`. The answer maps every question id to a `str` (`multi_select: false`) or a `list[str]` (`multi_select: true`). Every question must be answered, unknown ids are rejected, and when a question has `options` and `allow_freeform` is false each value must be one of the options.
+- `questions` is optional when reading a manifest. A manifest without it (written by v2.0.0) is read as one `default` question built from the top-level fields.
 
 ### Child exit codes
 
@@ -232,6 +241,17 @@ The engine hashes each output, moves it into the blob store, and writes:
 | any other, or killed by a signal not sent by the engine | | `FAILED` |
 | engine sent the kill (cancel, timeout) | | `CANCELED` |
 | 0 without `outputs.json`, or 10 without `checkpoint.json` | | `FAILED` (`protocol error`) |
+
+### Protocol enums (`plynx_sdk.protocol`)
+
+All are `enum.StrEnum`; use the members instead of raw strings. `ui/src/api/types.gen.ts` mirrors the API-visible ones.
+
+| Enum | Values |
+|---|---|
+| `AgentTurnStatus` | `completed`, `needs_input`, `propose_patch` |
+| `GraphEditPolicy` | `forbidden`, `confirm`, `auto` |
+| `ValidatorMode` | `on_anomaly`, `on_failure`, `always` |
+| `AgentProvider` | `default`, `claude`, `cursor`, `codex`, `gemini`, `opencode`, `goose`, `aider`, `custom`, `mock` |
 
 ## 6. Cache key
 
@@ -254,7 +274,7 @@ cache_key = sha256("\n".join([
 
 ## 7. SQLite (`.plynx/plynx.db`)
 
-Pragmas on every connection: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. `PRAGMA user_version = 1`. No migrations in v2.0.0: an unknown version stops with "delete `.plynx/plynx.db`".
+Pragmas on every connection: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`. `PRAGMA user_version = 2`. A version 1 database (v2.0.0) is upgraded in place on open with `ALTER TABLE checkpoints ADD COLUMN questions_json TEXT`, `ALTER TABLE node_runs ADD COLUMN warnings_json TEXT`, and `PRAGMA user_version = 2`. Any other version stops with "delete `.plynx/plynx.db`".
 
 ```sql
 CREATE TABLE runs (
@@ -267,11 +287,13 @@ CREATE TABLE node_runs (
   run_id TEXT NOT NULL REFERENCES runs(id) ON DELETE CASCADE, node_id TEXT NOT NULL,
   status TEXT NOT NULL, cache_hit INTEGER NOT NULL DEFAULT 0, cache_key TEXT,
   attempt INTEGER NOT NULL DEFAULT 0, exit_code INTEGER, error TEXT,
+  warnings_json TEXT,
   started_at REAL, finished_at REAL, PRIMARY KEY (run_id, node_id)
 );
 CREATE TABLE checkpoints (
   run_id TEXT NOT NULL REFERENCES runs(id) ON DELETE CASCADE, node_id TEXT NOT NULL,
   checkpoint_id TEXT NOT NULL, question TEXT NOT NULL, options_json TEXT, allow_freeform INTEGER NOT NULL DEFAULT 0,
+  questions_json TEXT,
   answer TEXT, created_at REAL NOT NULL, answered_at REAL,
   PRIMARY KEY (run_id, node_id, checkpoint_id)
 );
@@ -290,7 +312,7 @@ Gate kinds:
 - `approval`: Opened when all nodes in a stage with `require_approval: true` reach `SUCCESS`. Pauses execution before any later stage begins. Approved via `POST /runs/{id}/stages/{stage_id}/approve` (or terminal prompt).
 - `input`: Opened dynamically when prior stages have finished and the stage has unbound run inputs. Pauses execution until values are supplied via `POST /runs/{id}/stages/{stage_id}/inputs` or `approve` with inputs (or terminal prompt).
 
-An answer is written with `UPDATE checkpoints SET answer=?, answered_at=? WHERE ... AND answer IS NULL`. Zero rows changed means someone else answered first.
+An answer is written with `UPDATE checkpoints SET answer=?, answered_at=? WHERE ... AND answer IS NULL`. Zero rows changed means someone else answered first. `questions_json` is the JSON list of `CheckpointQuestion` objects (`NULL` for rows created before version 2). For a single-question checkpoint `answer` is the plain string. For a batch checkpoint `answer` is the JSON-encoded answer map.
 
 ## 8. Run directory
 
@@ -317,8 +339,8 @@ Blob store: `.plynx/cache/blobs/<first 2 hex>/<sha256>`, mode read-only. Link or
 | `type` | `data` |
 |---|---|
 | `run_status` | `run_id`, `status`, `error?` |
-| `node_status` | `run_id`, `node_id`, `status`, `cache_hit`, `attempt`, `exit_code?`, `error?` |
-| `node_checkpoint` | `run_id`, `node_id`, `checkpoint_id`, `question`, `options`, `allow_freeform` |
+| `node_status` | `run_id`, `node_id`, `status`, `cache_hit`, `attempt`, `exit_code?`, `error?`, `warnings` |
+| `node_checkpoint` | `run_id`, `node_id`, `checkpoint_id`, `question`, `options`, `allow_freeform`, `questions` (list of `CheckpointQuestion`; `question` is a one-line summary for batch checkpoints) |
 | `checkpoint_resolved` | `run_id`, `node_id`, `checkpoint_id` |
 | `stage_approval` | `run_id`, `stage_id`, `title`, `kind` (`input`/`approval`) |
 | `stage_resolved` | `run_id`, `stage_id`, `kind` (`input`/`approval`) |
@@ -345,7 +367,7 @@ SSE (`GET /api/v1/runs/{run_id}/stream`): frames `id: <seq>`, `event: <type>`, `
 | `GET /runs/{id}` | full state: run, nodes, open checkpoints, stage gates, run inputs (`RunState`) |
 | `POST /runs/{id}/cancel` | request cancel |
 | `POST /runs/{id}/resume` | take ownership and continue run, returns `{ run_id }` |
-| `POST /runs/{id}/checkpoints/{node_id}/{checkpoint_id}/answer` | `{ answer: string }` |
+| `POST /runs/{id}/checkpoints/{node_id}/{checkpoint_id}/answer` | `{ answer: string }` for a single-question checkpoint, or `{ answers: { "<question_id>": string \| string[] } }` for a batch checkpoint. Send exactly one of the two. Invalid answers return `422 invalid_answer`. `RunState.checkpoints[]` carries `questions`, `answer`, and the decoded `answers` for batch checkpoints. |
 | `POST /runs/{id}/stages/{stage_id}/approve` | approve stage gate (optional body `{ inputs?: { "node.name": value } }`) |
 | `POST /runs/{id}/stages/{stage_id}/inputs` | submit deferred stage inputs (body `{ inputs: { "node.name": value } }`) and resolve its `input` gate |
 | `GET /runs/{id}/stream` | SSE (section 9, supports `?last_event_id=N&initial_log_offset=N` or `Last-Event-ID` header) |
@@ -371,11 +393,11 @@ Server binds `127.0.0.1` (or loopback host). CORS allows only the Vite dev origi
 | `plynx ui [--port 8080] [--host 127.0.0.1] [--no-browser]` | start the server on loopback host and open the UI |
 | `plynx agent-guide` | print the self-contained User Agent Reference (`AGENT_GUIDE.md`) to stdout |
 
-`plynx run` options: `--set node.port=value` (repeatable, scalar), `--input node.port=path` (repeatable, file or directory), `--answers file.json` (`{ "node.cp_n": "value" }`), `--answer node.cp_n=value` (repeatable), `--concurrency N`, `--non-interactive` (also when `CI=true`), `--no-cache`.
+`plynx run` options: `--set node.port=value` (repeatable, scalar), `--input node.port=path` (repeatable, file or directory), `--answers file.json` (`{ "node.cp_n": "value" }`, or `{ "node.cp_n": { "question_id": "value" | ["v1", "v2"] } }` for batch checkpoints), `--answer node.cp_n=value` (repeatable; `--answer node.cp_n.question_id=value` for a batch question, repeat it to build a `multi_select` list), `--concurrency N`, `--non-interactive` (also when `CI=true`), `--no-cache`.
 
-`plynx resume` options: `--answers file.json` (`{ "node.cp_n": "value" }`), `--answer node.cp_n=value` (repeatable), `--concurrency N`, `--non-interactive`.
+`plynx resume` options: `--answers file.json` and `--answer` (same forms as `plynx run`), `--concurrency N`, `--non-interactive`.
 
-Exit codes of `run` and `resume`: `0` success, `1` failed, `2` blocked on a checkpoint or stage gate in non-interactive mode, `130` canceled. Interactive mode prompts in the terminal: numbered options `[1-N]`, or text when `allow_freeform`.
+Exit codes of `run` and `resume`: `0` success, `1` failed, `2` blocked on a checkpoint or stage gate in non-interactive mode, `130` canceled. Interactive mode prompts in the terminal: numbered options `[1-N]`, or text when `allow_freeform`. A batch checkpoint prompts for each question in order; `multi_select` answers are comma separated.
 
 ## 12. `plynx.yaml` (optional)
 

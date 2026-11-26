@@ -24,6 +24,13 @@
     }
   },
   "checkpoint_answers": {
-    "cp_0": "foo"
+    "cp_0": "foo",
+    "cp_1": {
+      "role": "ML",
+      "skills": [
+        "python",
+        "sql"
+      ]
+    }
   }
 }

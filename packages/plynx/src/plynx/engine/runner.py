@@ -785,7 +785,9 @@ class LocalExecutor:
                     with contextlib.suppress(ProtocolError, OSError):
                         cp = CheckpointManifest.from_json(cp_path.read_bytes())
                         if on_stdout is not None:
-                            on_stdout(f"\n[checkpoint {cp.checkpoint_id}] {cp.question}\n")
+                            on_stdout(
+                                f"\n[checkpoint {cp.checkpoint_id}] {cp.display_question()}\n"
+                            )
                 return 2
             return 1
         finally:

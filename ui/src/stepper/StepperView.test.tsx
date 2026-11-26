@@ -50,6 +50,7 @@ const mockRunState: RunState = {
       status: "SUCCESS",
       cache_hit: true,
       attempt: 1,
+      warnings: [],
       started_at: 1700000001,
       finished_at: 1700000002,
     },
@@ -58,6 +59,7 @@ const mockRunState: RunState = {
       status: "RUNNING",
       cache_hit: false,
       attempt: 1,
+      warnings: [],
       started_at: 1700000003,
     },
     branch_b: {
@@ -65,6 +67,7 @@ const mockRunState: RunState = {
       status: "PENDING",
       cache_hit: false,
       attempt: 1,
+    warnings: [],
     },
   },
   checkpoints: [],
@@ -163,6 +166,7 @@ describe("StepperView component (Task 6.3)", () => {
           status: "SUCCESS",
           cache_hit: false,
           attempt: 1,
+        warnings: [],
         },
       },
     };
@@ -219,5 +223,24 @@ describe("StepperView component (Task 6.3)", () => {
     // Renders defined stages in draft mode
     expect(screen.getByText("1. Ingest Stage")).toBeDefined();
     expect(screen.getByText("2. Processing Stage")).toBeDefined();
+  });
+
+  it("renders warning badge on nodes with non-empty warnings", () => {
+    const runWithWarnings: RunState = {
+      ...mockRunState,
+      nodes: {
+        ...mockRunState.nodes,
+        n1: {
+          ...mockRunState.nodes.n1,
+          warnings: ["Detected French language (lang=fr)", "Missing header"],
+        },
+      },
+    };
+    render(
+      <StepperView runState={runWithWarnings} workflowDoc={mockWorkflowDoc} />,
+    );
+
+    const badge = screen.getByTestId("node-warnings-badge-n1");
+    expect(badge.textContent).toContain("2 warnings");
   });
 });

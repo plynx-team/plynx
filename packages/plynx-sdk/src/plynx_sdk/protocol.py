@@ -9,8 +9,9 @@ from __future__ import annotations
 import json
 import math
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from enum import StrEnum
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import Any, Final, Literal, TypeVar
 
@@ -23,6 +24,11 @@ ValueKind = Literal["scalar", "file", "directory"]
 ScalarPrimitive = str | int | float | bool | None
 JsonValue = ScalarPrimitive | list["JsonValue"] | dict[str, "JsonValue"]
 ScalarData = str | int | float | bool | list[JsonValue] | dict[str, JsonValue] | None
+# One answer value: ``str`` (single-select / freeform) or ``list[str]`` (multi-select).
+AnswerValue = str | list[str]
+# Stored answer for one checkpoint: ``str`` for ``checkpoint()``, a map for ``checkpoint_batch()``.
+CheckpointAnswer = str | dict[str, AnswerValue]
+SINGLE_QUESTION_ID: Final[str] = "default"
 
 _PORT_NAME_RE: Final[re.Pattern[str]] = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 _CHECKPOINT_ID_RE: Final[re.Pattern[str]] = re.compile(r"^cp_[0-9]+$")
@@ -30,6 +36,45 @@ _CHECKPOINT_ID_RE: Final[re.Pattern[str]] = re.compile(r"^cp_[0-9]+$")
 
 class ProtocolError(ValueError):
     """Raised when an IPC manifest or value fails validation."""
+
+
+class AgentTurnStatus(StrEnum):
+    """Status of one agent turn (``AgentOp`` response envelope)."""
+
+    COMPLETED = "completed"
+    NEEDS_INPUT = "needs_input"
+    PROPOSE_PATCH = "propose_patch"
+
+
+class GraphEditPolicy(StrEnum):
+    """Whether an agent op may edit the run graph."""
+
+    FORBIDDEN = "forbidden"
+    CONFIRM = "confirm"
+    AUTO = "auto"
+
+
+class ValidatorMode(StrEnum):
+    """When a stage validator runs."""
+
+    ON_ANOMALY = "on_anomaly"
+    ON_FAILURE = "on_failure"
+    ALWAYS = "always"
+
+
+class AgentProvider(StrEnum):
+    """Supported coding-agent CLI providers."""
+
+    DEFAULT = "default"
+    CLAUDE = "claude"
+    CURSOR = "cursor"
+    CODEX = "codex"
+    GEMINI = "gemini"
+    OPENCODE = "opencode"
+    GOOSE = "goose"
+    AIDER = "aider"
+    CUSTOM = "custom"
+    MOCK = "mock"
 
 
 def _check_keys(
@@ -670,12 +715,37 @@ def _validate_checkpoint_id(checkpoint_id: object, *, context: str) -> None:
         )
 
 
+def _validate_answer_value(value: object, *, context: str) -> None:
+    if isinstance(value, str):
+        return
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return
+    raise ProtocolError(f"{context}: answer value must be a str or list[str]")
+
+
+def _validate_checkpoint_answer(answer: object, *, context: str) -> None:
+    if isinstance(answer, str):
+        return
+    if isinstance(answer, dict):
+        for qid, value in answer.items():
+            if not isinstance(qid, str):
+                raise ProtocolError(f"{context}: answer keys must be str")
+            _validate_answer_value(value, context=f"{context}[{qid!r}]")
+        return
+    raise ProtocolError(f"{context}: answer must be a str or an object of question answers")
+
+
+def _validate_warnings(warnings: object, *, context: str) -> None:
+    if not isinstance(warnings, list) or not all(isinstance(w, str) for w in warnings):
+        raise ProtocolError(f"{context}: 'warnings' must be a list of str")
+
+
 @dataclass
 class InputsManifest:
     """``inputs.json`` written by the engine before launching a child process."""
 
     inputs: dict[str, InputValue] = field(default_factory=dict)
-    checkpoint_answers: dict[str, str] = field(default_factory=dict)
+    checkpoint_answers: dict[str, CheckpointAnswer] = field(default_factory=dict)
     schema: int = SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -696,10 +766,9 @@ class InputsManifest:
             raise ProtocolError("InputsManifest: 'checkpoint_answers' must be a dict")
         for cp_id, answer in self.checkpoint_answers.items():
             _validate_checkpoint_id(cp_id, context="InputsManifest.checkpoint_answers")
-            if not isinstance(answer, str):
-                raise ProtocolError(
-                    f"InputsManifest.checkpoint_answers[{cp_id!r}]: answer must be a str"
-                )
+            _validate_checkpoint_answer(
+                answer, context=f"InputsManifest.checkpoint_answers[{cp_id!r}]"
+            )
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to a validated JSON-ready dictionary."""
@@ -707,7 +776,10 @@ class InputsManifest:
         return {
             "schema": self.schema,
             "inputs": {port: val.to_dict() for port, val in self.inputs.items()},
-            "checkpoint_answers": dict(self.checkpoint_answers),
+            "checkpoint_answers": {
+                cp_id: dict(ans) if isinstance(ans, dict) else ans
+                for cp_id, ans in self.checkpoint_answers.items()
+            },
         }
 
     @classmethod
@@ -730,13 +802,12 @@ class InputsManifest:
         raw_answers = data.get("checkpoint_answers", {})
         if not isinstance(raw_answers, Mapping):
             raise ProtocolError("InputsManifest: 'checkpoint_answers' must be an object")
-        answers: dict[str, str] = {}
+        answers: dict[str, CheckpointAnswer] = {}
         for cp_id, ans in raw_answers.items():
             _validate_checkpoint_id(cp_id, context="InputsManifest.checkpoint_answers")
-            if not isinstance(ans, str):
-                raise ProtocolError(
-                    f"InputsManifest.checkpoint_answers[{cp_id!r}]: answer must be a str"
-                )
+            _validate_checkpoint_answer(
+                ans, context=f"InputsManifest.checkpoint_answers[{cp_id!r}]"
+            )
             answers[cp_id] = ans
         return cls(inputs=inputs, checkpoint_answers=answers, schema=data["schema"])
 
@@ -757,6 +828,7 @@ class OutputsManifest:
     started_at: float
     finished_at: float
     outputs: dict[str, OutputValue] = field(default_factory=dict)
+    warnings: list[str] = field(default_factory=list)
     schema: int = SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -789,6 +861,7 @@ class OutputsManifest:
                 raise ProtocolError(
                     f"OutputsManifest.outputs[{port!r}]: invalid value type {type(val).__name__}"
                 )
+        _validate_warnings(self.warnings, context="OutputsManifest")
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to a validated JSON-ready dictionary."""
@@ -798,6 +871,7 @@ class OutputsManifest:
             "started_at": self.started_at,
             "finished_at": self.finished_at,
             "outputs": {port: val.to_dict() for port, val in self.outputs.items()},
+            "warnings": list(self.warnings),
         }
 
     @classmethod
@@ -806,6 +880,7 @@ class OutputsManifest:
         _check_keys(
             data,
             required={"schema", "started_at", "finished_at", "outputs"},
+            optional={"warnings"},
             context="OutputsManifest",
         )
         _validate_schema(data["schema"], context="OutputsManifest")
@@ -820,6 +895,7 @@ class OutputsManifest:
             started_at=data["started_at"],
             finished_at=data["finished_at"],
             outputs=outputs,
+            warnings=data.get("warnings", []),
             schema=data["schema"],
         )
 
@@ -843,6 +919,7 @@ class ResultManifest:
     started_at: float
     finished_at: float
     outputs: dict[str, ResultValue] = field(default_factory=dict)
+    warnings: list[str] = field(default_factory=list)
     schema: int = SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -877,6 +954,7 @@ class ResultManifest:
                 raise ProtocolError(
                     f"ResultManifest.outputs[{port!r}]: invalid value type {type(val).__name__}"
                 )
+        _validate_warnings(self.warnings, context="ResultManifest")
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to a validated JSON-ready dictionary."""
@@ -889,6 +967,7 @@ class ResultManifest:
             "started_at": self.started_at,
             "finished_at": self.finished_at,
             "outputs": {port: val.to_dict() for port, val in self.outputs.items()},
+            "warnings": list(self.warnings),
         }
 
     @classmethod
@@ -905,6 +984,7 @@ class ResultManifest:
                 "finished_at",
                 "outputs",
             },
+            optional={"warnings"},
             context="ResultManifest",
         )
         _validate_schema(data["schema"], context="ResultManifest")
@@ -922,6 +1002,7 @@ class ResultManifest:
             started_at=data["started_at"],
             finished_at=data["finished_at"],
             outputs=outputs,
+            warnings=data.get("warnings", []),
             schema=data["schema"],
         )
 
@@ -936,23 +1017,152 @@ class ResultManifest:
 
 
 @dataclass
-class CheckpointManifest:
-    """``checkpoint.json`` written by the child harness when an op requests user input."""
+class CheckpointQuestion:
+    """One question inside a (batch) checkpoint."""
 
-    checkpoint_id: str
+    id: str
     question: str
-    options: list[str] | None = None
-    allow_freeform: bool = False
-    schema: int = SCHEMA_VERSION
+    header: str = ""
+    options: list[str] = field(default_factory=list)
+    multi_select: bool = False
+    allow_freeform: bool = True
 
     def __post_init__(self) -> None:
         self.validate()
 
     def validate(self) -> None:
+        """Validate this question."""
+        _validate_port_name(self.id, context="CheckpointQuestion.id")
+        _validate_non_empty_str(self.question, field_name="question", context="CheckpointQuestion")
+        if not isinstance(self.header, str):
+            raise ProtocolError("CheckpointQuestion: 'header' must be a str")
+        if not isinstance(self.options, list) or not all(isinstance(o, str) for o in self.options):
+            raise ProtocolError("CheckpointQuestion: 'options' must be a list of str")
+        if not isinstance(self.multi_select, bool):
+            raise ProtocolError("CheckpointQuestion: 'multi_select' must be a bool")
+        if not isinstance(self.allow_freeform, bool):
+            raise ProtocolError("CheckpointQuestion: 'allow_freeform' must be a bool")
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to a validated JSON-ready dictionary."""
+        self.validate()
+        return {
+            "id": self.id,
+            "header": self.header,
+            "question": self.question,
+            "options": list(self.options),
+            "multi_select": self.multi_select,
+            "allow_freeform": self.allow_freeform,
+        }
+
+    @classmethod
+    def from_dict(cls, data: Mapping[str, Any]) -> CheckpointQuestion:
+        """Validate and construct from a dictionary."""
+        if not isinstance(data, Mapping):
+            raise ProtocolError("CheckpointQuestion: expected an object")
+        _check_keys(
+            data,
+            required={"id", "question"},
+            optional={"header", "options", "multi_select", "allow_freeform"},
+            context="CheckpointQuestion",
+        )
+        return cls(**data)
+
+
+def validate_batch_answers(
+    questions: Sequence[CheckpointQuestion],
+    raw: object,
+) -> dict[str, AnswerValue]:
+    """Validate and normalize answers for ``questions``.
+
+    Every question id must be answered and no unknown ids are allowed. Values are ``str`` for
+    ``multi_select=False`` and ``list[str]`` for ``multi_select=True`` (a lone ``str`` is
+    promoted to a one-item list). When a question has options and ``allow_freeform`` is false,
+    every value must be one of the options.
+    """
+    context = "checkpoint answers"
+    if not isinstance(raw, Mapping):
+        raise ProtocolError(f"{context}: expected an object mapping question id to answer")
+    by_id = {q.id: q for q in questions}
+    missing = [qid for qid in by_id if qid not in raw]
+    unknown = [str(k) for k in raw if k not in by_id]
+    if missing:
+        raise ProtocolError(f"{context}: missing answer(s) for: {', '.join(missing)}")
+    if unknown:
+        raise ProtocolError(f"{context}: unknown question id(s): {', '.join(sorted(unknown))}")
+
+    result: dict[str, AnswerValue] = {}
+    for qid, q in by_id.items():
+        value = raw[qid]
+        values: list[str]
+        if q.multi_select:
+            if isinstance(value, str):
+                values = [value]
+            elif isinstance(value, list) and all(isinstance(v, str) for v in value):
+                values = list(value)
+            else:
+                raise ProtocolError(f"{context}[{qid!r}]: expected a str or list[str]")
+        else:
+            if not isinstance(value, str):
+                raise ProtocolError(f"{context}[{qid!r}]: expected a str (multi_select is false)")
+            if not value.strip():
+                raise ProtocolError(f"{context}[{qid!r}]: answer must be non-empty")
+            values = [value]
+        if q.options and not q.allow_freeform:
+            for item in values:
+                if item not in q.options:
+                    raise ProtocolError(f"{context}[{qid!r}]: {item!r} is not one of {q.options}")
+        result[qid] = values if q.multi_select else values[0]
+    return result
+
+
+@dataclass
+class CheckpointManifest:
+    """``checkpoint.json`` written by the child harness when an op requests user input.
+
+    ``questions`` always holds at least one entry. ``checkpoint()`` writes a single question
+    with id ``"default"`` and mirrors it in the top-level ``question`` / ``options`` /
+    ``allow_freeform`` fields; ``checkpoint_batch()`` leaves those top-level fields empty.
+    """
+
+    checkpoint_id: str
+    question: str = ""
+    options: list[str] | None = None
+    allow_freeform: bool = False
+    questions: list[CheckpointQuestion] = field(default_factory=list)
+    schema: int = SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        if not self.questions and isinstance(self.question, str) and self.question:
+            self.questions = [
+                CheckpointQuestion(
+                    id=SINGLE_QUESTION_ID,
+                    question=self.question,
+                    options=list(self.options) if self.options else [],
+                    allow_freeform=self.allow_freeform,
+                )
+            ]
+        self.validate()
+
+    @property
+    def is_batch(self) -> bool:
+        """Return whether answers are a map of question id to value."""
+        return not (len(self.questions) == 1 and self.questions[0].id == SINGLE_QUESTION_ID)
+
+    def display_question(self) -> str:
+        """Return a one-line human-readable summary of the prompt."""
+        if self.question:
+            return self.question
+        return " | ".join(q.question for q in self.questions)
+
+    def validate(self) -> None:
         """Validate this ``CheckpointManifest``."""
         _validate_schema(self.schema, context="CheckpointManifest")
         _validate_checkpoint_id(self.checkpoint_id, context="CheckpointManifest")
-        _validate_non_empty_str(self.question, field_name="question", context="CheckpointManifest")
+        if not isinstance(self.question, str):
+            raise ProtocolError("CheckpointManifest: 'question' must be a str")
+        if not self.questions:
+            raise ProtocolError("CheckpointManifest: 'question' or 'questions' is required")
         if self.options is not None:
             if not isinstance(self.options, list) or not self.options:
                 raise ProtocolError(
@@ -963,6 +1173,16 @@ class CheckpointManifest:
                     raise ProtocolError("CheckpointManifest: all items in 'options' must be str")
         if not isinstance(self.allow_freeform, bool):
             raise ProtocolError("CheckpointManifest: 'allow_freeform' must be a bool")
+        seen: set[str] = set()
+        for q in self.questions:
+            if not isinstance(q, CheckpointQuestion):
+                raise ProtocolError(
+                    "CheckpointManifest: every question must be a CheckpointQuestion"
+                )
+            q.validate()
+            if q.id in seen:
+                raise ProtocolError(f"CheckpointManifest: duplicate question id {q.id!r}")
+            seen.add(q.id)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to a validated JSON-ready dictionary."""
@@ -973,6 +1193,7 @@ class CheckpointManifest:
             "question": self.question,
             "options": list(self.options) if self.options is not None else None,
             "allow_freeform": self.allow_freeform,
+            "questions": [q.to_dict() for q in self.questions],
         }
 
     @classmethod
@@ -980,15 +1201,20 @@ class CheckpointManifest:
         """Validate and construct from a dictionary."""
         _check_keys(
             data,
-            required={"schema", "checkpoint_id", "question", "options", "allow_freeform"},
+            required={"schema", "checkpoint_id"},
+            optional={"question", "options", "allow_freeform", "questions"},
             context="CheckpointManifest",
         )
         _validate_schema(data["schema"], context="CheckpointManifest")
+        raw_questions = data.get("questions", [])
+        if not isinstance(raw_questions, list):
+            raise ProtocolError("CheckpointManifest: 'questions' must be a list")
         return cls(
             checkpoint_id=data["checkpoint_id"],
-            question=data["question"],
-            options=data["options"],
-            allow_freeform=data["allow_freeform"],
+            question=data.get("question", ""),
+            options=data.get("options"),
+            allow_freeform=data.get("allow_freeform", False),
+            questions=[CheckpointQuestion.from_dict(q) for q in raw_questions],
             schema=data["schema"],
         )
 
@@ -1005,8 +1231,15 @@ class CheckpointManifest:
 __all__ = [
     "MAX_SCALAR_BYTES",
     "SCHEMA_VERSION",
+    "SINGLE_QUESTION_ID",
+    "AgentProvider",
+    "AgentTurnStatus",
+    "AnswerValue",
+    "CheckpointAnswer",
     "CheckpointManifest",
+    "CheckpointQuestion",
     "DirectoryEntry",
+    "GraphEditPolicy",
     "InputDirectoryValue",
     "InputFileValue",
     "InputValue",
@@ -1024,6 +1257,8 @@ __all__ = [
     "ScalarData",
     "ScalarPrimitive",
     "ScalarValue",
+    "ValidatorMode",
     "ValueKind",
+    "validate_batch_answers",
     "validate_relative_path",
 ]

@@ -177,9 +177,10 @@ export async function answerCheckpoint(
   runId: string,
   nodeId: string,
   checkpointId: string,
-  answer: string,
+  answer: string | Record<string, string | string[]>,
 ): Promise<void> {
-  const payload: AnswerCheckpointRequest = { answer };
+  const payload: AnswerCheckpointRequest =
+    typeof answer === "string" ? { answer } : { answers: answer };
   const response = await fetch(
     `/api/v1/runs/${encodeURIComponent(runId)}/checkpoints/${encodeURIComponent(
       nodeId,

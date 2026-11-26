@@ -29,6 +29,7 @@ from typing import (
     is_typeddict,
 )
 
+from plynx_sdk.anomaly import warning_context
 from plynx_sdk.checkpoint import CheckpointInterrupt, checkpoint_context
 from plynx_sdk.op import Op
 from plynx_sdk.protocol import (
@@ -469,11 +470,15 @@ def run_harness(op_spec: str, node_dir: Path) -> int:
 
     prev_cwd = Path.cwd()
     started_at = time.time()
+    warnings: list[str] = []
     try:
         os.chdir(workdir)
-        with checkpoint_context(
-            answers=inputs_manifest.checkpoint_answers,
-            node_dir=resolved_node_dir,
+        with (
+            warning_context() as warnings,
+            checkpoint_context(
+                answers=inputs_manifest.checkpoint_answers,
+                node_dir=resolved_node_dir,
+            ),
         ):
             raw_result = callable_fn(**call_kwargs)
     except CheckpointInterrupt as cp_exc:
@@ -503,6 +508,7 @@ def run_harness(op_spec: str, node_dir: Path) -> int:
             started_at=started_at,
             finished_at=finished_at,
             outputs=outputs_map,
+            warnings=list(warnings),
         )
         _atomic_write_text(resolved_node_dir / "outputs.json", outputs_manifest.to_json())
     except (ProtocolError, HarnessProtocolError, OSError) as exc:

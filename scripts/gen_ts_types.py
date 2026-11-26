@@ -15,9 +15,12 @@ from pathlib import Path
 from typing import Any
 
 from plynx.api_models import (
+    AgentProvider,
+    AgentTurnStatus,
     AnswerCheckpointRequest,
     ApiErrorDetail,
     ApiErrorResponse,
+    CheckpointQuestionState,
     CheckpointResolvedData,
     CheckpointResolvedEvent,
     CheckpointState,
@@ -26,6 +29,7 @@ from plynx.api_models import (
     CreateRunRequest,
     CreateRunResponse,
     EventType,
+    GraphEditPolicy,
     HealthResponse,
     InputPortSpec,
     LogStream,
@@ -60,6 +64,7 @@ from plynx.api_models import (
     ValidateWorkflowRequest,
     ValidateWorkflowResponse,
     ValidationIssue,
+    ValidatorMode,
     Viewport,
     WorkflowDocument,
     WorkflowInputSpec,
@@ -79,6 +84,7 @@ SCHEMA_MODELS: tuple[type[BaseModel], ...] = (
     NodeSpec,
     Workflow,
     NodeRunState,
+    CheckpointQuestionState,
     CheckpointState,
     StageGateState,
     RunSummary,
@@ -127,6 +133,10 @@ ENUM_TYPES: tuple[tuple[str, type[Any]], ...] = (
     ("NodeStatus", NodeStatus),
     ("RunStatus", RunStatus),
     ("StageGateStatus", StageGateStatus),
+    ("AgentTurnStatus", AgentTurnStatus),
+    ("GraphEditPolicy", GraphEditPolicy),
+    ("ValidatorMode", ValidatorMode),
+    ("AgentProvider", AgentProvider),
 )
 
 TYPE_ALIASES: tuple[tuple[str, Any], ...] = (

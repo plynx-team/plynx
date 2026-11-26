@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import json
 import os
+import re
 import signal
 import sys
 import threading
@@ -14,7 +15,12 @@ from pathlib import Path
 from typing import Any, TextIO, TypeVar
 
 import click
-from plynx_sdk.protocol import CheckpointManifest
+from plynx_sdk.protocol import (
+    AnswerValue,
+    CheckpointAnswer,
+    CheckpointManifest,
+    CheckpointQuestion,
+)
 
 from plynx.api_models import WorkflowInputSpec
 
@@ -34,6 +40,9 @@ def is_non_interactive(flag: bool) -> bool:
     return os.environ.get("CI", "").strip().lower() == "true"
 
 
+_BATCH_ANSWER_KEY_RE = re.compile(r"^(?P<cp>.+\.cp_[0-9]+)\.(?P<qid>[A-Za-z_][A-Za-z0-9_]*)$")
+
+
 def parse_key_value_pair(pair: str, *, flag: str) -> tuple[str, str]:
     """Parse a ``KEY=VALUE`` CLI option value."""
     if "=" not in pair:
@@ -47,12 +56,16 @@ def parse_key_value_pair(pair: str, *, flag: str) -> tuple[str, str]:
 def load_cli_answers(
     answers_file: Path | None,
     answer_pairs: Sequence[str],
-) -> dict[str, str]:
+) -> dict[str, CheckpointAnswer]:
     """Load pre-supplied checkpoint answers from ``--answers`` JSON file and ``--answer`` flags.
 
+    Keys are ``<node>.cp_<n>``. A single-question checkpoint takes a string. A batch checkpoint
+    takes an object mapping question id to ``str`` or ``list[str]`` in the JSON file, or
+    ``<node>.cp_<n>.<question_id>=value`` flags (repeat a flag to build a ``multi_select`` list).
     ``--answer`` entries override entries from ``--answers``.
     """
-    answers: dict[str, str] = {}
+    answers: dict[str, CheckpointAnswer] = {}
+    flag_values: dict[str, dict[str, list[str]]] = {}
     if answers_file is not None:
         if not answers_file.is_file():
             raise click.ClickException(f"answers file not found: {answers_file}")
@@ -65,11 +78,28 @@ def load_cli_answers(
         if not isinstance(loaded, dict):
             raise click.ClickException("--answers file must contain a JSON object")
         for key, val in loaded.items():
-            answers[str(key)] = str(val)
+            if isinstance(val, dict):
+                answers[str(key)] = {
+                    str(qid): [str(v) for v in item] if isinstance(item, list) else str(item)
+                    for qid, item in val.items()
+                }
+            else:
+                answers[str(key)] = str(val)
 
     for pair in answer_pairs:
         key, val = parse_key_value_pair(pair, flag="--answer")
-        answers[key] = val
+        match = _BATCH_ANSWER_KEY_RE.match(key)
+        if match is None:
+            answers[key] = val
+            flag_values.pop(key, None)
+            continue
+        cp_key, qid = match.group("cp"), match.group("qid")
+        flag_values.setdefault(cp_key, {}).setdefault(qid, []).append(val)
+
+    for cp_key, per_question in flag_values.items():
+        answers[cp_key] = {
+            qid: values[0] if len(values) == 1 else values for qid, values in per_question.items()
+        }
 
     return answers
 
@@ -120,6 +150,40 @@ def parse_checkpoint_input(raw: str, cp: CheckpointManifest) -> tuple[bool, str 
     return True, entry, None
 
 
+def parse_question_input(
+    raw: str,
+    q: CheckpointQuestion,
+) -> tuple[bool, AnswerValue | None, str | None]:
+    """Validate one line of terminal input for one question of a batch checkpoint.
+
+    Multi-select input is comma separated (numbers, options, or freeform text).
+    Returns ``(ok, answer, error_message)``.
+    """
+    entry = raw.strip()
+    options = q.options
+    tokens = [t.strip() for t in entry.split(",")] if q.multi_select else [entry]
+    tokens = [t for t in tokens if t]
+    if not tokens:
+        return False, None, "Please enter an answer."
+
+    resolved: list[str] = []
+    for token in tokens:
+        if options:
+            if token.isdigit() and 1 <= int(token) <= len(options):
+                resolved.append(options[int(token) - 1])
+                continue
+            if token in options or q.allow_freeform:
+                resolved.append(token)
+                continue
+            return (
+                False,
+                None,
+                f"Invalid selection {token!r}. Enter a number in [1-{len(options)}].",
+            )
+        resolved.append(token)
+    return True, (resolved if q.multi_select else resolved[0]), None
+
+
 def make_terminal_checkpoint_callback(
     *,
     input_stream: TextIO | None = None,
@@ -134,6 +198,8 @@ def make_terminal_checkpoint_callback(
         cp: CheckpointManifest,
     ) -> str | None:
         stream = input_stream if input_stream is not None else sys.stdin
+        if cp.is_batch:
+            return await _prompt_batch(stream, node_id, checkpoint_id, cp)
         options = cp.options or []
         async with lock:
             click.echo(f"\n[{node_id}.{checkpoint_id}] {cp.question}")
@@ -160,6 +226,35 @@ def make_terminal_checkpoint_callback(
                     return answer
                 if err_msg:
                     click.echo(err_msg, err=True)
+
+    async def _prompt_batch(
+        stream: TextIO,
+        node_id: str,
+        checkpoint_id: str,
+        cp: CheckpointManifest,
+    ) -> str | None:
+        collected: dict[str, AnswerValue] = {}
+        async with lock:
+            click.echo(f"\n[{node_id}.{checkpoint_id}] {len(cp.questions)} questions")
+            for q in cp.questions:
+                title = f"{q.header}: {q.question}" if q.header else q.question
+                click.echo(f"\n{q.id}: {title}")
+                for idx, opt in enumerate(q.options, start=1):
+                    click.echo(f"  {idx}. {opt}")
+                while True:
+                    hint = "comma separated, " if q.multi_select else ""
+                    click.echo(f"Answer ({hint}{q.id}): ", nl=False)
+                    sys.stdout.flush()
+                    raw = await read_line_async(stream)
+                    if raw is None:
+                        return None
+                    ok, value, err_msg = parse_question_input(raw, q)
+                    if ok and value is not None:
+                        collected[q.id] = value
+                        break
+                    if err_msg:
+                        click.echo(err_msg, err=True)
+        return json.dumps(collected, ensure_ascii=False)
 
     return _prompt
 
@@ -309,6 +404,7 @@ __all__ = [
     "make_terminal_stage_inputs_callback",
     "parse_checkpoint_input",
     "parse_key_value_pair",
+    "parse_question_input",
     "read_line_async",
     "run_with_cancel_signals",
 ]

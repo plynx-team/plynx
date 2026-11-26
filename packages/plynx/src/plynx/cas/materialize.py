@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from plynx_sdk.protocol import (
+    CheckpointAnswer,
     InputDirectoryValue,
     InputFileValue,
     InputsManifest,
@@ -231,7 +232,7 @@ def materialize_inputs(
     workspace_root: Path,
     registry: OpRegistry | None = None,
     run_inputs: Mapping[str, Any] | None = None,
-    answers: Mapping[str, str] | None = None,
+    answers: Mapping[str, CheckpointAnswer] | None = None,
     db_checkpoints: Sequence[CheckpointState] | None = None,
 ) -> InputsManifest:
     """Resolve and materialize all inputs for a node into its ``inputs/`` directory.
@@ -291,7 +292,7 @@ def materialize_inputs(
                 )
 
     # 3. Checkpoint answers
-    cp_answers: dict[str, str] = {}
+    cp_answers: dict[str, CheckpointAnswer] = {}
     if answers:
         prefix = f"{node_id}."
         for key, ans in answers.items():
@@ -301,6 +302,6 @@ def materialize_inputs(
     if db_checkpoints:
         for cp in db_checkpoints:
             if cp.node_id == node_id and cp.answer is not None:
-                cp_answers[cp.checkpoint_id] = cp.answer
+                cp_answers[cp.checkpoint_id] = cp.answers if cp.answers is not None else cp.answer
 
     return InputsManifest(inputs=resolved_inputs, checkpoint_answers=cp_answers)

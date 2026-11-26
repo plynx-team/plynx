@@ -20,12 +20,13 @@ packages/
   plynx-sdk/              stdlib-only. Imported inside node environments.
     pyproject.toml
     src/plynx_sdk/
-      __init__.py         exports Op, op, Media, Range, Directory, checkpoint types
+      __init__.py         exports Op, op, warn, Media, Range, Directory, checkpoint types, protocol enums
       op.py               Op base class and @op decorator
       types.py            semantic media aliases (PdfFile, AudioWav, ...)
-      protocol.py         IPC manifest dataclasses (inputs/outputs/checkpoint)
+      protocol.py         IPC manifest dataclasses (inputs/outputs/checkpoint) and StrEnum constants
       harness.py          child entrypoint: python -m plynx_sdk.harness
-      checkpoint.py       CheckpointInterrupt, replay logic
+      checkpoint.py       CheckpointInterrupt, checkpoint() / checkpoint_batch() replay logic
+      anomaly.py          warn() per-attempt warning collection
   plynx/                  engine, CLI, server
     pyproject.toml
     src/plynx/
@@ -156,7 +157,8 @@ One process owns a run at a time (`RUNS.owner_pid`). Other processes (browser, s
 ## Key behaviors
 
 - **Cache key:** `sha256(op_entrypoint + file_sha256 + uv_lock_sha256 + inputs_hash + params_hash)`. Exact canonicalization in PROTOCOL.md. Identical output bytes end the cascade (early cutoff).
-- **Checkpoints:** `self.checkpoint(...)` raises an interrupt on first call. The child writes `checkpoint.json` and exits 10. After an answer, the node is re-run from the top and the call returns the stored answer. See [guides/author_pack.md](guides/author_pack.md) for the idempotency rule. A checkpoint answer is not remembered between fresh runs in v2.0.0.
+- **Checkpoints:** `self.checkpoint(...)` raises an interrupt on first call. The child writes `checkpoint.json` and exits 10. After an answer, the node is re-run from the top and the call returns the stored answer. See [guides/author_pack.md](guides/author_pack.md) for the idempotency rule. `self.checkpoint_batch([...])` asks several questions in one pause (one exit 10, one resume) and returns a map of question id to answer. A checkpoint answer is not remembered between fresh runs.
+- **Warnings:** `self.warn(message)` records a non-fatal anomaly. The harness writes `warnings` to `outputs.json`, the engine copies them to `result.json`, and they are kept on cache hits. A warning never changes the exit code.
 - **Stage gates:** `require_approval: true` pauses the run after all nodes of the stage reach `SUCCESS`, before any node of a later stage starts.
 - **Failure:** a failed node blocks only its dependents. Independent branches finish. The run ends `FAILED`.
 - **Cancel / timeout:** the whole process tree is killed. POSIX: `os.killpg`. Windows: `taskkill /T /F`. Both inside `procgroup.py`.

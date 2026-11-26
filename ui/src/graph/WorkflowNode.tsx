@@ -156,6 +156,17 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
                 <span className="sr-only">cache hit</span>
               </span>
             )}
+            {nodeState?.warnings && nodeState.warnings.length > 0 && (
+              <span
+                data-testid={`graph-node-warnings-${nodeId}`}
+                title={nodeState.warnings.join("\n")}
+                className="inline-flex items-center gap-0.5 cursor-help text-[10px] font-mono"
+                style={{ color: "var(--color-warning)" }}
+              >
+                <FeatherIcon name="alert-triangle" size={12} />
+                <span>{nodeState.warnings.length}</span>
+              </span>
+            )}
             {description && (
               <button
                 type="button"

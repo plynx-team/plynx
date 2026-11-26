@@ -7,6 +7,14 @@ export type RunStatus = "RUNNING" | "WAITING_FOR_USER" | "SUCCESS" | "FAILED" | 
 
 export type StageGateStatus = "WAITING" | "APPROVED";
 
+export type AgentTurnStatus = "completed" | "needs_input" | "propose_patch";
+
+export type GraphEditPolicy = "forbidden" | "confirm" | "auto";
+
+export type ValidatorMode = "on_anomaly" | "on_failure" | "always";
+
+export type AgentProvider = "default" | "claude" | "cursor" | "codex" | "gemini" | "opencode" | "goose" | "aider" | "custom" | "mock";
+
 export type PortType = "str" | "int" | "float" | "bool" | "json" | "file" | "directory";
 
 export type LogStream = "stdout" | "stderr";
@@ -54,8 +62,19 @@ export interface NodeRunState {
   attempt: number;
   exit_code?: number | null;
   error?: string | null;
+  warnings: Array<string>;
   started_at?: number | null;
   finished_at?: number | null;
+}
+
+/** One question of a checkpoint prompt. */
+export interface CheckpointQuestionState {
+  id: string;
+  question: string;
+  header: string;
+  options: Array<string>;
+  multi_select: boolean;
+  allow_freeform: boolean;
 }
 
 /** State of a checkpoint prompt requested by a node. */
@@ -65,7 +84,9 @@ export interface CheckpointState {
   question: string;
   options?: Array<string> | null;
   allow_freeform: boolean;
+  questions: Array<CheckpointQuestionState>;
   answer?: string | null;
+  answers?: Record<string, string | Array<string>> | null;
   created_at: number;
   answered_at?: number | null;
 }
@@ -131,6 +152,7 @@ export interface NodeStatusData {
   attempt: number;
   exit_code?: number | null;
   error?: string | null;
+  warnings: Array<string>;
 }
 
 /** Payload for ``node_checkpoint`` events. */
@@ -141,6 +163,7 @@ export interface NodeCheckpointData {
   question: string;
   options?: Array<string> | null;
   allow_freeform: boolean;
+  questions: Array<CheckpointQuestionState>;
 }
 
 /** Payload for ``checkpoint_resolved`` events. */
@@ -371,7 +394,8 @@ export interface RunListResponse {
 
 /** Request body for ``POST /runs/{id}/checkpoints/{node_id}/{checkpoint_id}/answer``. */
 export interface AnswerCheckpointRequest {
-  answer: string;
+  answer?: string | null;
+  answers?: Record<string, string | Array<string>> | null;
 }
 
 /** Request body for ``POST /clean``. */

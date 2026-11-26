@@ -23,6 +23,7 @@ const RECORDED_FOO_OR_WOO_EVENTS: ReadonlyArray<RunEvent> = [
       status: "PENDING",
       cache_hit: false,
       attempt: 0,
+    warnings: [],
     },
   },
   {
@@ -35,6 +36,7 @@ const RECORDED_FOO_OR_WOO_EVENTS: ReadonlyArray<RunEvent> = [
       status: "PENDING",
       cache_hit: false,
       attempt: 0,
+    warnings: [],
     },
   },
   {
@@ -47,6 +49,7 @@ const RECORDED_FOO_OR_WOO_EVENTS: ReadonlyArray<RunEvent> = [
       status: "RUNNING",
       cache_hit: false,
       attempt: 1,
+    warnings: [],
     },
   },
   {
@@ -59,6 +62,7 @@ const RECORDED_FOO_OR_WOO_EVENTS: ReadonlyArray<RunEvent> = [
       status: "WAITING_FOR_USER",
       cache_hit: false,
       attempt: 1,
+      warnings: [],
       exit_code: 10,
     },
   },
@@ -73,6 +77,7 @@ const RECORDED_FOO_OR_WOO_EVENTS: ReadonlyArray<RunEvent> = [
       question: "foo or woo?",
       options: ["foo", "woo"],
       allow_freeform: false,
+      questions: [],
     },
   },
   {
@@ -95,6 +100,7 @@ const RECORDED_FOO_OR_WOO_EVENTS: ReadonlyArray<RunEvent> = [
       status: "RUNNING",
       cache_hit: false,
       attempt: 2,
+    warnings: [],
     },
   },
   {
@@ -107,6 +113,7 @@ const RECORDED_FOO_OR_WOO_EVENTS: ReadonlyArray<RunEvent> = [
       status: "SUCCESS",
       cache_hit: false,
       attempt: 2,
+      warnings: [],
       exit_code: 0,
     },
   },
@@ -120,6 +127,7 @@ const RECORDED_FOO_OR_WOO_EVENTS: ReadonlyArray<RunEvent> = [
       status: "RUNNING",
       cache_hit: false,
       attempt: 1,
+    warnings: [],
     },
   },
   {
@@ -132,6 +140,7 @@ const RECORDED_FOO_OR_WOO_EVENTS: ReadonlyArray<RunEvent> = [
       status: "SUCCESS",
       cache_hit: false,
       attempt: 1,
+      warnings: [],
       exit_code: 0,
     },
   },
@@ -209,5 +218,39 @@ describe("applyRunEvent reducer", () => {
     expect(state.stage_gates.ask.status).toBe("APPROVED");
     expect(state.stage_gates.ask.kind).toBe("approval");
     expect(state.stage_gates.ask.decided_at).toBe(40);
+  });
+
+  it("propagates node warnings from node_status and clears them on retry", () => {
+    let state = createInitialRunState("r1");
+    state = applyRunEvent(state, {
+      seq: 1,
+      ts: 10,
+      type: "node_status",
+      data: {
+        run_id: "r1",
+        node_id: "ingest",
+        status: "SUCCESS",
+        cache_hit: false,
+        attempt: 1,
+        exit_code: 0,
+        warnings: ["lang=fr"],
+      },
+    });
+    expect(state.nodes.ingest.warnings).toEqual(["lang=fr"]);
+
+    state = applyRunEvent(state, {
+      seq: 2,
+      ts: 20,
+      type: "node_status",
+      data: {
+        run_id: "r1",
+        node_id: "ingest",
+        status: "RUNNING",
+        cache_hit: false,
+        attempt: 2,
+        warnings: [],
+      },
+    });
+    expect(state.nodes.ingest.warnings).toEqual([]);
   });
 });

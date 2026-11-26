@@ -80,6 +80,23 @@ export function NodeRow({
               cache hit
             </span>
           )}
+          {nodeState?.warnings && nodeState.warnings.length > 0 && (
+            <span
+              data-testid={`node-warnings-badge-${nodeId}`}
+              className="status-badge !text-[10px] !px-1.5 !py-0 inline-flex items-center gap-1 cursor-help"
+              style={{
+                borderColor: "var(--color-warning)",
+                color: "var(--color-warning)",
+              }}
+              title={nodeState.warnings.join("\n")}
+            >
+              <FeatherIcon name="alert-triangle" size={10} />
+              <span>
+                {nodeState.warnings.length}{" "}
+                {nodeState.warnings.length === 1 ? "warning" : "warnings"}
+              </span>
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-3">

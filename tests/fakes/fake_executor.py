@@ -248,7 +248,7 @@ class FakeExecutor:
             and checkpoint is not None
         ):
             answer = request.inputs.checkpoint_answers.get(checkpoint.checkpoint_id, "foo")
-            return {"choice": ScalarValue(value=answer)}
+            return {"choice": ScalarValue(value=answer if isinstance(answer, str) else str(answer))}
         if request.op == "standard_io/demo:SecretCodeChallenge":
             return {
                 "code": ScalarValue(value="42"),

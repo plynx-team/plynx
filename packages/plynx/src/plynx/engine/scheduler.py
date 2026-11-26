@@ -5,26 +5,32 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import graphlib
+import json
 import os
 import time
-from collections.abc import Awaitable, Callable, Coroutine, Mapping
-from dataclasses import dataclass, field
+from collections.abc import Awaitable, Callable, Coroutine, Mapping, Sequence
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
 from plynx_sdk.protocol import (
+    CheckpointAnswer,
     CheckpointManifest,
+    CheckpointQuestion,
     InputFileValue,
     InputsManifest,
     OutputValue,
+    ProtocolError,
     ResultDirectoryValue,
     ResultFileValue,
     ResultManifest,
     ResultValue,
     ScalarValue,
+    validate_batch_answers,
 )
 
 from plynx.api_models import (
+    CheckpointQuestionState,
     CheckpointResolvedData,
     CheckpointResolvedEvent,
     CheckpointState,
@@ -40,6 +46,7 @@ from plynx.api_models import (
     StageResolvedData,
     StageResolvedEvent,
     WorkflowInputSpec,
+    is_batch_checkpoint,
 )
 from plynx.cas import (
     BlobStore,
@@ -68,13 +75,26 @@ StageInputsCallback = Callable[
 NodeStatusCallback = Callable[[str, NodeStatus, int], None]
 
 
+def _encode_answer(cp: CheckpointManifest, candidate: CheckpointAnswer) -> str | None:
+    """Return the stored (string / JSON) form of ``candidate``, or ``None`` if it does not fit."""
+    if cp.is_batch:
+        if not isinstance(candidate, dict):
+            return None
+        try:
+            normalized = validate_batch_answers(cp.questions, candidate)
+        except ProtocolError:
+            return None
+        return json.dumps(normalized, ensure_ascii=False)
+    return candidate if isinstance(candidate, str) else None
+
+
 @dataclass
 class SchedulerOptions:
     """Options controlling a single workflow scheduler invocation."""
 
     concurrency: int | None = None
     run_inputs: dict[str, Any] = field(default_factory=dict)
-    answers: dict[str, str] = field(default_factory=dict)
+    answers: dict[str, CheckpointAnswer] = field(default_factory=dict)
     non_interactive: bool = False
     no_cache: bool = False
     poll_interval: float = 0.2
@@ -102,7 +122,7 @@ class _RunExecution:
         self.active_run_id = active_run_id
         self.opts = opts
         self.event_log: EventLog = self.store.event_log(active_run_id)
-        self.resolved_answers: dict[str, str] = dict(opts.answers)
+        self.resolved_answers: dict[str, CheckpointAnswer] = dict(opts.answers)
         self.current_run_status = RunStatus.RUNNING
         self.run_status_lock = asyncio.Lock()
 
@@ -391,10 +411,12 @@ class _RunExecution:
         cache_key: str | None = None,
         exit_code: int | None = None,
         error: str | None = None,
+        warnings: Sequence[str] | None = None,
         started_at: float | None = None,
         finished_at: float | None = None,
     ) -> None:
         self.node_statuses[nid] = status
+        warnings_list = list(warnings) if warnings is not None else None
         await asyncio.to_thread(
             self.store.update_node_status,
             self.active_run_id,
@@ -405,6 +427,7 @@ class _RunExecution:
             attempt=attempt,
             exit_code=exit_code,
             error=error,
+            warnings=warnings_list,
             started_at=started_at,
             finished_at=finished_at,
         )
@@ -419,6 +442,7 @@ class _RunExecution:
                 attempt=attempt,
                 exit_code=exit_code,
                 error=error,
+                warnings=warnings_list or [],
             ),
         )
         if self.opts.on_node_status is not None:
@@ -471,7 +495,9 @@ class _RunExecution:
                     checkpoint_id=cp.checkpoint_id,
                 ),
             )
-        self.resolved_answers[f"{nid}.{cp.checkpoint_id}"] = answer
+        self.resolved_answers[f"{nid}.{cp.checkpoint_id}"] = (
+            json.loads(answer) if cp.is_batch else answer
+        )
         self.waiting_nodes.discard(nid)
         self.runnable_nodes.add(nid)
         await self._sync_run_status()
@@ -488,6 +514,7 @@ class _RunExecution:
             started_at=cached_result.started_at,
             finished_at=cached_result.finished_at,
             outputs=cached_result.outputs,
+            warnings=list(cached_result.warnings),
         )
         await asyncio.to_thread(write_result_manifest, node_dir, hit_manifest)
         self.completed_outputs[nid] = dict(cached_result.outputs)
@@ -497,6 +524,7 @@ class _RunExecution:
             cache_hit=True,
             cache_key=cache_key,
             attempt=0,
+            warnings=hit_manifest.warnings,
             started_at=cached_result.started_at,
             finished_at=cached_result.finished_at,
         )
@@ -613,6 +641,7 @@ class _RunExecution:
                     cache_key=cache_key,
                     attempt=attempt,
                     exit_code=result.exit_code,
+                    warnings=result_manifest.warnings,
                     started_at=result.started_at,
                     finished_at=result.finished_at,
                 )
@@ -643,14 +672,16 @@ class _RunExecution:
         """Persist a new checkpoint, emit its event, and await resolution."""
         cp = result.checkpoint
         assert cp is not None
+        question_states = [CheckpointQuestionState(**asdict(q)) for q in cp.questions]
         await asyncio.to_thread(
             self.store.create_checkpoint,
             self.active_run_id,
             nid,
             cp.checkpoint_id,
-            cp.question,
+            cp.display_question(),
             options=cp.options,
             allow_freeform=cp.allow_freeform,
+            questions=question_states,
         )
         await self._emit_node_status(
             nid,
@@ -667,9 +698,10 @@ class _RunExecution:
                 run_id=self.active_run_id,
                 node_id=nid,
                 checkpoint_id=cp.checkpoint_id,
-                question=cp.question,
+                question=cp.display_question(),
                 options=cp.options,
                 allow_freeform=cp.allow_freeform,
+                questions=question_states,
             ),
         )
         answered, mark_done = await self._await_checkpoint_resolution(
@@ -685,11 +717,13 @@ class _RunExecution:
 
         pending_cp = self.resuming_waiting_nodes.pop(nid, None)
         if pending_cp is not None:
+            is_batch = is_batch_checkpoint(pending_cp.questions)
             cp_manifest = CheckpointManifest(
                 checkpoint_id=pending_cp.checkpoint_id,
-                question=pending_cp.question,
-                options=pending_cp.options,
+                question="" if is_batch else pending_cp.question,
+                options=None if is_batch else pending_cp.options,
                 allow_freeform=pending_cp.allow_freeform,
+                questions=[CheckpointQuestion(**q.model_dump()) for q in pending_cp.questions],
             )
             answered, mark_done = await self._await_checkpoint_resolution(
                 nid,
@@ -1131,7 +1165,7 @@ class Scheduler:
         spec: NodeSpec,
         completed_outputs: Mapping[str, Mapping[str, ResultValue | OutputValue]],
         opts: SchedulerOptions,
-        resolved_answers: Mapping[str, str],
+        resolved_answers: Mapping[str, CheckpointAnswer],
     ) -> InputsManifest:
         dst_node_dir = self.store.node_dir(run_id, node_id)
         state = self.store.get_run_state(run_id)
@@ -1227,6 +1261,7 @@ class Scheduler:
             started_at=result.started_at,
             finished_at=result.finished_at,
             outputs=result_outputs,
+            warnings=list(result.outputs.warnings) if result.outputs is not None else [],
         )
         write_result_manifest(node_dir, result_manifest)
         if is_cacheable:
@@ -1265,7 +1300,7 @@ class Scheduler:
         node_id: str,
         cp: CheckpointManifest,
         opts: SchedulerOptions,
-        resolved_answers: Mapping[str, str],
+        resolved_answers: Mapping[str, CheckpointAnswer],
         *,
         already_passed: bool = False,
         cancel_event: asyncio.Event | None = None,
@@ -1275,12 +1310,14 @@ class Scheduler:
 
         key = f"{node_id}.{cp.checkpoint_id}"
         if not already_passed and key in resolved_answers:
-            return await self._record_answer_first_wins(
-                run_id,
-                node_id,
-                cp.checkpoint_id,
-                resolved_answers[key],
-            )
+            encoded = _encode_answer(cp, resolved_answers[key])
+            if encoded is not None:
+                return await self._record_answer_first_wins(
+                    run_id,
+                    node_id,
+                    cp.checkpoint_id,
+                    encoded,
+                )
 
         existing = await asyncio.to_thread(
             self.store.get_checkpoint,

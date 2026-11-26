@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from plynx_sdk.protocol import (
+    CheckpointAnswer,
     InputDirectoryValue,
     InputFileValue,
     InputsManifest,
@@ -31,7 +32,7 @@ def compute_inputs_hash(file_and_dir_hashes: Mapping[str, str]) -> str:
 def compute_params_hash(
     params: Mapping[str, Any],
     *,
-    checkpoint_answers: Mapping[str, str] | None = None,
+    checkpoint_answers: Mapping[str, CheckpointAnswer] | None = None,
 ) -> str:
     """Compute params_hash = sha256 of canonical JSON of {port: value}.
 

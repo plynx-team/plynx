@@ -13,7 +13,15 @@ from contextvars import ContextVar
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from plynx_sdk.protocol import CheckpointManifest
+from plynx_sdk.protocol import (
+    SINGLE_QUESTION_ID,
+    AnswerValue,
+    CheckpointAnswer,
+    CheckpointManifest,
+    CheckpointQuestion,
+    ProtocolError,
+    validate_batch_answers,
+)
 
 
 class CheckpointInterrupt(BaseException):
@@ -24,7 +32,7 @@ class CheckpointInterrupt(BaseException):
     """
 
     def __init__(self, manifest: CheckpointManifest) -> None:
-        super().__init__(f"Checkpoint {manifest.checkpoint_id}: {manifest.question}")
+        super().__init__(f"Checkpoint {manifest.checkpoint_id}: {manifest.display_question()}")
         self.manifest = manifest
 
 
@@ -32,7 +40,7 @@ class CheckpointInterrupt(BaseException):
 class _CheckpointState:
     """Per-attempt checkpoint counter, pre-supplied answers, and target node directory."""
 
-    answers: dict[str, str] = field(default_factory=dict)
+    answers: dict[str, CheckpointAnswer] = field(default_factory=dict)
     node_dir: Path | None = None
     call_index: int = 0
 
@@ -61,7 +69,7 @@ def _atomic_write_checkpoint(path: Path, content: str) -> None:
 
 @contextmanager
 def checkpoint_context(
-    answers: Mapping[str, str] | None = None,
+    answers: Mapping[str, CheckpointAnswer] | None = None,
     node_dir: Path | None = None,
 ) -> Iterator[None]:
     """Bind checkpoint replay answers and ``node_dir`` for a single op execution attempt."""
@@ -77,6 +85,22 @@ def checkpoint_context(
         _CURRENT_STATE.reset(token)
 
 
+def _next_slot() -> tuple[str, dict[str, CheckpointAnswer], Path | None]:
+    """Allocate the next ``cp_<n>`` id and return it with the replay answers and node dir."""
+    state = _CURRENT_STATE.get()
+    if state is None:
+        return "cp_0", {}, None
+    idx = state.call_index
+    state.call_index += 1
+    return f"cp_{idx}", state.answers, state.node_dir
+
+
+def _interrupt(manifest: CheckpointManifest, node_dir: Path | None) -> CheckpointInterrupt:
+    if node_dir is not None:
+        _atomic_write_checkpoint(node_dir / "checkpoint.json", manifest.to_json())
+    return CheckpointInterrupt(manifest)
+
+
 def checkpoint(
     question: str,
     options: Sequence[str] | None = None,
@@ -89,37 +113,59 @@ def checkpoint(
     Otherwise writes ``checkpoint.json`` (when running in a node directory) and
     raises ``CheckpointInterrupt``.
     """
-    state = _CURRENT_STATE.get()
-    if state is None:
-        idx = 0
-        answers: dict[str, str] = {}
-        node_dir: Path | None = None
-    else:
-        idx = state.call_index
-        state.call_index += 1
-        answers = state.answers
-        node_dir = state.node_dir
-
-    cp_id = f"cp_{idx}"
-    opt_list = list(options) if options is not None else None
+    cp_id, answers, node_dir = _next_slot()
     manifest = CheckpointManifest(
         checkpoint_id=cp_id,
         question=question,
-        options=opt_list,
+        options=list(options) if options is not None else None,
         allow_freeform=allow_freeform,
     )
 
     if cp_id in answers:
-        return answers[cp_id]
+        stored = answers[cp_id]
+        if isinstance(stored, str):
+            return stored
+        single = stored.get(SINGLE_QUESTION_ID)
+        if isinstance(single, str):
+            return single
+        raise ProtocolError(f"{cp_id}: stored answer does not match a single-question checkpoint")
 
-    if node_dir is not None:
-        _atomic_write_checkpoint(node_dir / "checkpoint.json", manifest.to_json())
+    raise _interrupt(manifest, node_dir)
 
-    raise CheckpointInterrupt(manifest)
+
+def checkpoint_batch(
+    questions: Sequence[CheckpointQuestion | Mapping[str, object]],
+) -> dict[str, AnswerValue]:
+    """Ask several questions in one pause, or replay the stored answers.
+
+    Returns a map of question id to answer: ``str`` for ``multi_select=False`` and
+    ``list[str]`` for ``multi_select=True``. The id ``"default"`` is reserved for
+    single-question ``checkpoint()``.
+    """
+    parsed = [
+        q if isinstance(q, CheckpointQuestion) else CheckpointQuestion.from_dict(q)
+        for q in questions
+    ]
+    if not parsed:
+        raise ProtocolError("checkpoint_batch: at least one question is required")
+    if any(q.id == SINGLE_QUESTION_ID for q in parsed):
+        raise ProtocolError(f"checkpoint_batch: question id {SINGLE_QUESTION_ID!r} is reserved")
+
+    cp_id, answers, node_dir = _next_slot()
+    manifest = CheckpointManifest(checkpoint_id=cp_id, questions=parsed)
+
+    if cp_id in answers:
+        stored = answers[cp_id]
+        if not isinstance(stored, dict):
+            raise ProtocolError(f"{cp_id}: stored answer does not match a batch checkpoint")
+        return validate_batch_answers(parsed, stored)
+
+    raise _interrupt(manifest, node_dir)
 
 
 __all__ = [
     "CheckpointInterrupt",
     "checkpoint",
+    "checkpoint_batch",
     "checkpoint_context",
 ]

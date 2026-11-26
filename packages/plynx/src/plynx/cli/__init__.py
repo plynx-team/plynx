@@ -165,13 +165,19 @@ def validate_cmd(workflow: Path) -> None:
     "--answers",
     type=click.Path(path_type=Path),
     default=None,
-    help="JSON file of checkpoint answers ({'node.cp_n': 'value'}).",
+    help=(
+        "JSON file of checkpoint answers ({'node.cp_n': 'value'} or "
+        "{'node.cp_n': {'question_id': 'value'}} for batch checkpoints)."
+    ),
 )
 @click.option(
     "answer_pairs",
     "--answer",
     multiple=True,
-    help="Set checkpoint answer (node.cp_n=value).",
+    help=(
+        "Set checkpoint answer (node.cp_n=value, or node.cp_n.question_id=value for "
+        "batch checkpoints; repeat for multi-select)."
+    ),
 )
 @click.option("--concurrency", type=int, default=None, help="Maximum concurrent nodes.")
 @click.option(
@@ -299,13 +305,19 @@ def run_cmd(
     "--answers",
     type=click.Path(path_type=Path),
     default=None,
-    help="JSON file of checkpoint answers ({'node.cp_n': 'value'}).",
+    help=(
+        "JSON file of checkpoint answers ({'node.cp_n': 'value'} or "
+        "{'node.cp_n': {'question_id': 'value'}} for batch checkpoints)."
+    ),
 )
 @click.option(
     "answer_pairs",
     "--answer",
     multiple=True,
-    help="Set checkpoint answer (node.cp_n=value).",
+    help=(
+        "Set checkpoint answer (node.cp_n=value, or node.cp_n.question_id=value for "
+        "batch checkpoints; repeat for multi-select)."
+    ),
 )
 @click.option("--concurrency", type=int, default=None, help="Maximum concurrent nodes.")
 @click.option(

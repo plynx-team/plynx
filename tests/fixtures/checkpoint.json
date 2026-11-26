@@ -6,5 +6,18 @@
     "foo",
     "woo"
   ],
-  "allow_freeform": false
+  "allow_freeform": false,
+  "questions": [
+    {
+      "id": "default",
+      "header": "",
+      "question": "foo or woo?",
+      "options": [
+        "foo",
+        "woo"
+      ],
+      "multi_select": false,
+      "allow_freeform": false
+    }
+  ]
 }

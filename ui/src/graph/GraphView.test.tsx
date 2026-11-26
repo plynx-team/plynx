@@ -149,12 +149,14 @@ const MOCK_RUN_STATE: RunState = {
       status: "SUCCESS",
       cache_hit: true,
       attempt: 1,
+    warnings: [],
     },
     echo: {
       node_id: "echo",
       status: "RUNNING",
       cache_hit: false,
       attempt: 1,
+    warnings: [],
     },
   },
   checkpoints: [],
@@ -280,6 +282,7 @@ describe("GraphView component (Task 6.8)", () => {
         status: "SUCCESS",
         cache_hit: false,
         attempt: 1,
+      warnings: [],
       },
     });
 
@@ -303,6 +306,7 @@ describe("GraphView component (Task 6.8)", () => {
           status: "SUCCESS",
           cache_hit: true,
           attempt: 1,
+        warnings: [],
         },
       },
       workflow_snapshot: {

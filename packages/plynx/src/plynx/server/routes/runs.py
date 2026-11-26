@@ -12,11 +12,19 @@ from typing import Any
 
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
-from plynx_sdk.protocol import ResultFileValue, ResultManifest
+from plynx_sdk.protocol import (
+    CheckpointQuestion,
+    ProtocolError,
+    ResultFileValue,
+    ResultManifest,
+    validate_batch_answers,
+)
 from pydantic import ValidationError
 
 from plynx.api_models import (
+    SINGLE_QUESTION_ID,
     AnswerCheckpointRequest,
+    CheckpointState,
     CreateRunRequest,
     CreateRunResponse,
     NodeLogData,
@@ -29,6 +37,7 @@ from plynx.api_models import (
     StageGateKind,
     StageGateStatus,
     StageInputsRequest,
+    is_batch_checkpoint,
 )
 from plynx.cas import BlobStore
 from plynx.engine import Scheduler, SchedulerOptions
@@ -407,6 +416,37 @@ async def resume_run_endpoint(
     return CreateRunResponse(run_id=resolved_id)
 
 
+def _encode_request_answer(
+    cp: CheckpointState,
+    body: AnswerCheckpointRequest,
+) -> tuple[str | None, str | None]:
+    """Validate ``body`` against ``cp`` and return ``(stored_answer, error_message)``.
+
+    Single-question checkpoints store the plain string; batch checkpoints store the
+    JSON-encoded, normalized answer map.
+    """
+    if (body.answer is None) == (body.answers is None):
+        return None, "Provide exactly one of 'answer' or 'answers'"
+    if is_batch_checkpoint(cp.questions):
+        if body.answers is None:
+            return None, "This checkpoint has multiple questions; provide 'answers'"
+        try:
+            normalized = validate_batch_answers(
+                [CheckpointQuestion(**q.model_dump()) for q in cp.questions],
+                body.answers,
+            )
+        except ProtocolError as exc:
+            return None, str(exc)
+        return json.dumps(normalized, ensure_ascii=False), None
+    if body.answer is not None:
+        return body.answer, None
+    assert body.answers is not None
+    single = body.answers.get(SINGLE_QUESTION_ID)
+    if len(body.answers) == 1 and isinstance(single, str):
+        return single, None
+    return None, f"Provide 'answer' or 'answers' with the single key {SINGLE_QUESTION_ID!r}"
+
+
 @router.post("/runs/{run_id}/checkpoints/{node_id}/{checkpoint_id}/answer")
 async def answer_checkpoint_endpoint(
     run_id: str,
@@ -435,12 +475,17 @@ async def answer_checkpoint_endpoint(
             f"Checkpoint '{node_id}.{checkpoint_id}' has already been answered",
         )
 
+    stored, answer_error = _encode_request_answer(cp, body)
+    if answer_error is not None:
+        return error_response(422, "invalid_answer", answer_error)
+    assert stored is not None
+
     applied = await asyncio.to_thread(
         state.store.answer_checkpoint,
         resolved_id,
         node_id,
         checkpoint_id,
-        body.answer,
+        stored,
     )
     if not applied:
         return error_response(
@@ -449,7 +494,9 @@ async def answer_checkpoint_endpoint(
             f"Checkpoint '{node_id}.{checkpoint_id}' has already been answered",
         )
     await state.auto_resume_if_unowned(resolved_id)
-    return {"status": "ok", "checkpoint_id": checkpoint_id, "answer": body.answer}
+    if is_batch_checkpoint(cp.questions):
+        return {"status": "ok", "checkpoint_id": checkpoint_id, "answers": json.loads(stored)}
+    return {"status": "ok", "checkpoint_id": checkpoint_id, "answer": stored}
 
 
 @router.post("/runs/{run_id}/stages/{stage_id}/approve")

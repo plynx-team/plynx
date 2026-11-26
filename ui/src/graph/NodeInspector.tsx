@@ -12,6 +12,7 @@ import {
   getPortIconName,
 } from "../components/FeatherIcon";
 import { detectPreviewKind } from "../previewers/ArtifactPreviewDialog";
+import { CheckpointCard } from "../stepper/CheckpointCard";
 import { CsvPreviewer } from "../previewers/CsvPreviewer";
 import { ImagePreviewer } from "../previewers/ImagePreviewer";
 import { JsonPreviewer } from "../previewers/JsonPreviewer";
@@ -605,6 +606,20 @@ export function NodeInspector({
                 cached
               </span>
             )}
+            {nodeRunState.warnings && nodeRunState.warnings.length > 0 && (
+              <span
+                data-testid="inspector-warnings-badge"
+                className="status-badge !text-[10px] inline-flex items-center gap-1 cursor-help"
+                style={{
+                  borderColor: "var(--color-warning)",
+                  color: "var(--color-warning)",
+                }}
+                title={nodeRunState.warnings.join("\n")}
+              >
+                <FeatherIcon name="alert-triangle" size={10} />
+                <span>{nodeRunState.warnings.length}</span>
+              </span>
+            )}
             <span
               className={`status-badge ${nodeRunState.status} !text-[10px] cursor-help`}
               title={getStatusHint(nodeRunState.status, false, nodeRunState.error)}
@@ -616,6 +631,52 @@ export function NodeInspector({
       </div>
 
       <div className="PropertiesBoxRoot">
+        {/* Active Checkpoint(s) for this node */}
+        {runState &&
+          runState.checkpoints
+            .filter((cp) => cp.node_id === nodeId && !cp.answered_at)
+            .map((cp) => (
+              <div
+                key={cp.checkpoint_id}
+                data-testid={`inspector-checkpoint-${cp.checkpoint_id}`}
+                className="mb-2"
+              >
+                <CheckpointCard runId={runState.id} checkpoint={cp} />
+              </div>
+            ))}
+
+        {/* Per-Node Warnings */}
+        {nodeRunState?.warnings && nodeRunState.warnings.length > 0 && (
+          <div
+            data-testid="inspector-node-warnings"
+            className="PropertiesBox"
+            style={{ borderLeft: "3px solid var(--color-warning)" }}
+          >
+            <div
+              className="PropertiesBoxHeader flex items-center gap-1.5"
+              style={{ color: "var(--color-warning)" }}
+            >
+              <FeatherIcon name="alert-triangle" size={12} />
+              <span>Warnings ({nodeRunState.warnings.length})</span>
+            </div>
+            <div className="PropertiesBoxContent space-y-1.5">
+              {nodeRunState.warnings.map((msg, idx) => (
+                <div
+                  key={idx}
+                  className="rounded p-1.5 text-xs font-mono"
+                  style={{
+                    backgroundColor: "rgba(255, 193, 7, 0.1)",
+                    border: "1px solid rgba(255, 193, 7, 0.35)",
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  {msg}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Node Metadata Box */}
         <div className="PropertiesBox">
           <div className="PropertiesBoxHeader">Node</div>

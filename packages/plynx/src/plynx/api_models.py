@@ -8,6 +8,18 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Annotated, Any, Literal
 
+from plynx_sdk.protocol import (
+    AgentProvider as AgentProvider,
+)
+from plynx_sdk.protocol import (
+    AgentTurnStatus as AgentTurnStatus,
+)
+from plynx_sdk.protocol import (
+    GraphEditPolicy as GraphEditPolicy,
+)
+from plynx_sdk.protocol import (
+    ValidatorMode as ValidatorMode,
+)
 from pydantic import BaseModel, ConfigDict, Field
 
 from plynx import __version__
@@ -81,12 +93,42 @@ class NodeRunState(BaseModel):
     attempt: int = 0
     exit_code: int | None = None
     error: str | None = None
+    warnings: list[str] = Field(default_factory=list)
     started_at: float | None = None
     finished_at: float | None = None
 
 
+SINGLE_QUESTION_ID = "default"
+
+
+class CheckpointQuestionState(BaseModel):
+    """One question of a checkpoint prompt."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    question: str
+    header: str = ""
+    options: list[str] = Field(default_factory=list)
+    multi_select: bool = False
+    allow_freeform: bool = True
+
+
+def is_batch_checkpoint(questions: list[CheckpointQuestionState]) -> bool:
+    """Return whether answers are a map of question id to value (not a single string)."""
+    if not questions:
+        return False
+    return not (len(questions) == 1 and questions[0].id == SINGLE_QUESTION_ID)
+
+
 class CheckpointState(BaseModel):
-    """State of a checkpoint prompt requested by a node."""
+    """State of a checkpoint prompt requested by a node.
+
+    ``questions`` is empty for rows created before batch checkpoints; treat it as one
+    ``default`` question built from ``question`` / ``options`` / ``allow_freeform``.
+    For batch checkpoints ``answer`` holds the JSON-encoded answer map and ``answers`` the
+    decoded map.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -95,7 +137,9 @@ class CheckpointState(BaseModel):
     question: str
     options: list[str] | None = None
     allow_freeform: bool = False
+    questions: list[CheckpointQuestionState] = Field(default_factory=list)
     answer: str | None = None
+    answers: dict[str, str | list[str]] | None = None
     created_at: float
     answered_at: float | None = None
 
@@ -210,6 +254,7 @@ class NodeStatusData(BaseModel):
     attempt: int = 0
     exit_code: int | None = None
     error: str | None = None
+    warnings: list[str] = Field(default_factory=list)
 
 
 class NodeCheckpointData(BaseModel):
@@ -223,6 +268,7 @@ class NodeCheckpointData(BaseModel):
     question: str
     options: list[str] | None = None
     allow_freeform: bool = False
+    questions: list[CheckpointQuestionState] = Field(default_factory=list)
 
 
 class CheckpointResolvedData(BaseModel):
@@ -529,7 +575,8 @@ class AnswerCheckpointRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    answer: str
+    answer: str | None = None
+    answers: dict[str, str | list[str]] | None = None
 
 
 class StageApproveRequest(BaseModel):

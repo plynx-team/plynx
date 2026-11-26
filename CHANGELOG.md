@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Protocol enums**: `AgentTurnStatus`, `GraphEditPolicy`, `ValidatorMode`, and `AgentProvider` (`enum.StrEnum`) in `plynx_sdk.protocol`.
+- **`self.warn()` / `plynx_sdk.warn()`**: non-fatal per-node warnings recorded in `outputs.json` and `result.json` (`warnings`).
+- **Batch checkpoints**: `self.checkpoint_batch([...])` asks several questions (radio, checkbox, or freeform) in one pause. Supported by the REST answer endpoint (`answers`), SSE `node_checkpoint` (`questions`), CLI `--answers` / `--answer node.cp_n.question_id=value`, terminal prompts, and the Stepper / run inspector checkpoint card (**Submit Answers**).
+
+### Changed
+- SQLite `PRAGMA user_version` is now `2` (adds `checkpoints.questions_json`). Version 1 workspaces are upgraded in place on open.
+- `POST /runs/{id}/checkpoints/{node_id}/{checkpoint_id}/answer` accepts `{ "answer": str }` or `{ "answers": {...} }`.
+
 ## [2.0.0] - 2026-11-22
 
 Complete ground-up rewrite as a local-first, code-first workflow engine. Legacy PLynx v1 (`v1.12.1`) is preserved on the `legacy/v1` branch.
