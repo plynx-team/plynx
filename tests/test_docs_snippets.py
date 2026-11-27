@@ -27,7 +27,16 @@ DOC_FILES: list[Path] = [
 ]
 
 VALID_PLYNX_YAML_KEYS = frozenset(
-    {"workflows", "packs", "db", "concurrency", "env_passthrough", "cache"}
+    {
+        "workflows",
+        "packs",
+        "db",
+        "concurrency",
+        "env_passthrough",
+        "cache",
+        "agent",
+        "max_injected_nodes",
+    }
 )
 
 _FENCE_RE = re.compile(r"^```([a-zA-Z0-9_-]*)\n(.*?)^```", re.MULTILINE | re.DOTALL)

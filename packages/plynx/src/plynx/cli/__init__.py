@@ -28,7 +28,12 @@ from plynx.cli.interaction import (
 from plynx.engine import LocalExecutor, Scheduler, SchedulerOptions, create_executor
 from plynx.registry import OpRegistry, PackRegistry, find_workspace_root
 from plynx.store import AmbiguousRunIdError, RunNotFoundError, RunStore, StoreError
-from plynx.workflow.models import Workflow, load_workflow
+from plynx.store.telemetry import compute_run_stats, detect_baseline_drift
+from plynx.workflow.models import (
+    Workflow,
+    extract_validator_stage_id,
+    load_workflow,
+)
 from plynx.workflow.validator import validate_workflow, validate_workflow_file
 
 
@@ -46,10 +51,19 @@ def _lookup_port_type(workflow: Workflow, registry: OpRegistry, key: str) -> str
     if "." not in key:
         return None
     node_id, _, port_name = key.partition(".")
+    op_name: str | None = None
     node = workflow.nodes.get(node_id)
-    if node is None:
+    if node is not None:
+        op_name = node.op
+    else:
+        val_stage = extract_validator_stage_id(node_id)
+        if val_stage is not None:
+            st = workflow.stages.get(val_stage)
+            if st is not None and st.validator is not None:
+                op_name = st.validator.op
+    if op_name is None:
         return None
-    op_entry = registry.get(node.op)
+    op_entry = registry.get(op_name)
     if op_entry is None:
         return None
     for port in op_entry.inputs:
@@ -197,6 +211,12 @@ _CLI_AGENT_PROVIDER_CHOICES = tuple(p.value for p in AgentProvider if p != Agent
     help="Default coding-agent model override for this run.",
 )
 @click.option(
+    "--max-injected-nodes",
+    type=click.IntRange(min=0),
+    default=None,
+    help="Maximum dynamic agent-injected nodes permitted in this run.",
+)
+@click.option(
     "--non-interactive",
     is_flag=True,
     default=False,
@@ -212,6 +232,7 @@ def run_cmd(
     concurrency: int | None,
     agent_provider: str | None,
     agent_model: str | None,
+    max_injected_nodes: int | None,
     non_interactive: bool,
     no_cache: bool,
 ) -> None:
@@ -280,6 +301,7 @@ def run_cmd(
             no_cache=no_cache,
             agent_provider=agent_provider,
             agent_model=agent_model,
+            max_injected_nodes=max_injected_nodes,
             cancel_event=cancel_event,
             checkpoint_callback=(
                 None
@@ -353,6 +375,12 @@ def run_cmd(
     help="Override default coding-agent model when resuming.",
 )
 @click.option(
+    "--max-injected-nodes",
+    type=click.IntRange(min=0),
+    default=None,
+    help="Override maximum dynamic agent-injected nodes when resuming.",
+)
+@click.option(
     "--non-interactive",
     is_flag=True,
     default=False,
@@ -365,6 +393,7 @@ def resume_cmd(
     concurrency: int | None,
     agent_provider: str | None,
     agent_model: str | None,
+    max_injected_nodes: int | None,
     non_interactive: bool,
 ) -> None:
     """Continue a failed, canceled, or waiting run, reusing completed node outputs."""
@@ -396,6 +425,7 @@ def resume_cmd(
             no_cache=True,
             agent_provider=agent_provider,
             agent_model=agent_model,
+            max_injected_nodes=max_injected_nodes,
             cancel_event=cancel_event,
             checkpoint_callback=(
                 None
@@ -463,6 +493,12 @@ def run_node_cmd(node_dir: Path, op_override: str | None) -> None:
                 node_spec = wf_model.nodes.get(resolved_dir.name)
                 if node_spec is not None:
                     op = node_spec.op
+                else:
+                    val_stage = extract_validator_stage_id(resolved_dir.name)
+                    if val_stage is not None:
+                        st_spec = wf_model.stages.get(val_stage)
+                        if st_spec is not None and st_spec.validator is not None:
+                            op = st_spec.validator.op
         if op is None:
             click.echo(
                 f"error: could not determine op for {node_dir}; pass --op <pack>/<module>:<Name>",
@@ -503,11 +539,105 @@ def run_node_cmd(node_dir: Path, op_override: str | None) -> None:
     show_default=True,
     help="Maximum runs to list.",
 )
-def runs_cmd(run_id: str | None, limit: int) -> None:
-    """List recent runs or inspect one run by full ID or unique prefix."""
+@click.option(
+    "--stats",
+    is_flag=True,
+    default=False,
+    help="Report per-node execution stats, cache-hit rates, injections, and baseline drift.",
+)
+@click.option(
+    "--workflow",
+    "workflow_filter",
+    type=str,
+    default=None,
+    help="Filter runs or stats by workflow path.",
+)
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Emit stats or run details as JSON.",
+)
+def runs_cmd(
+    run_id: str | None,
+    limit: int,
+    stats: bool,
+    workflow_filter: str | None,
+    as_json: bool,
+) -> None:
+    """List recent runs, inspect one run, or report execution telemetry (--stats)."""
     workspace_root = find_workspace_root()
     store = RunStore(workspace_root)
     store.reconcile_dead_owners()
+
+    norm_wf_filter: str | None = None
+    if workflow_filter:
+        wf_cand = Path(workflow_filter)
+        if wf_cand.exists():
+            norm_wf_filter = _relative_workflow_path(wf_cand, workspace_root)
+        else:
+            norm_wf_filter = workflow_filter.replace("\\", "/")
+
+    if stats:
+        total_runs, node_stats, drift_alerts = compute_run_stats(
+            store,
+            workflow_path=norm_wf_filter,
+        )
+        if as_json:
+            payload = {
+                "total_runs": total_runs,
+                "nodes": [item.model_dump(mode="json") for item in node_stats],
+                "drift_alerts": [alert.model_dump(mode="json") for alert in drift_alerts],
+            }
+            click.echo(json.dumps(payload, indent=2))
+            return
+
+        if not node_stats:
+            click.echo("No runs found.")
+            return
+
+        for alert in drift_alerts:
+            click.echo(f"[DRIFT] {alert.message}")
+        if drift_alerts:
+            click.echo("")
+
+        stat_headers = (
+            "WORKFLOW",
+            "NODE",
+            "OP",
+            "RUNS",
+            "CACHE HIT%",
+            "AVG DUR",
+            "FAILURES",
+            "INJECTED",
+        )
+        stat_rows: list[tuple[str, str, str, str, str, str, str, str]] = []
+        for st in node_stats:
+            avg_s = (
+                f"{st.avg_duration_seconds:.2f}s" if st.avg_duration_seconds is not None else "-"
+            )
+            stat_rows.append(
+                (
+                    st.workflow_path,
+                    st.node_id,
+                    st.op or "-",
+                    str(st.executions),
+                    f"{st.cache_hit_rate * 100:.0f}%",
+                    avg_s,
+                    str(st.failures),
+                    str(st.dynamic_injections),
+                )
+            )
+        widths = [len(h) for h in stat_headers]
+        for s_row in stat_rows:
+            for idx, cell in enumerate(s_row):
+                widths[idx] = max(widths[idx], len(cell))
+        click.echo("  ".join(h.ljust(widths[i]) for i, h in enumerate(stat_headers)))
+        click.echo("  ".join("-" * widths[i] for i in range(len(stat_headers))))
+        for s_row in stat_rows:
+            click.echo("  ".join(cell.ljust(widths[i]) for i, cell in enumerate(s_row)))
+        return
 
     if run_id is not None:
         resolved_id = _resolve_run_id_or_exit(store, run_id)
@@ -515,6 +645,9 @@ def runs_cmd(run_id: str | None, limit: int) -> None:
         if state is None:
             click.echo(f"error: run {resolved_id!r} not found", err=True)
             sys.exit(1)
+        if as_json:
+            click.echo(json.dumps(state.model_dump(mode="json"), indent=2))
+            return
         created_str = datetime.fromtimestamp(state.created_at, tz=UTC).strftime("%Y-%m-%d %H:%M:%S")
         click.echo(f"Run:      {state.id}")
         click.echo(f"Status:   {state.status.value}")
@@ -530,17 +663,25 @@ def runs_cmd(run_id: str | None, limit: int) -> None:
                     extras.append("cache_hit")
                 if nstate.attempt:
                     extras.append(f"attempt={nstate.attempt}")
+                if nstate.warnings:
+                    extras.append(f"warnings={len(nstate.warnings)}")
                 if nstate.error:
                     extras.append(f"error={nstate.error}")
                 suffix = f" ({', '.join(extras)})" if extras else ""
                 click.echo(f"  {nid}: {nstate.status.value}{suffix}")
         return
 
-    runs = store.list_runs(limit=limit)
+    runs = store.list_runs(limit=limit, workflow_path=norm_wf_filter)
 
     if not runs:
         click.echo("No runs found.")
         return
+
+    drift_alerts = detect_baseline_drift(store, workflow_path=norm_wf_filter)
+    for alert in drift_alerts:
+        click.echo(f"[DRIFT] {alert.message}")
+    if drift_alerts:
+        click.echo("")
 
     headers = ("ID", "STATUS", "WORKFLOW", "CREATED", "ERROR")
     rows: list[tuple[str, str, str, str, str]] = []

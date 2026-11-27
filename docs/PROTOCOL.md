@@ -5,7 +5,7 @@ Exact formats. Code must match this file. Change this file first, then the code,
 ## 1. Conventions
 
 - Run ID: `YYYYMMDD_HHMMSS_<6 hex>` in UTC, e.g. `20261116_201500_a1b2c3`. It is the SQLite key and the run directory name. CLI accepts any unique prefix.
-- Node ID: `^[a-z][a-z0-9_]*$`. Stage ID: same pattern, or a free label (see 2).
+- Node ID: `^[a-z][a-z0-9_]*$` for user-declared nodes. At runtime, stage validators use the reserved ID `__stage_validator__<stage_id>` (`RUNTIME_NODE_ID_PATTERN`). Stage ID: `^[a-z][a-z0-9_]*$`, or `[a-zA-Z0-9][a-zA-Z0-9_-]*` when a validator is attached (see 2).
 - JSON files: UTF-8, no BOM, `\n` newlines. Written atomically.
 - Paths inside a node's manifests are relative to that node's directory (`.plynx/runs/<run_id>/nodes/<node_id>/`), use `/`, and never contain `..` or a drive letter. Paths in SQLite and `run_manifest.json` are relative to the workspace root.
 - Times: UTC float seconds.
@@ -18,13 +18,21 @@ version: 1
 name: foo_or_woo               # optional, default: file stem
 description: ""                # optional
 concurrency: 4                 # optional
+max_injected_nodes: 3          # optional cumulative dynamic-splice budget per run
 agent:                         # optional workflow-level agent defaults
   provider: default            # AgentProvider
   model: ""                    # optional model override
+  max_injected_nodes: 3        # optional alias when grouped under agent:
 stages:                        # optional
   ask:
     title: "1. Ask"            # optional, default: stage id
     require_approval: false    # optional, default false
+    validator:                 # optional StageValidatorSpec (runs as __stage_validator__ask)
+      op: standard_io/agent:StageSupervisor
+      mode: on_anomaly         # ValidatorMode: on_anomaly | on_failure | always
+      allow_graph_edits: confirm # GraphEditPolicy: confirm | auto | forbidden
+      inputs:
+        prompt: "Inspect anomalies."
 nodes:
   pick:
     op: standard_io/demo:AskFooOrWoo
@@ -42,6 +50,9 @@ nodes:
 Rules:
 
 - `op` is `<pack>/<module>:<Name>` (see 3). `Name` is a class name or a decorated function name.
+- `stages.<stage_id>.validator`: optional stage-end supervisor (`StageValidatorOp` or `AgentOp`). Scheduled as reserved node `__stage_validator__<stage_id>` depending on all regular nodes in `<stage_id>`. `mode` defaults to `on_anomaly`; `allow_graph_edits` defaults to `confirm`.
+- `nodes.<id>.allow_graph_edits`: optional `GraphEditPolicy` override (`forbidden | confirm | auto`), valid only on `AgentOp` nodes (defaults to the op class `ALLOW_GRAPH_EDITS`).
+- `nodes.<id>.meta`: optional provenance mapping `{ injected_by?: str, reason?: str, superseded_by?: str }` written into `workflow.snapshot.yaml` when an agent or outer harness splices or supersedes nodes at runtime.
 - `inputs` is one map for every port of the op (the old parameter/input split is gone). A value is one of:
   - a **reference**: the string `$<node_id>.<output_name>`, or the mapping `{ from_node: <node_id>, output: <output_name> }`;
   - a **literal**: any YAML scalar, list or mapping. For `Path` and `Directory` ports a string literal is a workspace-relative path;
@@ -113,7 +124,7 @@ def concat(a: str, b: str = " ") -> ConcatOut:
   - Optionals: `X | None` / `Optional[X]` of any of the above.
 - Defaults are literals. Port names are `snake_case`.
 - Variadic operations: An op can declare `ALLOW_EXTRA_INPUTS = True` (class form) or `@op(..., allow_extra_inputs=True)` (function form). Variadic inputs are declared via typed keyword arguments `**extra: <Type>` (e.g. `**tracks: AudioWav`). When enabled, the workflow engine accepts arbitrary named input ports matching `<Type>`.
-- Agent operations (`AgentOp` and `StageValidatorOp` subclasses): Default `ALLOW_EXTRA_INPUTS = True` and `agent_role = "agent" | "validator"`. Subclasses may omit `def run()` (Choice A), inheriting `prompt_file: MarkdownFile | None = None`, `prompt: str = ""`, `provider: AgentProviderLiteral = "default"`, `model: str = ""`, and `**extra: Any`, or declare an explicit `def run(...)` (Choice B) with mandatory typed ports alongside standard agent ports. Inheritance from any base class outside `Op`, `AgentOp`, and `StageValidatorOp` or computed metadata is not supported.
+- Agent operations (`AgentOp` and `StageValidatorOp` subclasses): Default `ALLOW_EXTRA_INPUTS = True`, `agent_role = "agent" | "validator"`, and `ALLOW_GRAPH_EDITS = GraphEditPolicy.FORBIDDEN` (`AgentOp`) or `GraphEditPolicy.CONFIRM` (`StageValidatorOp`), exposed as `allow_graph_edits` on `OpEntry`. Subclasses may omit `def run()` (Choice A), inheriting `prompt_file: MarkdownFile | None = None`, `prompt: str = ""`, `provider: AgentProviderLiteral = "default"`, `model: str = ""`, and `**extra: Any`, or declare an explicit `def run(...)` (Choice B) with mandatory typed ports alongside standard agent ports (`StageValidatorOp` defaults `Outputs` to `{ summary: str }`). Inheritance from any base class outside `Op`, `AgentOp`, and `StageValidatorOp` or computed metadata is not supported.
 
 Port type vocabulary (`type`): `str`, `int`, `float`, `bool`, `json` (`dict` or `list`), `file` (`Path`), `directory` (`Directory`).
 - `options`: list of allowed scalar literals for `Literal[...]`, or `null`.
@@ -177,12 +188,14 @@ Environment: host environment (restricted by `env_passthrough` when set) + `.env
     "doc": { "kind": "file", "path": "inputs/doc/resume.pdf", "sha256": "…", "size_bytes": 1234 },
     "frames": { "kind": "directory", "path": "inputs/frames", "tree_sha256": "…" }
   },
-  "checkpoint_answers": { "cp_0": "foo", "cp_1": { "role": "ML", "skills": ["python", "sql"] } }
+  "checkpoint_answers": { "cp_0": "foo", "cp_1": { "role": "ML", "skills": ["python", "sql"] } },
+  "allow_graph_edits": "confirm"
 }
 ```
 
 - `scalar` holds `str | int | float | bool | dict | list`, at most 1 MiB serialized. Larger data must be a file.
 - `checkpoint_answers` values are a `str` for `checkpoint()` and an object `{question_id: str | list[str]}` for `checkpoint_batch()`.
+- `allow_graph_edits` is optional (`GraphEditPolicy`: `"forbidden" | "confirm" | "auto"`); omitted when unset on deterministic ops.
 - Files and directories are materialized read-only (hard link, else copy) under `inputs/<port>/<original_filename>`.
 
 ### `outputs.json` (harness writes, only on success)
@@ -272,6 +285,33 @@ The engine hashes each output, moves it into the blob store, and writes:
 
 Before executing Turn `k`, `AgentOp` consults `agent_turns.json`. If Turn `k` is already recorded (e.g. replaying `run()` after a `checkpoint_batch()` exit `10`), `AgentOp` returns the recorded turn in 0 tokens, reads the stored checkpoint answer from `inputs.json`, and resumes Turn `k+1` via `--resume <session_id>`. Before each turn, `AgentOp` writes `workdir/turn_schema.json` and reads `workdir/turn_output.json` (falling back to CLI `stdout` JSON).
 
+### `stage_context.json` (engine writes inside `nodes/__stage_validator__<stage_id>/`)
+
+Before launching a Stage Validator subprocess, the engine writes `stage_context.json` containing `"schema": 1`, `run_id`, `stage_id`, `stage_title`, `mode`, `allow_graph_edits`, `max_injected_nodes`, `nodes` (per-node `op`, `status`, `cache_hit`, `attempt`, `error`, `warnings`, `outputs` with 4 KiB text previews, and 100-line `stdout_tail` / `stderr_tail`), `workflow_snapshot_yaml`, and `registered_ops` (`OpEntry` schemas). `AgentOp` summarizes this context automatically into the prompt.
+
+### `graph_patch.json` (`AgentOp` / `StageValidatorOp` writes inside `nodes/<node_id>/`)
+
+```json
+{
+  "schema": 1,
+  "reason": "Detected French document; splicing translator before summarize.",
+  "add_nodes": {
+    "translate_fr": {
+      "op": "demo_pack/ops:TranslateFr",
+      "stage": "ask",
+      "inputs": { "text": "$pick.choice" }
+    }
+  },
+  "rewire_inputs": {
+    "echo": { "text": "$translate_fr.text" }
+  }
+}
+```
+
+When a child exits `0` with `graph_patch.json` present:
+- `GraphEditPolicy.FORBIDDEN`: the engine rejects the attempt (`FAILED`).
+- `GraphEditPolicy.CONFIRM` / `AUTO`: the engine quiesces all active worker subprocesses, validates the candidate `workflow.snapshot.yaml` against all 4 mutation guardrails (`plynx validate`, `PENDING`-only / immutable `SUCCESS` nodes, Lineage Preservation `U -> [New Subgraph] -> V`, and cumulative `max_injected_nodes`), optionally opens a `["Approve Patch", "Reject"]` checkpoint (`CONFIRM`), writes the updated `workflow.snapshot.yaml` (leaving `workflows/<name>.yaml` untouched), archives `graph_patch.applied.json` (or `graph_patch.rejected.json`), and reloads `graphlib.TopologicalSorter`.
+
 ### Child exit codes
 
 | Exit | Files | Node status |
@@ -309,7 +349,8 @@ cache_key = sha256("\n".join([
 ```
 
 - `inputs_hash` = sha256 of canonical JSON (sorted keys, separators `,` `:`, no ASCII escaping) of `{port: sha256 | tree_sha256}` for every file and directory port (from a reference or a literal path).
-- `params_hash` = same canonical JSON of `{port: value}` for every scalar port, plus `"__checkpoint_answers__": {...}` when answers exist.
+- `params_hash` = same canonical JSON of `{port: value}` for every scalar port, plus `"__checkpoint_answers__": {...}` when answers exist and `"__allow_graph_edits__": "<policy>"` when `allow_graph_edits` is non-`forbidden`.
+- Stage Validators (`__stage_validator__<stage_id>`) are never stored in `cache_index`, but are skipped in 0ms (`cache_hit = true`, `attempt = 0`) when 100% of active nodes in the stage hit CAS cache with zero warnings, or skipped (`cache_hit = false`, `attempt = 0`) when `ValidatorMode` trigger rules (`on_anomaly` / `on_failure`) are not met.
 - Not covered, by design: other files in the pack (shared helpers), environment variables, time, network. Rule in `guides/author_pack.md`. Escape hatch: `plynx run --no-cache`.
 - Lookup happens only in fresh runs and only for `CACHEABLE = True` ops. A miss with a missing blob is a miss, never an error.
 - Early cutoff falls out of the formula: downstream keys depend on output hashes, not on upstream keys.
@@ -360,14 +401,16 @@ An answer is written with `UPDATE checkpoints SET answer=?, answered_at=? WHERE 
 
 ```text
 .plynx/runs/<run_id>/
-  run_manifest.json        { schema, run_id, workflow_path, workflow_sha256, plynx_version, created_at, run_inputs }
-  workflow.snapshot.yaml   exact bytes executed
-  layout.snapshot.json     only if the sidecar exists
-  events.jsonl             append-only event log (section 9)
-  logs/<node_id>.stdout.log   append-only; "--- attempt N ---" line between attempts
+  run_manifest.json          { schema, run_id, workflow_path, workflow_sha256, plynx_version, created_at, run_inputs }
+  workflow.snapshot.yaml     exact bytes executed (updated via ruamel.yaml on accepted dynamic graph patches)
+  .workflow.baseline.yaml    immutable initial workflow snapshot at run creation (used for drift & budget checks)
+  .workflow.accepted.yaml    last engine-validated snapshot (used to validate outer-agent edits on plynx resume)
+  layout.snapshot.json       only if the sidecar exists
+  events.jsonl               append-only event log (section 9)
+  logs/<node_id>.stdout.log  append-only; "--- attempt N ---" line between attempts
   logs/<node_id>.stderr.log
   nodes/<node_id>/
-    inputs.json  checkpoint.json  agent_turns.json  outputs.json  result.json
+    inputs.json  stage_context.json  checkpoint.json  agent_turns.json  graph_patch.json  outputs.json  result.json
     inputs/<port>/<filename>
     workdir/
 ```
@@ -382,7 +425,7 @@ Blob store: `.plynx/cache/blobs/<first 2 hex>/<sha256>`, mode read-only. Link or
 |---|---|
 | `run_status` | `run_id`, `status`, `error?` |
 | `node_status` | `run_id`, `node_id`, `status`, `cache_hit`, `attempt`, `exit_code?`, `error?`, `warnings` |
-| `node_checkpoint` | `run_id`, `node_id`, `checkpoint_id`, `question`, `options`, `allow_freeform`, `questions` (list of `CheckpointQuestion`; `question` is a one-line summary for batch checkpoints) |
+| `node_checkpoint` | `run_id`, `node_id`, `checkpoint_id`, `question`, `options`, `allow_freeform`, `questions` (list of `CheckpointQuestion`; `question` is a one-line summary for batch checkpoints), `graph_patch?` (`{ reason, add_nodes, rewire_inputs }` for patch-confirmation checkpoints) |
 | `checkpoint_resolved` | `run_id`, `node_id`, `checkpoint_id` |
 | `stage_approval` | `run_id`, `stage_id`, `title`, `kind` (`input`/`approval`) |
 | `stage_resolved` | `run_id`, `stage_id`, `kind` (`input`/`approval`) |
@@ -404,9 +447,10 @@ SSE (`GET /api/v1/runs/{run_id}/stream`): frames `id: <seq>`, `event: <type>`, `
 | `POST /workflows/validate` | body `{ workflow }`, returns `{ issues: [{ severity, message, node_id?, port_name?, stage_id? }] }` |
 | `GET /workflows/{path}/inputs` | run inputs still unbound: `[{ node_id, name, type, media, required, default, stage_id, options, min, max, step, description }]` (`WorkflowInputSpec`) |
 | `POST /uploads` | multipart file upload. Returns `{ path }` (workspace-relative, under `.plynx/uploads/`) |
-| `POST /runs` | `{ workflow_path, inputs?: { "node.name": value }, no_cache?: bool, agent_provider?: AgentProvider, agent_model?: str }`, returns `{ run_id }` |
-| `GET /runs` | list runs, newest first, `?limit=50&cursor=...&workflow_path=...`, returns `{ runs: [...], next_cursor: ... }` |
-| `GET /runs/{id}` | full state: run, nodes, open checkpoints, stage gates, run inputs (`RunState`) |
+| `POST /runs` | `{ workflow_path, inputs?: { "node.name": value }, no_cache?: bool, agent_provider?: AgentProvider, agent_model?: str, max_injected_nodes?: int }`, returns `{ run_id }` |
+| `GET /runs` | list runs, newest first, `?limit=50&cursor=...&workflow_path=...`, returns `{ runs: [...], next_cursor: ..., drift_alerts?: [...] }` |
+| `GET /runs/stats` | aggregated per-node execution stats & baseline drift alerts (`?workflow_path=...`), returns `{ total_runs, nodes: [...], drift_alerts: [...] }` (`RunStatsResponse`) |
+| `GET /runs/{id}` | full state: run, nodes, open checkpoints (including `graph_patch` when applicable), stage gates, run inputs (`RunState`) |
 | `POST /runs/{id}/cancel` | request cancel |
 | `POST /runs/{id}/resume` | take ownership and continue run, returns `{ run_id }` |
 | `POST /runs/{id}/checkpoints/{node_id}/{checkpoint_id}/answer` | `{ answer: string }` for a single-question checkpoint, or `{ answers: { "<question_id>": string \| string[] } }` for a batch checkpoint. Send exactly one of the two. Invalid answers return `422 invalid_answer`. `RunState.checkpoints[]` carries `questions`, `answer`, and the decoded `answers` for batch checkpoints. |
@@ -430,15 +474,15 @@ Server binds `127.0.0.1` (or loopback host). CORS allows only the Vite dev origi
 | `plynx run <workflow> [options]` | run in-process with `LocalExecutor` |
 | `plynx resume <run_id> [options]` | continue a failed, canceled, or waiting run, reusing completed node outputs |
 | `plynx run-node <node_dir> [--op <op>]` | re-run one node attempt from `node_dir` in a scratch copy without touching SQLite (reads op from snapshot if omitted) |
-| `plynx runs [run_id] [--limit N]` | list recent runs or inspect one run by full ID or unique prefix |
+| `plynx runs [run_id] [--limit N] [--workflow PATH] [--stats] [--json]` | list recent runs (with `[DRIFT]` alerts), inspect one run by full ID or unique prefix, or compute per-node execution & drift stats (`--stats`) |
 | `plynx ops [--json]` | list registered operations (table or full JSON schemas) |
 | `plynx clean [--days 14] [--dry-run]` | mark-and-sweep garbage collection of old unpinned runs and unreferenced blobs |
 | `plynx ui [--port 8080] [--host 127.0.0.1] [--no-browser]` | start the server on loopback host and open the UI |
 | `plynx agent-guide` | print the self-contained User Agent Reference (`AGENT_GUIDE.md`) to stdout |
 
-`plynx run` options: `--set node.port=value` (repeatable, scalar), `--input node.port=path` (repeatable, file or directory), `--answers file.json` (`{ "node.cp_n": "value" }`, or `{ "node.cp_n": { "question_id": "value" | ["v1", "v2"] } }` for batch checkpoints), `--answer node.cp_n=value` (repeatable; `--answer node.cp_n.question_id=value` for a batch question, repeat it to build a `multi_select` list), `--concurrency N`, `--agent-provider <provider>`, `--agent-model <model>`, `--non-interactive` (also when `CI=true`), `--no-cache`.
+`plynx run` options: `--set node.port=value` (repeatable, scalar), `--input node.port=path` (repeatable, file or directory), `--answers file.json` (`{ "node.cp_n": "value" }`, or `{ "node.cp_n": { "question_id": "value" | ["v1", "v2"] } }` for batch checkpoints), `--answer node.cp_n=value` (repeatable; `--answer node.cp_n.question_id=value` for a batch question, repeat it to build a `multi_select` list), `--concurrency N`, `--agent-provider <provider>`, `--agent-model <model>`, `--max-injected-nodes N`, `--non-interactive` (also when `CI=true`), `--no-cache`.
 
-`plynx resume` options: `--answers file.json` and `--answer` (same forms as `plynx run`), `--concurrency N`, `--agent-provider <provider>`, `--agent-model <model>`, `--non-interactive`.
+`plynx resume` options: `--answers file.json` and `--answer` (same forms as `plynx run`), `--concurrency N`, `--agent-provider <provider>`, `--agent-model <model>`, `--max-injected-nodes N`, `--non-interactive`. Before resuming, `plynx resume` validates any outer-agent edits made to `.plynx/runs/<run_id>/workflow.snapshot.yaml` against `validate_snapshot_mutation`.
 
 Exit codes of `run` and `resume`: `0` success, `1` failed, `2` blocked on a checkpoint or stage gate in non-interactive mode, `130` canceled. Interactive mode prompts in the terminal: numbered options `[1-N]`, or text when `allow_freeform`. A batch checkpoint prompts for each question in order; `multi_select` answers are comma separated.
 
@@ -456,9 +500,11 @@ agent:                               # optional coding-agent settings
   provider: default                  # AgentProvider (or PLYNX_AGENT_PROVIDER env var)
   model: ""                          # default model (or PLYNX_AGENT_MODEL env var)
   agent_concurrency: 2               # max concurrent AgentOp / StageValidatorOp attempts
+  max_injected_nodes: 3              # cumulative per-run dynamic node injection budget
   models: []                         # optional autocomplete suggestions for UI <datalist>
   custom_command: ""                 # command template for AgentProvider.CUSTOM
 ```
 
 Concurrency precedence: `--concurrency` > `workflow.yaml` > `plynx.yaml` > `os.cpu_count()`.
+Max injected nodes precedence: `--max-injected-nodes` > `workflow.yaml` > `plynx.yaml` > `3`.
 Agent `provider` / `model` precedence (resolved into `inputs.json` before `plynx-cache-1` cache-key computation): `plynx.yaml` / env -> `workflow.yaml` `agent:` -> CLI `--agent-provider` / `--agent-model` -> explicit non-default node `inputs` -> CLI `--set <node>.provider` / `--set <node>.model`.

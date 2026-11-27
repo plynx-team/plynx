@@ -9,6 +9,7 @@ import type {
   RunEvent,
   RunListResponse,
   RunState,
+  RunStatsResponse,
   UploadResponse,
   ValidateWorkflowRequest,
   ValidateWorkflowResponse,
@@ -61,6 +62,21 @@ export async function fetchRuns(
     throw new Error(`Failed to fetch runs (${response.status})`);
   }
   return (await response.json()) as RunListResponse;
+}
+
+export async function fetchRunStats(
+  workflowPath?: string,
+): Promise<RunStatsResponse> {
+  const params = new URLSearchParams();
+  if (workflowPath) {
+    params.set("workflow_path", workflowPath);
+  }
+  const qs = params.toString();
+  const response = await fetch(`/api/v1/runs/stats${qs ? `?${qs}` : ""}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch run stats (${response.status})`);
+  }
+  return (await response.json()) as RunStatsResponse;
 }
 
 export async function fetchRunState(runId: string): Promise<RunState> {

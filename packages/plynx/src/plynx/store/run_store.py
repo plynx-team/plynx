@@ -19,6 +19,7 @@ from plynx import __version__
 from plynx.api_models import (
     CheckpointQuestionState,
     CheckpointState,
+    GraphPatchModel,
     NodeRunState,
     NodeStatus,
     NodeStatusData,
@@ -260,6 +261,8 @@ class RunStore:
             (ndir / "workdir").mkdir(parents=True, exist_ok=True)
 
         atomic_write_bytes(rdir / "workflow.snapshot.yaml", workflow_bytes)
+        atomic_write_bytes(rdir / ".workflow.baseline.yaml", workflow_bytes)
+        atomic_write_bytes(rdir / ".workflow.accepted.yaml", workflow_bytes)
         if layout_bytes is not None:
             atomic_write_bytes(rdir / "layout.snapshot.json", layout_bytes)
 
@@ -316,6 +319,54 @@ class RunStore:
                 raise
 
         return resolved_run_id
+
+    def add_node_runs(self, run_id: str, node_ids: Sequence[str]) -> None:
+        """Create node directories and insert ``PENDING`` rows for dynamically added nodes."""
+        if not node_ids:
+            return
+        for nid in node_ids:
+            ndir = self.node_dir(run_id, nid)
+            (ndir / "inputs").mkdir(parents=True, exist_ok=True)
+            (ndir / "workdir").mkdir(parents=True, exist_ok=True)
+        with self._connect() as conn:
+            conn.execute("BEGIN IMMEDIATE;")
+            try:
+                for nid in node_ids:
+                    conn.execute(
+                        """
+                        INSERT OR IGNORE INTO node_runs (run_id, node_id, status, cache_hit, attempt)
+                        VALUES (?, ?, ?, 0, 0)
+                        """,
+                        (run_id, nid, NodeStatus.PENDING.value),
+                    )
+                conn.execute("COMMIT;")
+            except BaseException:
+                conn.execute("ROLLBACK;")
+                raise
+
+    def update_workflow_snapshot(self, run_id: str, workflow_bytes: bytes) -> str:
+        """Atomically persist an accepted ``workflow.snapshot.yaml`` mutation and update SHA-256."""
+        rdir = self.run_dir(run_id)
+        workflow_sha256 = hashlib.sha256(workflow_bytes).hexdigest()
+        atomic_write_bytes(rdir / "workflow.snapshot.yaml", workflow_bytes)
+        atomic_write_bytes(rdir / ".workflow.accepted.yaml", workflow_bytes)
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE runs SET workflow_sha256 = ? WHERE id = ?",
+                (workflow_sha256, run_id),
+            )
+        manifest_path = rdir / "run_manifest.json"
+        if manifest_path.is_file():
+            try:
+                manifest_data = json.loads(manifest_path.read_text(encoding="utf-8"))
+                manifest_data["workflow_sha256"] = workflow_sha256
+                atomic_write_text(
+                    manifest_path,
+                    json.dumps(manifest_data, indent=2, ensure_ascii=False) + "\n",
+                )
+            except Exception:
+                pass
+        return workflow_sha256
 
     def update_run_status(
         self,
@@ -682,7 +733,7 @@ class RunStore:
             ).fetchone()
         if row is None:
             return None
-        return _row_to_checkpoint(row)
+        return _row_to_checkpoint(row, node_dir=self.node_dir(run_id, node_id))
 
     def create_stage_gate(
         self,
@@ -890,7 +941,10 @@ class RunStore:
             )
             for r in node_rows
         }
-        checkpoints = [_row_to_checkpoint(r) for r in cp_rows]
+        checkpoints = [
+            _row_to_checkpoint(r, node_dir=self.node_dir(run_id, str(r["node_id"])))
+            for r in cp_rows
+        ]
         stage_gates: dict[str, StageGateState] = {}
         for r in gate_rows:
             sid = str(r["stage_id"])
@@ -1065,7 +1119,37 @@ class RunStore:
             conn.execute("DELETE FROM cache_index WHERE cache_key = ?", (cache_key,))
 
 
-def _row_to_checkpoint(row: sqlite3.Row) -> CheckpointState:
+PATCH_APPROVAL_OPTIONS: Final[list[str]] = ["Approve Patch", "Reject"]
+
+
+def _load_checkpoint_graph_patch(
+    node_dir: Path | None,
+    options: list[str] | None,
+) -> GraphPatchModel | None:
+    if node_dir is None or options != PATCH_APPROVAL_OPTIONS:
+        return None
+    for candidate_name in (
+        "graph_patch.json",
+        "graph_patch.applied.json",
+        "graph_patch.rejected.json",
+    ):
+        cand = node_dir / candidate_name
+        if cand.is_file():
+            try:
+                from plynx_sdk.protocol import GraphPatchPayload
+
+                payload = GraphPatchPayload.from_json(cand.read_bytes())
+                return GraphPatchModel(
+                    reason=payload.reason,
+                    add_nodes=dict(payload.add_nodes),
+                    rewire_inputs=dict(payload.rewire_inputs),
+                )
+            except Exception:
+                return None
+    return None
+
+
+def _row_to_checkpoint(row: sqlite3.Row, *, node_dir: Path | None = None) -> CheckpointState:
     raw_opts = row["options_json"]
     options = json.loads(str(raw_opts)) if raw_opts is not None else None
     raw_questions = row["questions_json"]
@@ -1082,6 +1166,7 @@ def _row_to_checkpoint(row: sqlite3.Row) -> CheckpointState:
         except json.JSONDecodeError:
             decoded = None
         answers = decoded if isinstance(decoded, dict) else None
+    graph_patch = _load_checkpoint_graph_patch(node_dir, options)
     return CheckpointState(
         node_id=str(row["node_id"]),
         checkpoint_id=str(row["checkpoint_id"]),
@@ -1089,6 +1174,7 @@ def _row_to_checkpoint(row: sqlite3.Row) -> CheckpointState:
         options=options,
         allow_freeform=bool(row["allow_freeform"]),
         questions=questions,
+        graph_patch=graph_patch,
         answer=answer,
         answers=answers,
         created_at=float(row["created_at"]),

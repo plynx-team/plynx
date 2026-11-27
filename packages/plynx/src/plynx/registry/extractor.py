@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from plynx_sdk.protocol import AGENT_PROVIDER_VALUES, AgentProvider
+from plynx_sdk.protocol import AGENT_PROVIDER_VALUES, AgentProvider, GraphEditPolicy
 from plynx_sdk.types import SEMANTIC_MEDIA_ALIASES
 
 from plynx.api_models import InputPortSpec, OpEntry, OutputPortSpec, PortType
@@ -68,6 +68,8 @@ def _extract_literal(node: ast.AST) -> Any:
         owner = _get_name_or_attr(node.value)
         if owner == "AgentProvider" and node.attr in AgentProvider.__members__:
             return AgentProvider[node.attr].value
+        if owner == "GraphEditPolicy" and node.attr in GraphEditPolicy.__members__:
+            return GraphEditPolicy[node.attr].value
     raise ValueError(f"Expression is not a supported literal: {ast.dump(node)}")
 
 
@@ -655,6 +657,7 @@ def _extract_class_op(
     cacheable = True
     allow_extra_inputs = False
     agent_role: Literal["agent", "validator"] | None = None
+    allow_graph_edits: GraphEditPolicy | None = None
     inner_typed_dicts: dict[str, ast.ClassDef] = {}
     run_func: ast.FunctionDef | None = None
     op_id = _format_op_id(pack, module, class_node.name)
@@ -678,9 +681,11 @@ def _extract_class_op(
             agent_role = "validator"
             category = "Agents / Validators"
             allow_extra_inputs = True
+            allow_graph_edits = GraphEditPolicy.CONFIRM
         elif is_agent_base:
             agent_role = "agent"
             allow_extra_inputs = True
+            allow_graph_edits = GraphEditPolicy.FORBIDDEN
 
         for item in class_node.body:
             if isinstance(item, ast.ClassDef):
@@ -704,6 +709,18 @@ def _extract_class_op(
                         cacheable = _extract_literal_bool(val_expr, "CACHEABLE")
                     elif target_id == "ALLOW_EXTRA_INPUTS":
                         allow_extra_inputs = _extract_literal_bool(val_expr, "ALLOW_EXTRA_INPUTS")
+                    elif target_id == "ALLOW_GRAPH_EDITS":
+                        raw_pol = _extract_literal(val_expr)
+                        if not isinstance(raw_pol, str):
+                            raise ValueError(
+                                "ALLOW_GRAPH_EDITS must be a GraphEditPolicy or string literal"
+                            )
+                        try:
+                            allow_graph_edits = GraphEditPolicy(raw_pol)
+                        except ValueError as exc:
+                            raise ValueError(
+                                f"Invalid ALLOW_GRAPH_EDITS value {raw_pol!r}"
+                            ) from exc
             elif isinstance(item, ast.FunctionDef) and item.name == "run":
                 run_func = item
 
@@ -779,6 +796,7 @@ def _extract_class_op(
             name=class_node.name,
             kind="class",
             agent_role=agent_role,
+            allow_graph_edits=allow_graph_edits,
             title=title,
             category=category,
             cacheable=cacheable,

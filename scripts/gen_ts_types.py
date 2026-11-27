@@ -22,6 +22,7 @@ from plynx.api_models import (
     AnswerCheckpointRequest,
     ApiErrorDetail,
     ApiErrorResponse,
+    BaselineDriftAlert,
     CheckpointQuestionState,
     CheckpointResolvedData,
     CheckpointResolvedEvent,
@@ -38,6 +39,7 @@ from plynx.api_models import (
     LogStream,
     NodeCheckpointData,
     NodeCheckpointEvent,
+    NodeExecutionStat,
     NodeLogData,
     NodeLogEvent,
     NodePosition,
@@ -51,6 +53,7 @@ from plynx.api_models import (
     RunEvent,
     RunListResponse,
     RunState,
+    RunStatsResponse,
     RunStatus,
     RunStatusData,
     RunStatusEvent,
@@ -74,7 +77,15 @@ from plynx.api_models import (
     WorkflowLayout,
     WorkflowListItem,
 )
-from plynx.workflow.models import NodeRef, NodeSpec, Stage, Workflow, WorkflowAgentConfig
+from plynx.workflow.models import (
+    NodeMeta,
+    NodeRef,
+    NodeSpec,
+    Stage,
+    StageValidatorSpec,
+    Workflow,
+    WorkflowAgentConfig,
+)
 from pydantic import BaseModel, TypeAdapter
 from pydantic.json_schema import models_json_schema
 
@@ -83,7 +94,9 @@ TARGET_PATH = PROJECT_ROOT / "ui" / "src" / "api" / "types.gen.ts"
 
 SCHEMA_MODELS: tuple[type[BaseModel], ...] = (
     NodeRef,
+    StageValidatorSpec,
     Stage,
+    NodeMeta,
     NodeSpec,
     WorkflowAgentConfig,
     Workflow,
@@ -123,6 +136,9 @@ SCHEMA_MODELS: tuple[type[BaseModel], ...] = (
     UploadResponse,
     CreateRunRequest,
     CreateRunResponse,
+    BaselineDriftAlert,
+    NodeExecutionStat,
+    RunStatsResponse,
     RunListResponse,
     AnswerCheckpointRequest,
     CleanRequest,
@@ -227,7 +243,9 @@ def _render_interface(name: str, def_schema: Mapping[str, Any]) -> str:
         "Workflow",
         "WorkflowAgentConfig",
         "NodeSpec",
+        "NodeMeta",
         "Stage",
+        "StageValidatorSpec",
     )
 
     lines: list[str] = []

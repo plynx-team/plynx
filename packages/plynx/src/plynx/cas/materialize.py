@@ -12,6 +12,7 @@ from typing import Any
 from plynx_sdk.protocol import (
     AgentProvider,
     CheckpointAnswer,
+    GraphEditPolicy,
     InputDirectoryValue,
     InputFileValue,
     InputsManifest,
@@ -299,7 +300,10 @@ def materialize_inputs(
                 )
 
     # 2b. 4-level provider & model resolution for AgentOp / StageValidatorOp (before cache key)
+    effective_graph_edit_policy: GraphEditPolicy | None = spec.allow_graph_edits
     if op_entry is not None and op_entry.agent_role is not None:
+        if effective_graph_edit_policy is None:
+            effective_graph_edit_policy = op_entry.allow_graph_edits
         ws_cfg = load_workspace_config(workspace_root)
         merged_env = dict(os.environ)
         merged_env.update(load_dotenv_file(workspace_root / ".env"))
@@ -356,4 +360,8 @@ def materialize_inputs(
             if cp.node_id == node_id and cp.answer is not None:
                 cp_answers[cp.checkpoint_id] = cp.answers if cp.answers is not None else cp.answer
 
-    return InputsManifest(inputs=resolved_inputs, checkpoint_answers=cp_answers)
+    return InputsManifest(
+        inputs=resolved_inputs,
+        checkpoint_answers=cp_answers,
+        allow_graph_edits=effective_graph_edit_policy,
+    )

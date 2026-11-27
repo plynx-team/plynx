@@ -1,6 +1,35 @@
 import type { NodeProps } from "@xyflow/react";
 import { FeatherIcon } from "../components/FeatherIcon";
-import type { StageGroupGraphNode } from "./types";
+import { stageValidatorNodeId, type StageGroupGraphNode } from "./types";
+
+function getValidatorDisplayStatus(data: StageGroupGraphNode["data"]): {
+  label: string;
+  badgeClass: string;
+} {
+  const st = data.validatorState?.status;
+  if (data.validatorHasOpenPatch || st === "WAITING_FOR_USER") {
+    return { label: "PATCH_PROPOSED", badgeClass: "status-badge WAITING" };
+  }
+  if (st === "SUCCESS") {
+    return {
+      label: data.validatorAppliedPatch ? "PATCHED" : "PASSED",
+      badgeClass: "status-badge SUCCESS",
+    };
+  }
+  if (st === "RUNNING" || st === "BUILDING_ENVIRONMENT") {
+    return { label: "RUNNING", badgeClass: "status-badge RUNNING" };
+  }
+  if (st === "FAILED") {
+    return { label: "FAILED", badgeClass: "status-badge FAILED" };
+  }
+  if (st === "PENDING") {
+    return { label: "PENDING", badgeClass: "status-badge PENDING" };
+  }
+  return {
+    label: data.validator?.mode || "on_anomaly",
+    badgeClass: "status-badge CREATED",
+  };
+}
 
 export function StageGroupNode({ data }: NodeProps<StageGroupGraphNode>) {
   const gateStatus = data.gateState?.status;
@@ -133,6 +162,55 @@ export function StageGroupNode({ data }: NodeProps<StageGroupGraphNode>) {
           >
             Empty stage: add operations or select this stage in the palette
           </span>
+        </div>
+      )}
+
+      {/* Stage Validator Pill / Footer Bar */}
+      {data.validator && (
+        <div className="absolute bottom-2 left-3 right-3 flex items-center justify-between pointer-events-none z-10">
+          <div
+            role="button"
+            tabIndex={0}
+            data-testid={`stage-validator-pill-${data.stageId}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              const valId = stageValidatorNodeId(data.stageId);
+              if (data.onSelectValidator) {
+                data.onSelectValidator(data.stageId, valId);
+              } else {
+                data.onSelectStage?.(data.stageId);
+              }
+            }}
+            className={`pointer-events-auto flex items-center justify-between gap-2 w-full px-2.5 py-1 rounded bg-[#252525]/95 text-xs shadow-sm cursor-pointer transition-colors ${
+              data.isValidatorSelected
+                ? "border border-[var(--color-primary)] ring-1 ring-[var(--color-primary)]"
+                : "border border-[#3e3e3e] hover:border-[var(--color-primary)]"
+            }`}
+            title={`Stage Validator: ${data.validatorTitle || data.validator.op} (${data.validator.mode || "on_anomaly"})`}
+          >
+            <div className="flex items-center gap-1.5 min-w-0">
+              <FeatherIcon
+                name="shield"
+                size={11}
+                style={{ color: "var(--color-primary)" }}
+              />
+              <span className="truncate font-semibold text-[11px]">
+                {data.validatorTitle || data.validator.op}
+              </span>
+              <span
+                className="font-mono text-[10px] px-1 rounded bg-black/30 shrink-0"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                {data.validator.mode || "on_anomaly"}
+              </span>
+            </div>
+            <span
+              data-testid={`stage-validator-status-${data.stageId}`}
+              className={`${getValidatorDisplayStatus(data).badgeClass} !text-[9px] shrink-0`}
+            >
+              {getValidatorDisplayStatus(data).label}
+            </span>
+          </div>
         </div>
       )}
     </div>

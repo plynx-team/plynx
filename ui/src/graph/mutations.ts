@@ -3,6 +3,7 @@ import type {
   NodeSpec,
   OpEntry,
   Stage,
+  StageValidatorSpec,
   Workflow,
   WorkflowLayout,
 } from "../api/types.gen";
@@ -358,8 +359,36 @@ export function prepareWorkflowForSave(workflow: Workflow): Workflow {
       inputs: nextInputs,
     };
   }
+  const nextStages: Record<string, Stage> | undefined = workflow.stages
+    ? Object.fromEntries(
+        Object.entries(workflow.stages).map(([sid, stage]) => {
+          if (!stage.validator?.inputs) {
+            return [sid, stage];
+          }
+          const valInputs: Record<string, unknown> = {};
+          for (const [port, val] of Object.entries(stage.validator.inputs)) {
+            if (typeof val === "string" && val.startsWith("$")) {
+              valInputs[port] = `$${val}`;
+            } else {
+              valInputs[port] = val;
+            }
+          }
+          return [
+            sid,
+            {
+              ...stage,
+              validator: {
+                ...stage.validator,
+                inputs: valInputs,
+              },
+            },
+          ];
+        }),
+      )
+    : undefined;
   return {
     ...workflow,
+    ...(nextStages ? { stages: nextStages } : {}),
     nodes: nextNodes,
   };
 }
@@ -484,6 +513,7 @@ export function updateStageInWorkflow(
   updates: {
     title?: string | null;
     require_approval?: boolean;
+    validator?: StageValidatorSpec | null;
   },
 ): Workflow {
   const existingStages = { ...(workflow.stages ?? {}) };
@@ -499,6 +529,8 @@ export function updateStageInWorkflow(
       updates.require_approval !== undefined
         ? updates.require_approval
         : current.require_approval,
+    validator:
+      updates.validator !== undefined ? updates.validator : current.validator,
   };
 
   return {

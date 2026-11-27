@@ -27,6 +27,7 @@ import {
   DEFAULT_STAGE_ID,
   findClosestStage,
   findStageAtPosition,
+  type RunLayoutMode,
 } from "./layout";
 import { OP_DRAG_MIME } from "./OpPalette";
 import type { WorkflowRunDiff } from "./runDiff";
@@ -34,6 +35,7 @@ import { StageGroupNode } from "./StageGroupNode";
 import {
   extractStageId,
   isStageGroupId,
+  isStageValidatorNodeId,
   type GraphNode,
   type StageGroupGraphNode,
 } from "./types";
@@ -57,6 +59,7 @@ export interface GraphViewProps {
   workflowDoc?: WorkflowDocument | null;
   workflow?: Workflow | null;
   layout?: WorkflowLayout | null;
+  runLayoutMode?: RunLayoutMode;
   runState?: RunState | null;
   runDiff?: WorkflowRunDiff | null;
   ops?: ReadonlyArray<OpEntry>;
@@ -66,6 +69,7 @@ export interface GraphViewProps {
   onSelectEdge?: (edgeId: string | undefined) => void;
   selectedStageId?: string;
   onSelectStage?: (stageId: string | undefined) => void;
+  onSelectValidator?: (stageId: string, validatorNodeId: string) => void;
   onDeleteStage?: (stageId: string) => void;
   readOnly?: boolean;
   onNodesChange?: OnNodesChange<GraphNode>;
@@ -93,6 +97,9 @@ export interface GraphViewProps {
 function synthesizeWorkflowFromRun(runState: RunState): Workflow {
   const nodes: Workflow["nodes"] = {};
   for (const nodeId of Object.keys(runState.nodes)) {
+    if (isStageValidatorNodeId(nodeId)) {
+      continue;
+    }
     nodes[nodeId] = {
       op: "unknown",
       stage: "main",
@@ -111,6 +118,7 @@ function GraphCanvasInner({
   workflowDoc,
   workflow: workflowProp,
   layout: layoutProp,
+  runLayoutMode = "original",
   runState,
   runDiff = null,
   ops = [],
@@ -120,6 +128,7 @@ function GraphCanvasInner({
   onSelectEdge,
   selectedStageId,
   onSelectStage,
+  onSelectValidator,
   onDeleteStage,
   readOnly = true,
   onNodesChange: externalOnNodesChange,
@@ -175,12 +184,14 @@ function GraphCanvasInner({
     }
     return buildGraphElements(effectiveWorkflow, {
       layout: effectiveLayout,
+      runLayoutMode,
       opsMap,
       runState,
       runDiff,
       selectedNodeId,
       selectedStageId,
       onSelectStage,
+      onSelectValidator,
       onDeleteStage,
       readOnly,
       onLiteralChange,
@@ -190,12 +201,14 @@ function GraphCanvasInner({
   }, [
     effectiveWorkflow,
     effectiveLayout,
+    runLayoutMode,
     opsMap,
     runState,
     runDiff,
     selectedNodeId,
     selectedStageId,
     onSelectStage,
+    onSelectValidator,
     onDeleteStage,
     readOnly,
     onLiteralChange,

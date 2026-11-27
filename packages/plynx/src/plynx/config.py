@@ -12,6 +12,7 @@ from plynx_sdk.protocol import AgentProvider
 from ruamel.yaml import YAML
 
 DEFAULT_AGENT_CONCURRENCY = 2
+DEFAULT_MAX_INJECTED_NODES = 3
 
 _SIZE_RE = re.compile(r"^\s*([0-9]+(?:\.[0-9]+)?)\s*([a-zA-Z]*)\s*$")
 
@@ -73,12 +74,19 @@ class WorkspaceConfig:
     agent_provider: AgentProvider = AgentProvider.DEFAULT
     agent_model: str = ""
     agent_concurrency: int = DEFAULT_AGENT_CONCURRENCY
+    max_injected_nodes: int = DEFAULT_MAX_INJECTED_NODES
     agent_models: list[str] = field(default_factory=list)
     agent_custom_command: str = ""
 
 
 def _parse_positive_int(raw: object) -> int | None:
     if isinstance(raw, int) and not isinstance(raw, bool) and raw > 0:
+        return int(raw)
+    return None
+
+
+def _parse_non_negative_int(raw: object) -> int | None:
+    if isinstance(raw, int) and not isinstance(raw, bool) and raw >= 0:
         return int(raw)
     return None
 
@@ -153,6 +161,10 @@ def load_workspace_config(workspace_root: Path) -> WorkspaceConfig:
     agent_concurrency = (
         _parse_positive_int(parsed.get("agent_concurrency")) or DEFAULT_AGENT_CONCURRENCY
     )
+    top_max_injected = _parse_non_negative_int(parsed.get("max_injected_nodes"))
+    max_injected_nodes = (
+        top_max_injected if top_max_injected is not None else DEFAULT_MAX_INJECTED_NODES
+    )
     agent_models: list[str] = []
     agent_custom_command = ""
 
@@ -172,6 +184,9 @@ def load_workspace_config(workspace_root: Path) -> WorkspaceConfig:
         )
         if nested_conc is not None:
             agent_concurrency = nested_conc
+        nested_max_inj = _parse_non_negative_int(raw_agent.get("max_injected_nodes"))
+        if nested_max_inj is not None:
+            max_injected_nodes = nested_max_inj
         raw_models = raw_agent.get("models")
         if isinstance(raw_models, list):
             for m_item in raw_models:
@@ -196,6 +211,7 @@ def load_workspace_config(workspace_root: Path) -> WorkspaceConfig:
         agent_provider=agent_provider,
         agent_model=agent_model,
         agent_concurrency=agent_concurrency,
+        max_injected_nodes=max_injected_nodes,
         agent_models=agent_models,
         agent_custom_command=agent_custom_command,
     )
@@ -274,10 +290,26 @@ def resolve_effective_agent_config(
     return provider, model
 
 
+def resolve_max_injected_nodes(
+    *,
+    workspace_config: WorkspaceConfig,
+    workflow_max: int | None = None,
+    cli_max: int | None = None,
+) -> int:
+    """Resolve effective ``max_injected_nodes`` budget (CLI > workflow > plynx.yaml > 3)."""
+    if cli_max is not None:
+        return max(cli_max, 0)
+    if workflow_max is not None:
+        return max(workflow_max, 0)
+    return max(workspace_config.max_injected_nodes, 0)
+
+
 __all__ = [
     "DEFAULT_AGENT_CONCURRENCY",
+    "DEFAULT_MAX_INJECTED_NODES",
     "WorkspaceConfig",
     "load_workspace_config",
     "parse_size_bytes",
     "resolve_effective_agent_config",
+    "resolve_max_injected_nodes",
 ]

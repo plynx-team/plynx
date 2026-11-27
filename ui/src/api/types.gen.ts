@@ -29,10 +29,26 @@ export interface NodeRef {
   output: string;
 }
 
+/** Stage-end validator / supervisor configuration on ``stages.<stage_id>.validator``. */
+export interface StageValidatorSpec {
+  op: string;
+  mode?: ValidatorMode;
+  allow_graph_edits?: GraphEditPolicy;
+  inputs?: Record<string, unknown>;
+}
+
 /** A workflow execution stage. */
 export interface Stage {
   title?: string | null;
   require_approval?: boolean;
+  validator?: StageValidatorSpec | null;
+}
+
+/** Snapshot provenance metadata for dynamically injected or superseded nodes. */
+export interface NodeMeta {
+  injected_by?: string | null;
+  reason?: string | null;
+  superseded_by?: string | null;
 }
 
 /** A single node declaration inside ``workflow.yaml``. */
@@ -40,13 +56,16 @@ export interface NodeSpec {
   op: string;
   title?: string | null;
   stage?: string;
+  allow_graph_edits?: GraphEditPolicy | null;
   inputs?: Record<string, unknown>;
+  meta?: NodeMeta | null;
 }
 
-/** Workflow-level default agent provider and model. */
+/** Workflow-level default agent provider, model, and injection budget. */
 export interface WorkflowAgentConfig {
   provider?: AgentProvider;
   model?: string;
+  max_injected_nodes?: number | null;
 }
 
 /** Top-level ``workflow.yaml`` model. */
@@ -55,6 +74,7 @@ export interface Workflow {
   name?: string;
   description?: string;
   concurrency?: number | null;
+  max_injected_nodes?: number | null;
   agent?: WorkflowAgentConfig | null;
   stages?: Record<string, Stage>;
   nodes?: Record<string, NodeSpec>;
@@ -92,6 +112,7 @@ export interface CheckpointState {
   options?: Array<string> | null;
   allow_freeform: boolean;
   questions: Array<CheckpointQuestionState>;
+  graph_patch?: GraphPatchModel | null;
   answer?: string | null;
   answers?: Record<string, string | Array<string>> | null;
   created_at: number;
@@ -171,6 +192,7 @@ export interface NodeCheckpointData {
   options?: Array<string> | null;
   allow_freeform: boolean;
   questions: Array<CheckpointQuestionState>;
+  graph_patch?: GraphPatchModel | null;
 }
 
 /** Payload for ``checkpoint_resolved`` events. */
@@ -291,6 +313,7 @@ export interface OpEntry {
   name: string;
   kind: "class" | "function";
   agent_role?: "agent" | "validator" | null;
+  allow_graph_edits?: GraphEditPolicy | null;
   title: string;
   category: string;
   cacheable: boolean;
@@ -389,6 +412,7 @@ export interface CreateRunRequest {
   no_cache?: boolean;
   agent_provider?: AgentProvider | null;
   agent_model?: string | null;
+  max_injected_nodes?: number | null;
   workflow?: Workflow | null;
   layout?: WorkflowLayout | null;
 }
@@ -398,10 +422,42 @@ export interface CreateRunResponse {
   run_id: string;
 }
 
+/** Recurring dynamic splice detected across recent runs of a workflow. */
+export interface BaselineDriftAlert {
+  workflow_path: string;
+  injected_op: string;
+  upstream_op?: string | null;
+  downstream_op?: string | null;
+  occurrences: number;
+  window_runs: number;
+  message: string;
+}
+
+/** Aggregated execution telemetry for a node across historical runs. */
+export interface NodeExecutionStat {
+  workflow_path: string;
+  node_id: string;
+  op: string;
+  executions: number;
+  cache_hits: number;
+  cache_hit_rate: number;
+  avg_duration_seconds?: number | null;
+  failures: number;
+  dynamic_injections: number;
+}
+
+/** Response body for ``GET /runs/stats``. */
+export interface RunStatsResponse {
+  total_runs: number;
+  nodes: Array<NodeExecutionStat>;
+  drift_alerts: Array<BaselineDriftAlert>;
+}
+
 /** Response body for ``GET /runs``. */
 export interface RunListResponse {
   runs: Array<RunSummary>;
   next_cursor?: string | null;
+  drift_alerts?: Array<BaselineDriftAlert> | null;
 }
 
 /** Request body for ``POST /runs/{id}/checkpoints/{node_id}/{checkpoint_id}/answer``. */
@@ -423,7 +479,7 @@ export interface CleanResponse {
   reclaimed_bytes: number;
 }
 
-/** Proposed dynamic DAG patch inside an agent turn. */
+/** Proposed dynamic DAG patch inside an agent turn or confirmation checkpoint. */
 export interface GraphPatchModel {
   reason: string;
   add_nodes: Record<string, Record<string, unknown>>;

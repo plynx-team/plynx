@@ -68,6 +68,8 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
 
   const isNotInRun = nodeDiff?.status === "not_in_run";
   const isNewInRun = nodeDiff?.status === "new_in_run";
+  const isAddedByAgent = Boolean(spec.meta?.injected_by);
+  const isSuperseded = Boolean(spec.meta?.superseded_by);
   const status = nodeState?.status;
   const statusLower = isNotInRun ? "not_in_run" : (status || "ready").toLowerCase();
   const activeSelected = Boolean(selected || isSelected);
@@ -122,7 +124,30 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
           </div>
 
           <div className="flex items-center gap-1 shrink-0">
-            {hasDiff && nodeDiff && (
+            {isAddedByAgent && (
+              <span
+                data-testid={`badge-added-by-agent-${nodeId}`}
+                className="node-diff-badge new-in-run"
+                title={
+                  spec.meta?.reason
+                    ? `Injected by ${spec.meta.injected_by}: ${spec.meta.reason}`
+                    : `Injected by ${spec.meta?.injected_by}`
+                }
+              >
+                <FeatherIcon name="cpu" size={9} />
+                <span>ADDED BY AGENT</span>
+              </span>
+            )}
+            {isSuperseded && (
+              <span
+                data-testid={`badge-superseded-${nodeId}`}
+                className="node-diff-badge"
+                title={`Superseded by ${spec.meta?.superseded_by}`}
+              >
+                <span>SUPERSEDED</span>
+              </span>
+            )}
+            {hasDiff && nodeDiff && !isAddedByAgent && (
               <span
                 data-testid={`graph-node-diff-${nodeId}`}
                 className={`node-diff-badge ${

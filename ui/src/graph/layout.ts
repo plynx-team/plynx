@@ -16,12 +16,16 @@ import type { WorkflowRunDiff } from "./runDiff";
 import {
   extractNodeRef,
   inputHandleId,
+  isStageValidatorNodeId,
   outputHandleId,
   stageGroupId,
+  stageValidatorNodeId,
   type GraphNode,
   type StageGroupGraphNode,
   type WorkflowGraphNode,
 } from "./types";
+
+export type RunLayoutMode = "original" | "relayout";
 
 export const NODE_WIDTH = 260;
 export const STAGE_PAD_X = 32;
@@ -288,6 +292,7 @@ export function computeDagrePositions(
 
 export interface BuildGraphOptions {
   layout?: WorkflowLayout | null;
+  runLayoutMode?: RunLayoutMode;
   opsMap?: Record<string, OpEntry>;
   runState?: RunState | null;
   runDiff?: WorkflowRunDiff | null;
@@ -298,6 +303,7 @@ export interface BuildGraphOptions {
   measuredDimensions?: Record<string, { width: number; height: number }>;
   selectedStageId?: string;
   onSelectStage?: (stageId: string) => void;
+  onSelectValidator?: (stageId: string, validatorNodeId: string) => void;
   onDeleteStage?: (stageId: string) => void;
 }
 
@@ -308,12 +314,136 @@ export interface BuiltGraphElements {
   stageGroupPositions: Record<string, NodePosition>;
 }
 
+function autoPlaceInjectedNodes(
+  nodesDef: Record<string, NodeSpec>,
+  savedPositions: Record<string, NodePosition>,
+  dagrePositions: Record<string, NodePosition>,
+): Record<string, NodePosition> {
+  const result: Record<string, NodePosition> = { ...savedPositions };
+  const unpositioned = Object.keys(nodesDef).filter((id) => !result[id]);
+  if (unpositioned.length === 0) {
+    return result;
+  }
+
+  // Build reverse downstream adjacency
+  const downstreams: Record<string, Array<string>> = {};
+  for (const [dstId, spec] of Object.entries(nodesDef)) {
+    for (const val of Object.values(spec.inputs ?? {})) {
+      const ref = extractNodeRef(val);
+      if (ref && nodesDef[ref.from_node]) {
+        if (!downstreams[ref.from_node]) {
+          downstreams[ref.from_node] = [];
+        }
+        downstreams[ref.from_node].push(dstId);
+      }
+    }
+  }
+
+  // Iteratively place unpositioned nodes between positioned upstream U and downstream V
+  let placedInPass = true;
+  let slotIndex = 0;
+  while (placedInPass) {
+    placedInPass = false;
+    for (const nid of unpositioned) {
+      if (result[nid]) continue;
+      const spec = nodesDef[nid];
+      const stageId = spec.stage || DEFAULT_STAGE_ID;
+      const upstreamCoords: Array<NodePosition> = [];
+      const sameStageUpCoords: Array<NodePosition> = [];
+      for (const val of Object.values(spec.inputs ?? {})) {
+        const ref = extractNodeRef(val);
+        if (ref && result[ref.from_node]) {
+          upstreamCoords.push(result[ref.from_node]);
+          if ((nodesDef[ref.from_node]?.stage || DEFAULT_STAGE_ID) === stageId) {
+            sameStageUpCoords.push(result[ref.from_node]);
+          }
+        }
+      }
+
+      const downstreamCoords: Array<NodePosition> = [];
+      const sameStageDownCoords: Array<NodePosition> = [];
+      for (const dstId of downstreams[nid] ?? []) {
+        if (result[dstId]) {
+          downstreamCoords.push(result[dstId]);
+          if ((nodesDef[dstId]?.stage || DEFAULT_STAGE_ID) === stageId) {
+            sameStageDownCoords.push(result[dstId]);
+          }
+        }
+      }
+
+      const effUp = sameStageUpCoords.length > 0 ? sameStageUpCoords : upstreamCoords;
+      const effDown =
+        sameStageDownCoords.length > 0 ? sameStageDownCoords : downstreamCoords;
+
+      let candidate: NodePosition | null = null;
+      if (effUp.length > 0 && effDown.length > 0) {
+        const avgUx = effUp.reduce((s, p) => s + p.x, 0) / effUp.length;
+        const avgUy = effUp.reduce((s, p) => s + p.y, 0) / effUp.length;
+        const avgVx = effDown.reduce((s, p) => s + p.x, 0) / effDown.length;
+        const avgVy = effDown.reduce((s, p) => s + p.y, 0) / effDown.length;
+        candidate = {
+          x: Math.round((avgUx + avgVx) / 2),
+          y: Math.round((avgUy + avgVy) / 2),
+        };
+      } else if (sameStageUpCoords.length > 0) {
+        const avgUx =
+          sameStageUpCoords.reduce((s, p) => s + p.x, 0) / sameStageUpCoords.length;
+        const avgUy =
+          sameStageUpCoords.reduce((s, p) => s + p.y, 0) / sameStageUpCoords.length;
+        candidate = {
+          x: Math.round(avgUx + NODE_WIDTH + 60),
+          y: Math.round(avgUy),
+        };
+      } else if (sameStageDownCoords.length > 0) {
+        const avgVx =
+          sameStageDownCoords.reduce((s, p) => s + p.x, 0) /
+          sameStageDownCoords.length;
+        const avgVy =
+          sameStageDownCoords.reduce((s, p) => s + p.y, 0) /
+          sameStageDownCoords.length;
+        candidate = {
+          x: Math.round(avgVx - NODE_WIDTH - 60),
+          y: Math.round(avgVy),
+        };
+      }
+
+      if (candidate) {
+        // Avoid exact overlap with already positioned nodes
+        while (
+          Object.values(result).some(
+            (existing) =>
+              Math.abs(existing.x - candidate!.x) < 120 &&
+              Math.abs(existing.y - candidate!.y) < 90,
+          )
+        ) {
+          candidate = { x: candidate.x, y: candidate.y + 130 };
+        }
+        result[nid] = candidate;
+        slotIndex += 1;
+        placedInPass = true;
+      }
+    }
+  }
+
+  for (const nid of unpositioned) {
+    if (!result[nid]) {
+      result[nid] = dagrePositions[nid] ?? {
+        x: STAGE_PAD_X,
+        y: STAGE_PAD_TOP + slotIndex * 130,
+      };
+      slotIndex += 1;
+    }
+  }
+  return result;
+}
+
 export function buildGraphElements(
   workflow: Workflow,
   options: BuildGraphOptions = {},
 ): BuiltGraphElements {
   const {
     layout = null,
+    runLayoutMode = "original",
     opsMap = {},
     runState = null,
     runDiff = null,
@@ -335,6 +465,9 @@ export function buildGraphElements(
   }
   if (runState?.nodes) {
     for (const nodeId of Object.keys(runState.nodes)) {
+      if (isStageValidatorNodeId(nodeId)) {
+        continue;
+      }
       if (!nodesDef[nodeId]) {
         nodesDef[nodeId] = {
           op: runDiff?.nodes?.[nodeId]?.runOp || "unknown",
@@ -346,6 +479,9 @@ export function buildGraphElements(
   }
   if (runDiff?.nodes) {
     for (const [nodeId, diff] of Object.entries(runDiff.nodes)) {
+      if (isStageValidatorNodeId(nodeId)) {
+        continue;
+      }
       if (!nodesDef[nodeId] && diff.status === "new_in_run") {
         nodesDef[nodeId] = {
           op: diff.runOp || "unknown",
@@ -396,25 +532,53 @@ export function buildGraphElements(
     stages: stagesDef,
   };
 
-  // Only run Dagre layout when at least one node lacks saved coordinates
-  const needsDagre = Object.keys(nodesDef).some((nodeId) => {
-    const saved =
-      layout?.nodes?.[nodeId] ?? runState?.layout_snapshot?.nodes?.[nodeId];
-    return !(saved && typeof saved.x === "number" && typeof saved.y === "number");
-  });
+  const forceFullDagre = runLayoutMode === "relayout";
+
+  // Only run Dagre layout when forceFullDagre is set or at least one node lacks saved coordinates
+  const needsDagre =
+    forceFullDagre ||
+    Object.keys(nodesDef).some((nodeId) => {
+      const saved =
+        layout?.nodes?.[nodeId] ?? runState?.layout_snapshot?.nodes?.[nodeId];
+      return !(saved && typeof saved.x === "number" && typeof saved.y === "number");
+    });
 
   const dagrePositions = needsDagre
     ? computeDagrePositions(effectiveWf, opsMap, options.measuredDimensions)
     : {};
-  const absolutePositions: Record<string, NodePosition> = {};
 
-  for (const nodeId of Object.keys(nodesDef)) {
-    const saved =
-      layout?.nodes?.[nodeId] ?? runState?.layout_snapshot?.nodes?.[nodeId];
-    if (saved && typeof saved.x === "number" && typeof saved.y === "number") {
-      absolutePositions[nodeId] = { x: saved.x, y: saved.y };
+  let absolutePositions: Record<string, NodePosition>;
+  if (forceFullDagre) {
+    absolutePositions = {};
+    for (const nodeId of Object.keys(nodesDef)) {
+      absolutePositions[nodeId] = dagrePositions[nodeId] ?? {
+        x: STAGE_PAD_X,
+        y: STAGE_PAD_TOP,
+      };
+    }
+  } else {
+    const savedMap: Record<string, NodePosition> = {};
+    for (const nodeId of Object.keys(nodesDef)) {
+      const saved =
+        layout?.nodes?.[nodeId] ?? runState?.layout_snapshot?.nodes?.[nodeId];
+      if (saved && typeof saved.x === "number" && typeof saved.y === "number") {
+        savedMap[nodeId] = { x: saved.x, y: saved.y };
+      }
+    }
+    if (Object.keys(savedMap).length > 0) {
+      absolutePositions = autoPlaceInjectedNodes(
+        nodesDef,
+        savedMap,
+        dagrePositions,
+      );
     } else {
-      absolutePositions[nodeId] = dagrePositions[nodeId] ?? { x: STAGE_PAD_X, y: STAGE_PAD_TOP };
+      absolutePositions = {};
+      for (const nodeId of Object.keys(nodesDef)) {
+        absolutePositions[nodeId] = dagrePositions[nodeId] ?? {
+          x: STAGE_PAD_X,
+          y: STAGE_PAD_TOP,
+        };
+      }
     }
   }
 
@@ -437,16 +601,36 @@ export function buildGraphElements(
   let emptyStageCursorX = 0;
 
   const isSingleMainStage =
-    stageIds.length === 1 && stageIds[0] === DEFAULT_STAGE_ID;
+    stageIds.length === 1 &&
+    stageIds[0] === DEFAULT_STAGE_ID &&
+    !stagesDef[DEFAULT_STAGE_ID]?.validator;
 
   for (const sid of stageIds) {
     const memberIds = nodesByStage[sid] ?? [];
     const stageSpec = stagesDef[sid];
+    const validatorSpec = stageSpec?.validator ?? null;
+    const valNodeId = stageValidatorNodeId(sid);
+    const validatorState = validatorSpec
+      ? runState?.nodes?.[valNodeId]
+      : undefined;
+    const validatorHasOpenPatch = Boolean(
+      validatorSpec &&
+        runState?.checkpoints?.some(
+          (cp) => cp.node_id === valNodeId && !cp.answered_at && cp.graph_patch,
+        ),
+    );
+    const validatorAppliedPatch = Boolean(
+      validatorSpec &&
+        Object.values(nodesDef).some(
+          (n) => n.meta?.injected_by === valNodeId,
+        ),
+    );
     const title =
       stageSpec?.title ||
       (sid === DEFAULT_STAGE_ID ? DEFAULT_STAGE_TITLE : sid);
     const requireApproval = Boolean(stageSpec?.require_approval);
     const gateState = runState?.stage_gates?.[sid];
+    const extraValidatorPad = validatorSpec ? 30 : 0;
 
     let groupX: number;
     let groupY: number;
@@ -457,7 +641,7 @@ export function buildGraphElements(
       groupX = emptyStageCursorX;
       groupY = 0;
       groupWidth = EMPTY_STAGE_WIDTH;
-      groupHeight = EMPTY_STAGE_HEIGHT;
+      groupHeight = EMPTY_STAGE_HEIGHT + extraValidatorPad;
       emptyStageCursorX = groupX + groupWidth + STAGE_GAP_X;
     } else {
       let minX = Infinity;
@@ -492,7 +676,9 @@ export function buildGraphElements(
       groupX = Math.round(minX - STAGE_PAD_X);
       groupY = Math.round(minY - STAGE_PAD_TOP);
       groupWidth = Math.round(maxX - minX + STAGE_PAD_X * 2);
-      groupHeight = Math.round(maxY - minY + STAGE_PAD_TOP + STAGE_PAD_BOTTOM);
+      groupHeight = Math.round(
+        maxY - minY + STAGE_PAD_TOP + STAGE_PAD_BOTTOM + extraValidatorPad,
+      );
       emptyStageCursorX = Math.max(emptyStageCursorX, groupX + groupWidth + STAGE_GAP_X);
     }
 
@@ -518,9 +704,18 @@ export function buildGraphElements(
           title,
           requireApproval,
           gateState,
+          validator: validatorSpec,
+          validatorTitle: validatorSpec
+            ? opsMap[validatorSpec.op]?.title || validatorSpec.op
+            : undefined,
+          validatorState,
+          validatorHasOpenPatch,
+          validatorAppliedPatch,
           nodeCount: memberIds.length,
           isSelected: options.selectedStageId === sid,
+          isValidatorSelected: selectedNodeId === valNodeId,
           onSelectStage: options.onSelectStage,
+          onSelectValidator: options.onSelectValidator,
           onDeleteStage: options.onDeleteStage,
         },
       });

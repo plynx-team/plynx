@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchRuns } from "../api/client";
-import type { RunStatus, RunSummary } from "../api/types.gen";
+import type { BaselineDriftAlert, RunStatus, RunSummary } from "../api/types.gen";
 import { Link, useRouter } from "../router/Router";
 import {
   ControlButton,
@@ -38,6 +38,7 @@ export function runStatusBadgeClasses(status: RunStatus): string {
 export function RunList() {
   const { navigate } = useRouter();
   const [runs, setRuns] = useState<ReadonlyArray<RunSummary>>([]);
+  const [driftAlerts, setDriftAlerts] = useState<ReadonlyArray<BaselineDriftAlert>>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
@@ -51,6 +52,7 @@ export function RunList() {
       setError(null);
       const res = await fetchRuns({ limit: 50 });
       setRuns(res.runs);
+      setDriftAlerts(res.drift_alerts ?? []);
       setNextCursor(res.next_cursor ?? null);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
@@ -143,6 +145,28 @@ export function RunList() {
           }}
         >
           {error}
+        </div>
+      )}
+
+      {driftAlerts.length > 0 && (
+        <div
+          data-testid="baseline-drift-banner"
+          className="m-2 rounded border px-3 py-2 text-xs space-y-1"
+          style={{
+            borderColor: "var(--color-warning)",
+            backgroundColor: "rgba(255, 167, 38, 0.12)",
+            color: "var(--color-warning)",
+          }}
+        >
+          <div className="flex items-center gap-1.5 font-bold">
+            <FeatherIcon name="alert-triangle" size={13} />
+            <span>Baseline Drift Detected</span>
+          </div>
+          {driftAlerts.map((alert, idx) => (
+            <div key={idx} style={{ color: "var(--text-primary)" }}>
+              {alert.message}
+            </div>
+          ))}
         </div>
       )}
 

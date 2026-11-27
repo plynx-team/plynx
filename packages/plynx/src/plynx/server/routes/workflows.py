@@ -71,6 +71,18 @@ def discover_workflows(workspace_root: Path) -> list[WorkflowListItem]:
     return items
 
 
+def _inputs_to_yaml_dict(inputs: dict[str, Any]) -> dict[str, Any]:
+    inputs_out: dict[str, Any] = {}
+    for port, val in inputs.items():
+        if isinstance(val, NodeRef):
+            inputs_out[port] = f"${val.from_node}.{val.output}"
+        elif isinstance(val, str) and val.startswith("$"):
+            inputs_out[port] = f"${val}"
+        else:
+            inputs_out[port] = val
+    return inputs_out
+
+
 def workflow_to_dict(wf: Workflow) -> dict[str, Any]:
     """Convert a ``Workflow`` model into a canonical YAML-serializable dictionary."""
     out: dict[str, Any] = {"version": wf.version}
@@ -80,23 +92,44 @@ def workflow_to_dict(wf: Workflow) -> dict[str, Any]:
         out["description"] = wf.description
     if wf.concurrency is not None:
         out["concurrency"] = wf.concurrency
+    if wf.max_injected_nodes is not None:
+        out["max_injected_nodes"] = wf.max_injected_nodes
     if wf.agent is not None and (
-        wf.agent.provider != AgentProvider.DEFAULT or wf.agent.model != ""
+        wf.agent.provider != AgentProvider.DEFAULT
+        or wf.agent.model != ""
+        or wf.agent.max_injected_nodes is not None
     ):
         agent_out: dict[str, Any] = {"provider": wf.agent.provider.value}
         if wf.agent.model:
             agent_out["model"] = wf.agent.model
+        if wf.agent.max_injected_nodes is not None:
+            agent_out["max_injected_nodes"] = wf.agent.max_injected_nodes
         out["agent"] = agent_out
 
     custom_stages: dict[str, Any] = {}
     for sid, stage in wf.stages.items():
-        if sid == "main" and not stage.require_approval and (stage.title in (None, "Workflow")):
+        if (
+            sid == "main"
+            and not stage.require_approval
+            and stage.validator is None
+            and (stage.title in (None, "Workflow"))
+        ):
             continue
         s_data: dict[str, Any] = {}
         if stage.title and stage.title != sid:
             s_data["title"] = stage.title
         if stage.require_approval:
             s_data["require_approval"] = True
+        if stage.validator is not None:
+            val_data: dict[str, Any] = {
+                "op": stage.validator.op,
+                "mode": stage.validator.mode.value,
+                "allow_graph_edits": stage.validator.allow_graph_edits.value,
+            }
+            val_inputs = _inputs_to_yaml_dict(stage.validator.inputs)
+            if val_inputs:
+                val_data["inputs"] = val_inputs
+            s_data["validator"] = val_data
         custom_stages[sid] = s_data
     if custom_stages:
         out["stages"] = custom_stages
@@ -108,16 +141,15 @@ def workflow_to_dict(wf: Workflow) -> dict[str, Any]:
             n_data["title"] = node.title
         if node.stage and node.stage != "main":
             n_data["stage"] = node.stage
-        inputs_out: dict[str, Any] = {}
-        for port, val in node.inputs.items():
-            if isinstance(val, NodeRef):
-                inputs_out[port] = f"${val.from_node}.{val.output}"
-            elif isinstance(val, str) and val.startswith("$"):
-                inputs_out[port] = f"${val}"
-            else:
-                inputs_out[port] = val
+        if node.allow_graph_edits is not None:
+            n_data["allow_graph_edits"] = node.allow_graph_edits.value
+        inputs_out = _inputs_to_yaml_dict(node.inputs)
         if inputs_out:
             n_data["inputs"] = inputs_out
+        if node.meta is not None:
+            meta_dict = node.meta.model_dump(exclude_none=True)
+            if meta_dict:
+                n_data["meta"] = meta_dict
         nodes_out[nid] = n_data
     out["nodes"] = nodes_out
     return out

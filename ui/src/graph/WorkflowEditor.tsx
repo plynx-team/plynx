@@ -12,6 +12,7 @@ import {
 } from "../api/client";
 import { applyRunEvent, createInitialRunState } from "../api/reducer";
 import type {
+  BaselineDriftAlert,
   InputPortSpec,
   NodePosition,
   NodeSpec,
@@ -19,6 +20,7 @@ import type {
   OutputPortSpec,
   RunState,
   RunSummary,
+  StageValidatorSpec,
   Viewport,
   Workflow,
   WorkflowLayout,
@@ -37,7 +39,12 @@ import {
   getOrderedStageIds,
   resolveNodePorts,
 } from "./layout";
-import { inputHandleId, outputHandleId, parseHandleId } from "./types";
+import {
+  inputHandleId,
+  isStageValidatorNodeId,
+  outputHandleId,
+  parseHandleId,
+} from "./types";
 import type { QuickConnectDropData } from "./QuickConnectPopover";
 import {
   addNodeToWorkflow,
@@ -155,6 +162,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   const [fitViewTrigger, setFitViewTrigger] = useState<number>(0);
   const [ops, setOps] = useState<Array<OpEntry>>([]);
   const [workflowRuns, setWorkflowRuns] = useState<Array<RunSummary>>([]);
+  const [driftAlerts, setDriftAlerts] = useState<Array<BaselineDriftAlert>>([]);
   const [runsNextCursor, setRunsNextCursor] = useState<string | null>(null);
   const [runsLoadingMore, setRunsLoadingMore] = useState<boolean>(false);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(
@@ -222,6 +230,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     const initialRunId = queryRunIdRef.current;
     setSelectedRunId(initialRunId);
     setSelectedRun(null);
+    setDriftAlerts([]);
     setRunsCollapsed(false);
     setOpsCollapsed(Boolean(initialRunId));
     setWireError(null);
@@ -270,6 +279,11 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
                 (r) => r.workflow_path === workflowPath,
               );
               setWorkflowRuns(matches);
+              setDriftAlerts(
+                (list.drift_alerts ?? []).filter(
+                  (a) => a.workflow_path === workflowPath,
+                ),
+              );
               setRunsNextCursor(list.next_cursor ?? null);
             })
             .catch(() => {});
@@ -444,7 +458,11 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   const handleUpdateStage = useCallback(
     (
       stageId: string,
-      updates: { title?: string; require_approval?: boolean },
+      updates: {
+        title?: string;
+        require_approval?: boolean;
+        validator?: StageValidatorSpec | null;
+      },
     ) => {
       if (!workflow) return;
       const nextWf = updateStageInWorkflow(workflow, stageId, updates);
@@ -890,6 +908,37 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
     let unsubscribe: (() => void) | undefined;
     let resyncPending = false;
 
+    const triggerResync = () => {
+      if (!active || resyncPending) return;
+      resyncPending = true;
+      fetchRunState(selectedRunId)
+        .then((latest) => {
+          if (!active) return;
+          setSelectedRun(latest);
+          setWorkflowRuns((prev) =>
+            prev.map((item) =>
+              item.id === latest.id
+                ? {
+                    ...item,
+                    status: latest.status,
+                    started_at: latest.started_at,
+                    finished_at: latest.finished_at,
+                    error: latest.error,
+                  }
+                : item,
+            ),
+          );
+          if (TERMINAL_RUN_STATUSES.has(latest.status)) {
+            unsubscribe?.();
+            unsubscribe = undefined;
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          resyncPending = false;
+        });
+    };
+
     fetchRunState(selectedRunId)
       .then((initial) => {
         if (!active) return;
@@ -916,13 +965,28 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
             selectedRunId,
             (event) => {
               if (!active) return;
+              let shouldResyncSnapshot = false;
               setSelectedRun((prev) => {
+                if (
+                  event.type === "node_status" &&
+                  !isStageValidatorNodeId(event.data.node_id) &&
+                  prev?.workflow_snapshot?.nodes &&
+                  !(event.data.node_id in prev.workflow_snapshot.nodes)
+                ) {
+                  shouldResyncSnapshot = true;
+                }
+                if (event.type === "checkpoint_resolved") {
+                  shouldResyncSnapshot = true;
+                }
                 const updated = applyRunEvent(
                   prev ?? createInitialRunState(selectedRunId),
                   event,
                 );
                 return updated;
               });
+              if (shouldResyncSnapshot) {
+                triggerResync();
+              }
               if (event.type === "run_status") {
                 setWorkflowRuns((prev) =>
                   prev.map((item) =>
@@ -933,36 +997,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
                 );
               }
             },
-            () => {
-              if (!active || resyncPending) return;
-              resyncPending = true;
-              fetchRunState(selectedRunId)
-                .then((latest) => {
-                  if (!active) return;
-                  setSelectedRun(latest);
-                  setWorkflowRuns((prev) =>
-                    prev.map((item) =>
-                      item.id === latest.id
-                        ? {
-                            ...item,
-                            status: latest.status,
-                            started_at: latest.started_at,
-                            finished_at: latest.finished_at,
-                            error: latest.error,
-                          }
-                        : item,
-                    ),
-                  );
-                  if (TERMINAL_RUN_STATUSES.has(latest.status)) {
-                    unsubscribe?.();
-                    unsubscribe = undefined;
-                  }
-                })
-                .catch(() => {})
-                .finally(() => {
-                  resyncPending = false;
-                });
-            },
+            triggerResync,
           );
         }
       })
@@ -1414,6 +1449,33 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         </div>
       )}
 
+      {!isInspectingRun && driftAlerts.length > 0 && (
+        <div
+          role="status"
+          data-testid="baseline-drift-banner"
+          className="flex items-center justify-between gap-3 px-3 py-1.5 text-xs"
+          style={{
+            borderBottom: "1px solid rgba(171, 71, 188, 0.45)",
+            backgroundColor: "rgba(171, 71, 188, 0.12)",
+            color: "#e1bee7",
+          }}
+        >
+          <div className="flex items-center gap-1.5 min-w-0">
+            <FeatherIcon name="git-branch" size={12} />
+            <span className="font-semibold shrink-0">Baseline Drift:</span>
+            <span className="truncate">{driftAlerts[0].message}</span>
+          </div>
+          <button
+            type="button"
+            aria-label="Dismiss baseline drift alert"
+            onClick={() => setDriftAlerts([])}
+            className="px-1 shrink-0"
+          >
+            &times;
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <div
           className="p-10 text-center text-sm"
@@ -1572,6 +1634,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
                 onSelectNode={handleSelectNode}
                 onPreviewArtifact={setPreviewTarget}
                 onApproved={handleStageApproved}
+                onCheckpointAnswered={() => void handleStageApproved()}
                 showNodeInspector={false}
               />
             ) : (
@@ -1595,6 +1658,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
                     onSelectEdge={setSelectedEdgeId}
                     selectedStageId={selectedStageId}
                     onSelectStage={handleSelectStage}
+                    onSelectValidator={(sid) => handleSelectStage(sid)}
                     onDeleteStage={handleDeleteStageRequest}
                     readOnly={false}
                     onConnect={handleConnect}
@@ -1649,6 +1713,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
             onBindReference={handleBindReference}
             onUnbindInput={handleUnbindInput}
             onPreviewArtifact={setPreviewTarget}
+            onCheckpointAnswered={() => void handleStageApproved()}
             onAddStage={handleAddStage}
             onUpdateStage={handleUpdateStage}
             onDeleteStage={handleDeleteStageRequest}
@@ -1707,6 +1772,11 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
                   setWorkflowRuns(matches);
                   setRunsNextCursor(list.next_cursor ?? null);
                 }
+                setDriftAlerts(
+                  (list.drift_alerts ?? []).filter(
+                    (a) => a.workflow_path === workflowPath,
+                  ),
+                );
               })
               .catch(() => {});
           }

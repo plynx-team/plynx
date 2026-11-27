@@ -762,9 +762,19 @@ class InputsManifest:
 
     inputs: dict[str, InputValue] = field(default_factory=dict)
     checkpoint_answers: dict[str, CheckpointAnswer] = field(default_factory=dict)
+    allow_graph_edits: GraphEditPolicy | None = None
     schema: int = SCHEMA_VERSION
 
     def __post_init__(self) -> None:
+        if isinstance(self.allow_graph_edits, str) and not isinstance(
+            self.allow_graph_edits, GraphEditPolicy
+        ):
+            try:
+                self.allow_graph_edits = GraphEditPolicy(self.allow_graph_edits)
+            except ValueError as exc:
+                raise ProtocolError(
+                    f"InputsManifest: invalid allow_graph_edits {self.allow_graph_edits!r}"
+                ) from exc
         self.validate()
 
     def validate(self) -> None:
@@ -785,11 +795,17 @@ class InputsManifest:
             _validate_checkpoint_answer(
                 answer, context=f"InputsManifest.checkpoint_answers[{cp_id!r}]"
             )
+        if self.allow_graph_edits is not None and not isinstance(
+            self.allow_graph_edits, GraphEditPolicy
+        ):
+            raise ProtocolError(
+                f"InputsManifest: invalid allow_graph_edits {self.allow_graph_edits!r}"
+            )
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to a validated JSON-ready dictionary."""
         self.validate()
-        return {
+        out: dict[str, Any] = {
             "schema": self.schema,
             "inputs": {port: val.to_dict() for port, val in self.inputs.items()},
             "checkpoint_answers": {
@@ -797,6 +813,9 @@ class InputsManifest:
                 for cp_id, ans in self.checkpoint_answers.items()
             },
         }
+        if self.allow_graph_edits is not None:
+            out["allow_graph_edits"] = self.allow_graph_edits.value
+        return out
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> InputsManifest:
@@ -804,7 +823,7 @@ class InputsManifest:
         _check_keys(
             data,
             required={"schema", "inputs"},
-            optional={"checkpoint_answers"},
+            optional={"checkpoint_answers", "allow_graph_edits"},
             context="InputsManifest",
         )
         _validate_schema(data["schema"], context="InputsManifest")
@@ -825,7 +844,23 @@ class InputsManifest:
                 ans, context=f"InputsManifest.checkpoint_answers[{cp_id!r}]"
             )
             answers[cp_id] = ans
-        return cls(inputs=inputs, checkpoint_answers=answers, schema=data["schema"])
+        raw_policy = data.get("allow_graph_edits")
+        policy: GraphEditPolicy | None = None
+        if raw_policy is not None:
+            if not isinstance(raw_policy, str):
+                raise ProtocolError("InputsManifest: 'allow_graph_edits' must be a str or null")
+            try:
+                policy = GraphEditPolicy(raw_policy)
+            except ValueError as exc:
+                raise ProtocolError(
+                    f"InputsManifest: invalid allow_graph_edits {raw_policy!r}"
+                ) from exc
+        return cls(
+            inputs=inputs,
+            checkpoint_answers=answers,
+            allow_graph_edits=policy,
+            schema=data["schema"],
+        )
 
     def to_json(self) -> str:
         """Serialize to a validated JSON string."""

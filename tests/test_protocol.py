@@ -13,6 +13,7 @@ from plynx_sdk.protocol import (
     AgentTurnsManifest,
     CheckpointManifest,
     DirectoryEntry,
+    GraphPatchPayload,
     InputDirectoryValue,
     InputFileValue,
     InputsManifest,
@@ -46,6 +47,7 @@ MANIFEST_FIXTURES: list[tuple[str, type[_ManifestType]]] = [
     ("result.json", ResultManifest),
     ("checkpoint.json", CheckpointManifest),
     ("agent_turns.json", AgentTurnsManifest),
+    ("graph_patch.json", GraphPatchPayload),
 ]
 
 

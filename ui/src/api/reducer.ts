@@ -84,6 +84,7 @@ export function applyRunEvent(state: RunState, event: RunEvent): RunState {
         options: event.data.options ?? null,
         allow_freeform: event.data.allow_freeform,
         questions: event.data.questions ?? [],
+        graph_patch: event.data.graph_patch ?? existingCp?.graph_patch ?? null,
         answer: null,
         answers: null,
         created_at: existingCp?.created_at ?? event.ts,

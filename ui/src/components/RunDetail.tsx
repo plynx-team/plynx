@@ -15,6 +15,7 @@ import type {
 } from "../api/types.gen";
 import type { ArtifactPreviewTarget } from "../graph/NodeInspector";
 import { computeWorkflowRunDiff } from "../graph/runDiff";
+import { isStageValidatorNodeId } from "../graph/types";
 import { ArtifactPreviewDialog } from "../previewers/ArtifactPreviewDialog";
 import { useRouter } from "../router/Router";
 import { ControlButton, ControlPanel, ControlSeparator } from "./ControlPanel";
@@ -121,9 +122,29 @@ export function RunDetail({ runId }: { runId: string }) {
             runId,
             (event) => {
               if (!active) return;
-              setRunState((prev) =>
-                applyRunEvent(prev ?? createInitialRunState(runId), event),
-              );
+              let shouldResyncSnapshot = false;
+              setRunState((prev) => {
+                if (
+                  event.type === "node_status" &&
+                  prev?.workflow_snapshot?.nodes &&
+                  !isStageValidatorNodeId(event.data.node_id) &&
+                  !prev.workflow_snapshot.nodes[event.data.node_id]
+                ) {
+                  shouldResyncSnapshot = true;
+                }
+                return applyRunEvent(prev ?? createInitialRunState(runId), event);
+              });
+              if (shouldResyncSnapshot && !resyncPending) {
+                resyncPending = true;
+                fetchRunState(runId)
+                  .then((latest) => {
+                    if (active) setRunState(latest);
+                  })
+                  .catch(() => {})
+                  .finally(() => {
+                    resyncPending = false;
+                  });
+              }
             },
             () => {
               if (!active || resyncPending) return;
@@ -375,6 +396,7 @@ export function RunDetail({ runId }: { runId: string }) {
           onSelectNode={setSelectedNodeId}
           onPreviewArtifact={setPreviewTarget}
           onApproved={() => setReloadSeq((s) => s + 1)}
+          onCheckpointAnswered={() => setReloadSeq((s) => s + 1)}
           showLogsHeader={true}
         />
       ) : null}

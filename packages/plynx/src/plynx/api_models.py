@@ -121,6 +121,16 @@ def is_batch_checkpoint(questions: list[CheckpointQuestionState]) -> bool:
     return not (len(questions) == 1 and questions[0].id == SINGLE_QUESTION_ID)
 
 
+class GraphPatchModel(BaseModel):
+    """Proposed dynamic DAG patch inside an agent turn or confirmation checkpoint."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str
+    add_nodes: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    rewire_inputs: dict[str, dict[str, Any]] = Field(default_factory=dict)
+
+
 class CheckpointState(BaseModel):
     """State of a checkpoint prompt requested by a node.
 
@@ -138,6 +148,7 @@ class CheckpointState(BaseModel):
     options: list[str] | None = None
     allow_freeform: bool = False
     questions: list[CheckpointQuestionState] = Field(default_factory=list)
+    graph_patch: GraphPatchModel | None = None
     answer: str | None = None
     answers: dict[str, str | list[str]] | None = None
     created_at: float
@@ -269,6 +280,7 @@ class NodeCheckpointData(BaseModel):
     options: list[str] | None = None
     allow_freeform: bool = False
     questions: list[CheckpointQuestionState] = Field(default_factory=list)
+    graph_patch: GraphPatchModel | None = None
 
 
 class CheckpointResolvedData(BaseModel):
@@ -449,6 +461,7 @@ class OpEntry(BaseModel):
     name: str
     kind: Literal["class", "function"]
     agent_role: Literal["agent", "validator"] | None = None
+    allow_graph_edits: GraphEditPolicy | None = None
     title: str
     category: str = "Uncategorized"
     cacheable: bool = True
@@ -554,6 +567,7 @@ class CreateRunRequest(BaseModel):
     no_cache: bool = False
     agent_provider: AgentProvider | None = None
     agent_model: str | None = None
+    max_injected_nodes: int | None = Field(default=None, ge=0)
     workflow: Workflow | None = None
     layout: WorkflowLayout | None = None
 
@@ -566,6 +580,46 @@ class CreateRunResponse(BaseModel):
     run_id: str
 
 
+class BaselineDriftAlert(BaseModel):
+    """Recurring dynamic splice detected across recent runs of a workflow."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    workflow_path: str
+    injected_op: str
+    upstream_op: str | None = None
+    downstream_op: str | None = None
+    occurrences: int
+    window_runs: int
+    message: str
+
+
+class NodeExecutionStat(BaseModel):
+    """Aggregated execution telemetry for a node across historical runs."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    workflow_path: str
+    node_id: str
+    op: str = ""
+    executions: int = 0
+    cache_hits: int = 0
+    cache_hit_rate: float = 0.0
+    avg_duration_seconds: float | None = None
+    failures: int = 0
+    dynamic_injections: int = 0
+
+
+class RunStatsResponse(BaseModel):
+    """Response body for ``GET /runs/stats``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    total_runs: int = 0
+    nodes: list[NodeExecutionStat] = Field(default_factory=list)
+    drift_alerts: list[BaselineDriftAlert] = Field(default_factory=list)
+
+
 class RunListResponse(BaseModel):
     """Response body for ``GET /runs``."""
 
@@ -573,6 +627,7 @@ class RunListResponse(BaseModel):
 
     runs: list[RunSummary] = Field(default_factory=list)
     next_cursor: str | None = None
+    drift_alerts: list[BaselineDriftAlert] | None = None
 
 
 class AnswerCheckpointRequest(BaseModel):
@@ -617,16 +672,6 @@ class CleanResponse(BaseModel):
     deleted_runs: int = 0
     deleted_blobs: int = 0
     reclaimed_bytes: int = 0
-
-
-class GraphPatchModel(BaseModel):
-    """Proposed dynamic DAG patch inside an agent turn."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    reason: str
-    add_nodes: dict[str, dict[str, Any]] = Field(default_factory=dict)
-    rewire_inputs: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
 
 class AgentTurnModel(BaseModel):

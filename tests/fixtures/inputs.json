@@ -32,5 +32,6 @@
         "sql"
       ]
     }
-  }
+  },
+  "allow_graph_edits": "confirm"
 }

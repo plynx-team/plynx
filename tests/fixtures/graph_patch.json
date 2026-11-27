@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "reason": "Detected French document; splicing translator before summarize.",
+  "add_nodes": {
+    "translate_fr": {
+      "op": "demo_pack/ops:TranslateFr",
+      "stage": "ask",
+      "inputs": {
+        "text": "$pick.choice"
+      }
+    }
+  },
+  "rewire_inputs": {
+    "echo": {
+      "text": "$translate_fr.text"
+    }
+  }
+}

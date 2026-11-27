@@ -27,6 +27,8 @@ export function NodeRow({
 }: NodeRowProps) {
   const isNotInRun = nodeDiff ? nodeDiff.status === "not_in_run" : !nodeState;
   const isNewInRun = nodeDiff ? nodeDiff.status === "new_in_run" : !spec;
+  const isAddedByAgent = Boolean(spec?.meta?.injected_by);
+  const isSuperseded = Boolean(spec?.meta?.superseded_by);
   const status = nodeState?.status;
   const title = spec?.title || spec?.op || nodeId;
   const op = spec?.op;
@@ -66,9 +68,31 @@ export function NodeRow({
               &bull; {title}
             </span>
           )}
-          {isNewInRun && (
-            <span className="status-badge !border-[#00d8ff] !text-[#00d8ff] !text-[10px] !px-1.5 !py-0">
-              NEW
+          {isAddedByAgent ? (
+            <span
+              data-testid={`badge-added-by-agent-${nodeId}`}
+              className="status-badge !border-[#00d8ff] !text-[#00d8ff] !text-[10px] !px-1.5 !py-0"
+              title={
+                spec?.meta?.reason
+                  ? `Injected by ${spec.meta.injected_by}: ${spec.meta.reason}`
+                  : `Injected by ${spec?.meta?.injected_by}`
+              }
+            >
+              ADDED BY AGENT
+            </span>
+          ) : (
+            isNewInRun && (
+              <span className="status-badge !border-[#00d8ff] !text-[#00d8ff] !text-[10px] !px-1.5 !py-0">
+                NEW
+              </span>
+            )
+          )}
+          {isSuperseded && (
+            <span
+              data-testid={`badge-superseded-${nodeId}`}
+              className="status-badge CREATED !text-[10px] !px-1.5 !py-0"
+            >
+              SUPERSEDED
             </span>
           )}
           {nodeState?.cache_hit && (

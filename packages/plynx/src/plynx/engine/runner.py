@@ -393,7 +393,7 @@ class LocalExecutor:
         await asyncio.to_thread(workdir.mkdir, parents=True, exist_ok=True)
 
         # Remove stale manifest files from any earlier attempt on this node directory.
-        for stale_name in ("outputs.json", "checkpoint.json"):
+        for stale_name in ("outputs.json", "checkpoint.json", "graph_patch.json"):
             stale_path = node_dir / stale_name
             if stale_path.is_file():
                 await asyncio.to_thread(stale_path.unlink)
@@ -704,6 +704,11 @@ class LocalExecutor:
             scratch_workdir = scratch_dir / "workdir"
             await asyncio.to_thread(scratch_workdir.mkdir, parents=True, exist_ok=True)
             await asyncio.to_thread(shutil.copy2, inputs_json_src, scratch_dir / "inputs.json")
+            stage_ctx_src = src_dir / "stage_context.json"
+            if stage_ctx_src.is_file():
+                await asyncio.to_thread(
+                    shutil.copy2, stage_ctx_src, scratch_dir / "stage_context.json"
+                )
             src_inputs_dir = src_dir / "inputs"
             if src_inputs_dir.is_dir():
                 await asyncio.to_thread(

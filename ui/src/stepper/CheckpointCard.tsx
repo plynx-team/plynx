@@ -79,6 +79,7 @@ export function CheckpointCard({
 
   const questions = checkpointQuestions(checkpoint);
   const batch = isBatch(questions);
+  const graphPatch = checkpoint.graph_patch;
 
   const resolved = questions.map((q) => resolveAnswer(q, drafts[q.id]));
   const complete = resolved.every((value) => value !== null);
@@ -88,6 +89,24 @@ export function CheckpointCard({
       ...prev,
       [id]: { ...(prev[id] ?? { selected: [], freeform: "" }), ...patch },
     }));
+  };
+
+  const handlePatchDecision = async (decision: "Approve Patch" | "Reject") => {
+    if (submitting) return;
+    try {
+      setSubmitting(true);
+      setError(null);
+      await answerCheckpoint(
+        runId,
+        checkpoint.node_id,
+        checkpoint.checkpoint_id,
+        decision,
+      );
+      onAnswered?.(checkpoint.node_id, checkpoint.checkpoint_id, decision);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
+      setSubmitting(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -116,6 +135,156 @@ export function CheckpointCard({
   };
 
   const testId = `checkpoint-card-${checkpoint.checkpoint_id}`;
+
+  if (graphPatch) {
+    const addedEntries = Object.entries(graphPatch.add_nodes ?? {});
+    const rewireEntries = Object.entries(graphPatch.rewire_inputs ?? {});
+
+    return (
+      <div
+        data-testid={testId}
+        className="rounded p-3.5 space-y-3"
+        style={{
+          backgroundColor: "var(--bg-panel)",
+          border: "1px solid var(--border-strong)",
+          borderLeft: "4px solid var(--color-primary)",
+        }}
+      >
+        <div
+          className="flex flex-wrap items-center justify-between gap-2 pb-2"
+          style={{ borderBottom: "1px solid var(--border-subtle)" }}
+        >
+          <div className="flex items-center gap-2">
+            <FeatherIcon
+              name="git-pull-request"
+              size={15}
+              style={{ color: "var(--color-primary)" }}
+            />
+            <h3 className="text-xs font-bold uppercase tracking-wide">
+              Proposed Graph Patch (Confirm)
+            </h3>
+          </div>
+          <div
+            className="flex items-center gap-2 font-mono text-xs"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            <span>node: {checkpoint.node_id}</span>
+            <span>&bull;</span>
+            <span>id: {checkpoint.checkpoint_id}</span>
+          </div>
+        </div>
+
+        {error && (
+          <div
+            role="alert"
+            className="rounded p-2 text-xs"
+            style={{
+              border: "1px solid var(--color-error)",
+              backgroundColor: "rgba(244, 67, 54, 0.15)",
+              color: "#ff8a80",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-1">
+          <div
+            className="text-[11px] font-bold uppercase tracking-wide"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            Reason
+          </div>
+          <p className="text-xs">{graphPatch.reason}</p>
+        </div>
+
+        <div
+          data-testid={`patch-diff-preview-${checkpoint.checkpoint_id}`}
+          className="rounded p-2.5 space-y-2 font-mono text-xs"
+          style={{
+            backgroundColor: "var(--bg-canvas)",
+            border: "1px solid var(--border-subtle)",
+          }}
+        >
+          {addedEntries.length > 0 && (
+            <div className="space-y-1">
+              <div style={{ color: "var(--color-status-success)" }}>
+                + Add Nodes ({addedEntries.length})
+              </div>
+              {addedEntries.map(([nid, spec]) => (
+                <div
+                  key={nid}
+                  className="pl-2 py-0.5 rounded"
+                  style={{ backgroundColor: "rgba(56, 193, 114, 0.1)" }}
+                >
+                  <span className="font-bold">+ {nid}</span>:{" "}
+                  <span>{String(spec.op ?? "")}</span>
+                  {spec.inputs ? (
+                    <span style={{ color: "var(--text-secondary)" }}>
+                      {" "}
+                      {JSON.stringify(spec.inputs)}
+                    </span>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {rewireEntries.length > 0 && (
+            <div className="space-y-1">
+              <div style={{ color: "var(--color-warning)" }}>
+                ~ Rewire Inputs
+              </div>
+              {rewireEntries.map(([targetNid, ports]) =>
+                Object.entries(ports).map(([portName, newVal]) => (
+                  <div
+                    key={`${targetNid}.${portName}`}
+                    className="pl-2 py-0.5 rounded"
+                    style={{ backgroundColor: "rgba(255, 167, 38, 0.1)" }}
+                  >
+                    <span className="font-bold">
+                      ~ {targetNid}.{portName}
+                    </span>{" "}
+                    &larr;{" "}
+                    <span>
+                      {typeof newVal === "string"
+                        ? newVal
+                        : JSON.stringify(newVal)}
+                    </span>
+                  </div>
+                )),
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 pt-1">
+          <button
+            type="button"
+            data-testid={`btn-approve-patch-${checkpoint.checkpoint_id}`}
+            disabled={submitting}
+            onClick={() => void handlePatchDecision("Approve Patch")}
+            className="control-button primary"
+          >
+            <FeatherIcon name="check" size={13} />
+            <span className="control-button-text">
+              {submitting ? "Applying..." : "Approve Patch"}
+            </span>
+          </button>
+          <button
+            type="button"
+            data-testid={`btn-reject-patch-${checkpoint.checkpoint_id}`}
+            disabled={submitting}
+            onClick={() => void handlePatchDecision("Reject")}
+            className="control-button danger"
+          >
+            <FeatherIcon name="x" size={13} />
+            <span className="control-button-text">Reject</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <form

@@ -8,10 +8,28 @@ import type {
   OpEntry,
   OutputPortSpec,
   StageGateState,
+  StageValidatorSpec,
 } from "../api/types.gen";
 import type { NodeDiff } from "./runDiff";
 
 export const STAGE_NODE_PREFIX = "__stage__:";
+export const STAGE_VALIDATOR_PREFIX = "__stage_validator__";
+
+export function stageValidatorNodeId(stageId: string): string {
+  return `${STAGE_VALIDATOR_PREFIX}${stageId}`;
+}
+
+export function isStageValidatorNodeId(nodeId: string): boolean {
+  return (
+    nodeId.startsWith(STAGE_VALIDATOR_PREFIX) &&
+    nodeId.length > STAGE_VALIDATOR_PREFIX.length
+  );
+}
+
+export function extractValidatorStageId(nodeId: string): string | null {
+  if (!isStageValidatorNodeId(nodeId)) return null;
+  return nodeId.slice(STAGE_VALIDATOR_PREFIX.length);
+}
 
 export function getStatusHint(
   status?: NodeStatus,
@@ -113,10 +131,17 @@ export interface StageGroupNodeData extends Record<string, unknown> {
   title: string;
   requireApproval: boolean;
   gateState?: StageGateState;
+  validator?: StageValidatorSpec | null;
+  validatorTitle?: string;
+  validatorState?: NodeRunState;
+  validatorHasOpenPatch?: boolean;
+  validatorAppliedPatch?: boolean;
   nodeCount: number;
   isSelected?: boolean;
+  isValidatorSelected?: boolean;
   isDropTarget?: boolean;
   onSelectStage?: (stageId: string) => void;
+  onSelectValidator?: (stageId: string, validatorNodeId: string) => void;
   onDeleteStage?: (stageId: string) => void;
 }
 

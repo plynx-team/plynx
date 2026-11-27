@@ -8,6 +8,11 @@ import type {
 } from "../api/types.gen";
 import { FeatherIcon } from "../components/FeatherIcon";
 import type { WorkflowRunDiff } from "../graph/runDiff";
+import {
+  extractValidatorStageId,
+  isStageValidatorNodeId,
+  stageValidatorNodeId,
+} from "../graph/types";
 import { CheckpointCard } from "./CheckpointCard";
 import { StageCard } from "./StageCard";
 
@@ -19,6 +24,7 @@ export interface StepperViewProps {
   onSelectNode?: (nodeId: string) => void;
   opsMap?: Record<string, OpEntry>;
   onApproved?: (stageId: string) => void;
+  onCheckpointAnswered?: () => void;
 }
 
 export function StepperView({
@@ -29,6 +35,7 @@ export function StepperView({
   onSelectNode,
   opsMap,
   onApproved,
+  onCheckpointAnswered,
 }: StepperViewProps) {
   const workflow = workflowDoc?.workflow;
   const stagesDef = {
@@ -45,7 +52,7 @@ export function StepperView({
         .filter(([, diff]) => diff.status === "new_in_run")
         .map(([id]) => id),
     ]),
-  );
+  ).filter((id) => !isStageValidatorNodeId(id));
 
   const stageGroups: Record<
     string,
@@ -72,9 +79,15 @@ export function StepperView({
     (id) => stageGroups[id].length > 0 || stagesDef[id] !== undefined,
   );
 
-  const snapshotNodeIds = runState
-    ? Object.keys(runState.workflow_snapshot?.nodes ?? runState.nodes)
-    : allNodeIds;
+  const snapshotNodeIds = (
+    runState
+      ? Object.keys(runState.workflow_snapshot?.nodes ?? runState.nodes)
+      : allNodeIds
+  ).filter(
+    (id) =>
+      !isStageValidatorNodeId(id) &&
+      !runState?.workflow_snapshot?.nodes?.[id]?.meta?.superseded_by,
+  );
   const totalNodes = snapshotNodeIds.length;
   const completedNodes = runState
     ? snapshotNodeIds.filter((id) => runState.nodes[id]?.status === "SUCCESS")
@@ -94,11 +107,19 @@ export function StepperView({
   const activeCheckpoints = isRunActive && runState
     ? runState.checkpoints.filter((cp) => !cp.answered_at)
     : [];
+  const topLevelCheckpoints = activeCheckpoints.filter(
+    (cp) => !isStageValidatorNodeId(cp.node_id),
+  );
   const waitingStageIds = new Set(
     runState
-      ? Object.entries(runState.stage_gates)
-          .filter(([, g]) => isRunActive && g.status === "WAITING")
-          .map(([sid]) => sid)
+      ? [
+          ...Object.entries(runState.stage_gates)
+            .filter(([, g]) => isRunActive && g.status === "WAITING")
+            .map(([sid]) => sid),
+          ...activeCheckpoints
+            .map((cp) => extractValidatorStageId(cp.node_id))
+            .filter((sid): sid is string => Boolean(sid)),
+        ]
       : [],
   );
   const hasActiveFeedback =
@@ -173,14 +194,15 @@ export function StepperView({
         </div>
       )}
 
-      {/* Active Checkpoints */}
+      {/* Active Checkpoints (regular nodes) */}
       {isRunActive &&
         runState &&
-        activeCheckpoints.map((cp) => (
+        topLevelCheckpoints.map((cp) => (
           <CheckpointCard
             key={`${cp.node_id}-${cp.checkpoint_id}`}
             runId={runState.id}
             checkpoint={cp}
+            onAnswered={() => onCheckpointAnswered?.()}
           />
         ))}
 
@@ -189,6 +211,11 @@ export function StepperView({
         {stageIds.map((stageId) => {
           const stageDef: Stage | undefined = stagesDef[stageId];
           const gateState = runState?.stage_gates[stageId];
+          const valNid = stageValidatorNodeId(stageId);
+          const valState = runState?.nodes[valNid];
+          const valCheckpoints = runState
+            ? runState.checkpoints.filter((cp) => cp.node_id === valNid)
+            : [];
           const nodes = stageGroups[stageId];
           const isWaitingGate = waitingStageIds.has(stageId);
           const isDimmed = hasActiveFeedback && !isWaitingGate;
@@ -205,6 +232,8 @@ export function StepperView({
                 stageId={stageId}
                 stageDef={stageDef}
                 gateState={gateState}
+                validatorState={valState}
+                validatorCheckpoints={valCheckpoints}
                 runActive={Boolean(isRunActive)}
                 runDiff={runDiff}
                 nodes={nodes}
@@ -214,6 +243,7 @@ export function StepperView({
                 runInputs={runState?.run_inputs}
                 opsMap={opsMap}
                 onApproved={onApproved}
+                onCheckpointAnswered={onCheckpointAnswered}
               />
             </div>
           );
