@@ -1223,14 +1223,6 @@ textarea:read-only {
   background-color: rgba(24, 24, 24, 0.7);
 }
 
-.flow-node.is-new-in-run .flow-node-header {
-  background-color: rgba(35, 40, 45, 0.85);
-}
-
-.flow-node.is-new-in-run .flow-title-text {
-  color: var(--text-secondary);
-}
-
 .flow-node.is-new-in-run .flow-node-body,
 .flow-node.is-new-in-run .flow-node-widgets {
   opacity: 0.65;
