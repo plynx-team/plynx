@@ -32,6 +32,7 @@ from plynx_sdk.protocol import (
     ResultManifest,
     ResultValue,
     ScalarValue,
+    SideEffect,
     ValidatorMode,
     validate_batch_answers,
 )
@@ -1305,7 +1306,26 @@ class _RunExecution:
             return True
 
         # Step 3: Human confirmation gate when allow_graph_edits == GraphEditPolicy.CONFIRM
-        if pending.policy == GraphEditPolicy.CONFIRM:
+        # (or when an 'auto' patch attempts to inject external SideEffect.WRITE operations)
+        added_write_nodes = [
+            added_nid
+            for added_nid in mutation_res.added_node_ids
+            if added_nid in candidate_wf.nodes
+            and (op_ent := self.scheduler.registry.get(candidate_wf.nodes[added_nid].op))
+            is not None
+            and op_ent.side_effects == SideEffect.WRITE
+        ]
+        effective_patch_policy = pending.policy
+        if effective_patch_policy == GraphEditPolicy.AUTO and added_write_nodes:
+            effective_patch_policy = GraphEditPolicy.CONFIRM
+            await asyncio.to_thread(
+                self._append_gate_log_sync,
+                patch_nid,
+                f"Graph patch adds external write node(s) {added_write_nodes}; "
+                "requiring user confirmation despite allow_graph_edits='auto'.",
+            )
+
+        if effective_patch_policy == GraphEditPolicy.CONFIRM:
             if pending.existing_checkpoint is not None:
                 cp_id = pending.existing_checkpoint.checkpoint_id
                 cp_manifest = CheckpointManifest(

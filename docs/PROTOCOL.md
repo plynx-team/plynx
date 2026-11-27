@@ -87,7 +87,8 @@ class Concat(Op):
     """                                # cleaned docstring (inspect.cleandoc) = description
     TITLE = "Concat text"              # required, str literal
     CATEGORY = "Text / Basic"          # optional literal, default "Uncategorized"
-    CACHEABLE = True                   # optional literal bool, default True
+    CACHEABLE = True                   # optional literal bool, default True (False when SIDE_EFFECTS = SideEffect.WRITE)
+    SIDE_EFFECTS = SideEffect.NONE     # optional SideEffect or str literal ("none" | "read" | "write"), default "none"
 
     class Outputs(TypedDict):
         text: str
@@ -110,12 +111,13 @@ from plynx_sdk import op
 class ConcatOut(TypedDict):            # module-level TypedDict in the same file
     text: str
 
-@op(title="Concat text", category="Text / Basic", cacheable=True)
+@op(title="Concat text", category="Text / Basic", cacheable=True, side_effects="none")
 def concat(a: str, b: str = " ") -> ConcatOut:
     return {"text": a + b}
 ```
 
 - `@op(...)` arguments are literals. A single return annotation that is not a `TypedDict` (e.g. `-> str`) means one output named `result`.
+- External side-effect metadata (`SIDE_EFFECTS` / `side_effects`): Declarative author contract (not OS/network sandboxing) classifying external consequence as `SideEffect.NONE` (`"none"`, pure local `workdir/`), `SideEffect.READ` (`"read"`, external read-only query or LLM call), or `SideEffect.WRITE` (`"write"`, external state mutation or real-world action). Setting `SIDE_EFFECTS = SideEffect.WRITE` defaults `CACHEABLE` to `False`; combining `WRITE` with `CACHEABLE = True` is invalid (`valid: false` in the registry and an `error` in `plynx validate`). `plynx validate` emits a `warning` when a `WRITE` node lacks an upstream `require_approval: true` stage gate after its non-local upstream producers.
 - Port annotations allowed:
   - Primitives: `str`, `int`, `float`, `bool`, `dict`, `list`, `Path`, `Directory`.
   - Choices: `Literal["val1", "val2", ...]` (from `typing`; values must be str or int literals; yields `options` in registry).
@@ -124,7 +126,7 @@ def concat(a: str, b: str = " ") -> ConcatOut:
   - Optionals: `X | None` / `Optional[X]` of any of the above.
 - Defaults are literals. Port names are `snake_case`.
 - Variadic operations: An op can declare `ALLOW_EXTRA_INPUTS = True` (class form) or `@op(..., allow_extra_inputs=True)` (function form). Variadic inputs are declared via typed keyword arguments `**extra: <Type>` (e.g. `**tracks: AudioWav`). When enabled, the workflow engine accepts arbitrary named input ports matching `<Type>`.
-- Agent operations (`AgentOp` and `StageValidatorOp` subclasses): Default `ALLOW_EXTRA_INPUTS = True`, `agent_role = "agent" | "validator"`, and `ALLOW_GRAPH_EDITS = GraphEditPolicy.FORBIDDEN` (`AgentOp`) or `GraphEditPolicy.CONFIRM` (`StageValidatorOp`), exposed as `allow_graph_edits` on `OpEntry`. Subclasses may omit `def run()` (Choice A), inheriting `prompt_file: MarkdownFile | None = None`, `prompt: str = ""`, `provider: AgentProviderLiteral = "default"`, `model: str = ""`, and `**extra: Any`, or declare an explicit `def run(...)` (Choice B) with mandatory typed ports alongside standard agent ports (`StageValidatorOp` defaults `Outputs` to `{ summary: str }`). Inheritance from any base class outside `Op`, `AgentOp`, and `StageValidatorOp` or computed metadata is not supported.
+- Agent operations (`AgentOp` and `StageValidatorOp` subclasses): Default `ALLOW_EXTRA_INPUTS = True`, `SIDE_EFFECTS = SideEffect.READ`, `agent_role = "agent" | "validator"`, and `ALLOW_GRAPH_EDITS = GraphEditPolicy.FORBIDDEN` (`AgentOp`) or `GraphEditPolicy.CONFIRM` (`StageValidatorOp`), exposed as `allow_graph_edits` on `OpEntry`. Subclasses may omit `def run()` (Choice A), inheriting `prompt_file: MarkdownFile | None = None`, `prompt: str = ""`, `provider: AgentProviderLiteral = "default"`, `model: str = ""`, and `**extra: Any`, or declare an explicit `def run(...)` (Choice B) with mandatory typed ports alongside standard agent ports (`StageValidatorOp` defaults `Outputs` to `{ summary: str }`). Inheritance from any base class outside `Op`, `AgentOp`, and `StageValidatorOp` or computed metadata is not supported.
 
 Port type vocabulary (`type`): `str`, `int`, `float`, `bool`, `json` (`dict` or `list`), `file` (`Path`), `directory` (`Directory`).
 - `options`: list of allowed scalar literals for `Literal[...]`, or `null`.
@@ -138,6 +140,7 @@ Registry entry (served by `GET /api/v1/ops`, cached in `.plynx/registry_cache.js
 {
   "id": "standard_io/text:Concat", "pack": "standard_io", "module": "text", "name": "Concat",
   "kind": "class", "title": "Concat text", "category": "Text / Basic", "cacheable": true,
+  "side_effects": "none",
   "description": "Join two strings.\n\nSupports joining arbitrary strings with an optional delimiter.",
   "inputs": [
     {
@@ -310,7 +313,7 @@ Before launching a Stage Validator subprocess, the engine writes `stage_context.
 
 When a child exits `0` with `graph_patch.json` present:
 - `GraphEditPolicy.FORBIDDEN`: the engine rejects the attempt (`FAILED`).
-- `GraphEditPolicy.CONFIRM` / `AUTO`: the engine quiesces all active worker subprocesses, validates the candidate `workflow.snapshot.yaml` against all 4 mutation guardrails (`plynx validate`, `PENDING`-only / immutable `SUCCESS` nodes, Lineage Preservation `U -> [New Subgraph] -> V`, and cumulative `max_injected_nodes`), optionally opens a `["Approve Patch", "Reject"]` checkpoint (`CONFIRM`), writes the updated `workflow.snapshot.yaml` (leaving `workflows/<name>.yaml` untouched), archives `graph_patch.applied.json` (or `graph_patch.rejected.json`), and reloads `graphlib.TopologicalSorter`.
+- `GraphEditPolicy.CONFIRM` / `AUTO`: the engine quiesces all active worker subprocesses, validates the candidate `workflow.snapshot.yaml` against all 4 mutation guardrails (`plynx validate`, `PENDING`-only / immutable `SUCCESS` nodes, Lineage Preservation `U -> [New Subgraph] -> V`, and cumulative `max_injected_nodes`), opens a `["Approve Patch", "Reject"]` checkpoint when policy is `CONFIRM` (or when `AUTO` attempts to inject any `SideEffect.WRITE` node), writes the updated `workflow.snapshot.yaml` (leaving `workflows/<name>.yaml` untouched), archives `graph_patch.applied.json` (or `graph_patch.rejected.json`), and reloads `graphlib.TopologicalSorter`.
 
 ### Child exit codes
 
@@ -333,6 +336,7 @@ All are `enum.StrEnum`; use the members instead of raw strings. `ui/src/api/type
 | `AgentTurnStatus` | `completed`, `needs_input`, `propose_patch` |
 | `GraphEditPolicy` | `forbidden`, `confirm`, `auto` |
 | `ValidatorMode` | `on_anomaly`, `on_failure`, `always` |
+| `SideEffect` | `none`, `read`, `write` |
 | `AgentProvider` | `default`, `claude`, `cursor`, `codex`, `gemini`, `opencode`, `goose`, `aider`, `custom`, `mock` |
 
 ## 6. Cache key
@@ -473,7 +477,7 @@ Server binds `127.0.0.1` (or loopback host). CORS allows only the Vite dev origi
 | `plynx validate <workflow>` | static check, no code executed. Exit 0 ok, 1 issues |
 | `plynx run <workflow> [options]` | run in-process with `LocalExecutor` |
 | `plynx resume <run_id> [options]` | continue a failed, canceled, or waiting run, reusing completed node outputs |
-| `plynx run-node <node_dir> [--op <op>]` | re-run one node attempt from `node_dir` in a scratch copy without touching SQLite (reads op from snapshot if omitted) |
+| `plynx run-node <node_dir> [--op <op>] [--allow-side-effects]` | re-run one node attempt from `node_dir` in a scratch copy without touching SQLite (reads op from snapshot if omitted; blocks `side_effects='write'` ops unless `--allow-side-effects` is set) |
 | `plynx runs [run_id] [--limit N] [--workflow PATH] [--stats] [--json]` | list recent runs (with `[DRIFT]` alerts), inspect one run by full ID or unique prefix, or compute per-node execution & drift stats (`--stats`) |
 | `plynx ops [--json]` | list registered operations (table or full JSON schemas) |
 | `plynx clean [--days 14] [--dry-run]` | mark-and-sweep garbage collection of old unpinned runs and unreferenced blobs |

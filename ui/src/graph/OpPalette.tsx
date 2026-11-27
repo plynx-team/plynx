@@ -230,7 +230,11 @@ export function OpPalette({
                           readOnly
                             ? "Return to Working Draft (Editor) to add operations"
                             : op.valid
-                            ? `${getOpSummary(op.description, op.title)} (${op.id})`
+                            ? `${getOpSummary(op.description, op.title)} (${op.id})${
+                                op.side_effects === "write"
+                                  ? " — External write side effects"
+                                  : ""
+                              }`
                             : `Invalid op: ${op.error ?? "unknown error"}`
                         }
                         className="hub-item-node"
@@ -245,6 +249,19 @@ export function OpPalette({
                           }}
                         />
                         <span className="hub-item-node-text">{op.title}</span>
+                        {op.side_effects === "write" && (
+                          <span
+                            data-testid={`palette-op-write-${op.id}`}
+                            title="Mutates external state (side_effects='write')"
+                            className="shrink-0 rounded px-1 py-0 text-[9px] font-mono uppercase"
+                            style={{
+                              border: "1px solid var(--color-warning)",
+                              color: "var(--color-warning)",
+                            }}
+                          >
+                            write
+                          </span>
+                        )}
                         <FeatherIcon
                           name="help-circle"
                           size={12}

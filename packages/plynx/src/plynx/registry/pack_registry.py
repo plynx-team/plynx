@@ -18,7 +18,7 @@ from plynx.config import load_workspace_config
 from plynx.registry.extractor import extract_ops_from_file
 from plynx.store.run_store import atomic_write_text
 
-CACHE_SCHEMA_VERSION = 3
+CACHE_SCHEMA_VERSION = 4
 
 
 def find_workspace_root(start: Path | None = None) -> Path:

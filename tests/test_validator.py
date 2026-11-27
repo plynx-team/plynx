@@ -530,3 +530,162 @@ def test_all_curated_showcase_workflows_validate() -> None:
         issues = validate_workflow(wf, reg)
         errors = [issue for issue in issues if issue.severity == "error"]
         assert not errors, f"Workflow {name} had validation errors: {errors}"
+
+
+def test_validator_side_effects_write_checks() -> None:
+    """Validator errors on cached WRITE ops and warns on unguarded or post-gate-unapproved WRITE nodes."""
+    from plynx_sdk.protocol import SideEffect
+
+    reg = FakeRegistry(
+        ops=[
+            OpEntry(
+                id="ext/ops:PurePrep",
+                pack="ext",
+                module="ops",
+                name="PurePrep",
+                kind="class",
+                title="Pure Prep",
+                cacheable=True,
+                side_effects=SideEffect.NONE,
+                inputs=[InputPortSpec(name="raw", type="str", required=False, default="hi")],
+                outputs=[OutputPortSpec(name="text", type="str")],
+                source="ext/ops.py",
+            ),
+            OpEntry(
+                id="ext/ops:AgentDraft",
+                pack="ext",
+                module="ops",
+                name="AgentDraft",
+                kind="class",
+                agent_role="agent",
+                title="Agent Draft",
+                cacheable=True,
+                side_effects=SideEffect.READ,
+                inputs=[InputPortSpec(name="topic", type="str")],
+                outputs=[OutputPortSpec(name="body", type="str")],
+                source="ext/ops.py",
+            ),
+            OpEntry(
+                id="ext/ops:SendEmail",
+                pack="ext",
+                module="ops",
+                name="SendEmail",
+                kind="class",
+                title="Send Email",
+                cacheable=False,
+                side_effects=SideEffect.WRITE,
+                inputs=[InputPortSpec(name="body", type="str")],
+                outputs=[OutputPortSpec(name="sent", type="bool")],
+                source="ext/ops.py",
+            ),
+            OpEntry(
+                id="ext/ops:BrokenCachedWrite",
+                pack="ext",
+                module="ops",
+                name="BrokenCachedWrite",
+                kind="class",
+                title="Broken Cached Write",
+                cacheable=True,
+                side_effects=SideEffect.WRITE,
+                inputs=[],
+                outputs=[OutputPortSpec(name="ok", type="bool")],
+                source="ext/ops.py",
+            ),
+        ]
+    )
+
+    # 1. Contradictory WRITE + cacheable=True -> severity='error'
+    bad_cached_wf = Workflow.model_validate(
+        {
+            "version": 1,
+            "stages": {
+                "s1": {"require_approval": True},
+                "s2": {"require_approval": False},
+            },
+            "nodes": {
+                "prep": {"op": "ext/ops:PurePrep", "stage": "s1"},
+                "bad": {"op": "ext/ops:BrokenCachedWrite", "stage": "s2"},
+            },
+        }
+    )
+    bad_issues = validate_workflow(bad_cached_wf, reg)
+    assert any(
+        i.severity == "error" and i.node_id == "bad" and "cacheable=False" in i.message
+        for i in bad_issues
+    )
+
+    # 2. Unguarded single-stage WRITE -> severity='warning' (not error)
+    unguarded_wf = Workflow.model_validate(
+        {
+            "version": 1,
+            "nodes": {
+                "prep": {"op": "ext/ops:PurePrep"},
+                "send": {"op": "ext/ops:SendEmail", "inputs": {"body": "$prep.text"}},
+            },
+        }
+    )
+    unguarded_issues = validate_workflow(unguarded_wf, reg)
+    assert not [i for i in unguarded_issues if i.severity == "error"]
+    assert any(
+        i.severity == "warning" and i.node_id == "send" and "require_approval: true" in i.message
+        for i in unguarded_issues
+    )
+
+    # 3. Properly guarded WRITE (even with a pure SideEffect.NONE formatter in the final stage) -> zero warnings
+    guarded_wf = Workflow.model_validate(
+        {
+            "version": 1,
+            "stages": {
+                "draft": {"require_approval": True},
+                "deliver": {"require_approval": False},
+            },
+            "nodes": {
+                "draft_msg": {
+                    "op": "ext/ops:AgentDraft",
+                    "stage": "draft",
+                    "inputs": {"topic": "Q3 update"},
+                },
+                "format_msg": {
+                    "op": "ext/ops:PurePrep",
+                    "stage": "deliver",
+                    "inputs": {"raw": "$draft_msg.body"},
+                },
+                "send": {
+                    "op": "ext/ops:SendEmail",
+                    "stage": "deliver",
+                    "inputs": {"body": "$format_msg.text"},
+                },
+            },
+        }
+    )
+    assert validate_workflow(guarded_wf, reg) == []
+
+    # 4. Early Stage 1 approval followed by unapproved Stage 2 AgentDraft feeding Stage 3 SendEmail -> warning
+    stale_gate_wf = Workflow.model_validate(
+        {
+            "version": 1,
+            "stages": {
+                "intake": {"require_approval": True},
+                "draft": {"require_approval": False},
+                "deliver": {"require_approval": False},
+            },
+            "nodes": {
+                "prep": {"op": "ext/ops:PurePrep", "stage": "intake"},
+                "draft_msg": {
+                    "op": "ext/ops:AgentDraft",
+                    "stage": "draft",
+                    "inputs": {"topic": "$prep.text"},
+                },
+                "send": {
+                    "op": "ext/ops:SendEmail",
+                    "stage": "deliver",
+                    "inputs": {"body": "$draft_msg.body"},
+                },
+            },
+        }
+    )
+    stale_issues = validate_workflow(stale_gate_wf, reg)
+    assert any(
+        i.severity == "warning" and i.node_id == "send" and "'draft_msg'" in i.message
+        for i in stale_issues
+    )

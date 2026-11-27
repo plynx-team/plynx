@@ -179,6 +179,7 @@ export function StageCard({
             nodeId={node.id}
             nodeState={node.state}
             spec={node.spec}
+            opEntry={node.spec ? opsMap?.[node.spec.op] : undefined}
             nodeDiff={runDiff?.nodes?.[node.id]}
             isSelected={selectedNodeId === node.id}
             onSelect={onSelectNode}

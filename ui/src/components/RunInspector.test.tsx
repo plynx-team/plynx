@@ -37,6 +37,7 @@ const OPS: Array<OpEntry> = [
     title: "Echo",
     category: "Demo",
     cacheable: true,
+    side_effects: "none",
     description: "",
     inputs: [
       {

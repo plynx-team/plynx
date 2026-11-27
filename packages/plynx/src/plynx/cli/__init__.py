@@ -12,7 +12,7 @@ from typing import Any
 
 import click
 import uvicorn
-from plynx_sdk.protocol import AgentProvider
+from plynx_sdk.protocol import AgentProvider, SideEffect
 from pydantic import ValidationError
 
 from plynx.api_models import NodeStatus, RunStatus
@@ -479,7 +479,13 @@ def resume_cmd(
     default=None,
     help="Explicit op (<pack>/<module>:<Name>) if not using a run directory snapshot.",
 )
-def run_node_cmd(node_dir: Path, op_override: str | None) -> None:
+@click.option(
+    "--allow-side-effects",
+    is_flag=True,
+    default=False,
+    help="Allow executing operations that declare side_effects='write'.",
+)
+def run_node_cmd(node_dir: Path, op_override: str | None, allow_side_effects: bool) -> None:
     """Re-run one node attempt from NODE_DIR in a scratch copy without touching SQLite."""
     resolved_dir = node_dir.resolve()
     if not resolved_dir.is_dir():
@@ -516,6 +522,26 @@ def run_node_cmd(node_dir: Path, op_override: str | None) -> None:
             sys.exit(1)
 
     workspace_root = find_workspace_root(resolved_dir)
+    if (
+        workspace_root == resolved_dir
+        and not (resolved_dir / ".plynx").exists()
+        and not (resolved_dir / "plynx.yaml").is_file()
+    ):
+        workspace_root = find_workspace_root()
+    registry = PackRegistry(workspace_root)
+    op_entry = registry.get(op)
+    if (
+        op_entry is not None
+        and op_entry.side_effects == SideEffect.WRITE
+        and not allow_side_effects
+    ):
+        click.echo(
+            f"error: op '{op}' declares side_effects='write' (external state mutation). "
+            "Pass --allow-side-effects after confirming with the user.",
+            err=True,
+        )
+        sys.exit(1)
+
     executor = LocalExecutor(workspace_root)
 
     def _write_stdout(chunk: str) -> None:
@@ -740,8 +766,8 @@ def ops_cmd(as_json: bool) -> None:
         click.echo("No operations found.")
         return
 
-    headers = ("NAME", "PACK", "CATEGORY", "INPUTS", "OUTPUTS", "DESCRIPTION")
-    rows: list[tuple[str, str, str, str, str, str]] = []
+    headers = ("NAME", "PACK", "CATEGORY", "SIDE EFFECTS", "INPUTS", "OUTPUTS", "DESCRIPTION")
+    rows: list[tuple[str, str, str, str, str, str, str]] = []
     for op in ops:
         inputs_str = ", ".join(f"{p.name}: {p.type}" for p in op.inputs) or "-"
         outputs_str = ", ".join(f"{p.name}: {p.type}" for p in op.outputs) or "-"
@@ -750,6 +776,7 @@ def ops_cmd(as_json: bool) -> None:
                 op.name,
                 op.pack,
                 op.category,
+                op.side_effects.value,
                 inputs_str,
                 outputs_str,
                 op.description or "-",

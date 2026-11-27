@@ -58,6 +58,7 @@ from plynx.api_models import (
     RunStatusData,
     RunStatusEvent,
     RunSummary,
+    SideEffect,
     StageApprovalData,
     StageApprovalEvent,
     StageApproveRequest,
@@ -158,6 +159,7 @@ ENUM_TYPES: tuple[tuple[str, type[Any]], ...] = (
     ("StageGateStatus", StageGateStatus),
     ("AgentTurnStatus", AgentTurnStatus),
     ("GraphEditPolicy", GraphEditPolicy),
+    ("SideEffect", SideEffect),
     ("ValidatorMode", ValidatorMode),
     ("AgentProvider", AgentProvider),
 )

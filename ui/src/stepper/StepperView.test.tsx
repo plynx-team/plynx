@@ -243,4 +243,68 @@ describe("StepperView component (Task 6.3)", () => {
     const badge = screen.getByTestId("node-warnings-badge-n1");
     expect(badge.textContent).toContain("2 warnings");
   });
+
+  it("renders EXTERNAL WRITE badge on nodes whose op declares side_effects === 'write'", () => {
+    const writeWorkflowDoc: WorkflowDocument = {
+      workflow: {
+        version: 1,
+        name: "Webhook Flow",
+        stages: {
+          s1: { title: "1. Review", require_approval: true },
+          s2: { title: "2. Notify", require_approval: false },
+        },
+        nodes: {
+          prep: { op: "standard_io/demo:Echo", stage: "s1" },
+          notify: { op: "standard_io/http:HttpPostJson", stage: "s2" },
+        },
+      },
+    };
+    render(
+      <StepperView
+        runState={null}
+        workflowDoc={writeWorkflowDoc}
+        opsMap={{
+          "standard_io/demo:Echo": {
+            id: "standard_io/demo:Echo",
+            pack: "standard_io",
+            module: "demo",
+            name: "Echo",
+            kind: "class",
+            title: "Echo text",
+            category: "Core",
+            cacheable: true,
+            side_effects: "none",
+            description: "",
+            inputs: [],
+            outputs: [],
+            allow_extra_inputs: false,
+            source: "demo.py",
+            valid: true,
+          },
+          "standard_io/http:HttpPostJson": {
+            id: "standard_io/http:HttpPostJson",
+            pack: "standard_io",
+            module: "http",
+            name: "HttpPostJson",
+            kind: "class",
+            title: "HTTP POST JSON",
+            category: "Core / Network",
+            cacheable: false,
+            side_effects: "write",
+            description: "",
+            inputs: [],
+            outputs: [],
+            allow_extra_inputs: false,
+            source: "http.py",
+            valid: true,
+          },
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByTestId("stepper-badge-write-notify").textContent,
+    ).toContain("EXTERNAL WRITE");
+    expect(screen.queryByTestId("stepper-badge-write-prep")).toBeNull();
+  });
 });

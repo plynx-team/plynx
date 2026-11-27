@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TypedDict
 
-from plynx_sdk import AgentOp, MarkdownFile, StageValidatorOp
+from plynx_sdk import AgentOp, MarkdownFile, SideEffect, StageValidatorOp
 
 
 class AgentPrompt(AgentOp):
@@ -13,6 +13,7 @@ class AgentPrompt(AgentOp):
     TITLE = "Agent Prompt"
     CATEGORY = "Core / Agents"
     CACHEABLE = True
+    SIDE_EFFECTS = SideEffect.READ
 
     class Outputs(TypedDict):
         response: MarkdownFile
@@ -24,6 +25,7 @@ class StageSupervisor(StageValidatorOp):
     TITLE = "Stage Supervisor"
     CATEGORY = "Core / Agents"
     CACHEABLE = True
+    SIDE_EFFECTS = SideEffect.READ
 
 
 __all__ = [

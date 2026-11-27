@@ -12,9 +12,25 @@ from typing import Any, ClassVar, TypeVar
 from plynx_sdk.anomaly import warn as _warn
 from plynx_sdk.checkpoint import checkpoint as _checkpoint
 from plynx_sdk.checkpoint import checkpoint_batch as _checkpoint_batch
-from plynx_sdk.protocol import AnswerValue, CheckpointQuestion
+from plynx_sdk.protocol import AnswerValue, CheckpointQuestion, SideEffect
 
 F = TypeVar("F", bound=Callable[..., Any])
+
+
+def _coerce_side_effects(value: object, *, owner: str) -> SideEffect:
+    if isinstance(value, SideEffect):
+        return value
+    if isinstance(value, str) and not isinstance(value, bool):
+        try:
+            return SideEffect(value)
+        except ValueError as exc:
+            allowed = ", ".join(repr(m.value) for m in SideEffect)
+            raise ValueError(
+                f"{owner} side_effects must be one of {allowed}, got {value!r}"
+            ) from exc
+    raise ValueError(
+        f"{owner} side_effects must be a SideEffect or string literal, got {type(value).__name__}"
+    )
 
 
 @dataclass(frozen=True)
@@ -25,6 +41,7 @@ class OpMetadata:
     category: str = "Uncategorized"
     cacheable: bool = True
     allow_extra_inputs: bool = False
+    side_effects: SideEffect = SideEffect.NONE
 
     def __post_init__(self) -> None:
         if not isinstance(self.title, str) or not self.title.strip():
@@ -35,6 +52,13 @@ class OpMetadata:
             raise ValueError("op cacheable must be a bool")
         if not isinstance(self.allow_extra_inputs, bool):
             raise ValueError("op allow_extra_inputs must be a bool")
+        coerced_se = _coerce_side_effects(self.side_effects, owner="op")
+        object.__setattr__(self, "side_effects", coerced_se)
+        if coerced_se == SideEffect.WRITE and self.cacheable is True:
+            raise ValueError(
+                "op declares side_effects='write' with cacheable=True; "
+                "side-effecting write ops must set cacheable=False"
+            )
 
 
 class Op:
@@ -44,6 +68,26 @@ class Op:
     CATEGORY: ClassVar[str] = "Uncategorized"
     CACHEABLE: ClassVar[bool] = True
     ALLOW_EXTRA_INPUTS: ClassVar[bool] = False
+    SIDE_EFFECTS: ClassVar[SideEffect] = SideEffect.NONE
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        if "SIDE_EFFECTS" in cls.__dict__:
+            cls.SIDE_EFFECTS = _coerce_side_effects(
+                cls.__dict__["SIDE_EFFECTS"],
+                owner=cls.__name__,
+            )
+        if "CACHEABLE" in cls.__dict__ and not isinstance(cls.__dict__["CACHEABLE"], bool):
+            raise ValueError(f"{cls.__name__}.CACHEABLE must be a bool")
+        if cls.SIDE_EFFECTS == SideEffect.WRITE:
+            if "CACHEABLE" in cls.__dict__:
+                if cls.__dict__["CACHEABLE"] is True:
+                    raise ValueError(
+                        f"{cls.__name__} declares SIDE_EFFECTS='write' with CACHEABLE=True; "
+                        "side-effecting write ops must set CACHEABLE=False"
+                    )
+            else:
+                cls.CACHEABLE = False
 
     def checkpoint(
         self,
@@ -73,15 +117,19 @@ class Op:
 def op(
     title: str,
     category: str = "Uncategorized",
-    cacheable: bool = True,
+    cacheable: bool | None = None,
     allow_extra_inputs: bool = False,
+    side_effects: SideEffect | str = SideEffect.NONE,
 ) -> Callable[[F], F]:
     """Decorate a function as a PLynx operation."""
+    coerced_se = _coerce_side_effects(side_effects, owner="op")
+    resolved_cacheable = (coerced_se != SideEffect.WRITE) if cacheable is None else cacheable
     metadata = OpMetadata(
         title=title,
         category=category,
-        cacheable=cacheable,
+        cacheable=resolved_cacheable,
         allow_extra_inputs=allow_extra_inputs,
+        side_effects=coerced_se,
     )
 
     def _decorator(func: F) -> F:

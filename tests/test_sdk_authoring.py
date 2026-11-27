@@ -5,10 +5,11 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
-from typing import Annotated, Literal, TypedDict, get_args, get_origin
+from typing import Annotated, Any, Literal, TypedDict, get_args, get_origin
 
 import pytest
 from plynx_sdk import (
+    AgentOp,
     AudioWav,
     CheckpointInterrupt,
     CsvFile,
@@ -22,6 +23,8 @@ from plynx_sdk import (
     OpMetadata,
     PdfFile,
     Range,
+    SideEffect,
+    StageValidatorOp,
     TextFile,
     checkpoint,
     checkpoint_context,
@@ -177,3 +180,68 @@ assert not non_stdlib, f"Non-stdlib modules imported: {non_stdlib}"
         check=False,
     )
     assert proc.returncode == 0, f"stdout={proc.stdout}\nstderr={proc.stderr}"
+
+
+def test_side_effects_defaults_auto_cacheable_and_validation() -> None:
+    """SideEffect defaults cleanly, auto-sets CACHEABLE=False on WRITE, and rejects WRITE+CACHEABLE=True."""
+    assert SideEffect.NONE.value == "none"
+    assert SideEffect.READ.value == "read"
+    assert SideEffect.WRITE.value == "write"
+    assert Op.SIDE_EFFECTS == SideEffect.NONE
+    assert AgentOp.SIDE_EFFECTS == SideEffect.READ
+    assert StageValidatorOp.SIDE_EFFECTS == SideEffect.READ
+
+    class ReadIssues(Op):
+        TITLE = "Read Issues"
+        CACHEABLE = False
+        SIDE_EFFECTS = "read"  # type: ignore[assignment]
+
+        def run(self) -> dict[str, int]:
+            return {"count": 1}
+
+    assert ReadIssues.SIDE_EFFECTS == SideEffect.READ
+    assert ReadIssues.CACHEABLE is False
+
+    class SendWebhook(Op):
+        TITLE = "Send Webhook"
+        SIDE_EFFECTS = SideEffect.WRITE
+
+        def run(self) -> dict[str, bool]:
+            return {"ok": True}
+
+    assert SendWebhook.SIDE_EFFECTS == SideEffect.WRITE
+    assert SendWebhook.CACHEABLE is False
+
+    @op(title="Post Slack", side_effects=SideEffect.WRITE)
+    def post_slack(msg: str) -> str:
+        return msg
+
+    post_slack_any: Any = post_slack
+    fn_meta = post_slack_any.__plynx_op__
+    assert fn_meta.side_effects == SideEffect.WRITE
+    assert fn_meta.cacheable is False
+
+    with pytest.raises(ValueError, match="CACHEABLE=False"):
+
+        class InvalidCachedWrite(Op):
+            TITLE = "Bad Write"
+            CACHEABLE = True
+            SIDE_EFFECTS = SideEffect.WRITE
+
+            def run(self) -> dict[str, str]:
+                return {"ok": "no"}
+
+    with pytest.raises(ValueError, match="cacheable=False"):
+
+        @op(title="Bad Fn Write", cacheable=True, side_effects="write")
+        def bad_fn_write() -> str:
+            return "no"
+
+    with pytest.raises(ValueError, match="side_effects"):
+
+        class InvalidSideEffectValue(Op):
+            TITLE = "Invalid SE"
+            SIDE_EFFECTS = "destroy"  # type: ignore[assignment]
+
+            def run(self) -> dict[str, str]:
+                return {"ok": "no"}

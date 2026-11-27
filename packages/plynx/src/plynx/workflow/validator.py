@@ -6,6 +6,7 @@ import graphlib
 from pathlib import Path
 from typing import Any
 
+from plynx_sdk.protocol import SideEffect
 from pydantic import ValidationError
 
 from plynx.api_models import (
@@ -178,6 +179,17 @@ def _resolve_node_ops(
                 )
             )
             continue
+        if op_entry.side_effects == SideEffect.WRITE and op_entry.cacheable:
+            issues.append(
+                ValidationIssue(
+                    severity="error",
+                    node_id=node_id,
+                    message=(
+                        f"Node '{node_id}': op '{node.op}' declares side_effects='write' "
+                        "with cacheable=True; side-effecting write ops must set cacheable=False"
+                    ),
+                )
+            )
         if node.allow_graph_edits is not None and op_entry.agent_role is None:
             issues.append(
                 ValidationIssue(
@@ -509,6 +521,79 @@ def _validate_node_inputs(
                     )
 
 
+def _check_side_effect_gates(
+    workflow: Workflow,
+    node_ops: dict[str, OpEntry],
+    stage_index: dict[str, int],
+    dep_graph: dict[str, set[str]],
+    issues: list[ValidationIssue],
+) -> None:
+    stage_order = list(workflow.stages.keys())
+    ancestors: dict[str, set[str]] = {}
+    for nid in workflow.nodes:
+        visited: set[str] = set()
+        stack = list(dep_graph.get(nid, ()))
+        while stack:
+            cur = stack.pop()
+            if cur in visited or cur == nid:
+                continue
+            visited.add(cur)
+            stack.extend(dep_graph.get(cur, ()))
+        ancestors[nid] = visited
+
+    for node_id, node in workflow.nodes.items():
+        dst_op = node_ops.get(node_id)
+        if dst_op is None or dst_op.side_effects != SideEffect.WRITE:
+            continue
+
+        w_stage_idx = stage_index[node.stage]
+        prior_gate_indices = [
+            idx
+            for idx, sid in enumerate(stage_order[:w_stage_idx])
+            if workflow.stages[sid].require_approval
+        ]
+        if not prior_gate_indices:
+            issues.append(
+                ValidationIssue(
+                    severity="warning",
+                    node_id=node_id,
+                    message=(
+                        f"Node '{node_id}' ('{node.op}') has external write side effects "
+                        "(side_effects='write') without a preceding stage "
+                        "'require_approval: true' gate"
+                    ),
+                )
+            )
+            continue
+
+        latest_gate_idx = max(prior_gate_indices)
+        unguarded_upstream = [
+            u_nid
+            for u_nid in sorted(ancestors[node_id])
+            if stage_index[workflow.nodes[u_nid].stage] > latest_gate_idx
+            and (
+                stage_index[workflow.nodes[u_nid].stage] < w_stage_idx
+                or (
+                    node_ops.get(u_nid) is not None
+                    and node_ops[u_nid].side_effects != SideEffect.NONE
+                )
+            )
+        ]
+        if unguarded_upstream:
+            upstream_list = ", ".join(f"'{u}'" for u in unguarded_upstream)
+            issues.append(
+                ValidationIssue(
+                    severity="warning",
+                    node_id=node_id,
+                    message=(
+                        f"Node '{node_id}' ('{node.op}') has external write side effects "
+                        f"(side_effects='write') fed by unapproved upstream node(s) "
+                        f"{upstream_list} after the last 'require_approval: true' gate"
+                    ),
+                )
+            )
+
+
 def validate_workflow(
     workflow: Workflow,
     registry: OpRegistry,
@@ -546,6 +631,8 @@ def validate_workflow(
                 message=f"Node '{culprit}': cycle detected ({cycle_display})",
             )
         )
+    else:
+        _check_side_effect_gates(workflow, node_ops, stage_index, dep_graph, issues)
 
     return issues
 

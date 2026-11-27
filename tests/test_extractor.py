@@ -857,6 +857,118 @@ class IngestSupervisor(StageValidatorOp):
     assert supervisor.valid is True
     assert supervisor.agent_role == "validator"
     assert supervisor.allow_extra_inputs is True
+    assert supervisor.side_effects == "read"
     assert supervisor.category == "Agents / Validators"
     assert [p.name for p in supervisor.inputs] == ["prompt_file", "prompt", "provider", "model"]
     assert supervisor.outputs == [OutputPortSpec(name="summary", type="str")]
+    assert choice_a.side_effects == "read"
+    assert choice_b.side_effects == "read"
+
+
+def test_extract_side_effects_valid_and_invalid_forms() -> None:
+    """AST extractor parses SIDE_EFFECTS on classes/functions and marks invalid forms valid=False."""
+    src = """
+from typing import TypedDict
+from plynx_sdk import AgentOp, Op, SideEffect, op
+
+
+class PureOp(Op):
+    TITLE = "Pure"
+
+    def run(self, x: int) -> int:
+        return x
+
+
+class LiveReadOp(Op):
+    TITLE = "Live Read"
+    CACHEABLE = False
+    SIDE_EFFECTS = SideEffect.READ
+
+    def run(self, q: str) -> str:
+        return q
+
+
+class AutoNonCacheableWriteOp(Op):
+    TITLE = "Write Op"
+    SIDE_EFFECTS = SideEffect.WRITE
+
+    def run(self, payload: str) -> str:
+        return payload
+
+
+class MutatingAgentOp(AgentOp):
+    TITLE = "Mutating Agent"
+    SIDE_EFFECTS = "write"
+
+    class Outputs(TypedDict):
+        summary: str
+
+
+@op(title="Fn Write", side_effects="write")
+def fn_write(msg: str) -> str:
+    return msg
+
+
+class ContradictoryWriteOp(Op):
+    TITLE = "Bad Cached Write"
+    CACHEABLE = True
+    SIDE_EFFECTS = SideEffect.WRITE
+
+    def run(self, x: str) -> str:
+        return x
+
+
+@op(title="Bad Fn Cached Write", cacheable=True, side_effects=SideEffect.WRITE)
+def bad_fn_cached_write(x: str) -> str:
+    return x
+
+
+class ComputedSideEffectOp(Op):
+    TITLE = "Computed SE"
+    SIDE_EFFECTS = get_effect()
+
+    def run(self, x: str) -> str:
+        return x
+
+
+class UnknownSideEffectOp(Op):
+    TITLE = "Unknown SE"
+    SIDE_EFFECTS = "destructive"
+
+    def run(self, x: str) -> str:
+        return x
+"""
+    ops = extract_ops_from_source(src, pack="se_pack", module="ops")
+    by_name = {entry.name: entry for entry in ops}
+
+    assert by_name["PureOp"].valid is True
+    assert by_name["PureOp"].side_effects == "none"
+    assert by_name["PureOp"].cacheable is True
+
+    assert by_name["LiveReadOp"].valid is True
+    assert by_name["LiveReadOp"].side_effects == "read"
+    assert by_name["LiveReadOp"].cacheable is False
+
+    assert by_name["AutoNonCacheableWriteOp"].valid is True
+    assert by_name["AutoNonCacheableWriteOp"].side_effects == "write"
+    assert by_name["AutoNonCacheableWriteOp"].cacheable is False
+
+    assert by_name["MutatingAgentOp"].valid is True
+    assert by_name["MutatingAgentOp"].side_effects == "write"
+    assert by_name["MutatingAgentOp"].cacheable is False
+
+    assert by_name["fn_write"].valid is True
+    assert by_name["fn_write"].side_effects == "write"
+    assert by_name["fn_write"].cacheable is False
+
+    assert by_name["ContradictoryWriteOp"].valid is False
+    assert "CACHEABLE=False" in (by_name["ContradictoryWriteOp"].error or "")
+
+    assert by_name["bad_fn_cached_write"].valid is False
+    assert "cacheable=False" in (by_name["bad_fn_cached_write"].error or "")
+
+    assert by_name["ComputedSideEffectOp"].valid is False
+    assert "SIDE_EFFECTS" in (by_name["ComputedSideEffectOp"].error or "")
+
+    assert by_name["UnknownSideEffectOp"].valid is False
+    assert "destructive" in (by_name["UnknownSideEffectOp"].error or "")

@@ -815,6 +815,36 @@ export function NodeInspector({
                 {spec.op}
               </div>
             </div>
+            {opEntry && opEntry.side_effects && opEntry.side_effects !== "none" && (
+              <div className="ParameterItem">
+                <div className="ParameterNameCell">Side Effects</div>
+                <div
+                  data-testid="inspector-side-effects"
+                  className="ParameterValueCell flex items-center gap-1.5 text-xs"
+                >
+                  {opEntry.side_effects === "write" ? (
+                    <span
+                      className="status-badge !text-[10px] inline-flex items-center gap-1"
+                      style={{
+                        borderColor: "var(--color-warning)",
+                        color: "var(--color-warning)",
+                      }}
+                      title="Mutates external state; place after a require_approval stage gate"
+                    >
+                      <FeatherIcon name="upload-cloud" size={10} />
+                      <span>write (external)</span>
+                    </span>
+                  ) : (
+                    <span
+                      className="font-mono text-[11px]"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      {opEntry.side_effects}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
             <div className="ParameterItem">
               <label
                 htmlFor="inspector-node-title"

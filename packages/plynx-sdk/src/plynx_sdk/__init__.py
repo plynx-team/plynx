@@ -28,6 +28,7 @@ from plynx_sdk.protocol import (
     CheckpointQuestion,
     GraphEditPolicy,
     GraphPatchPayload,
+    SideEffect,
     ValidatorMode,
 )
 from plynx_sdk.types import (
@@ -73,6 +74,7 @@ __all__ = [
     "OpMetadata",
     "PdfFile",
     "Range",
+    "SideEffect",
     "StageValidatorOp",
     "TextFile",
     "ValidatorMode",

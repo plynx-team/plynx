@@ -535,3 +535,61 @@ def test_ask_choice_scheduler_replay(tmp_path: Path) -> None:
         (store.node_dir(state2.id, "choice") / "outputs.json").read_text(encoding="utf-8")
     )
     assert outputs.outputs["choice"] == ScalarValue(value="staging")
+
+
+def test_http_get_and_post_json_ops(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """HttpGetJson (READ) and HttpPostJson (WRITE) validate URLs and handle JSON payloads."""
+    import unittest.mock as mock
+
+    from standard_io.http import HttpGetJson, HttpPostJson
+
+    monkeypatch.chdir(tmp_path)
+    assert HttpGetJson.SIDE_EFFECTS == "read"
+    assert HttpGetJson.CACHEABLE is False
+    assert HttpPostJson.SIDE_EFFECTS == "write"
+    assert HttpPostJson.CACHEABLE is False
+
+    with pytest.raises(ValueError, match="http://"):
+        HttpGetJson().run("file:///etc/passwd")
+    with pytest.raises(ValueError, match="http://"):
+        HttpPostJson().run("ftp://example.com/hook", payload={"ok": True})
+
+    class _FakeResp:
+        def __init__(self, status: int, body: bytes) -> None:
+            self.status = status
+            self._body = body
+
+        def read(self) -> bytes:
+            return self._body
+
+        def __enter__(self) -> _FakeResp:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+    with mock.patch(
+        "urllib.request.urlopen",
+        return_value=_FakeResp(200, b'{"issues": [{"key": "PLX-1"}]}'),
+    ) as mock_open:
+        get_res = HttpGetJson().run("https://api.example.com/issues", headers={"X-Test": "1"})
+        assert get_res["status_code"] == 200
+        assert get_res["data"] == {"issues": [{"key": "PLX-1"}]}
+        assert Path(get_res["response_file"]).is_file()
+        req_sent = mock_open.call_args[0][0]
+        assert req_sent.get_method() == "GET"
+
+    with mock.patch(
+        "urllib.request.urlopen",
+        return_value=_FakeResp(201, b'{"delivered": true}'),
+    ) as mock_post:
+        post_res = HttpPostJson().run(
+            "https://hooks.example.com/notify",
+            payload={"message": "Deployment ready"},
+            method="POST",
+        )
+        assert post_res["status_code"] == 201
+        assert post_res["response_json"] == {"delivered": True}
+        post_req = mock_post.call_args[0][0]
+        assert post_req.get_method() == "POST"
+        assert json.loads(post_req.data.decode("utf-8")) == {"message": "Deployment ready"}

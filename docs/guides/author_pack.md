@@ -60,7 +60,12 @@ cd custom_packs/my_pack && uv lock
 
 ## 2. Defining Operations
 
-PLynx discovers operations via static AST parsing (pack code is never imported at discovery time). Metadata (`TITLE`, `CATEGORY`, `CACHEABLE`, `ALLOW_EXTRA_INPUTS`, and `@op(...)` arguments) and port defaults must be plain literals.
+PLynx discovers operations via static AST parsing (pack code is never imported at discovery time). Metadata (`TITLE`, `CATEGORY`, `CACHEABLE`, `ALLOW_EXTRA_INPUTS`, `SIDE_EFFECTS`, and `@op(...)` arguments) and port defaults must be plain literals (or `SideEffect.<MEMBER>`).
+
+Use `SIDE_EFFECTS` (`SideEffect.NONE`, `SideEffect.READ`, or `SideEffect.WRITE`) to declare whether an operation is safe to run in scratch debugging (`plynx run-node`):
+- `SideEffect.NONE` (default on `Op` / `@op`): pure local computation inside `workdir/`.
+- `SideEffect.READ` (default on `AgentOp` / `StageValidatorOp`): reads external APIs/state or calls LLMs without mutating external systems (combine with `CACHEABLE = False` for live queries).
+- `SideEffect.WRITE`: mutates external state (sending messages, webhooks, creating tickets, `git push`). Automatically defaults `CACHEABLE = False` (rejects `CACHEABLE = True`) and blocks `plynx run-node` unless `--allow-side-effects` is passed.
 
 ### Function Form (`@op`)
 

@@ -57,6 +57,7 @@ const MOCK_OPS: Array<OpEntry> = [
     title: "Echo text",
     category: "Demo",
     cacheable: true,
+    side_effects: "none",
     description: "Echo an input string.",
     inputs: [
       {
@@ -86,6 +87,7 @@ const MOCK_OPS: Array<OpEntry> = [
     title: "Concat text",
     category: "Text / Basic",
     cacheable: true,
+    side_effects: "none",
     description: "Join two strings.",
     inputs: [
       {

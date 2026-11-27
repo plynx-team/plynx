@@ -52,6 +52,7 @@ from plynx_sdk.protocol import (
     InputsManifest,
     JsonValue,
     ProtocolError,
+    SideEffect,
 )
 from plynx_sdk.types import DirectoryMarker, MarkdownFile, Media, Range
 
@@ -697,6 +698,7 @@ class AgentOp(Op):
     CATEGORY: ClassVar[str] = "Uncategorized"
     CACHEABLE: ClassVar[bool] = True
     ALLOW_EXTRA_INPUTS: ClassVar[bool] = True
+    SIDE_EFFECTS: ClassVar[SideEffect] = SideEffect.READ
     ALLOW_GRAPH_EDITS: ClassVar[GraphEditPolicy] = GraphEditPolicy.FORBIDDEN
     TIMEOUT_SECONDS: ClassVar[int | None] = None
 

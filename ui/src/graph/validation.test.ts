@@ -17,6 +17,7 @@ const OPS_MAP: Record<string, OpEntry> = {
     title: "String Output",
     category: "Test",
     cacheable: true,
+    side_effects: "none",
     description: "",
     inputs: [
       {
@@ -51,6 +52,7 @@ const OPS_MAP: Record<string, OpEntry> = {
     title: "Consumer",
     category: "Test",
     cacheable: true,
+    side_effects: "none",
     description: "",
     inputs: [
       {
