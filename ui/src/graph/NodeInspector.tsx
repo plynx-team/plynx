@@ -13,7 +13,10 @@ import {
   getPortIconColor,
   getPortIconName,
 } from "../components/FeatherIcon";
-import { detectPreviewKind } from "../previewers/ArtifactPreviewDialog";
+import {
+  detectPreviewKind,
+  unwrapScalarOutput,
+} from "../previewers/ArtifactPreviewDialog";
 import { CheckpointCard } from "../stepper/CheckpointCard";
 import { CsvPreviewer } from "../previewers/CsvPreviewer";
 import { ImagePreviewer } from "../previewers/ImagePreviewer";
@@ -177,6 +180,14 @@ function InlineOutputPreview({ target }: { target: ArtifactPreviewTarget }) {
     return null;
   }
 
+  const unwrapped =
+    content !== null && (kind === "json" || kind === "text")
+      ? unwrapScalarOutput(content)
+      : { text: content ?? "", isScalarPrimitive: false };
+  const effectiveKind =
+    kind === "json" && unwrapped.isScalarPrimitive ? "text" : kind;
+  const displayContent = unwrapped.text;
+
   return (
     <div
       data-testid={`inline-output-preview-${target.title}`}
@@ -186,25 +197,26 @@ function InlineOutputPreview({ target }: { target: ArtifactPreviewTarget }) {
         border: "1px solid var(--border-subtle)",
       }}
     >
-      {kind === "image" && <ImagePreviewer url={target.url} alt={target.title} />}
-      {kind === "audio" && (
+      {effectiveKind === "image" && (
+        <ImagePreviewer url={target.url} alt={target.title} />
+      )}
+      {effectiveKind === "audio" && (
         <audio controls src={target.url} className="w-full my-1" />
       )}
-      {kind === "csv" && content !== null && (
+      {effectiveKind === "csv" && content !== null && (
         <CsvPreviewer content={content} delimiter="," />
       )}
-      {kind === "tsv" && content !== null && (
+      {effectiveKind === "tsv" && content !== null && (
         <CsvPreviewer content={content} delimiter="\t" />
       )}
-      {kind === "json" && content !== null && (
-        <JsonPreviewer content={content} />
+      {effectiveKind === "json" && content !== null && (
+        <JsonPreviewer content={displayContent} />
       )}
-      {kind === "markdown" && content !== null && (
+      {effectiveKind === "markdown" && content !== null && (
         <MarkdownPreviewer content={content} />
       )}
-      {(kind === "text" || kind === "pdf") && content !== null && (
-        <TextPreviewer content={content} />
-      )}
+      {(effectiveKind === "text" || effectiveKind === "pdf") &&
+        content !== null && <TextPreviewer content={displayContent} />}
     </div>
   );
 }
