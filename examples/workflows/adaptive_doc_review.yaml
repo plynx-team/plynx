@@ -1,0 +1,33 @@
+version: 1
+name: adaptive_doc_review
+description: "Showcase workflow demonstrating self.warn() anomaly detection, StageSupervisor bounded graph repair, and batch multi-question checkpoint_batch()."
+stages:
+  ingest:
+    title: "1. Ingest Document"
+    require_approval: false
+    validator:
+      op: standard_io/agent:StageSupervisor
+      mode: on_anomaly
+      allow_graph_edits: confirm
+      inputs:
+        prompt: >-
+          If ingest_doc emits a non-English language warning (lang=fr), propose a graph_patch
+          that adds node translate_doc (op: doc_review/ops:TranslateToEnglish, stage: ingest,
+          inputs: {text: $ingest_doc.text}) and rewires compile_brief.text to $translate_doc.text.
+  review:
+    title: "2. Review & Report"
+    require_approval: false
+nodes:
+  ingest_doc:
+    op: doc_review/ops:InspectDocument
+    title: "Inspect Incoming Document"
+    stage: ingest
+    inputs:
+      document_text: "Bonjour equipe. Rapport trimestriel: les revenus ont augmente de 14 pour cent grace aux renouvellements entreprises. Merci."
+  compile_brief:
+    op: doc_review/ops:CompileReviewBrief
+    title: "Compile Review Brief"
+    stage: review
+    inputs:
+      text: $ingest_doc.text
+      title: "Quarterly Document Review"

@@ -7,6 +7,7 @@ dependencies = []
 
 [dependency-groups]
 dev = [
+    "doc-review",
     "httpx>=0.27",
     "media-studio",
     "mypy>=1.10",
@@ -27,6 +28,7 @@ default-groups = ["dev"]
 members = ["packages/*", "builtin_packs/*", "examples/custom_packs/*"]
 
 [tool.uv.sources]
+doc-review = { workspace = true }
 media-studio = { workspace = true }
 pedalboard-studio = { workspace = true }
 plynx = { workspace = true }
@@ -52,6 +54,7 @@ mypy_path = [
     "packages/plynx-sdk/src",
     "packages/plynx/src",
     "builtin_packs/standard_io/src",
+    "examples/custom_packs/doc_review/src",
     "examples/custom_packs/media_studio/src",
     "examples/custom_packs/podcast_studio/src",
     "examples/custom_packs/pedalboard_studio/src",

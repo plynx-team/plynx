@@ -50,6 +50,7 @@ build-backend = "hatchling.build"
 artifacts = [
     "src/plynx/static/**",
     "src/plynx/builtin_packs/**",
+    "src/plynx/skills/**",
     "src/plynx/AGENT_GUIDE.md",
 ]
 

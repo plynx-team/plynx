@@ -5,7 +5,7 @@ Self-contained reference for AI coding agents working in a PLynx workspace. Prin
 ## 1. Quick Workflow Loop
 
 ```bash
-# 1. Initialize workspace (creates .plynx/, workflows/, custom_packs/, plynx.yaml)
+# 1. Initialize workspace (creates .plynx/, workflows/, custom_packs/, plynx.yaml, .agents/skills/)
 plynx init
 
 # 2. Inspect all available operations and exact port schemas (always do this first)
@@ -17,22 +17,23 @@ plynx validate workflows/my_flow.yaml
 # 4. Run a workflow (use --non-interactive in automated sessions)
 plynx run --non-interactive workflows/my_flow.yaml
 
-# 5. Inspect runs and logs
+# 5. Inspect runs, logs, and execution telemetry
 plynx runs
 plynx runs <run_id>
+plynx runs --stats
 ```
 
 ## 2. CLI Commands & Exit Codes
 
 | Command | Purpose |
 | :--- | :--- |
-| `plynx init [dir]` | Initialize `.plynx/`, `workflows/`, `custom_packs/`, `plynx.yaml`, `.gitignore`. |
+| `plynx init [dir]` | Initialize `.plynx/`, `workflows/`, `custom_packs/`, `plynx.yaml`, `.agents/skills/plynx-create-workflow/SKILL.md`, and `.gitignore`. |
 | `plynx ops [--json]` | List discovered built-in (`standard_io`) and custom ops. Use `--json` for full port schemas. |
-| `plynx validate <workflow.yaml>` | Statically validate schema, DAG cycles, op IDs, port types/media, stage order, and `uv.lock`. |
-| `plynx run <workflow.yaml> [opts]` | Execute a workflow. Options: `--set node.port=val` (scalars), `--input node.port=path` (files/dirs), `--answer node.cp_n=val`, `--answers file.json`, `--concurrency N`, `--agent-provider <p>`, `--agent-model <m>`, `--non-interactive`, `--no-cache`. |
-| `plynx resume <run_id> [opts]` | Continue a failed, canceled, or waiting run, reusing completed node outputs. Options: `--answer`, `--answers`, `--concurrency`, `--agent-provider`, `--agent-model`, `--non-interactive`. |
+| `plynx validate <workflow.yaml>` | Statically validate schema, DAG cycles, op IDs, port types/media, stage validators, stage order, and `uv.lock`. |
+| `plynx run <workflow.yaml> [opts]` | Execute a workflow. Options: `--set node.port=val` (scalars), `--input node.port=path` (files/dirs), `--answer node.cp_n=val`, `--answers file.json`, `--concurrency N`, `--agent-provider <p>`, `--agent-model <m>`, `--max-injected-nodes N`, `--non-interactive`, `--no-cache`. |
+| `plynx resume <run_id> [opts]` | Continue a failed, canceled, or waiting run, reusing completed node outputs and validating any edits made to `.plynx/runs/<run_id>/workflow.snapshot.yaml`. Options: `--answer`, `--answers`, `--concurrency`, `--agent-provider`, `--agent-model`, `--max-injected-nodes N`, `--non-interactive`. |
 | `plynx run-node <node_dir> [--op <op>]` | Re-run a single node attempt in a scratch copy without touching SQLite or the original directory. Streams stdout/stderr and exits with the child exit code. |
-| `plynx runs [run_id] [--limit N]` | List recent runs or inspect one run by ID or unique prefix. |
+| `plynx runs [run_id] [--limit N] [--workflow PATH] [--stats] [--json]` | List recent runs (with `[DRIFT]` alerts), inspect one run by ID or unique prefix, or report per-node execution stats, cache-hit rates, and dynamic injections (`--stats`). |
 | `plynx clean [--days 14] [--dry-run]` | Delete old unpinned runs and unreferenced cache blobs. |
 | `plynx ui [--port 8080] [--host 127.0.0.1] [--no-browser]` | Start local web UI and REST/SSE API. |
 | `plynx agent-guide` | Print this reference to stdout. |
@@ -40,10 +41,19 @@ plynx runs <run_id>
 Exit codes for `plynx run` and `plynx resume`:
 - `0`: `SUCCESS`
 - `1`: `FAILED` (or CLI/validation error)
-- `2`: `WAITING_FOR_USER` (blocked on a checkpoint, missing input, or stage approval gate in `--non-interactive` mode)
+- `2`: `WAITING_FOR_USER` (blocked on a checkpoint, missing input, patch approval, or stage approval gate in `--non-interactive` mode)
 - `130`: `CANCELED`
 
-## 3. `workflow.yaml` Schema
+## 3. Workflow Design & Granularity Heuristics
+
+Follow these heuristics when designing or refactoring PLynx workflows:
+
+1. **Reuse Before Authoring (`plynx ops --json` first)**: Always inspect built-in `standard_io` ops (including `standard_io/agent:AgentPrompt` and `standard_io/agent:StageSupervisor`) and existing `custom_packs/` ops before writing new Python ops.
+2. **Goldilocks Granularity (Typically 3–8 Nodes Across 2–4 Stages)**: Never write a 1-node monolith script (which defeats Stepper visibility and intermediate CAS caching), and never create 25 tiny 2-line micro-nodes (which adds UI clutter and subprocess startup overhead). Each node should represent one coherent, human-understandable step.
+3. **Cache-Boundary Splitting**: Separate expensive or slow steps (`AgentOp` LLM calls, PDF parsing, media rendering, network I/O) from fast deterministic formatting so downstream tweaks hit `plynx-cache-1` in 0 ms.
+4. **Regression Testing Refactored Ops with `plynx run-node`**: When consolidating or refactoring Python ops in `custom_packs/`, replay historical `.plynx/runs/<run_id>/nodes/<node_id>` directories via `plynx run-node` to verify corner cases before updating `workflows/<name>.yaml`.
+
+## 4. `workflow.yaml` Schema
 
 ```yaml
 version: 1
@@ -52,6 +62,12 @@ stages:
   prepare:
     title: "1. Prepare"
     require_approval: false
+    validator:
+      op: standard_io/agent:StageSupervisor
+      mode: on_anomaly
+      allow_graph_edits: confirm
+      inputs:
+        prompt: "If any node emitted a warning, propose a bounded adapter splice before finish."
   finish:
     title: "2. Finish"
 nodes:
@@ -70,7 +86,10 @@ nodes:
 
 Rules:
 - `nodes` is a top-level mapping of node IDs (`^[a-z][a-z0-9_]*$`). Never nest `nodes:` inside `stages:`.
-- `stages` is an optional top-level mapping (`stage_id: { title?, require_approval? }`). Edges must stay in the same stage or point to a later stage.
+- `stages` is an optional top-level mapping (`stage_id: { title?, require_approval?, validator? }`). Edges must stay in the same stage or point to a later stage.
+- `stages.<stage_id>.validator` attaches a `StageValidatorOp` (such as `standard_io/agent:StageSupervisor`) materialized as reserved node `__stage_validator__<stage_id>`:
+  - `mode`: `on_anomaly` (default; 0 ms skip unless a stage node calls `self.warn()` or fails), `on_failure`, or `always`.
+  - `allow_graph_edits`: `confirm` (default; pauses for human `[Approve Patch / Reject]`), `auto`, or `forbidden`.
 - `op` is `<pack>/<module>:<Name>` (copy the exact `id` from `plynx ops --json`).
 - `inputs` values:
   - Wiring reference: `$<node_id>.<output_name>` or `{ from_node: <node_id>, output: <output_name> }`.
@@ -78,7 +97,22 @@ Rules:
   - Literal starting with `$`: escape with `$$` (e.g. `$$PATH`).
 - Any required input port omitted from `inputs:` becomes an unbound run input: pass scalars with `--set node.port=value` and files/directories with `--input node.port=path`.
 
-## 4. Debugging Failed Nodes
+## 5. Agentic Execution, Credentials & Dynamic DAG Repair
+
+- **Built-in Agent Ops**:
+  - `standard_io/agent:AgentPrompt`: Choice A `AgentOp` accepting `prompt_file`, `prompt`, `provider`, `model`, and variadic `**extra` inputs, returning `response: MarkdownFile`.
+  - `standard_io/agent:StageSupervisor`: `StageValidatorOp` inspecting `stage_context.json` (`outputs.json`, `warnings`, `stdout`/`stderr` tails, `workflow.snapshot.yaml`, and `plynx ops` schemas) and optionally proposing a bounded `graph_patch`.
+- **Provider & Model Resolution** (lowest to highest precedence, written into `inputs.json` before `plynx-cache-1` hashing):
+  1. `plynx.yaml` `agent: { provider, model, agent_concurrency, max_injected_nodes, models, custom_command }` (or `PLYNX_AGENT_PROVIDER` / `PLYNX_AGENT_MODEL`).
+  2. `workflow.yaml` top-level `agent: { provider, model }`.
+  3. CLI `--agent-provider` / `--agent-model`.
+  4. Node input port `provider` / `model` (or `--set node.provider=...` / `--set node.model=...`).
+- **Credentials**: Coding-agent CLIs (`claude`, `cursor-agent`, `codex`, `gemini`, `opencode`, `goose`, `aider`) use either their existing host CLI login session (inherited via `HOME`) or API keys in a gitignored workspace `.env` file (or host environment, controlled by `env_passthrough` in `plynx.yaml`). Never write secrets to workflows, snapshots, outputs, or logs. See `docs/guides/agentic_workflows.md` for per-provider setup details.
+- **Dynamic DAG Reload & Outer-Agent Edits**:
+  - Graph patches (or manual edits to `.plynx/runs/<run_id>/workflow.snapshot.yaml` while paused, followed by `plynx resume <run_id>`) are validated by `validate_snapshot_mutation`: static `plynx validate` passes, `SUCCESS`/`RUNNING` nodes are untouched, upstream lineage (`U -> [New Subgraph] -> V`) is preserved, and injected nodes stay within `max_injected_nodes` (default `3`).
+  - Baseline `workflows/<name>.yaml` is never mutated automatically; recurring splices across runs trigger `[DRIFT]` alerts in `plynx runs` and `plynx runs --stats`.
+
+## 6. Debugging Failed Nodes
 
 1. Inspect the run and stderr log:
    ```bash
@@ -94,7 +128,7 @@ Rules:
    plynx resume <run_id>
    ```
 
-## 5. Adding a Custom Node Pack
+## 7. Adding a Custom Node Pack
 
 Create `custom_packs/<pack_name>/` with `pyproject.toml`, `uv.lock` (`cd custom_packs/<pack_name> && uv lock`), and `src/<pack_name>/<module>.py`. Packs depend on `plynx-sdk` (never `plynx`).
 
@@ -145,6 +179,6 @@ Key pack authoring rules:
 - **Filesystem rules**: Inputs are read-only; write outputs only inside `workdir/` (current working directory) and return relative `Path` objects. Keep JSON/scalar outputs under 1 MiB.
 - **Checkpoints**: `self.checkpoint(question, options=[...], allow_freeform=False)` replays the node from the start of `run()` once answered. Keep work before `checkpoint()` idempotent and never catch `BaseException` around it.
 - **Batch checkpoints**: when you need several answers, ask once with `self.checkpoint_batch([CheckpointQuestion(id="role", question="Target track?", options=["ML", "Backend"]), {"id": "skills", "question": "Skills?", "options": [...], "multi_select": True}])`. It returns `{id: str | list[str]}` (`list[str]` for `multi_select`). The id `default` is reserved. Supply answers in non-interactive runs with `--answers file.json` (`{"node.cp_0": {"role": "ML", "skills": ["sql"]}}`) or `--answer node.cp_0.role=ML` (repeat the flag for a `multi_select` list).
-- **Warnings**: call `self.warn("message")` (or `plynx_sdk.warn(...)` in `@op` functions) for a non-fatal data anomaly. The op still exits 0; the messages are stored in `warnings` of `outputs.json` and `result.json`.
-- **Agent operations (`AgentOp`)**: Subclass `AgentOp` (defaults `ALLOW_EXTRA_INPUTS = True`) either without overriding `run()` (Choice A: inherits `prompt_file`, `prompt`, `provider`, `model`, `**extra` and materializes `class Outputs(TypedDict)` automatically) or with an explicit `def run(...)` calling `self.run_agent(...)` / `self.agent_turn(...)` (Choice B). Turns record to `nodes/<node_id>/agent_turns.json` so answering a `checkpoint_batch()` replays prior turns in 0 tokens.
-- **Caching**: Cache keys hash op entrypoint, op source file bytes, pack `uv.lock`, input hashes, scalar params, and checkpoint answers (not shared helper files or env vars). Run `plynx run --no-cache` after editing shared helpers; set `CACHEABLE = False` for non-deterministic ops.
+- **Warnings**: call `self.warn("message")` (or `plynx_sdk.warn(...)` in `@op` functions) for a non-fatal data anomaly. The op still exits 0; the messages are stored in `warnings` of `outputs.json` and `result.json` and trigger `on_anomaly` stage validators.
+- **Agent operations (`AgentOp` / `StageValidatorOp`)**: Subclass `AgentOp` (defaults `ALLOW_EXTRA_INPUTS = True`) either without overriding `run()` (Choice A: inherits `prompt_file`, `prompt`, `provider`, `model`, `**extra` and materializes `class Outputs(TypedDict)` automatically) or with an explicit `def run(...)` calling `self.run_agent(...)` / `self.agent_turn(...)` (Choice B). Turns record to `nodes/<node_id>/agent_turns.json` so answering a `checkpoint_batch()` replays prior turns in 0 tokens.
+- **Caching**: Cache keys hash op entrypoint, op source file bytes, pack `uv.lock`, input hashes, scalar params (including resolved `provider` and `model`), and checkpoint answers (not shared helper files or env vars). Run `plynx run --no-cache` after editing shared helpers; set `CACHEABLE = False` for non-deterministic ops.

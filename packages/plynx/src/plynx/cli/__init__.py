@@ -130,6 +130,15 @@ def init_cmd(target_dir: Path | None) -> None:
             encoding="utf-8",
         )
 
+    bundled_skill = (
+        Path(__file__).resolve().parent.parent / "skills" / "plynx-create-workflow" / "SKILL.md"
+    )
+    if bundled_skill.is_file():
+        target_skill = dest / ".agents" / "skills" / "plynx-create-workflow" / "SKILL.md"
+        if not target_skill.is_file():
+            target_skill.parent.mkdir(parents=True, exist_ok=True)
+            target_skill.write_text(bundled_skill.read_text(encoding="utf-8"), encoding="utf-8")
+
     git_root: Path | None = None
     for candidate in [dest, *dest.parents]:
         if (candidate / ".git").exists():

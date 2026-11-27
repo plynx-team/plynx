@@ -23,6 +23,7 @@ DOC_FILES: list[Path] = [
     ROOT / "docs" / "AGENT_GUIDE.md",
     ROOT / "docs" / "guides" / "create_workflow.md",
     ROOT / "docs" / "guides" / "author_pack.md",
+    ROOT / "docs" / "guides" / "agentic_workflows.md",
     ROOT / "docs" / "guides" / "debug_failed_node.md",
 ]
 
@@ -105,6 +106,10 @@ def test_agent_guide_cli_and_blank_repo_workflow_loop(
     assert guide_res.exit_code == 0, guide_res.output
     expected_guide = (ROOT / "docs" / "AGENT_GUIDE.md").read_text(encoding="utf-8")
     assert guide_res.output == expected_guide
+    assert "Workflow Design & Granularity Heuristics" in guide_res.output
+    assert "Reuse Before Authoring" in guide_res.output
+    assert "Goldilocks Granularity" in guide_res.output
+    assert "Cache-Boundary Splitting" in guide_res.output
 
     # 2. Initialize blank workspace
     init_res = runner.invoke(cli_main, ["init"])
@@ -113,6 +118,12 @@ def test_agent_guide_cli_and_blank_repo_workflow_loop(
     assert (tmp_path / "workflows").is_dir()
     assert (tmp_path / "custom_packs").is_dir()
     assert (tmp_path / "plynx.yaml").is_file()
+    skill_path = tmp_path / ".agents" / "skills" / "plynx-create-workflow" / "SKILL.md"
+    assert skill_path.is_file()
+    skill_text = skill_path.read_text(encoding="utf-8")
+    assert "name: plynx-create-workflow" in skill_text
+    assert "plynx agent-guide" in skill_text
+    assert "plynx ops --json" in skill_text
 
     # 3. Inspect ops --json
     ops_res = runner.invoke(cli_main, ["ops", "--json"])
@@ -121,6 +132,8 @@ def test_agent_guide_cli_and_blank_repo_workflow_loop(
     op_ids = {op["id"] for op in ops_list}
     assert "standard_io/interactive:AskChoice" in op_ids
     assert "standard_io/demo:Echo" in op_ids
+    assert "standard_io/agent:AgentPrompt" in op_ids
+    assert "standard_io/agent:StageSupervisor" in op_ids
 
     # 4. Extract starter workflow from README.md, write to workflows/hello.yaml, validate & run
     readme_yaml_blocks = [

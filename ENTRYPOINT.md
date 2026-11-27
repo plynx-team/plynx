@@ -48,11 +48,11 @@ Track progress against this ordered checklist:
   - [x] 4.5 Support outer coding agent snapshot edits (`FEAT-AGT-3`): when a paused run's `.plynx/runs/<run_id>/workflow.snapshot.yaml` is edited and `plynx resume <run_id>` is called, run `validate_snapshot_mutation(...)` and reload the DAG.
   - [x] 4.6 Add Stage Validator UI across Graph (`StageGroupNode` validator pill), Stepper (`StageCard` validator row + `[Approve Patch / Reject]` diff card), `.PropertiesBar` (validator editor), and `RunInspector` (`"Added by Agent"` badge + client-side layout toggle: *"Original Layout (+ Auto-place Added Nodes)"* vs. *"Re-Layout Full Run DAG"*).
   - [x] 4.7 Add Baseline Drift Detection & execution stats (`plynx runs --stats` / UI drift banner when the same `(injected_op, upstream_op, downstream_op)` splice recurs in $K$ of the last $N$ runs).
-- [ ] **Phase 5 — `FEAT-AGT-4` & Built-in Showcase: `standard_io/agent`, Thin-Shim Skills, `AGENT_GUIDE.md` Heuristics, & Example Workflow**
-  - [ ] 5.1 Add `standard_io/agent:AgentPrompt` and `standard_io/agent:StageSupervisor` to `builtin_packs/standard_io/`.
-  - [ ] 5.2 Update `AGENT_GUIDE.md` (`plynx agent-guide`) with the **Workflow Design & Granularity Heuristics** and new `v2.1.0` capabilities.
-  - [ ] 5.3 Bundle `plynx-create-workflow/SKILL.md` in `packages/plynx/src/plynx/skills/` and materialize thin-shim `.agents/skills/plynx-create-workflow/SKILL.md` during `plynx init`.
-  - [ ] 5.4 Add an end-to-end showcase workflow in `examples/workflows/` demonstrating `self.warn()`, `StageSupervisor` graph repair, and batch multi-question `checkpoint()`.
+- [x] **Phase 5 — `FEAT-AGT-4` & Built-in Showcase: `standard_io/agent`, Thin-Shim Skills, `AGENT_GUIDE.md` Heuristics, & Example Workflow**
+  - [x] 5.1 Add `standard_io/agent:AgentPrompt` and `standard_io/agent:StageSupervisor` to `builtin_packs/standard_io/`.
+  - [x] 5.2 Update `AGENT_GUIDE.md` (`plynx agent-guide`) with the **Workflow Design & Granularity Heuristics** and new `v2.1.0` capabilities.
+  - [x] 5.3 Bundle `plynx-create-workflow/SKILL.md` in `packages/plynx/src/plynx/skills/` and materialize thin-shim `.agents/skills/plynx-create-workflow/SKILL.md` during `plynx init`.
+  - [x] 5.4 Add an end-to-end showcase workflow in `examples/workflows/` demonstrating `self.warn()`, `StageSupervisor` graph repair, and batch multi-question `checkpoint()`.
 
 ---
 

@@ -81,22 +81,24 @@ plynx clean --days 7
 
 ## Built-in Operations (`standard_io`)
 
-The `plynx` wheel ships with **13 stdlib-only operations** in `standard_io`:
+The `plynx` wheel ships with **15 stdlib-only operations** in `standard_io`:
 
 - **`Core / Text & Data`**: `Echo`, `Concat`, `TemplateFormat`, `MathOp`, `JsonExtract`, `JsonMerge`, `CsvSummary`
 - **`Core / Files`**: `ReadText`, `WriteText`, `ListDirectory`, `BundleDirectory`, `MarkdownReport`
 - **`Core / Interactive`**: `AskChoice`
+- **`Core / Agents`**: `AgentPrompt`, `StageSupervisor`
 
 Run `plynx ops` (or `plynx ops --json`) in any workspace to list all built-in and custom operations with their full port schemas.
 
 ## Examples (Repository Only)
 
-This repository includes optional demo packs (`examples/custom_packs/`: `media_studio`, `pedalboard_studio`, `podcast_studio`) and showcase workflows in `examples/workflows/`:
+This repository includes optional demo packs (`examples/custom_packs/`: `doc_review`, `media_studio`, `pedalboard_studio`, `podcast_studio`) and showcase workflows in `examples/workflows/`:
 
 | Workflow | Focus |
 | :--- | :--- |
 | [`foo_or_woo.yaml`](examples/workflows/foo_or_woo.yaml) | Minimal 2-node checkpoint workflow using `standard_io`. |
 | [`interactive_wizard_staged.yaml`](examples/workflows/interactive_wizard_staged.yaml) | Multi-stage interactive survey with `require_approval: true` and Markdown report. |
+| [`adaptive_doc_review.yaml`](examples/workflows/adaptive_doc_review.yaml) | End-to-end agentic workflow with `self.warn()`, `StageSupervisor` graph repair, and batch multi-question `checkpoint_batch()`. |
 | [`data_bundle_pipeline.yaml`](examples/workflows/data_bundle_pipeline.yaml) | Data pipeline covering CSV, JSON, math, directory bundling, and Markdown output. |
 | [`generative_art_studio.yaml`](examples/workflows/generative_art_studio.yaml) | Procedural image generation (Mandelbrot, geometric patterns, filters, metadata). |
 | [`midi_groove_studio.yaml`](examples/workflows/midi_groove_studio.yaml) | Multi-track MIDI sequencing, synthesis, mixing, and mastering. |
@@ -105,7 +107,7 @@ This repository includes optional demo packs (`examples/custom_packs/`: `media_s
 
 ## AI Coding Agents
 
-PLynx ships a self-contained reference for AI coding agents. From any workspace, print it with:
+`plynx init` materializes a thin-shim skill at `.agents/skills/plynx-create-workflow/SKILL.md`, and PLynx ships a self-contained reference for AI coding agents. From any workspace, print it with:
 
 ```bash
 plynx agent-guide
@@ -115,6 +117,7 @@ plynx agent-guide
 
 - [Guide: Creating a Workflow](docs/guides/create_workflow.md)
 - [Guide: Authoring a Node Pack](docs/guides/author_pack.md)
+- [Guide: Setting Up Agentic Workflows](docs/guides/agentic_workflows.md)
 - [Guide: Debugging a Failed Node](docs/guides/debug_failed_node.md)
 - [User Agent Reference](docs/AGENT_GUIDE.md)
 - [Architecture & Invariants](docs/ARCHITECTURE.md)
