@@ -556,7 +556,7 @@ def test_stage_validator_op_propose_patch_and_forbidden_guard(tmp_path: Path) ->
 
 
 def test_parse_fenced_json_and_jsonl_envelopes() -> None:
-    """_parse_envelope_from_text handles fenced markdown JSON and JSONL event streams."""
+    """_parse_envelope_from_text handles CLI wrappers, fenced JSON, and JSONL streams."""
     fenced = 'Here is my analysis:\n```json\n{"status": "completed", "outputs": {"x": 1}}\n```'
     env1, sid1 = _parse_envelope_from_text(fenced)
     assert env1 == {"status": "completed", "outputs": {"x": 1}}
@@ -569,6 +569,143 @@ def test_parse_fenced_json_and_jsonl_envelopes() -> None:
     env2, sid2 = _parse_envelope_from_text(jsonl)
     assert env2 == {"status": "completed", "outputs": {"x": 2}}
     assert sid2 == "th_999"
+
+    # Real `agy --output-format json --json-schema` wrapper has top-level `"status": "SUCCESS"`;
+    # parser must extract `structured_output` + `conversation_id` rather than outer `"SUCCESS"`.
+    agy_stdout = json.dumps(
+        {
+            "conversation_id": "conv-agy-123",
+            "status": "SUCCESS",
+            "response": '{"outputs":{"summary":"ok"},"status":"completed"}\n',
+            "structured_output": {"status": "completed", "outputs": {"summary": "ok"}},
+        }
+    )
+    env3, sid3 = _parse_envelope_from_text(agy_stdout)
+    assert env3 == {"status": "completed", "outputs": {"summary": "ok"}}
+    assert sid3 == "conv-agy-123"
+
+    # OpenCode `--format json` streams `part.text` chunks across JSONL lines
+    opencode_jsonl = (
+        '{"type":"step_start","sessionID":"ses_open_1","part":{"type":"step-start"}}\n'
+        '{"type":"text","sessionID":"ses_open_1","part":{"type":"text","text":"{\\"status\\": \\"completed\\", "}}\n'
+        '{"type":"text","sessionID":"ses_open_1","part":{"type":"text","text":"\\"outputs\\": {\\"k\\": \\"v\\"}}"}}\n'
+    )
+    env4, sid4 = _parse_envelope_from_text(opencode_jsonl)
+    assert env4 == {"status": "completed", "outputs": {"k": "v"}}
+    assert sid4 == "ses_open_1"
+
+
+def test_provider_quirks_agy_claude_codex_aider(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify agy -p placement, Claude min/max sanitization, Codex strict schema, and Aider flags."""
+    workdir = tmp_path / "workdir"
+    workdir.mkdir()
+    schema_path = workdir / "turn_schema.json"
+    output_path = workdir / "turn_output.json"
+    prompt_file = workdir / "turn_prompt.md"
+
+    class BoundedOp(AgentOp):
+        TITLE = "Bounded"
+
+        class Outputs(TypedDict):
+            score: Annotated[int, Range(1, 5)]
+            note: str | None
+
+    closed_schema = generate_turn_schema(BoundedOp, allow_graph_edits=GraphEditPolicy.FORBIDDEN)
+
+    # 1. agy fallback: -p must immediately precede prompt at the end (never before --output-format)
+    monkeypatch.setattr(
+        "plynx_sdk.adapters.shutil.which",
+        lambda name: "/usr/local/bin/agy" if name == "agy" else None,
+    )
+    agy_cmd = build_provider_command(
+        AgentProvider.GEMINI,
+        prompt="hello agy",
+        schema_path=schema_path,
+        schema_dict=closed_schema,
+        output_path=output_path,
+        prompt_file_path=prompt_file,
+        workdir=workdir,
+        model="gemini-3.8-flash-medium",
+        resume_session_id="conv_42",
+    )
+    assert agy_cmd[0] == "agy"
+    assert agy_cmd[-2:] == ["-p", "hello agy"]
+    assert "--dangerously-skip-permissions" in agy_cmd
+    assert agy_cmd[agy_cmd.index("--model") + 1] == "gemini-3.8-flash-medium"
+    assert agy_cmd[agy_cmd.index("--conversation") + 1] == "conv_42"
+
+    # Leading-dash prompt uses --print=<prompt> so Go flag doesn't treat prompt as a flag
+    agy_dash = build_provider_command(
+        AgentProvider.GEMINI,
+        prompt="- bullet prompt",
+        schema_path=schema_path,
+        schema_dict=closed_schema,
+        output_path=output_path,
+        prompt_file_path=prompt_file,
+        workdir=workdir,
+    )
+    assert agy_dash[-1] == "--print=- bullet prompt"
+
+    # 2. Claude: strips numeric minimum/maximum from --json-schema (moves to description)
+    claude_cmd = build_provider_command(
+        AgentProvider.CLAUDE,
+        prompt="score it",
+        schema_path=schema_path,
+        schema_dict=closed_schema,
+        output_path=output_path,
+        prompt_file_path=prompt_file,
+        workdir=workdir,
+    )
+    claude_schema_str = claude_cmd[claude_cmd.index("--json-schema") + 1]
+    assert '"minimum"' not in claude_schema_str
+    assert '"maximum"' not in claude_schema_str
+    assert "Range: [1, 5]" in claude_schema_str
+
+    # 3. Codex: closed schema writes strict turn_schema.codex.json (all properties required);
+    # open graph_patch schema omits --output-schema so OpenAI strict mode doesn't 400.
+    codex_closed = build_provider_command(
+        AgentProvider.CODEX,
+        prompt="run closed",
+        schema_path=schema_path,
+        schema_dict=closed_schema,
+        output_path=output_path,
+        prompt_file_path=prompt_file,
+        workdir=workdir,
+    )
+    assert "--output-schema" in codex_closed
+    strict_file = Path(codex_closed[codex_closed.index("--output-schema") + 1])
+    strict_loaded = json.loads(strict_file.read_text(encoding="utf-8"))
+    assert set(strict_loaded["required"]) == set(strict_loaded["properties"].keys())
+    assert strict_loaded["additionalProperties"] is False
+
+    open_schema = generate_turn_schema(BoundedOp, allow_graph_edits=GraphEditPolicy.CONFIRM)
+    codex_open = build_provider_command(
+        AgentProvider.CODEX,
+        prompt="run open",
+        schema_path=schema_path,
+        schema_dict=open_schema,
+        output_path=output_path,
+        prompt_file_path=prompt_file,
+        workdir=workdir,
+    )
+    assert "--output-schema" not in codex_open
+
+    # 4. Aider: passes --no-auto-commits and --no-gitignore so it can write inside .plynx/
+    aider_cmd = build_provider_command(
+        AgentProvider.AIDER,
+        prompt="write output",
+        schema_path=schema_path,
+        schema_dict=closed_schema,
+        output_path=output_path,
+        prompt_file_path=prompt_file,
+        workdir=workdir,
+        model="ollama/qwen2.5-coder",
+    )
+    assert "--no-auto-commits" in aider_cmd
+    assert "--no-gitignore" in aider_cmd
 
 
 def test_agent_turn_record_export() -> None:

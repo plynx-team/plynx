@@ -370,9 +370,23 @@ def generate_turn_schema(
         envelope_props["graph_patch"] = {
             "type": "object",
             "properties": {
-                "reason": {"type": "string"},
-                "add_nodes": {"type": "object"},
-                "rewire_inputs": {"type": "object"},
+                "reason": {
+                    "type": "string",
+                    "description": "Concise human-readable reason for the proposed DAG patch.",
+                },
+                "add_nodes": {
+                    "type": "object",
+                    "description": (
+                        'Mapping of new_node_id -> {"op": "<pack>/<mod>:<Op>", '
+                        '"stage": "<stage_id>", "title": "...", "inputs": {"<port>": "$<up>.<out>"}}.'
+                    ),
+                },
+                "rewire_inputs": {
+                    "type": "object",
+                    "description": (
+                        'Nested mapping of target_node_id -> {"<port>": "$<new_node_id>.<out>"}.'
+                    ),
+                },
             },
             "required": ["reason"],
             "additionalProperties": False,
@@ -595,14 +609,15 @@ def _build_full_turn_prompt(
         ),
         (
             f"Write your final response as a JSON object conforming to `{schema_path}` "
-            f"into `{output_path}`:\n"
+            f"into `{output_path}` (do not search PLynx engine source code; write `{TURN_OUTPUT_FILENAME}` and finish as soon as your task is resolved):\n"
             '- Set `"status": "completed"` and populate `"outputs"` when the task is complete.\n'
             '- Set `"status": "needs_input"` and populate `"questions"` (batch all needed '
             "human clarifications into one list) only when human user input is required."
             + (
                 '\n- Set `"status": "propose_patch"` and populate `"graph_patch"` '
-                '(`{"reason": "...", "add_nodes": {...}, "rewire_inputs": {...}}`) '
-                "if the workflow graph needs bounded repair."
+                '(`{"reason": "...", "add_nodes": {"<new_id>": {"op": "<pack>/<mod>:<Op>", "stage": "<stage_id>", "inputs": {"<port>": "$<up>.<out>"}}}, '
+                '"rewire_inputs": {"<downstream_id>": {"<port>": "$<new_id>.<out>"}}}`) '
+                "if the workflow graph needs bounded repair (omit `outputs` when proposing a patch)."
                 if allow_graph_edits != GraphEditPolicy.FORBIDDEN
                 else ""
             )
@@ -630,20 +645,26 @@ def _build_full_turn_prompt(
         ]
         try:
             ctx_data = json.loads(stage_ctx_path.read_text(encoding="utf-8"))
-            if isinstance(ctx_data, Mapping) and isinstance(ctx_data.get("nodes"), Mapping):
-                for s_nid, s_info in ctx_data["nodes"].items():
-                    if not isinstance(s_info, Mapping):
-                        continue
-                    s_status = s_info.get("status", "UNKNOWN")
-                    s_warns = s_info.get("warnings") or []
-                    s_err = s_info.get("error")
-                    if s_status == "FAILED" or s_warns or s_err:
-                        detail = f"status={s_status}"
-                        if s_err:
-                            detail += f", error={s_err!r}"
-                        if s_warns:
-                            detail += f", warnings={list(s_warns)!r}"
-                        ctx_lines.append(f"- Node `{s_nid}`: {detail}")
+            if isinstance(ctx_data, Mapping):
+                if isinstance(ctx_data.get("nodes"), Mapping):
+                    for s_nid, s_info in ctx_data["nodes"].items():
+                        if not isinstance(s_info, Mapping):
+                            continue
+                        s_status = s_info.get("status", "UNKNOWN")
+                        s_warns = s_info.get("warnings") or []
+                        s_err = s_info.get("error")
+                        if s_status == "FAILED" or s_warns or s_err:
+                            detail = f"status={s_status}"
+                            if s_err:
+                                detail += f", error={s_err!r}"
+                            if s_warns:
+                                detail += f", warnings={list(s_warns)!r}"
+                            ctx_lines.append(f"- Node `{s_nid}`: {detail}")
+                wf_yaml = ctx_data.get("workflow_snapshot_yaml")
+                if isinstance(wf_yaml, str) and 0 < len(wf_yaml) <= 8000:
+                    ctx_lines.append(
+                        f"\nCurrent `workflow.snapshot.yaml`:\n```yaml\n{wf_yaml.strip()}\n```"
+                    )
         except Exception:
             pass
         sections.append("## Stage Context\n" + "\n".join(ctx_lines))

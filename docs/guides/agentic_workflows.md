@@ -20,6 +20,14 @@ Install and authenticate at least one supported coding-agent CLI on your machine
 
 All CLI adapters run non-interactively (`stdin=DEVNULL`), omit `--bare` so workspace `.agents/skills/` and `AGENTS.md` are discovered upward, and pass explicit `--resume <session_id>` (never `--continue`) across `checkpoint_batch()` restarts.
 
+### Provider & Model Specifics
+
+- **`gemini` (`gemini` vs. `agy`)**: Uses `gemini` (`@google/gemini-cli`) if on `PATH`, otherwise falls back automatically to `agy` (Antigravity CLI, e.g. `model: gemini-3.8-flash-medium`). Run `agy models` to list valid Antigravity model IDs.
+- **`claude` (Claude Code)**: Enforces structured output via `--json-schema`. Numeric `Range(min, max)` bounds are moved into field descriptions for Anthropic's decoder and strictly validated by PLynx on return.
+- **`codex` (OpenAI Codex CLI)**: Normalizes closed `Outputs(TypedDict)` schemas into OpenAI's `strict: true` subset (`turn_schema.codex.json`); for open map schemas (such as `StageValidatorOp` `graph_patch` or `dict` ports), Codex writes `workdir/turn_output.json` directly. Note that `codex exec resume` reuses the prior thread without `--output-schema`.
+- **`opencode` & `aider` model IDs**: Pass provider-prefixed model strings (`provider/model`, e.g. `anthropic/claude-sonnet-4-5` or `ollama/qwen2.5-coder`). `aider` runs with `--no-auto-commits --no-gitignore` so it can write `turn_output.json` inside `.plynx/` without creating Git commits in your workspace, and does not persist cross-process session IDs (multi-turn context is passed via PLynx's prompt envelope).
+- **Large prompts**: Prompts exceeding 24 KB are read from `workdir/turn_prompt.md` rather than passed inline on `argv`, avoiding Windows (`32 KB`) and POSIX `ARG_MAX` limits.
+
 ## 2. Credentials & Secrets (`.env` vs. Host CLI Login)
 
 PLynx never stores credentials in `workflow.yaml`, `plynx.yaml`, snapshots, manifests, or SQLite. Node subprocesses receive credentials from two sources:
