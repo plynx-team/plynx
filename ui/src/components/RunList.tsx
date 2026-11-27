@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchRuns } from "../api/client";
-import type { RunStatus, RunSummary } from "../api/types.gen";
+import type { BaselineDriftAlert, RunStatus, RunSummary } from "../api/types.gen";
 import { Link, useRouter } from "../router/Router";
 import {
   ControlButton,
@@ -38,6 +38,7 @@ export function runStatusBadgeClasses(status: RunStatus): string {
 export function RunList() {
   const { navigate } = useRouter();
   const [runs, setRuns] = useState<ReadonlyArray<RunSummary>>([]);
+  const [driftAlerts, setDriftAlerts] = useState<ReadonlyArray<BaselineDriftAlert>>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingMore, setLoadingMore] = useState<boolean>(false);
@@ -51,6 +52,7 @@ export function RunList() {
       setError(null);
       const res = await fetchRuns({ limit: 50 });
       setRuns(res.runs);
+      setDriftAlerts(res.drift_alerts ?? []);
       setNextCursor(res.next_cursor ?? null);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
@@ -146,19 +148,36 @@ export function RunList() {
         </div>
       )}
 
-      <div className="list">
+      {driftAlerts.length > 0 && (
         <div
-          className="list-header"
+          data-testid="baseline-drift-banner"
+          className="m-2 rounded border px-3 py-2 text-xs space-y-1"
           style={{
-            gridTemplateColumns:
-              "minmax(180px, 1.5fr) 150px minmax(200px, 1.5fr) 110px 180px",
+            borderColor: "var(--color-warning)",
+            backgroundColor: "rgba(255, 167, 38, 0.12)",
+            color: "var(--color-warning)",
           }}
         >
+          <div className="flex items-center gap-1.5 font-bold">
+            <FeatherIcon name="alert-triangle" size={13} />
+            <span>Baseline Drift Detected</span>
+          </div>
+          {driftAlerts.map((alert, idx) => (
+            <div key={idx} style={{ color: "var(--text-primary)" }}>
+              {alert.message}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="list">
+        <div className="list-header run-list-grid">
           <div className="list-field">Workflow</div>
           <div className="list-field">Status</div>
           <div className="list-field">Run ID</div>
           <div className="list-field">Duration</div>
           <div className="list-field">Created</div>
+          <div className="list-field text-right">Actions</div>
         </div>
 
         {loading ? (
@@ -200,11 +219,8 @@ export function RunList() {
             <Link
               key={run.id}
               to={`/runs/${run.id}`}
-              className="list-item"
-              style={{
-                gridTemplateColumns:
-                  "minmax(180px, 1.5fr) 150px minmax(200px, 1.5fr) 110px 180px",
-              }}
+              data-testid={`run-card-${run.id}`}
+              className="list-row run-list-grid"
             >
               <div className="list-field flex items-center gap-2 font-semibold">
                 <FeatherIcon
@@ -242,6 +258,22 @@ export function RunList() {
                 style={{ color: "var(--text-secondary)" }}
               >
                 {formatTimestamp(run.created_at)}
+              </div>
+
+              <div
+                className="flex items-center justify-end"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  navigate(`/runs/${run.id}`);
+                }}
+              >
+                <ControlButton
+                  icon="eye"
+                  text="View"
+                  data-testid={`view-run-${run.id}`}
+                  onClick={() => navigate(`/runs/${run.id}`)}
+                />
               </div>
             </Link>
           ))

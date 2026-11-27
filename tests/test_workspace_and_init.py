@@ -168,6 +168,7 @@ def test_r03_plynx_init_sets_up_working_workspace(
     assert (repo / "custom_packs").is_dir()
     assert (repo / "custom_packs" / ".gitkeep").is_file()
     assert (repo / "plynx.yaml").is_file()
+    assert (repo / ".agents" / "skills" / "plynx-create-workflow" / "SKILL.md").is_file()
 
     gi_text = (repo / ".gitignore").read_text(encoding="utf-8")
     assert ".plynx/" in gi_text

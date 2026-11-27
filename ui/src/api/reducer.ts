@@ -52,6 +52,10 @@ export function applyRunEvent(state: RunState, event: RunEvent): RunState {
         attempt: event.data.attempt,
         exit_code: event.data.exit_code ?? existing?.exit_code ?? null,
         error: event.data.error ?? existing?.error ?? null,
+        warnings:
+          event.data.status === "RUNNING" || event.data.status === "PENDING"
+            ? []
+            : (event.data.warnings ?? existing?.warnings ?? []),
         started_at: existing?.started_at ?? null,
         finished_at: existing?.finished_at ?? null,
       };
@@ -79,7 +83,10 @@ export function applyRunEvent(state: RunState, event: RunEvent): RunState {
         question: event.data.question,
         options: event.data.options ?? null,
         allow_freeform: event.data.allow_freeform,
+        questions: event.data.questions ?? [],
+        graph_patch: event.data.graph_patch ?? existingCp?.graph_patch ?? null,
         answer: null,
+        answers: null,
         created_at: existingCp?.created_at ?? event.ts,
         answered_at: null,
       };

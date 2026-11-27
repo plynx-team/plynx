@@ -53,6 +53,49 @@ export function detectPreviewKind(
   return "text";
 }
 
+export interface UnwrappedOutputPreview {
+  text: string;
+  isScalarPrimitive: boolean;
+}
+
+/**
+ * Unwrap PLynx's scalar output REST envelope (`{"kind": "scalar", "value": ...}`)
+ * so primitive outputs display their raw value instead of protocol JSON.
+ */
+export function unwrapScalarOutput(content: string): UnwrappedOutputPreview {
+  try {
+    const parsed: unknown = JSON.parse(content);
+    if (
+      parsed !== null &&
+      typeof parsed === "object" &&
+      !Array.isArray(parsed)
+    ) {
+      const record = parsed as Record<string, unknown>;
+      const keys = Object.keys(record);
+      if (
+        keys.length === 2 &&
+        record.kind === "scalar" &&
+        "value" in record
+      ) {
+        const val = record.value;
+        if (val === null || typeof val !== "object") {
+          return {
+            text: typeof val === "string" ? val : String(val),
+            isScalarPrimitive: true,
+          };
+        }
+        return {
+          text: JSON.stringify(val, null, 2),
+          isScalarPrimitive: false,
+        };
+      }
+    }
+  } catch {
+    // Not JSON; render as-is
+  }
+  return { text: content, isScalarPrimitive: false };
+}
+
 export function ArtifactPreviewDialog({
   title,
   url,
@@ -67,6 +110,13 @@ export function ArtifactPreviewDialog({
 
   const kind = detectPreviewKind(mediaType, filename);
   const isDirectUrl = kind === "pdf" || kind === "image" || kind === "audio";
+  const unwrapped =
+    kind === "json" || kind === "text"
+      ? unwrapScalarOutput(content)
+      : { text: content, isScalarPrimitive: false };
+  const effectiveKind =
+    kind === "json" && unwrapped.isScalarPrimitive ? "text" : kind;
+  const displayContent = unwrapped.text;
 
   useEffect(() => {
     if (isDirectUrl || initialContent !== undefined) {
@@ -201,9 +251,9 @@ export function ArtifactPreviewDialog({
               {kind === "tsv" && (
                 <CsvPreviewer content={content} delimiter="\t" />
               )}
-              {kind === "json" && <JsonPreviewer content={content} />}
-              {kind === "markdown" && <MarkdownPreviewer content={content} />}
-              {kind === "text" && <TextPreviewer content={content} />}
+              {effectiveKind === "json" && <JsonPreviewer content={displayContent} />}
+              {effectiveKind === "markdown" && <MarkdownPreviewer content={displayContent} />}
+              {effectiveKind === "text" && <TextPreviewer content={displayContent} />}
             </div>
           )}
         </div>

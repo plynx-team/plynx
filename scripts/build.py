@@ -68,9 +68,12 @@ def verify_wheel_contents(plynx_wheel: Path) -> None:
 
     required_entries = [
         "plynx/static/index.html",
+        "plynx/skills/plynx-create-workflow/SKILL.md",
         "plynx/builtin_packs/standard_io/pyproject.toml",
         "plynx/builtin_packs/standard_io/src/standard_io/__init__.py",
+        "plynx/builtin_packs/standard_io/src/standard_io/agent.py",
         "plynx/builtin_packs/standard_io/src/standard_io/demo.py",
+        "plynx/builtin_packs/standard_io/src/standard_io/interactive.py",
         "plynx/builtin_packs/standard_io/src/standard_io/text.py",
     ]
     missing = [entry for entry in required_entries if entry not in names]

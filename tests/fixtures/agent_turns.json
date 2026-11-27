@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "turns": [
+    {
+      "turn_index": 0,
+      "provider": "cursor",
+      "model": "gpt-5",
+      "session_id": "chat_abc123",
+      "status": "needs_input",
+      "prompt_summary": "Compare CV against job description...",
+      "started_at": 1731800000.1,
+      "finished_at": 1731800008.4,
+      "questions": [
+        {
+          "id": "role",
+          "header": "",
+          "question": "Target track?",
+          "options": [
+            "ML",
+            "Backend"
+          ],
+          "multi_select": false,
+          "allow_freeform": true
+        }
+      ],
+      "user_answers": {
+        "role": "ML"
+      }
+    }
+  ]
+}

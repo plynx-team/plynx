@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import type {
+  GraphEditPolicy,
   NodeSpec,
   OpEntry,
   OutputPortSpec,
   RunState,
+  StageValidatorSpec,
   Workflow,
 } from "../api/types.gen";
 import {
@@ -11,7 +13,11 @@ import {
   getPortIconColor,
   getPortIconName,
 } from "../components/FeatherIcon";
-import { detectPreviewKind } from "../previewers/ArtifactPreviewDialog";
+import {
+  detectPreviewKind,
+  unwrapScalarOutput,
+} from "../previewers/ArtifactPreviewDialog";
+import { CheckpointCard } from "../stepper/CheckpointCard";
 import { CsvPreviewer } from "../previewers/CsvPreviewer";
 import { ImagePreviewer } from "../previewers/ImagePreviewer";
 import { JsonPreviewer } from "../previewers/JsonPreviewer";
@@ -27,7 +33,13 @@ import { LiteralWidget } from "./LiteralWidget";
 import { toSnakeCaseId } from "./mutations";
 import type { NodeDiff } from "./runDiff";
 import { StageInspectorPanel } from "./StageInspectorPanel";
-import { extractNodeRef, getCacheHint, getStatusHint } from "./types";
+import {
+  extractNodeRef,
+  extractValidatorStageId,
+  getCacheHint,
+  getStatusHint,
+  isStageValidatorNodeId,
+} from "./types";
 import { getCompatibleUpstreamOutputs, validateStageChange } from "./validation";
 
 export interface ArtifactPreviewTarget {
@@ -58,6 +70,7 @@ export interface NodeInspectorProps {
   ) => void;
   onUnbindInput?: (targetNodeId: string, targetPort: string) => void;
   onPreviewArtifact?: (target: ArtifactPreviewTarget) => void;
+  onCheckpointAnswered?: () => void;
   onAddStage?: (
     stageId: string,
     title?: string,
@@ -65,7 +78,11 @@ export interface NodeInspectorProps {
   ) => void;
   onUpdateStage?: (
     stageId: string,
-    updates: { title?: string; require_approval?: boolean },
+    updates: {
+      title?: string;
+      require_approval?: boolean;
+      validator?: StageValidatorSpec | null;
+    },
   ) => void;
   onDeleteStage?: (
     stageId: string,
@@ -163,6 +180,14 @@ function InlineOutputPreview({ target }: { target: ArtifactPreviewTarget }) {
     return null;
   }
 
+  const unwrapped =
+    content !== null && (kind === "json" || kind === "text")
+      ? unwrapScalarOutput(content)
+      : { text: content ?? "", isScalarPrimitive: false };
+  const effectiveKind =
+    kind === "json" && unwrapped.isScalarPrimitive ? "text" : kind;
+  const displayContent = unwrapped.text;
+
   return (
     <div
       data-testid={`inline-output-preview-${target.title}`}
@@ -172,25 +197,26 @@ function InlineOutputPreview({ target }: { target: ArtifactPreviewTarget }) {
         border: "1px solid var(--border-subtle)",
       }}
     >
-      {kind === "image" && <ImagePreviewer url={target.url} alt={target.title} />}
-      {kind === "audio" && (
+      {effectiveKind === "image" && (
+        <ImagePreviewer url={target.url} alt={target.title} />
+      )}
+      {effectiveKind === "audio" && (
         <audio controls src={target.url} className="w-full my-1" />
       )}
-      {kind === "csv" && content !== null && (
+      {effectiveKind === "csv" && content !== null && (
         <CsvPreviewer content={content} delimiter="," />
       )}
-      {kind === "tsv" && content !== null && (
+      {effectiveKind === "tsv" && content !== null && (
         <CsvPreviewer content={content} delimiter="\t" />
       )}
-      {kind === "json" && content !== null && (
-        <JsonPreviewer content={content} />
+      {effectiveKind === "json" && content !== null && (
+        <JsonPreviewer content={displayContent} />
       )}
-      {kind === "markdown" && content !== null && (
+      {effectiveKind === "markdown" && content !== null && (
         <MarkdownPreviewer content={content} />
       )}
-      {(kind === "text" || kind === "pdf") && content !== null && (
-        <TextPreviewer content={content} />
-      )}
+      {(effectiveKind === "text" || effectiveKind === "pdf") &&
+        content !== null && <TextPreviewer content={displayContent} />}
     </div>
   );
 }
@@ -208,6 +234,7 @@ export function NodeInspector({
   onBindReference,
   onUnbindInput,
   onPreviewArtifact,
+  onCheckpointAnswered,
   onAddStage,
   onUpdateStage,
   onDeleteStage,
@@ -224,7 +251,31 @@ export function NodeInspector({
   const [extraPortError, setExtraPortError] = useState<string | null>(null);
 
   const stageIds = getOrderedStageIds(workflow);
+  const validatorStageId = nodeId ? extractValidatorStageId(nodeId) : null;
+  const stageValidatorSpec = validatorStageId
+    ? (workflow.stages?.[validatorStageId]?.validator ??
+      runState?.workflow_snapshot?.stages?.[validatorStageId]?.validator)
+    : undefined;
+  const synthesizedValidatorNodeSpec: NodeSpec | undefined =
+    validatorStageId && stageValidatorSpec
+      ? {
+          op: stageValidatorSpec.op,
+          title: `Stage Validator (${validatorStageId})`,
+          stage: validatorStageId,
+          allow_graph_edits: stageValidatorSpec.allow_graph_edits ?? "confirm",
+          inputs: stageValidatorSpec.inputs ?? {},
+        }
+      : validatorStageId && nodeId && runState?.nodes?.[nodeId]
+        ? {
+            op: "standard_io/agent:StageSupervisor",
+            title: `Stage Validator (${validatorStageId})`,
+            stage: validatorStageId,
+            inputs: {},
+          }
+        : undefined;
+
   const spec =
+    synthesizedValidatorNodeSpec ??
     (nodeId ? workflow.nodes?.[nodeId] : undefined) ??
     (nodeId && runState?.workflow_snapshot?.nodes
       ? runState.workflow_snapshot.nodes[nodeId]
@@ -242,6 +293,7 @@ export function NodeInspector({
       <StageInspectorPanel
         selectedStageId={selectedStageId}
         workflow={workflow}
+        opsMap={opsMap}
         readOnly={readOnly}
         onSelectStage={onSelectStage}
         onUpdateStage={onUpdateStage}
@@ -421,6 +473,17 @@ export function NodeInspector({
                             Gate
                           </span>
                         )}
+                        {sDef?.validator && (
+                          <span
+                            className="status-badge !text-[9px]"
+                            style={{
+                              borderColor: "rgba(171, 71, 188, 0.5)",
+                              color: "#ce93d8",
+                            }}
+                          >
+                            Validator
+                          </span>
+                        )}
                         <span className="font-mono text-[10px] text-[var(--text-tertiary)] ml-auto pr-1">
                           {nodeCount} {nodeCount === 1 ? "op" : "ops"}
                         </span>
@@ -548,7 +611,10 @@ export function NodeInspector({
     );
   }
 
-  const isSnapshotOnly = Boolean(nodeId && !workflow.nodes?.[nodeId]);
+  const isValidatorNode = Boolean(nodeId && isStageValidatorNodeId(nodeId));
+  const isSnapshotOnly = Boolean(
+    nodeId && (!workflow.nodes?.[nodeId] || isValidatorNode),
+  );
   const effectiveReadOnly = readOnly || isSnapshotOnly;
 
   const opEntry = opsMap[spec.op];
@@ -605,6 +671,20 @@ export function NodeInspector({
                 cached
               </span>
             )}
+            {nodeRunState.warnings && nodeRunState.warnings.length > 0 && (
+              <span
+                data-testid="inspector-warnings-badge"
+                className="status-badge !text-[10px] inline-flex items-center gap-1 cursor-help"
+                style={{
+                  borderColor: "var(--color-warning)",
+                  color: "var(--color-warning)",
+                }}
+                title={nodeRunState.warnings.join("\n")}
+              >
+                <FeatherIcon name="alert-triangle" size={10} />
+                <span>{nodeRunState.warnings.length}</span>
+              </span>
+            )}
             <span
               className={`status-badge ${nodeRunState.status} !text-[10px] cursor-help`}
               title={getStatusHint(nodeRunState.status, false, nodeRunState.error)}
@@ -616,6 +696,105 @@ export function NodeInspector({
       </div>
 
       <div className="PropertiesBoxRoot">
+        {/* Active Checkpoint(s) for this node */}
+        {runState &&
+          runState.checkpoints
+            .filter((cp) => cp.node_id === nodeId && !cp.answered_at)
+            .map((cp) => (
+              <div
+                key={cp.checkpoint_id}
+                data-testid={`inspector-checkpoint-${cp.checkpoint_id}`}
+                className="mb-2"
+              >
+                <CheckpointCard
+                  runId={runState.id}
+                  checkpoint={cp}
+                  onAnswered={() => onCheckpointAnswered?.()}
+                />
+              </div>
+            ))}
+
+        {/* Agent Provenance Box (Dynamically Injected or Superseded Node) */}
+        {(spec.meta?.injected_by || spec.meta?.superseded_by) && (
+          <div
+            data-testid="inspector-injected-meta"
+            className="PropertiesBox"
+            style={{ borderLeft: "3px solid #ab47bc" }}
+          >
+            <div
+              className="PropertiesBoxHeader flex items-center gap-1.5"
+              style={{ color: "#ce93d8" }}
+            >
+              <FeatherIcon name="cpu" size={12} />
+              <span>
+                {spec.meta?.injected_by ? "Added by Agent" : "Agent Repair"}
+              </span>
+            </div>
+            <div className="PropertiesBoxContent space-y-1 text-xs">
+              {spec.meta?.injected_by && (
+                <div className="ParameterItem">
+                  <div className="ParameterNameCell">Injected by</div>
+                  <div className="ParameterValueCell font-mono text-[11px] truncate">
+                    {spec.meta.injected_by}
+                  </div>
+                </div>
+              )}
+              {spec.meta?.reason && (
+                <div
+                  className="rounded p-1.5 text-[11px]"
+                  style={{
+                    backgroundColor: "rgba(171, 71, 188, 0.1)",
+                    border: "1px solid rgba(171, 71, 188, 0.35)",
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  {spec.meta.reason}
+                </div>
+              )}
+              {spec.meta?.superseded_by && (
+                <div className="ParameterItem">
+                  <div className="ParameterNameCell">Superseded by</div>
+                  <div className="ParameterValueCell font-mono text-[11px] truncate">
+                    {spec.meta.superseded_by}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Per-Node Warnings */}
+        {nodeRunState?.warnings && nodeRunState.warnings.length > 0 && (
+          <div
+            data-testid="inspector-node-warnings"
+            className="PropertiesBox"
+            style={{ borderLeft: "3px solid var(--color-warning)" }}
+          >
+            <div
+              className="PropertiesBoxHeader flex items-center gap-1.5"
+              style={{ color: "var(--color-warning)" }}
+            >
+              <FeatherIcon name="alert-triangle" size={12} />
+              <span>Warnings ({nodeRunState.warnings.length})</span>
+            </div>
+            <div className="PropertiesBoxContent space-y-1.5">
+              {nodeRunState.warnings.map((msg, idx) => (
+                <div
+                  key={idx}
+                  className="rounded p-1.5 text-xs font-mono"
+                  style={{
+                    backgroundColor: "rgba(255, 193, 7, 0.1)",
+                    border: "1px solid rgba(255, 193, 7, 0.35)",
+                    color: "var(--text-primary)",
+                  }}
+                >
+                  {msg}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Node Metadata Box */}
         <div className="PropertiesBox">
           <div className="PropertiesBoxHeader">Node</div>
@@ -700,6 +879,50 @@ export function NodeInspector({
                 </select>
               </div>
             </div>
+            {opEntry?.agent_role === "agent" && !isValidatorNode && (
+              <div className="ParameterItem">
+                <label
+                  htmlFor="inspector-node-allow-graph-edits"
+                  className="ParameterNameCell"
+                >
+                  Graph Edits
+                </label>
+                <div className="ParameterValueCell">
+                  <select
+                    id="inspector-node-allow-graph-edits"
+                    data-testid="inspector-node-allow-graph-edits"
+                    disabled={effectiveReadOnly}
+                    value={spec.allow_graph_edits ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      onUpdateNodeSpec?.(nodeId, (prev) => {
+                        const next: NodeSpec = { ...prev };
+                        if (!val) {
+                          delete next.allow_graph_edits;
+                        } else {
+                          next.allow_graph_edits = val as GraphEditPolicy;
+                        }
+                        return next;
+                      });
+                    }}
+                    className="w-full px-1.5 py-1 text-xs"
+                  >
+                    <option value="">
+                      Default ({opEntry.allow_graph_edits ?? "forbidden"})
+                    </option>
+                    <option value="forbidden">
+                      Forbidden (no graph edits)
+                    </option>
+                    <option value="confirm">
+                      Confirm (pause for user approval)
+                    </option>
+                    <option value="auto">
+                      Auto (apply valid patches immediately)
+                    </option>
+                  </select>
+                </div>
+              </div>
+            )}
             {isCreatingStageForNode && (
               <div
                 data-testid="inline-create-stage-for-node"

@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from plynx_sdk.protocol import (
+    CheckpointAnswer,
+    GraphEditPolicy,
     InputDirectoryValue,
     InputFileValue,
     InputsManifest,
@@ -31,15 +33,18 @@ def compute_inputs_hash(file_and_dir_hashes: Mapping[str, str]) -> str:
 def compute_params_hash(
     params: Mapping[str, Any],
     *,
-    checkpoint_answers: Mapping[str, str] | None = None,
+    checkpoint_answers: Mapping[str, CheckpointAnswer] | None = None,
+    allow_graph_edits: GraphEditPolicy | None = None,
 ) -> str:
     """Compute params_hash = sha256 of canonical JSON of {port: value}.
 
-    Includes __checkpoint_answers__ when answers exist.
+    Includes __checkpoint_answers__ when answers exist and __allow_graph_edits__ when non-forbidden.
     """
     data = dict(params)
     if checkpoint_answers:
         data["__checkpoint_answers__"] = dict(checkpoint_answers)
+    if allow_graph_edits is not None and allow_graph_edits != GraphEditPolicy.FORBIDDEN:
+        data["__allow_graph_edits__"] = allow_graph_edits.value
     text = canonical_json(data)
     return hash_bytes(text.encode("utf-8"))
 
@@ -105,7 +110,11 @@ def compute_cache_key(
             scalar_params[port_name] = inp_val.value
 
     inputs_hash = compute_inputs_hash(file_and_dir_hashes)
-    params_hash = compute_params_hash(scalar_params, checkpoint_answers=inputs.checkpoint_answers)
+    params_hash = compute_params_hash(
+        scalar_params,
+        checkpoint_answers=inputs.checkpoint_answers,
+        allow_graph_edits=inputs.allow_graph_edits,
+    )
 
     return compute_cache_key_raw(
         op_entrypoint=op_entrypoint,

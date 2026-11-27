@@ -143,8 +143,8 @@ describe("RunDetail reload behavior (Task 6.13)", () => {
       created_at: 1731800000,
       started_at: 1731800001,
       nodes: {
-        pick: { node_id: "pick", status: "RUNNING", cache_hit: false, attempt: 1 },
-        echo: { node_id: "echo", status: "PENDING", cache_hit: false, attempt: 0 },
+        pick: { node_id: "pick", status: "RUNNING", cache_hit: false, attempt: 1, warnings: [] },
+        echo: { node_id: "echo", status: "PENDING", cache_hit: false, attempt: 0, warnings: [] },
       },
       checkpoints: [],
       stage_gates: {},
@@ -201,6 +201,7 @@ describe("RunDetail reload behavior (Task 6.13)", () => {
           status: "SUCCESS",
           cache_hit: false,
           attempt: 1,
+        warnings: [],
         },
       });
     });
@@ -230,8 +231,9 @@ describe("RunDetail reload behavior (Task 6.13)", () => {
           status: "WAITING_FOR_USER",
           cache_hit: false,
           attempt: 1,
+        warnings: [],
         },
-        echo: { node_id: "echo", status: "PENDING", cache_hit: false, attempt: 0 },
+        echo: { node_id: "echo", status: "PENDING", cache_hit: false, attempt: 0, warnings: [] },
       },
       checkpoints: [
         {
@@ -240,6 +242,7 @@ describe("RunDetail reload behavior (Task 6.13)", () => {
           question: "foo or woo?",
           options: ["foo", "woo"],
           allow_freeform: false,
+          questions: [],
           answer: null,
           created_at: 1731800002,
           answered_at: null,
@@ -306,6 +309,7 @@ describe("RunDetail reload behavior (Task 6.13)", () => {
         question: "foo or woo?",
         options: ["foo", "woo"],
         allow_freeform: false,
+        questions: [],
       },
     });
     expect(afterReplay.checkpoints[0].answered_at).toBe(1731800010);
@@ -331,8 +335,9 @@ describe("RunDetail reload behavior (Task 6.13)", () => {
           status: "WAITING_FOR_USER",
           cache_hit: false,
           attempt: 1,
+        warnings: [],
         },
-        echo: { node_id: "echo", status: "PENDING", cache_hit: false, attempt: 0 },
+        echo: { node_id: "echo", status: "PENDING", cache_hit: false, attempt: 0, warnings: [] },
       },
       checkpoints: [
         {
@@ -341,6 +346,7 @@ describe("RunDetail reload behavior (Task 6.13)", () => {
           question: "foo or woo?",
           options: ["foo", "woo"],
           allow_freeform: false,
+          questions: [],
           answer: null,
           created_at: 1731800002,
           answered_at: null,

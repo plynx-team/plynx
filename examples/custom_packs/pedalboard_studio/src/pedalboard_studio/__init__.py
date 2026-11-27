@@ -11,10 +11,14 @@ from pedalboard_studio.effects import (
 )
 from pedalboard_studio.inspect import AudioStats, MidiPianoRoll
 from pedalboard_studio.mastering import PedalboardMastering
-from pedalboard_studio.score import ChordProgressionScore, MidiMerge, StepSequencer
+from pedalboard_studio.score import (
+    ChordProgressionScore,
+    MidiMerge,
+    MidiTransform,
+    StepSequencer,
+)
 from pedalboard_studio.synth import (
     AcousticPianoSynth,
-    BachPreludeScore,
     DrumSynth,
     PolySynth,
 )
@@ -23,11 +27,11 @@ __all__ = [
     "AcousticPianoSynth",
     "AudioMixer",
     "AudioStats",
-    "BachPreludeScore",
     "ChordProgressionScore",
     "DrumSynth",
     "MidiMerge",
     "MidiPianoRoll",
+    "MidiTransform",
     "PedalboardChorus",
     "PedalboardDelay",
     "PedalboardMastering",

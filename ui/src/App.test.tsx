@@ -58,6 +58,7 @@ describe("App component shell", () => {
           status: "RUNNING",
           cache_hit: false,
           attempt: 1,
+        warnings: [],
         },
       },
       checkpoints: [],

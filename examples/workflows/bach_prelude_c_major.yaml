@@ -12,13 +12,15 @@ stages:
     title: "4. Studio Mastering & Visuals"
 nodes:
   score:
-    op: pedalboard_studio/synth:BachPreludeScore
-    title: "Bach BWV 846 Score"
+    op: pedalboard_studio/score:MidiTransform
+    title: "Bach BWV 846 MIDI & Tempo"
     stage: composition
     inputs:
+      midi: "examples/samples/bwv_846_prelude_c_major.mid"
       tempo_bpm: 84
-      bars_count: 35
+      transpose_semitones: 0
       dynamics: expressive
+      max_bars: 35
   piano_roll:
     op: pedalboard_studio/inspect:MidiPianoRoll
     title: "MIDI Piano Roll Preview"

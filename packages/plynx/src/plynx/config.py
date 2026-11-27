@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import os
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from plynx_sdk.protocol import AgentProvider
 from ruamel.yaml import YAML
+
+DEFAULT_AGENT_CONCURRENCY = 2
+DEFAULT_MAX_INJECTED_NODES = 3
 
 _SIZE_RE = re.compile(r"^\s*([0-9]+(?:\.[0-9]+)?)\s*([a-zA-Z]*)\s*$")
 
@@ -66,6 +71,24 @@ class WorkspaceConfig:
     concurrency: int | None = None
     env_passthrough: list[str] | None = None
     cache_max_size: int | None = None
+    agent_provider: AgentProvider = AgentProvider.DEFAULT
+    agent_model: str = ""
+    agent_concurrency: int = DEFAULT_AGENT_CONCURRENCY
+    max_injected_nodes: int = DEFAULT_MAX_INJECTED_NODES
+    agent_models: list[str] = field(default_factory=list)
+    agent_custom_command: str = ""
+
+
+def _parse_positive_int(raw: object) -> int | None:
+    if isinstance(raw, int) and not isinstance(raw, bool) and raw > 0:
+        return int(raw)
+    return None
+
+
+def _parse_non_negative_int(raw: object) -> int | None:
+    if isinstance(raw, int) and not isinstance(raw, bool) and raw >= 0:
+        return int(raw)
+    return None
 
 
 def load_workspace_config(workspace_root: Path) -> WorkspaceConfig:
@@ -108,8 +131,7 @@ def load_workspace_config(workspace_root: Path) -> WorkspaceConfig:
     db_path = str(raw_db) if isinstance(raw_db, str) else ".plynx/plynx.db"
 
     # 4. concurrency
-    raw_conc = parsed.get("concurrency")
-    concurrency = int(raw_conc) if isinstance(raw_conc, int) and raw_conc > 0 else None
+    concurrency = _parse_positive_int(parsed.get("concurrency"))
 
     # 5. env_passthrough
     raw_passthrough = parsed.get("env_passthrough")
@@ -133,6 +155,51 @@ def load_workspace_config(workspace_root: Path) -> WorkspaceConfig:
         except ValueError:
             cache_max_size = None
 
+    # 7. agent settings
+    agent_provider = AgentProvider.DEFAULT
+    agent_model = ""
+    agent_concurrency = (
+        _parse_positive_int(parsed.get("agent_concurrency")) or DEFAULT_AGENT_CONCURRENCY
+    )
+    top_max_injected = _parse_non_negative_int(parsed.get("max_injected_nodes"))
+    max_injected_nodes = (
+        top_max_injected if top_max_injected is not None else DEFAULT_MAX_INJECTED_NODES
+    )
+    agent_models: list[str] = []
+    agent_custom_command = ""
+
+    raw_agent = parsed.get("agent")
+    if isinstance(raw_agent, Mapping):
+        raw_prov = raw_agent.get("provider")
+        if isinstance(raw_prov, str) and raw_prov.strip():
+            try:
+                agent_provider = AgentProvider(raw_prov.strip())
+            except ValueError:
+                agent_provider = AgentProvider.DEFAULT
+        raw_model = raw_agent.get("model")
+        if isinstance(raw_model, str):
+            agent_model = raw_model.strip()
+        nested_conc = _parse_positive_int(
+            raw_agent.get("agent_concurrency", raw_agent.get("concurrency"))
+        )
+        if nested_conc is not None:
+            agent_concurrency = nested_conc
+        nested_max_inj = _parse_non_negative_int(raw_agent.get("max_injected_nodes"))
+        if nested_max_inj is not None:
+            max_injected_nodes = nested_max_inj
+        raw_models = raw_agent.get("models")
+        if isinstance(raw_models, list):
+            for m_item in raw_models:
+                if (
+                    isinstance(m_item, str)
+                    and m_item.strip()
+                    and m_item.strip() not in agent_models
+                ):
+                    agent_models.append(m_item.strip())
+        raw_custom = raw_agent.get("custom_command")
+        if isinstance(raw_custom, str):
+            agent_custom_command = raw_custom.strip()
+
     return WorkspaceConfig(
         workspace_root=root,
         workflows=workflows,
@@ -141,11 +208,108 @@ def load_workspace_config(workspace_root: Path) -> WorkspaceConfig:
         concurrency=concurrency,
         env_passthrough=env_passthrough,
         cache_max_size=cache_max_size,
+        agent_provider=agent_provider,
+        agent_model=agent_model,
+        agent_concurrency=agent_concurrency,
+        max_injected_nodes=max_injected_nodes,
+        agent_models=agent_models,
+        agent_custom_command=agent_custom_command,
     )
 
 
+def resolve_effective_agent_config(
+    *,
+    workspace_config: WorkspaceConfig,
+    workflow_provider: str | AgentProvider | None = None,
+    workflow_model: str | None = None,
+    cli_provider: str | AgentProvider | None = None,
+    cli_model: str | None = None,
+    node_provider: object = None,
+    node_model: object = None,
+    set_provider: object = None,
+    set_model: object = None,
+    env: Mapping[str, str] | None = None,
+) -> tuple[str, str]:
+    """Resolve effective ``(provider, model)`` across the 4-level hierarchy.
+
+    Precedence (lowest to highest):
+    1. ``plynx.yaml`` ``agent.{provider,model}`` (or ``PLYNX_AGENT_PROVIDER`` / ``PLYNX_AGENT_MODEL``).
+    2. ``workflow.yaml`` ``agent.{provider,model}``.
+    3. CLI ``--agent-provider`` / ``--agent-model``.
+    4. Node input port ``provider`` (when non-default) / ``model`` (when non-empty),
+       with CLI ``--set <node>.provider`` / ``--set <node>.model`` winning at the port level.
+    """
+    source_env = os.environ if env is None else env
+
+    # --- Provider ---
+    provider = workspace_config.agent_provider.value
+    env_prov = source_env.get("PLYNX_AGENT_PROVIDER", "").strip()
+    if env_prov and env_prov != AgentProvider.DEFAULT.value:
+        provider = env_prov
+
+    if workflow_provider is not None:
+        wf_prov = (
+            workflow_provider.value
+            if isinstance(workflow_provider, AgentProvider)
+            else str(workflow_provider).strip()
+        )
+        if wf_prov and wf_prov != AgentProvider.DEFAULT.value:
+            provider = wf_prov
+
+    if cli_provider is not None:
+        c_prov = (
+            cli_provider.value
+            if isinstance(cli_provider, AgentProvider)
+            else str(cli_provider).strip()
+        )
+        if c_prov and c_prov != AgentProvider.DEFAULT.value:
+            provider = c_prov
+
+    effective_node_provider = set_provider if set_provider is not None else node_provider
+    if isinstance(effective_node_provider, str):
+        n_prov = effective_node_provider.strip()
+        if n_prov and n_prov != AgentProvider.DEFAULT.value:
+            provider = n_prov
+
+    # --- Model ---
+    model = workspace_config.agent_model
+    env_model = source_env.get("PLYNX_AGENT_MODEL", "").strip()
+    if env_model:
+        model = env_model
+
+    if workflow_model is not None and workflow_model.strip():
+        model = workflow_model.strip()
+
+    if cli_model is not None and cli_model.strip():
+        model = cli_model.strip()
+
+    effective_node_model = set_model if set_model is not None else node_model
+    if isinstance(effective_node_model, str) and effective_node_model.strip():
+        model = effective_node_model.strip()
+
+    return provider, model
+
+
+def resolve_max_injected_nodes(
+    *,
+    workspace_config: WorkspaceConfig,
+    workflow_max: int | None = None,
+    cli_max: int | None = None,
+) -> int:
+    """Resolve effective ``max_injected_nodes`` budget (CLI > workflow > plynx.yaml > 3)."""
+    if cli_max is not None:
+        return max(cli_max, 0)
+    if workflow_max is not None:
+        return max(workflow_max, 0)
+    return max(workspace_config.max_injected_nodes, 0)
+
+
 __all__ = [
+    "DEFAULT_AGENT_CONCURRENCY",
+    "DEFAULT_MAX_INJECTED_NODES",
     "WorkspaceConfig",
     "load_workspace_config",
     "parse_size_bytes",
+    "resolve_effective_agent_config",
+    "resolve_max_injected_nodes",
 ]

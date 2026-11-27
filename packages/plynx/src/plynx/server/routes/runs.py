@@ -12,23 +12,35 @@ from typing import Any
 
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
-from plynx_sdk.protocol import ResultFileValue, ResultManifest
+from plynx_sdk.protocol import (
+    AgentTurnsManifest,
+    CheckpointQuestion,
+    ProtocolError,
+    ResultFileValue,
+    ResultManifest,
+    validate_batch_answers,
+)
 from pydantic import ValidationError
 
 from plynx.api_models import (
+    SINGLE_QUESTION_ID,
+    AgentTurnsResponse,
     AnswerCheckpointRequest,
+    CheckpointState,
     CreateRunRequest,
     CreateRunResponse,
     NodeLogData,
     NodeLogEvent,
     RunListResponse,
     RunState,
+    RunStatsResponse,
     RunStatus,
     RunStatusEvent,
     StageApproveRequest,
     StageGateKind,
     StageGateStatus,
     StageInputsRequest,
+    is_batch_checkpoint,
 )
 from plynx.cas import BlobStore
 from plynx.engine import Scheduler, SchedulerOptions
@@ -40,7 +52,12 @@ from plynx.server.state import (
     error_response,
 )
 from plynx.store import StoreError
-from plynx.workflow.models import NODE_ID_PATTERN, load_workflow
+from plynx.store.telemetry import compute_run_stats, detect_baseline_drift
+from plynx.workflow.models import (
+    RUNTIME_NODE_ID_PATTERN,
+    execution_node_ids,
+    load_workflow,
+)
 from plynx.workflow.validator import validate_workflow
 
 SSE_POLL_INTERVAL_SECONDS: float = 0.1
@@ -243,16 +260,47 @@ async def list_runs(
     cursor: str | None = Query(default=None),
     workflow_path: str | None = Query(default=None),
 ) -> RunListResponse:
-    """Return recent runs ordered newest first."""
+    """Return recent runs ordered newest first, plus any baseline drift alerts."""
     items = await asyncio.to_thread(
         state.store.list_runs,
         limit=limit + 1,
         cursor=cursor,
         workflow_path=workflow_path,
     )
+    drift_alerts = (
+        await asyncio.to_thread(
+            detect_baseline_drift,
+            state.store,
+            workflow_path=workflow_path,
+        )
+        if cursor is None
+        else []
+    )
     if len(items) > limit:
-        return RunListResponse(runs=items[:limit], next_cursor=items[limit - 1].id)
-    return RunListResponse(runs=items, next_cursor=None)
+        return RunListResponse(
+            runs=items[:limit],
+            next_cursor=items[limit - 1].id,
+            drift_alerts=drift_alerts,
+        )
+    return RunListResponse(runs=items, next_cursor=None, drift_alerts=drift_alerts)
+
+
+@router.get("/runs/stats", response_model=RunStatsResponse)
+async def get_run_stats(
+    state: ServerStateDep,
+    workflow_path: str | None = Query(default=None),
+) -> RunStatsResponse:
+    """Return aggregated per-node execution stats and baseline drift alerts."""
+    total_runs, nodes, drift_alerts = await asyncio.to_thread(
+        compute_run_stats,
+        state.store,
+        workflow_path=workflow_path,
+    )
+    return RunStatsResponse(
+        total_runs=total_runs,
+        nodes=nodes,
+        drift_alerts=drift_alerts,
+    )
 
 
 @router.get("/runs/{run_id}", response_model=RunState)
@@ -327,18 +375,32 @@ async def create_run_endpoint(
         msg = "; ".join(issue.message for issue in errors)
         return error_response(422, "validation_failed", msg)
 
+    initial_inputs = dict(body.inputs)
+    if body.agent_provider is not None:
+        initial_inputs["__agent_provider__"] = body.agent_provider.value
+    if body.agent_model is not None:
+        initial_inputs["__agent_model__"] = body.agent_model
+    if body.max_injected_nodes is not None:
+        initial_inputs["__max_injected_nodes__"] = body.max_injected_nodes
+
     run_id = await asyncio.to_thread(
         state.store.create_run,
         workflow_path=rel_wf,
         workflow_bytes=workflow_bytes,
         layout_bytes=layout_bytes,
-        node_ids=list(wf_model.nodes.keys()),
-        run_inputs=body.inputs,
+        node_ids=execution_node_ids(wf_model),
+        run_inputs=initial_inputs,
     )
 
     executor = state.executor_factory(state.workspace_root)
     scheduler = Scheduler(state.store, executor, state.registry)
-    opts = SchedulerOptions(run_inputs=dict(body.inputs), no_cache=body.no_cache)
+    opts = SchedulerOptions(
+        run_inputs=initial_inputs,
+        no_cache=body.no_cache,
+        agent_provider=body.agent_provider,
+        agent_model=body.agent_model,
+        max_injected_nodes=body.max_injected_nodes,
+    )
     task = asyncio.create_task(
         scheduler.run(
             wf_model,
@@ -402,9 +464,47 @@ async def resume_run_endpoint(
 
     executor = state.executor_factory(state.workspace_root)
     scheduler = Scheduler(state.store, executor, state.registry)
+    try:
+        await scheduler.validate_and_prepare_resume_snapshot(resolved_id, run_state)
+    except StoreError as exc:
+        await asyncio.to_thread(state.store.release_ownership, resolved_id)
+        await asyncio.to_thread(state.store.update_run_status, resolved_id, run_state.status)
+        return error_response(422, "invalid_snapshot_mutation", str(exc))
+
     task = asyncio.create_task(scheduler.resume(resolved_id, options=SchedulerOptions()))
     state.track_run_task(resolved_id, task)
     return CreateRunResponse(run_id=resolved_id)
+
+
+def _encode_request_answer(
+    cp: CheckpointState,
+    body: AnswerCheckpointRequest,
+) -> tuple[str | None, str | None]:
+    """Validate ``body`` against ``cp`` and return ``(stored_answer, error_message)``.
+
+    Single-question checkpoints store the plain string; batch checkpoints store the
+    JSON-encoded, normalized answer map.
+    """
+    if (body.answer is None) == (body.answers is None):
+        return None, "Provide exactly one of 'answer' or 'answers'"
+    if is_batch_checkpoint(cp.questions):
+        if body.answers is None:
+            return None, "This checkpoint has multiple questions; provide 'answers'"
+        try:
+            normalized = validate_batch_answers(
+                [CheckpointQuestion(**q.model_dump()) for q in cp.questions],
+                body.answers,
+            )
+        except ProtocolError as exc:
+            return None, str(exc)
+        return json.dumps(normalized, ensure_ascii=False), None
+    if body.answer is not None:
+        return body.answer, None
+    assert body.answers is not None
+    single = body.answers.get(SINGLE_QUESTION_ID)
+    if len(body.answers) == 1 and isinstance(single, str):
+        return single, None
+    return None, f"Provide 'answer' or 'answers' with the single key {SINGLE_QUESTION_ID!r}"
 
 
 @router.post("/runs/{run_id}/checkpoints/{node_id}/{checkpoint_id}/answer")
@@ -435,12 +535,17 @@ async def answer_checkpoint_endpoint(
             f"Checkpoint '{node_id}.{checkpoint_id}' has already been answered",
         )
 
+    stored, answer_error = _encode_request_answer(cp, body)
+    if answer_error is not None:
+        return error_response(422, "invalid_answer", answer_error)
+    assert stored is not None
+
     applied = await asyncio.to_thread(
         state.store.answer_checkpoint,
         resolved_id,
         node_id,
         checkpoint_id,
-        body.answer,
+        stored,
     )
     if not applied:
         return error_response(
@@ -449,7 +554,9 @@ async def answer_checkpoint_endpoint(
             f"Checkpoint '{node_id}.{checkpoint_id}' has already been answered",
         )
     await state.auto_resume_if_unowned(resolved_id)
-    return {"status": "ok", "checkpoint_id": checkpoint_id, "answer": body.answer}
+    if is_batch_checkpoint(cp.questions):
+        return {"status": "ok", "checkpoint_id": checkpoint_id, "answers": json.loads(stored)}
+    return {"status": "ok", "checkpoint_id": checkpoint_id, "answer": stored}
 
 
 @router.post("/runs/{run_id}/stages/{stage_id}/approve")
@@ -541,11 +648,11 @@ async def get_node_logs(
     offset: int = Query(default=0, ge=0),
 ) -> Any:
     """Return plain-text logs for a node stream from offset with X-Next-Offset header."""
-    if not NODE_ID_PATTERN.match(node_id):
+    if not RUNTIME_NODE_ID_PATTERN.match(node_id):
         return error_response(
             400,
             "invalid_node_id",
-            f"Node ID {node_id!r} is invalid: must match {NODE_ID_PATTERN.pattern}",
+            f"Node ID {node_id!r} is invalid: must match {RUNTIME_NODE_ID_PATTERN.pattern}",
         )
 
     resolved_id, err = await state.resolve_run_id_or_error(run_id)
@@ -605,11 +712,11 @@ async def get_node_output(
     state: ServerStateDep,
 ) -> Any:
     """Download or fetch an output artifact from a node."""
-    if not NODE_ID_PATTERN.match(node_id):
+    if not RUNTIME_NODE_ID_PATTERN.match(node_id):
         return error_response(
             400,
             "invalid_node_id",
-            f"Node ID {node_id!r} is invalid: must match {NODE_ID_PATTERN.pattern}",
+            f"Node ID {node_id!r} is invalid: must match {RUNTIME_NODE_ID_PATTERN.pattern}",
         )
 
     if not _PORT_NAME_RE.match(name):
@@ -670,6 +777,48 @@ async def get_node_output(
         return FileResponse(blob_path, media_type=media_type, filename=filename)
 
     return JSONResponse(content=output_val.to_dict())
+
+
+@router.get("/runs/{run_id}/nodes/{node_id}/agent-turns", response_model=AgentTurnsResponse)
+async def get_node_agent_turns(
+    run_id: str,
+    node_id: str,
+    state: ServerStateDep,
+) -> Any:
+    """Return recorded ``agent_turns.json`` entries for ``node_id`` in ``run_id``."""
+    if not RUNTIME_NODE_ID_PATTERN.match(node_id):
+        return error_response(
+            400,
+            "invalid_node_id",
+            f"Node ID {node_id!r} is invalid: must match {RUNTIME_NODE_ID_PATTERN.pattern}",
+        )
+
+    resolved_id, err = await state.resolve_run_id_or_error(run_id)
+    if err is not None:
+        return err
+    assert resolved_id is not None
+
+    node_dir = state.store.node_dir(resolved_id, node_id).resolve()
+    try:
+        node_dir.relative_to(state.store.run_dir(resolved_id).resolve())
+    except ValueError:
+        return error_response(
+            400,
+            "invalid_node_id",
+            "Node path must stay inside the run directory",
+        )
+
+    turns_path = node_dir / "agent_turns.json"
+    if not turns_path.is_file():
+        return AgentTurnsResponse(turns=[])
+
+    try:
+        raw_bytes = await asyncio.to_thread(turns_path.read_bytes)
+        manifest = AgentTurnsManifest.from_json(raw_bytes)
+    except Exception as exc:
+        return error_response(500, "agent_turns_parse_error", str(exc))
+
+    return AgentTurnsResponse.model_validate(manifest.to_dict())
 
 
 @router.get("/runs/{run_id}/stream")

@@ -7,6 +7,14 @@ export type RunStatus = "RUNNING" | "WAITING_FOR_USER" | "SUCCESS" | "FAILED" | 
 
 export type StageGateStatus = "WAITING" | "APPROVED";
 
+export type AgentTurnStatus = "completed" | "needs_input" | "propose_patch";
+
+export type GraphEditPolicy = "forbidden" | "confirm" | "auto";
+
+export type ValidatorMode = "on_anomaly" | "on_failure" | "always";
+
+export type AgentProvider = "default" | "claude" | "cursor" | "codex" | "gemini" | "opencode" | "goose" | "aider" | "custom" | "mock";
+
 export type PortType = "str" | "int" | "float" | "bool" | "json" | "file" | "directory";
 
 export type LogStream = "stdout" | "stderr";
@@ -21,10 +29,26 @@ export interface NodeRef {
   output: string;
 }
 
+/** Stage-end validator / supervisor configuration on ``stages.<stage_id>.validator``. */
+export interface StageValidatorSpec {
+  op: string;
+  mode?: ValidatorMode;
+  allow_graph_edits?: GraphEditPolicy;
+  inputs?: Record<string, unknown>;
+}
+
 /** A workflow execution stage. */
 export interface Stage {
   title?: string | null;
   require_approval?: boolean;
+  validator?: StageValidatorSpec | null;
+}
+
+/** Snapshot provenance metadata for dynamically injected or superseded nodes. */
+export interface NodeMeta {
+  injected_by?: string | null;
+  reason?: string | null;
+  superseded_by?: string | null;
 }
 
 /** A single node declaration inside ``workflow.yaml``. */
@@ -32,7 +56,16 @@ export interface NodeSpec {
   op: string;
   title?: string | null;
   stage?: string;
+  allow_graph_edits?: GraphEditPolicy | null;
   inputs?: Record<string, unknown>;
+  meta?: NodeMeta | null;
+}
+
+/** Workflow-level default agent provider, model, and injection budget. */
+export interface WorkflowAgentConfig {
+  provider?: AgentProvider;
+  model?: string;
+  max_injected_nodes?: number | null;
 }
 
 /** Top-level ``workflow.yaml`` model. */
@@ -41,6 +74,8 @@ export interface Workflow {
   name?: string;
   description?: string;
   concurrency?: number | null;
+  max_injected_nodes?: number | null;
+  agent?: WorkflowAgentConfig | null;
   stages?: Record<string, Stage>;
   nodes?: Record<string, NodeSpec>;
 }
@@ -54,8 +89,19 @@ export interface NodeRunState {
   attempt: number;
   exit_code?: number | null;
   error?: string | null;
+  warnings: Array<string>;
   started_at?: number | null;
   finished_at?: number | null;
+}
+
+/** One question of a checkpoint prompt. */
+export interface CheckpointQuestionState {
+  id: string;
+  question: string;
+  header: string;
+  options: Array<string>;
+  multi_select: boolean;
+  allow_freeform: boolean;
 }
 
 /** State of a checkpoint prompt requested by a node. */
@@ -65,7 +111,10 @@ export interface CheckpointState {
   question: string;
   options?: Array<string> | null;
   allow_freeform: boolean;
+  questions: Array<CheckpointQuestionState>;
+  graph_patch?: GraphPatchModel | null;
   answer?: string | null;
+  answers?: Record<string, string | Array<string>> | null;
   created_at: number;
   answered_at?: number | null;
 }
@@ -131,6 +180,7 @@ export interface NodeStatusData {
   attempt: number;
   exit_code?: number | null;
   error?: string | null;
+  warnings: Array<string>;
 }
 
 /** Payload for ``node_checkpoint`` events. */
@@ -141,6 +191,8 @@ export interface NodeCheckpointData {
   question: string;
   options?: Array<string> | null;
   allow_freeform: boolean;
+  questions: Array<CheckpointQuestionState>;
+  graph_patch?: GraphPatchModel | null;
 }
 
 /** Payload for ``checkpoint_resolved`` events. */
@@ -236,6 +288,7 @@ export interface InputPortSpec {
   type: "str" | "int" | "float" | "bool" | "json" | "file" | "directory";
   media?: string | null;
   options?: Array<string | number> | null;
+  suggestions?: Array<string> | null;
   min?: number | null;
   max?: number | null;
   step?: number | null;
@@ -259,6 +312,8 @@ export interface OpEntry {
   module: string;
   name: string;
   kind: "class" | "function";
+  agent_role?: "agent" | "validator" | null;
+  allow_graph_edits?: GraphEditPolicy | null;
   title: string;
   category: string;
   cacheable: boolean;
@@ -335,6 +390,7 @@ export interface WorkflowInputSpec {
   type: "str" | "int" | "float" | "bool" | "json" | "file" | "directory";
   media?: string | null;
   options?: Array<string | number> | null;
+  suggestions?: Array<string> | null;
   min?: number | null;
   max?: number | null;
   step?: number | null;
@@ -354,6 +410,9 @@ export interface CreateRunRequest {
   workflow_path: string;
   inputs?: Record<string, unknown>;
   no_cache?: boolean;
+  agent_provider?: AgentProvider | null;
+  agent_model?: string | null;
+  max_injected_nodes?: number | null;
   workflow?: Workflow | null;
   layout?: WorkflowLayout | null;
 }
@@ -363,15 +422,48 @@ export interface CreateRunResponse {
   run_id: string;
 }
 
+/** Recurring dynamic splice detected across recent runs of a workflow. */
+export interface BaselineDriftAlert {
+  workflow_path: string;
+  injected_op: string;
+  upstream_op?: string | null;
+  downstream_op?: string | null;
+  occurrences: number;
+  window_runs: number;
+  message: string;
+}
+
+/** Aggregated execution telemetry for a node across historical runs. */
+export interface NodeExecutionStat {
+  workflow_path: string;
+  node_id: string;
+  op: string;
+  executions: number;
+  cache_hits: number;
+  cache_hit_rate: number;
+  avg_duration_seconds?: number | null;
+  failures: number;
+  dynamic_injections: number;
+}
+
+/** Response body for ``GET /runs/stats``. */
+export interface RunStatsResponse {
+  total_runs: number;
+  nodes: Array<NodeExecutionStat>;
+  drift_alerts: Array<BaselineDriftAlert>;
+}
+
 /** Response body for ``GET /runs``. */
 export interface RunListResponse {
   runs: Array<RunSummary>;
   next_cursor?: string | null;
+  drift_alerts?: Array<BaselineDriftAlert> | null;
 }
 
 /** Request body for ``POST /runs/{id}/checkpoints/{node_id}/{checkpoint_id}/answer``. */
 export interface AnswerCheckpointRequest {
-  answer: string;
+  answer?: string | null;
+  answers?: Record<string, string | Array<string>> | null;
 }
 
 /** Request body for ``POST /clean``. */
@@ -385,6 +477,35 @@ export interface CleanResponse {
   deleted_runs: number;
   deleted_blobs: number;
   reclaimed_bytes: number;
+}
+
+/** Proposed dynamic DAG patch inside an agent turn or confirmation checkpoint. */
+export interface GraphPatchModel {
+  reason: string;
+  add_nodes: Record<string, Record<string, unknown>>;
+  rewire_inputs: Record<string, Record<string, unknown>>;
+}
+
+/** Single recorded coding-agent turn from ``agent_turns.json``. */
+export interface AgentTurnModel {
+  turn_index: number;
+  provider: AgentProvider;
+  model: string;
+  session_id?: string | null;
+  status: AgentTurnStatus;
+  prompt_summary: string;
+  outputs?: Record<string, unknown> | null;
+  questions: Array<CheckpointQuestionState>;
+  user_answers?: Record<string, string | Array<string>> | null;
+  graph_patch?: GraphPatchModel | null;
+  started_at: number;
+  finished_at: number;
+}
+
+/** Response body for ``GET /runs/{id}/nodes/{node_id}/agent-turns``. */
+export interface AgentTurnsResponse {
+  schema: 1;
+  turns: Array<AgentTurnModel>;
 }
 
 /** Request body for ``POST /runs/{id}/stages/{stage_id}/approve``. */

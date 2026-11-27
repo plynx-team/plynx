@@ -443,8 +443,10 @@ textarea:read-only {
   display: grid;
   align-items: center;
   gap: 12px;
+  box-sizing: border-box;
 }
 
+.list-row,
 .list-item {
   border-radius: 4px;
   margin: 3px;
@@ -461,17 +463,38 @@ textarea:read-only {
   transition: all 0.1s ease-in;
   background-color: var(--bg-card);
   border: 1px solid var(--border-subtle);
+  box-sizing: border-box;
 }
 
+.list-row:hover,
 .list-item:hover {
   background-color: var(--bg-card-hover);
   border-color: var(--border-strong);
 }
 
+.list-row:active,
+.list-row.selected,
 .list-item:active,
 .list-item.selected {
   background-color: var(--color-primary-selected);
   border-color: var(--color-primary);
+}
+
+/* Explicit responsive multi-column layouts for list views */
+.workflow-list-grid {
+  display: grid !important;
+  grid-template-columns: minmax(200px, 1.5fr) minmax(220px, 2fr) 120px 210px;
+  align-items: center;
+  gap: 12px;
+  min-width: 750px;
+}
+
+.run-list-grid {
+  display: grid !important;
+  grid-template-columns: minmax(180px, 1.5fr) 140px minmax(180px, 1.2fr) 100px 180px 90px;
+  align-items: center;
+  gap: 12px;
+  min-width: 870px;
 }
 
 .list-field {
@@ -1198,14 +1221,6 @@ textarea:read-only {
   border: 2px solid #00d8ff;
   box-shadow: 0 0 14px rgba(0, 216, 255, 0.35);
   background-color: rgba(24, 24, 24, 0.7);
-}
-
-.flow-node.is-new-in-run .flow-node-header {
-  background-color: rgba(35, 40, 45, 0.85);
-}
-
-.flow-node.is-new-in-run .flow-title-text {
-  color: var(--text-secondary);
 }
 
 .flow-node.is-new-in-run .flow-node-body,

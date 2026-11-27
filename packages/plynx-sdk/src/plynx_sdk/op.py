@@ -5,11 +5,14 @@ Standard library only.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, ClassVar, TypeVar
 
+from plynx_sdk.anomaly import warn as _warn
 from plynx_sdk.checkpoint import checkpoint as _checkpoint
+from plynx_sdk.checkpoint import checkpoint_batch as _checkpoint_batch
+from plynx_sdk.protocol import AnswerValue, CheckpointQuestion
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -50,6 +53,17 @@ class Op:
     ) -> str:
         """Ask a checkpoint question or return the replayed answer for this attempt."""
         return _checkpoint(question, options=options, allow_freeform=allow_freeform)
+
+    def checkpoint_batch(
+        self,
+        questions: Sequence[CheckpointQuestion | Mapping[str, object]],
+    ) -> dict[str, AnswerValue]:
+        """Ask several questions in one pause or return the replayed answers by question id."""
+        return _checkpoint_batch(questions)
+
+    def warn(self, message: str) -> None:
+        """Record a non-fatal anomaly for this attempt (written to ``warnings`` in outputs)."""
+        _warn(message)
 
     def run(self, *args: Any, **kwargs: Any) -> Any:
         """Execute the operation. Subclasses must override this method."""

@@ -17,6 +17,7 @@ import traceback
 import types
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import (
     Annotated,
@@ -29,6 +30,8 @@ from typing import (
     is_typeddict,
 )
 
+from plynx_sdk.agent import AgentOp, StageValidatorOp, agent_context
+from plynx_sdk.anomaly import warning_context
 from plynx_sdk.checkpoint import CheckpointInterrupt, checkpoint_context
 from plynx_sdk.op import Op
 from plynx_sdk.protocol import (
@@ -128,6 +131,16 @@ def _parse_type_annotation(annotation: Any) -> _PortTypeInfo:
             optional=optional,
         )
 
+    if isinstance(annotation, type) and issubclass(annotation, StrEnum):
+        enum_vals = tuple(member.value for member in annotation)
+        if not enum_vals:
+            raise HarnessProtocolError(f"Empty StrEnum annotation: {annotation!r}")
+        return _PortTypeInfo(
+            kind="scalar",
+            literal_options=enum_vals,
+            optional=optional,
+        )
+
     if origin in (dict, list):
         annotation = origin
 
@@ -162,7 +175,11 @@ def _resolve_op_target(
     target = getattr(module, op_name)
     globalns = vars(module)
 
-    if isinstance(target, type) and issubclass(target, Op) and target is not Op:
+    if (
+        isinstance(target, type)
+        and issubclass(target, Op)
+        and target not in (Op, AgentOp, StageValidatorOp)
+    ):
         try:
             instance = target()
         except Exception as exc:
@@ -469,11 +486,20 @@ def run_harness(op_spec: str, node_dir: Path) -> int:
 
     prev_cwd = Path.cwd()
     started_at = time.time()
+    warnings: list[str] = []
     try:
         os.chdir(workdir)
-        with checkpoint_context(
-            answers=inputs_manifest.checkpoint_answers,
-            node_dir=resolved_node_dir,
+        with (
+            warning_context() as warnings,
+            checkpoint_context(
+                answers=inputs_manifest.checkpoint_answers,
+                node_dir=resolved_node_dir,
+            ),
+            agent_context(
+                node_dir=resolved_node_dir,
+                workdir=workdir,
+                inputs_manifest=inputs_manifest,
+            ),
         ):
             raw_result = callable_fn(**call_kwargs)
     except CheckpointInterrupt as cp_exc:
@@ -503,6 +529,7 @@ def run_harness(op_spec: str, node_dir: Path) -> int:
             started_at=started_at,
             finished_at=finished_at,
             outputs=outputs_map,
+            warnings=list(warnings),
         )
         _atomic_write_text(resolved_node_dir / "outputs.json", outputs_manifest.to_json())
     except (ProtocolError, HarnessProtocolError, OSError) as exc:

@@ -8,6 +8,18 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Annotated, Any, Literal
 
+from plynx_sdk.protocol import (
+    AgentProvider as AgentProvider,
+)
+from plynx_sdk.protocol import (
+    AgentTurnStatus as AgentTurnStatus,
+)
+from plynx_sdk.protocol import (
+    GraphEditPolicy as GraphEditPolicy,
+)
+from plynx_sdk.protocol import (
+    ValidatorMode as ValidatorMode,
+)
 from pydantic import BaseModel, ConfigDict, Field
 
 from plynx import __version__
@@ -81,12 +93,52 @@ class NodeRunState(BaseModel):
     attempt: int = 0
     exit_code: int | None = None
     error: str | None = None
+    warnings: list[str] = Field(default_factory=list)
     started_at: float | None = None
     finished_at: float | None = None
 
 
+SINGLE_QUESTION_ID = "default"
+
+
+class CheckpointQuestionState(BaseModel):
+    """One question of a checkpoint prompt."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    question: str
+    header: str = ""
+    options: list[str] = Field(default_factory=list)
+    multi_select: bool = False
+    allow_freeform: bool = True
+
+
+def is_batch_checkpoint(questions: list[CheckpointQuestionState]) -> bool:
+    """Return whether answers are a map of question id to value (not a single string)."""
+    if not questions:
+        return False
+    return not (len(questions) == 1 and questions[0].id == SINGLE_QUESTION_ID)
+
+
+class GraphPatchModel(BaseModel):
+    """Proposed dynamic DAG patch inside an agent turn or confirmation checkpoint."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    reason: str
+    add_nodes: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    rewire_inputs: dict[str, dict[str, Any]] = Field(default_factory=dict)
+
+
 class CheckpointState(BaseModel):
-    """State of a checkpoint prompt requested by a node."""
+    """State of a checkpoint prompt requested by a node.
+
+    ``questions`` is empty for rows created before batch checkpoints; treat it as one
+    ``default`` question built from ``question`` / ``options`` / ``allow_freeform``.
+    For batch checkpoints ``answer`` holds the JSON-encoded answer map and ``answers`` the
+    decoded map.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -95,7 +147,10 @@ class CheckpointState(BaseModel):
     question: str
     options: list[str] | None = None
     allow_freeform: bool = False
+    questions: list[CheckpointQuestionState] = Field(default_factory=list)
+    graph_patch: GraphPatchModel | None = None
     answer: str | None = None
+    answers: dict[str, str | list[str]] | None = None
     created_at: float
     answered_at: float | None = None
 
@@ -210,6 +265,7 @@ class NodeStatusData(BaseModel):
     attempt: int = 0
     exit_code: int | None = None
     error: str | None = None
+    warnings: list[str] = Field(default_factory=list)
 
 
 class NodeCheckpointData(BaseModel):
@@ -223,6 +279,8 @@ class NodeCheckpointData(BaseModel):
     question: str
     options: list[str] | None = None
     allow_freeform: bool = False
+    questions: list[CheckpointQuestionState] = Field(default_factory=list)
+    graph_patch: GraphPatchModel | None = None
 
 
 class CheckpointResolvedData(BaseModel):
@@ -372,6 +430,7 @@ class InputPortSpec(BaseModel):
     type: PortType
     media: str | None = None
     options: list[str | int] | None = None
+    suggestions: list[str] | None = None
     min: int | float | None = None
     max: int | float | None = None
     step: int | float | None = None
@@ -401,6 +460,8 @@ class OpEntry(BaseModel):
     module: str
     name: str
     kind: Literal["class", "function"]
+    agent_role: Literal["agent", "validator"] | None = None
+    allow_graph_edits: GraphEditPolicy | None = None
     title: str
     category: str = "Uncategorized"
     cacheable: bool = True
@@ -478,6 +539,7 @@ class WorkflowInputSpec(BaseModel):
     type: PortType
     media: str | None = None
     options: list[str | int] | None = None
+    suggestions: list[str] | None = None
     min: int | float | None = None
     max: int | float | None = None
     step: int | float | None = None
@@ -503,6 +565,9 @@ class CreateRunRequest(BaseModel):
     workflow_path: str
     inputs: dict[str, Any] = Field(default_factory=dict)
     no_cache: bool = False
+    agent_provider: AgentProvider | None = None
+    agent_model: str | None = None
+    max_injected_nodes: int | None = Field(default=None, ge=0)
     workflow: Workflow | None = None
     layout: WorkflowLayout | None = None
 
@@ -515,6 +580,46 @@ class CreateRunResponse(BaseModel):
     run_id: str
 
 
+class BaselineDriftAlert(BaseModel):
+    """Recurring dynamic splice detected across recent runs of a workflow."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    workflow_path: str
+    injected_op: str
+    upstream_op: str | None = None
+    downstream_op: str | None = None
+    occurrences: int
+    window_runs: int
+    message: str
+
+
+class NodeExecutionStat(BaseModel):
+    """Aggregated execution telemetry for a node across historical runs."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    workflow_path: str
+    node_id: str
+    op: str = ""
+    executions: int = 0
+    cache_hits: int = 0
+    cache_hit_rate: float = 0.0
+    avg_duration_seconds: float | None = None
+    failures: int = 0
+    dynamic_injections: int = 0
+
+
+class RunStatsResponse(BaseModel):
+    """Response body for ``GET /runs/stats``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    total_runs: int = 0
+    nodes: list[NodeExecutionStat] = Field(default_factory=list)
+    drift_alerts: list[BaselineDriftAlert] = Field(default_factory=list)
+
+
 class RunListResponse(BaseModel):
     """Response body for ``GET /runs``."""
 
@@ -522,6 +627,7 @@ class RunListResponse(BaseModel):
 
     runs: list[RunSummary] = Field(default_factory=list)
     next_cursor: str | None = None
+    drift_alerts: list[BaselineDriftAlert] | None = None
 
 
 class AnswerCheckpointRequest(BaseModel):
@@ -529,7 +635,8 @@ class AnswerCheckpointRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    answer: str
+    answer: str | None = None
+    answers: dict[str, str | list[str]] | None = None
 
 
 class StageApproveRequest(BaseModel):
@@ -565,6 +672,34 @@ class CleanResponse(BaseModel):
     deleted_runs: int = 0
     deleted_blobs: int = 0
     reclaimed_bytes: int = 0
+
+
+class AgentTurnModel(BaseModel):
+    """Single recorded coding-agent turn from ``agent_turns.json``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    turn_index: int
+    provider: AgentProvider
+    model: str = ""
+    session_id: str | None = None
+    status: AgentTurnStatus
+    prompt_summary: str = ""
+    outputs: dict[str, Any] | None = None
+    questions: list[CheckpointQuestionState] = Field(default_factory=list)
+    user_answers: dict[str, str | list[str]] | None = None
+    graph_patch: GraphPatchModel | None = None
+    started_at: float
+    finished_at: float
+
+
+class AgentTurnsResponse(BaseModel):
+    """Response body for ``GET /runs/{id}/nodes/{node_id}/agent-turns``."""
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    schema_version: Literal[1] = Field(default=1, alias="schema")
+    turns: list[AgentTurnModel] = Field(default_factory=list)
 
 
 class ApiErrorDetail(BaseModel):

@@ -67,13 +67,14 @@ class MandelbrotFractal(Op):
         height: Annotated[int, Range(200, 1000)] = 400,
         max_iter: Annotated[int, Range(20, 300)] = 80,
         zoom: Annotated[float, Range(0.5, 5.0)] = 1.0,
+        center_x: Annotated[float, Range(-2.5, 1.5)] = -0.7436439,
+        center_y: Annotated[float, Range(-1.5, 1.5)] = 0.1318259,
     ) -> Outputs:
         img = Image.new("RGB", (width, height), (15, 15, 15))
         pixels = img.load()
         assert pixels is not None
 
-        # Complex bounds centered on Seahorse Valley / interesting region
-        cx, cy = -0.743643887037158704752191506114774, 0.131825904205311970493132056385139
+        cx, cy = center_x, center_y
         scale = 2.5 / (zoom * min(width, height))
 
         for py in range(height):

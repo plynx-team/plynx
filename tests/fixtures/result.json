@@ -28,5 +28,8 @@
         }
       ]
     }
-  }
+  },
+  "warnings": [
+    "Detected non-English document (lang=fr)"
+  ]
 }

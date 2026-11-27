@@ -19,10 +19,9 @@ from pedalboard_studio.effects import (
 from pedalboard_studio.inspect import AudioStats, MidiPianoRoll
 from pedalboard_studio.mastering import PedalboardMastering
 from pedalboard_studio.midi_io import DRUM_CHANNEL, MidiNote, MidiScore, read_midi, write_midi
-from pedalboard_studio.score import ChordProgressionScore, MidiMerge, StepSequencer
+from pedalboard_studio.score import ChordProgressionScore, MidiMerge, MidiTransform, StepSequencer
 from pedalboard_studio.synth import (
     AcousticPianoSynth,
-    BachPreludeScore,
     DrumSynth,
     PolySynth,
 )
@@ -63,29 +62,46 @@ def test_midi_io_round_trip(tmp_path: Path) -> None:
     assert by_pitch[36].velocity == 120
 
 
-def test_bach_prelude_score_generation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Verify BachPreludeScore generates authentic 35-bar BWV 846 MIDI and metadata."""
-    monkeypatch.chdir(tmp_path)
-    score_op = BachPreludeScore()
+def test_midi_transform_and_bwv_846_sample(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Verify MidiTransform adjusts tempo, transposition, dynamics, and bar count on bwv_846 sample."""
+    sample_mid = (
+        Path(__file__).resolve().parent.parent
+        / "examples"
+        / "samples"
+        / "bwv_846_prelude_c_major.mid"
+    )
+    assert sample_mid.is_file()
 
-    # Short 2-bar preview
-    res_short = score_op.run(tempo_bpm=120, bars_count=2, dynamics="flat")
+    monkeypatch.chdir(tmp_path)
+    transform_op = MidiTransform()
+
+    # Short 2-bar preview at 120 BPM transposed up 2 semitones
+    res_short = transform_op.run(
+        midi=sample_mid,
+        tempo_bpm=120,
+        transpose_semitones=2,
+        dynamics="flat",
+        max_bars=2,
+    )
     midi_path = res_short["midi"]
     assert midi_path.is_file()
     parsed = read_midi(midi_path)
     assert len(parsed.notes) == 32  # 16 notes per bar * 2 = 32
-    assert parsed.notes[0].pitch == 48  # C3
-    assert parsed.notes[1].pitch == 52  # E3
-    assert parsed.notes[2].pitch == 55  # G3
+    assert parsed.notes[0].pitch == 50  # C3 (48) + 2 semitones = D3 (50)
+    assert parsed.notes[1].pitch == 54  # E3 (52) + 2 = F#3 (54)
 
     meta = json.loads(res_short["metadata"].read_text(encoding="utf-8"))
-    assert meta["bars_count"] == 2
     assert meta["notes_count"] == 32
+    assert meta["tempo_bpm"] == 120
 
-    # Full 35-bar score
-    res_full = score_op.run(tempo_bpm=84, bars_count=35, dynamics="expressive")
+    # Full 35-bar score at 84 BPM
+    res_full = transform_op.run(
+        midi=sample_mid,
+        tempo_bpm=84,
+        dynamics="expressive",
+        max_bars=35,
+    )
     full_meta = json.loads(res_full["metadata"].read_text(encoding="utf-8"))
-    assert full_meta["bars_count"] == 35
     assert full_meta["total_duration_sec"] > 50.0
 
 
@@ -253,9 +269,14 @@ def test_pedalboard_studio_full_pipeline(tmp_path: Path, monkeypatch: pytest.Mon
     """Verify the entire MIDI score -> synthesis -> DSP effects -> mastering -> visuals pipeline."""
     monkeypatch.chdir(tmp_path)
 
-    # 1. Score: 2 bars for fast test execution
-    score_op = BachPreludeScore()
-    score_res = score_op.run(tempo_bpm=120, bars_count=2)
+    # 1. Score: 2 bars from canonical BWV 846 MIDI sample for fast test execution
+    sample_mid = (
+        Path(__file__).resolve().parent.parent
+        / "examples"
+        / "samples"
+        / "bwv_846_prelude_c_major.mid"
+    )
+    score_res = MidiTransform().run(midi=sample_mid, tempo_bpm=120, max_bars=2)
     midi_file = score_res["midi"]
 
     # 2. Synthesis: Acoustic piano

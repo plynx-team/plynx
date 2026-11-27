@@ -15,9 +15,15 @@ from pathlib import Path
 from typing import Any
 
 from plynx.api_models import (
+    AgentProvider,
+    AgentTurnModel,
+    AgentTurnsResponse,
+    AgentTurnStatus,
     AnswerCheckpointRequest,
     ApiErrorDetail,
     ApiErrorResponse,
+    BaselineDriftAlert,
+    CheckpointQuestionState,
     CheckpointResolvedData,
     CheckpointResolvedEvent,
     CheckpointState,
@@ -26,11 +32,14 @@ from plynx.api_models import (
     CreateRunRequest,
     CreateRunResponse,
     EventType,
+    GraphEditPolicy,
+    GraphPatchModel,
     HealthResponse,
     InputPortSpec,
     LogStream,
     NodeCheckpointData,
     NodeCheckpointEvent,
+    NodeExecutionStat,
     NodeLogData,
     NodeLogEvent,
     NodePosition,
@@ -44,6 +53,7 @@ from plynx.api_models import (
     RunEvent,
     RunListResponse,
     RunState,
+    RunStatsResponse,
     RunStatus,
     RunStatusData,
     RunStatusEvent,
@@ -60,13 +70,22 @@ from plynx.api_models import (
     ValidateWorkflowRequest,
     ValidateWorkflowResponse,
     ValidationIssue,
+    ValidatorMode,
     Viewport,
     WorkflowDocument,
     WorkflowInputSpec,
     WorkflowLayout,
     WorkflowListItem,
 )
-from plynx.workflow.models import NodeRef, NodeSpec, Stage, Workflow
+from plynx.workflow.models import (
+    NodeMeta,
+    NodeRef,
+    NodeSpec,
+    Stage,
+    StageValidatorSpec,
+    Workflow,
+    WorkflowAgentConfig,
+)
 from pydantic import BaseModel, TypeAdapter
 from pydantic.json_schema import models_json_schema
 
@@ -75,10 +94,14 @@ TARGET_PATH = PROJECT_ROOT / "ui" / "src" / "api" / "types.gen.ts"
 
 SCHEMA_MODELS: tuple[type[BaseModel], ...] = (
     NodeRef,
+    StageValidatorSpec,
     Stage,
+    NodeMeta,
     NodeSpec,
+    WorkflowAgentConfig,
     Workflow,
     NodeRunState,
+    CheckpointQuestionState,
     CheckpointState,
     StageGateState,
     RunSummary,
@@ -113,10 +136,16 @@ SCHEMA_MODELS: tuple[type[BaseModel], ...] = (
     UploadResponse,
     CreateRunRequest,
     CreateRunResponse,
+    BaselineDriftAlert,
+    NodeExecutionStat,
+    RunStatsResponse,
     RunListResponse,
     AnswerCheckpointRequest,
     CleanRequest,
     CleanResponse,
+    GraphPatchModel,
+    AgentTurnModel,
+    AgentTurnsResponse,
     StageApproveRequest,
     StageInputsRequest,
     ApiErrorDetail,
@@ -127,6 +156,10 @@ ENUM_TYPES: tuple[tuple[str, type[Any]], ...] = (
     ("NodeStatus", NodeStatus),
     ("RunStatus", RunStatus),
     ("StageGateStatus", StageGateStatus),
+    ("AgentTurnStatus", AgentTurnStatus),
+    ("GraphEditPolicy", GraphEditPolicy),
+    ("ValidatorMode", ValidatorMode),
+    ("AgentProvider", AgentProvider),
 )
 
 TYPE_ALIASES: tuple[tuple[str, Any], ...] = (
@@ -206,7 +239,14 @@ def _is_nullable(prop_schema: Mapping[str, Any]) -> bool:
 def _render_interface(name: str, def_schema: Mapping[str, Any]) -> str:
     properties: Mapping[str, Any] = def_schema.get("properties", {})
     required_set = set(def_schema.get("required", []))
-    is_request_or_spec = name.endswith("Request") or name in ("Workflow", "NodeSpec", "Stage")
+    is_request_or_spec = name.endswith("Request") or name in (
+        "Workflow",
+        "WorkflowAgentConfig",
+        "NodeSpec",
+        "NodeMeta",
+        "Stage",
+        "StageValidatorSpec",
+    )
 
     lines: list[str] = []
     description = def_schema.get("description")

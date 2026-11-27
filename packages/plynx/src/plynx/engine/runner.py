@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import BinaryIO, Final
 
 from plynx_sdk.protocol import (
+    AgentProvider,
     CheckpointManifest,
     OutputsManifest,
     ProtocolError,
@@ -281,6 +282,16 @@ class LocalExecutor:
                 self.workspace_root / ".plynx" / "envs" / f"{pack_name}-{env_hash}"
             ).resolve()
             child_env = self._build_child_env(env_dir)
+        ws_cfg = await asyncio.to_thread(load_workspace_config, self.workspace_root)
+        if ws_cfg.agent_custom_command and "PLYNX_AGENT_CUSTOM_COMMAND" not in child_env:
+            child_env["PLYNX_AGENT_CUSTOM_COMMAND"] = ws_cfg.agent_custom_command
+        if (
+            ws_cfg.agent_provider != AgentProvider.DEFAULT
+            and "PLYNX_AGENT_PROVIDER" not in child_env
+        ):
+            child_env["PLYNX_AGENT_PROVIDER"] = ws_cfg.agent_provider.value
+        if ws_cfg.agent_model and "PLYNX_AGENT_MODEL" not in child_env:
+            child_env["PLYNX_AGENT_MODEL"] = ws_cfg.agent_model
         return direct_python, env_dir, child_env
 
     async def _ensure_environment(
@@ -382,7 +393,7 @@ class LocalExecutor:
         await asyncio.to_thread(workdir.mkdir, parents=True, exist_ok=True)
 
         # Remove stale manifest files from any earlier attempt on this node directory.
-        for stale_name in ("outputs.json", "checkpoint.json"):
+        for stale_name in ("outputs.json", "checkpoint.json", "graph_patch.json"):
             stale_path = node_dir / stale_name
             if stale_path.is_file():
                 await asyncio.to_thread(stale_path.unlink)
@@ -693,6 +704,11 @@ class LocalExecutor:
             scratch_workdir = scratch_dir / "workdir"
             await asyncio.to_thread(scratch_workdir.mkdir, parents=True, exist_ok=True)
             await asyncio.to_thread(shutil.copy2, inputs_json_src, scratch_dir / "inputs.json")
+            stage_ctx_src = src_dir / "stage_context.json"
+            if stage_ctx_src.is_file():
+                await asyncio.to_thread(
+                    shutil.copy2, stage_ctx_src, scratch_dir / "stage_context.json"
+                )
             src_inputs_dir = src_dir / "inputs"
             if src_inputs_dir.is_dir():
                 await asyncio.to_thread(
@@ -785,7 +801,9 @@ class LocalExecutor:
                     with contextlib.suppress(ProtocolError, OSError):
                         cp = CheckpointManifest.from_json(cp_path.read_bytes())
                         if on_stdout is not None:
-                            on_stdout(f"\n[checkpoint {cp.checkpoint_id}] {cp.question}\n")
+                            on_stdout(
+                                f"\n[checkpoint {cp.checkpoint_id}] {cp.display_question()}\n"
+                            )
                 return 2
             return 1
         finally:

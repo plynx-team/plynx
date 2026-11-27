@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import platform
+import shutil
 import wave
 from pathlib import Path
 
@@ -20,9 +22,14 @@ from podcast_studio.voice import TextToSpeech
 
 
 def test_text_to_speech_synthesis(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Verify TextToSpeech generates a valid 44.1kHz 16-bit PCM voiceover WAV."""
+    """Verify TextToSpeech generates 44.1kHz 16-bit PCM WAV on macOS and fails cleanly otherwise."""
     monkeypatch.chdir(tmp_path)
     tts_op = TextToSpeech()
+    if platform.system() != "Darwin" or shutil.which("say") is None:
+        with pytest.raises(RuntimeError, match="macOS"):
+            tts_op.run(text="Hello from non-macOS.", voice="Samantha", rate=180)
+        return
+
     res = tts_op.run(
         text="Hello and welcome to the Plynx podcast. This is a local synthesis test.",
         voice="Samantha",
@@ -39,8 +46,22 @@ def test_text_to_speech_synthesis(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
         assert wf.getnframes() > 0
 
 
+def test_text_to_speech_fails_when_say_unavailable(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify TextToSpeech raises RuntimeError rather than returning fake fallback audio."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("podcast_studio.voice.platform.system", lambda: "Darwin")
+    monkeypatch.setattr("podcast_studio.voice.shutil.which", lambda _name: None)
+    with pytest.raises(RuntimeError, match="say"):
+        TextToSpeech().run(text="Should fail cleanly.")
+
+
 def test_podcast_cross_pack_full_pipeline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify cross-pack pipeline: TTS + MIDI Rhodes BGM -> AudioMixer -> Waveform + ShowNotes."""
+    if platform.system() != "Darwin" or shutil.which("say") is None:
+        pytest.skip("Cross-pack podcast TTS synthesis requires macOS 'say'")
     monkeypatch.chdir(tmp_path)
 
     # 1. Voiceover (podcast_studio)
@@ -103,6 +124,7 @@ def test_podcast_cross_pack_full_pipeline(tmp_path: Path, monkeypatch: pytest.Mo
         summary="A test of autonomous podcast pipeline generation.",
         chapters="00:00 - Introduction\n00:03 - Graph Scheduling\n00:06 - Outro",
         transcript="Episode 1. Today we discuss graph workflows.",
+        production_notes="- Synthesized on macOS.",
     )
     notes_md = notes_res["show_notes"]
     assert notes_md.is_file()

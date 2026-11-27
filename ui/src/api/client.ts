@@ -1,4 +1,5 @@
 import type {
+  AgentTurnsResponse,
   AnswerCheckpointRequest,
   CreateRunRequest,
   CreateRunResponse,
@@ -8,6 +9,7 @@ import type {
   RunEvent,
   RunListResponse,
   RunState,
+  RunStatsResponse,
   UploadResponse,
   ValidateWorkflowRequest,
   ValidateWorkflowResponse,
@@ -60,6 +62,21 @@ export async function fetchRuns(
     throw new Error(`Failed to fetch runs (${response.status})`);
   }
   return (await response.json()) as RunListResponse;
+}
+
+export async function fetchRunStats(
+  workflowPath?: string,
+): Promise<RunStatsResponse> {
+  const params = new URLSearchParams();
+  if (workflowPath) {
+    params.set("workflow_path", workflowPath);
+  }
+  const qs = params.toString();
+  const response = await fetch(`/api/v1/runs/stats${qs ? `?${qs}` : ""}`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch run stats (${response.status})`);
+  }
+  return (await response.json()) as RunStatsResponse;
 }
 
 export async function fetchRunState(runId: string): Promise<RunState> {
@@ -177,9 +194,10 @@ export async function answerCheckpoint(
   runId: string,
   nodeId: string,
   checkpointId: string,
-  answer: string,
+  answer: string | Record<string, string | string[]>,
 ): Promise<void> {
-  const payload: AnswerCheckpointRequest = { answer };
+  const payload: AnswerCheckpointRequest =
+    typeof answer === "string" ? { answer } : { answers: answer };
   const response = await fetch(
     `/api/v1/runs/${encodeURIComponent(runId)}/checkpoints/${encodeURIComponent(
       nodeId,
@@ -270,6 +288,23 @@ export async function fetchNodeLogs(
     ? text.split(/\r?\n/).filter((line, idx, arr) => !(idx === arr.length - 1 && line === ""))
     : [];
   return { lines, offset: nextOffset };
+}
+
+export async function fetchNodeAgentTurns(
+  runId: string,
+  nodeId: string,
+): Promise<AgentTurnsResponse> {
+  const response = await fetch(
+    `/api/v1/runs/${encodeURIComponent(runId)}/nodes/${encodeURIComponent(
+      nodeId,
+    )}/agent-turns`,
+  );
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch agent turns for node ${nodeId} (${response.status})`,
+    );
+  }
+  return (await response.json()) as AgentTurnsResponse;
 }
 
 export async function uploadFile(file: File): Promise<UploadResponse> {

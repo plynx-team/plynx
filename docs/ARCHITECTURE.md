@@ -20,20 +20,23 @@ packages/
   plynx-sdk/              stdlib-only. Imported inside node environments.
     pyproject.toml
     src/plynx_sdk/
-      __init__.py         exports Op, op, Media, Range, Directory, checkpoint types
+      __init__.py         exports Op, AgentOp, StageValidatorOp, op, warn, Media, Range, Directory, checkpoint types, protocol enums
       op.py               Op base class and @op decorator
+      agent.py            AgentOp, StageValidatorOp, turn schema generation, output materialization, agent_turns.json
+      adapters.py         non-interactive CLI coding harness adapters (claude, cursor-agent, codex, gemini, opencode, goose, aider, custom, mock)
       types.py            semantic media aliases (PdfFile, AudioWav, ...)
-      protocol.py         IPC manifest dataclasses (inputs/outputs/checkpoint)
+      protocol.py         IPC manifest dataclasses (inputs/outputs/checkpoint/agent_turns/graph_patch) and StrEnum constants
       harness.py          child entrypoint: python -m plynx_sdk.harness
-      checkpoint.py       CheckpointInterrupt, replay logic
+      checkpoint.py       CheckpointInterrupt, checkpoint() / checkpoint_batch() replay logic
+      anomaly.py          warn() per-attempt warning collection
   plynx/                  engine, CLI, server
     pyproject.toml
     src/plynx/
       cli/                click commands: run, validate, resume, run-node, runs, ops, clean, ui, init
-      workflow/           workflow.yaml models (pydantic), loader, writer, validator
+      workflow/           workflow.yaml models (pydantic), loader, writer, validator, snapshot mutation guardrails (mutation.py)
       registry/           static AST extraction, registry cache, workspace discovery
       engine/             scheduler, executor, runner, procgroup
-      store/              SQLite access, run directories, event log
+      store/              SQLite access, run directories, event log, baseline drift & stats telemetry (telemetry.py)
       cas/                blob store, hashing, cache key, GC
       server/             FastAPI app, routes (ops, runs, workflows), state, REST, SSE
       config.py           plynx.yaml workspace config loader
@@ -143,7 +146,7 @@ One process owns a run at a time (`RUNS.owner_pid`). Other processes (browser, s
 - Distributed workers, worker server, `launch` implementation.
 - Recursive sub-graphs, `include:`, templates, hubs, a node database.
 - Dynamic fan-out (`map:`). Batching happens inside Python nodes with `Directory` or lists of paths.
-- `AgentOp`, agent CLI adapters, MCP server. They are in [TODO.md](TODO.md).
+- MCP server. It is in [TODO.md](TODO.md).
 - API key vault, model selector, marketplace, `plynx pack install`.
 - Tauri or desktop packaging.
 - Real-time streaming or audio DSP inside the engine.
@@ -156,9 +159,12 @@ One process owns a run at a time (`RUNS.owner_pid`). Other processes (browser, s
 ## Key behaviors
 
 - **Cache key:** `sha256(op_entrypoint + file_sha256 + uv_lock_sha256 + inputs_hash + params_hash)`. Exact canonicalization in PROTOCOL.md. Identical output bytes end the cascade (early cutoff).
-- **Checkpoints:** `self.checkpoint(...)` raises an interrupt on first call. The child writes `checkpoint.json` and exits 10. After an answer, the node is re-run from the top and the call returns the stored answer. See [guides/author_pack.md](guides/author_pack.md) for the idempotency rule. A checkpoint answer is not remembered between fresh runs in v2.0.0.
+- **Checkpoints:** `self.checkpoint(...)` raises an interrupt on first call. The child writes `checkpoint.json` and exits 10. After an answer, the node is re-run from the top and the call returns the stored answer. See [guides/author_pack.md](guides/author_pack.md) for the idempotency rule. `self.checkpoint_batch([...])` asks several questions in one pause (one exit 10, one resume) and returns a map of question id to answer. A checkpoint answer is not remembered between fresh runs.
+- **Warnings:** `self.warn(message)` records a non-fatal anomaly. The harness writes `warnings` to `outputs.json`, the engine copies them to `result.json`, and they are kept on cache hits. A warning never changes the exit code.
 - **Stage gates:** `require_approval: true` pauses the run after all nodes of the stage reach `SUCCESS`, before any node of a later stage starts.
-- **Failure:** a failed node blocks only its dependents. Independent branches finish. The run ends `FAILED`.
+- **Stage validators & bounded dynamic snapshot reload:** `stages.<id>.validator` schedules a reserved stage-end node `__stage_validator__<id>`. On 100% CAS cache hit (no warnings) or when `ValidatorMode` (`on_anomaly`, `on_failure`) is not triggered, the validator skips in 0ms without spawning a subprocess. When triggered (including intercepting a stage `FAILED` node before downstream stages block), the engine writes `stage_context.json` and runs the validator. Proposed `graph_patch.json` splices—as well as outer-agent edits to `.plynx/runs/<run_id>/workflow.snapshot.yaml` before `plynx resume`—are validated after worker quiescence against 4 guardrails (`plynx validate`, `PENDING`-only / immutable `SUCCESS` nodes, Lineage Preservation `U -> [New Subgraph] -> V`, and cumulative `max_injected_nodes`), written only to `workflow.snapshot.yaml` (never modifying `workflows/<name>.yaml` or layout sidecars), and dynamically reloaded into `TopologicalSorter`.
+- **Baseline drift detection:** `store/telemetry.py` compares `workflow.snapshot.yaml` against `.workflow.baseline.yaml`; when the same `(injected_op, upstream_op, downstream_op)` splice recurs in 3 of the last 5 runs of a workflow, `plynx runs`, `GET /runs`, and the UI surface a drift alert suggesting promoting the op into static `workflow.yaml`.
+- **Failure:** a failed node blocks only its dependents (unless intercepted and repaired or superseded by a stage validator). Independent branches finish. The run ends `FAILED` if unrepaired.
 - **Cancel / timeout:** the whole process tree is killed. POSIX: `os.killpg`. Windows: `taskkill /T /F`. Both inside `procgroup.py`.
 - **First run:** the engine emits `BUILDING_ENVIRONMENT` while `uv` creates an environment.
 - **Environments:** `UV_PROJECT_ENVIRONMENT=.plynx/envs/<pack>-<hash(pyproject+lock)>`, and `uv run --frozen`. Stdlib-only built-in packs (`standard_io`) run directly with `sys.executable -B`, `PYTHONPATH` pointing to the pack source, and `PYTHONDONTWRITEBYTECODE=1` so packs inside `site-packages` stay read-only.

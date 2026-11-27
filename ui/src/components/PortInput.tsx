@@ -8,6 +8,7 @@ export interface PortInputSpec {
   type: PortType | string;
   media?: string | null;
   options?: ReadonlyArray<string | number> | null;
+  suggestions?: ReadonlyArray<string> | null;
   min?: number | null;
   max?: number | null;
   step?: number | null;
@@ -700,7 +701,7 @@ export function PortInput({
     );
   }
 
-  // 6. String (single-line or multiline/code toggle)
+  // 6. String (single-line or multiline/code toggle, with optional <datalist> suggestions)
   const strVal =
     typeof value === "string"
       ? value
@@ -715,24 +716,40 @@ export function PortInput({
       : compact
         ? port.name
         : "Enter value...";
+  const hasSuggestions = Boolean(
+    port.suggestions && port.suggestions.length > 0,
+  );
+  const datalistId = hasSuggestions
+    ? `${id ?? effectiveTestId}-datalist`
+    : undefined;
 
   if (compact) {
     return (
-      <input
-        id={id}
-        data-testid={effectiveTestId}
-        type="text"
-        disabled={readOnly}
-        placeholder={placeholder}
-        value={strVal}
-        onChange={(e) =>
-          onChange(
-            e.target.value === "" ? undefined : e.target.value,
-            e.target.value,
-          )
-        }
-        className="comfy-widget-input"
-      />
+      <>
+        <input
+          id={id}
+          data-testid={effectiveTestId}
+          type="text"
+          list={datalistId}
+          disabled={readOnly}
+          placeholder={placeholder}
+          value={strVal}
+          onChange={(e) =>
+            onChange(
+              e.target.value === "" ? undefined : e.target.value,
+              e.target.value,
+            )
+          }
+          className="comfy-widget-input"
+        />
+        {hasSuggestions && datalistId && (
+          <datalist id={datalistId} data-testid={`${effectiveTestId}-datalist`}>
+            {port.suggestions?.map((item) => (
+              <option key={item} value={item} />
+            ))}
+          </datalist>
+        )}
+      </>
     );
   }
 
@@ -755,21 +772,34 @@ export function PortInput({
           className="w-full p-1.5 font-mono text-xs"
         />
       ) : (
-        <input
-          id={id}
-          data-testid={effectiveTestId}
-          type="text"
-          disabled={readOnly}
-          placeholder={placeholder}
-          value={strVal}
-          onChange={(e) =>
-            onChange(
-              e.target.value === "" ? undefined : e.target.value,
-              e.target.value,
-            )
-          }
-          className="w-full px-1.5 py-1 text-xs"
-        />
+        <>
+          <input
+            id={id}
+            data-testid={effectiveTestId}
+            type="text"
+            list={datalistId}
+            disabled={readOnly}
+            placeholder={placeholder}
+            value={strVal}
+            onChange={(e) =>
+              onChange(
+                e.target.value === "" ? undefined : e.target.value,
+                e.target.value,
+              )
+            }
+            className="w-full px-1.5 py-1 text-xs"
+          />
+          {hasSuggestions && datalistId && (
+            <datalist
+              id={datalistId}
+              data-testid={`${effectiveTestId}-datalist`}
+            >
+              {port.suggestions?.map((item) => (
+                <option key={item} value={item} />
+              ))}
+            </datalist>
+          )}
+        </>
       )}
       {!readOnly && (
         <div className="flex justify-end">

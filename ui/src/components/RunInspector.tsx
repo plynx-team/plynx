@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   OpEntry,
   OutputPortSpec,
@@ -7,6 +7,7 @@ import type {
   WorkflowLayout,
 } from "../api/types.gen";
 import { GraphView } from "../graph/GraphView";
+import type { RunLayoutMode } from "../graph/layout";
 import {
   buildOutputPreviewTarget,
   NodeInspector,
@@ -16,6 +17,7 @@ import { computeWorkflowRunDiff, type WorkflowRunDiff } from "../graph/runDiff";
 import { CheckpointCard } from "../stepper/CheckpointCard";
 import { StageApprovalCard } from "../stepper/StageApprovalCard";
 import { StepperView } from "../stepper/StepperView";
+import { FeatherIcon } from "./FeatherIcon";
 import { LogsPanel } from "./LogsPanel";
 
 export type RunViewMode = "stepper" | "graph";
@@ -35,10 +37,16 @@ export interface RunInspectorProps {
   onSelectNode: (nodeId: string | undefined) => void;
   onPreviewArtifact: (target: ArtifactPreviewTarget) => void;
   onApproved?: (stageId: string) => void;
+  onCheckpointAnswered?: () => void;
   /** Optional header strip above LogsPanel showing selected node id + status. */
   showLogsHeader?: boolean;
   /** Render the right-side NodeInspector inside RunInspector (default true). */
   showNodeInspector?: boolean;
+  /** Optional controlled run DAG layout mode (when hosted in an external toolbar). */
+  runLayoutMode?: RunLayoutMode;
+  onChangeRunLayoutMode?: (mode: RunLayoutMode) => void;
+  /** Render the inline Graph layout toggle inside RunInspector (default true). */
+  showLayoutToggle?: boolean;
 }
 
 /**
@@ -60,9 +68,26 @@ export function RunInspector({
   onSelectNode,
   onPreviewArtifact,
   onApproved,
+  onCheckpointAnswered,
   showLogsHeader = false,
   showNodeInspector = true,
+  runLayoutMode: controlledLayoutMode,
+  onChangeRunLayoutMode,
+  showLayoutToggle = true,
 }: RunInspectorProps) {
+  const [internalLayoutMode, setInternalLayoutMode] =
+    useState<RunLayoutMode>("relayout");
+  const runLayoutMode = controlledLayoutMode ?? internalLayoutMode;
+  const [fitTrigger, setFitTrigger] = useState<number>(0);
+  const prevLayoutModeRef = useRef<RunLayoutMode>(runLayoutMode);
+
+  useEffect(() => {
+    if (prevLayoutModeRef.current !== runLayoutMode) {
+      prevLayoutModeRef.current = runLayoutMode;
+      setFitTrigger((c) => c + 1);
+    }
+  }, [runLayoutMode]);
+
   const snapshotWorkflow = runState.workflow_snapshot ?? editorWorkflow ?? null;
   const snapshotLayout = runState.layout_snapshot ?? fallbackLayout ?? null;
 
@@ -78,6 +103,14 @@ export function RunInspector({
 
   const handlePreviewNodeOutput = (nodeId: string, output: OutputPortSpec) => {
     onPreviewArtifact(buildOutputPreviewTarget(runState.id, nodeId, output));
+  };
+
+  const handleLayoutModeChange = (mode: RunLayoutMode) => {
+    if (onChangeRunLayoutMode) {
+      onChangeRunLayoutMode(mode);
+    } else {
+      setInternalLayoutMode(mode);
+    }
   };
 
   const openCheckpoints = runState.checkpoints.filter((cp) => !cp.answered_at);
@@ -124,10 +157,54 @@ export function RunInspector({
                   key={`${cp.node_id}-${cp.checkpoint_id}`}
                   runId={runState.id}
                   checkpoint={cp}
+                  onAnswered={() => onCheckpointAnswered?.()}
                 />
               ))}
             </div>
           )}
+
+        {/* Client-side layout toggle in standalone Graph view */}
+        {showLayoutToggle && viewMode === "graph" && snapshotWorkflow && (
+          <div
+            data-testid="run-layout-mode-toggle"
+            className="absolute top-2.5 right-2.5 z-20 flex items-center rounded shadow-md overflow-hidden text-[11px]"
+            style={{
+              backgroundColor: "var(--bg-panel)",
+              border: "1px solid var(--border-subtle)",
+            }}
+          >
+            <button
+              type="button"
+              data-testid="layout-mode-original"
+              aria-pressed={runLayoutMode === "original"}
+              onClick={() => handleLayoutModeChange("original")}
+              className={`px-2.5 py-1 flex items-center gap-1 transition-colors ${
+                runLayoutMode === "original"
+                  ? "bg-[var(--color-primary)] text-white font-semibold"
+                  : "hover:bg-white/5 text-[var(--text-secondary)]"
+              }`}
+              title="Original layout: lock baseline nodes to layout.snapshot.json and auto-place added nodes between upstream and downstream"
+            >
+              <FeatherIcon name="anchor" size={11} />
+              <span>Original</span>
+            </button>
+            <button
+              type="button"
+              data-testid="layout-mode-relayout"
+              aria-pressed={runLayoutMode === "relayout"}
+              onClick={() => handleLayoutModeChange("relayout")}
+              className={`px-2.5 py-1 flex items-center gap-1 transition-colors ${
+                runLayoutMode === "relayout"
+                  ? "bg-[var(--color-primary)] text-white font-semibold"
+                  : "hover:bg-white/5 text-[var(--text-secondary)]"
+              }`}
+              title="Re-layout full run DAG with client-side Dagre auto-layout"
+            >
+              <FeatherIcon name="shuffle" size={11} />
+              <span>Re-Layout</span>
+            </button>
+          </div>
+        )}
 
         <div
           className={`flex-1 min-h-0 ${
@@ -147,18 +224,22 @@ export function RunInspector({
               onSelectNode={onSelectNode}
               opsMap={opsMap}
               onApproved={onApproved}
+              onCheckpointAnswered={onCheckpointAnswered}
             />
           ) : (
             <GraphView
               workflow={snapshotWorkflow}
               layout={snapshotLayout}
+              runLayoutMode={runLayoutMode}
               runState={runState}
               runDiff={computedDiff}
               ops={ops}
               selectedNodeId={selectedNodeId}
               onSelectNode={onSelectNode}
+              onSelectValidator={(_sid, valNodeId) => onSelectNode(valNodeId)}
               onPreviewOutput={handlePreviewNodeOutput}
               readOnly={true}
+              fitViewTrigger={fitTrigger}
               heightClassName="h-full"
             />
           )}
@@ -202,6 +283,7 @@ export function RunInspector({
           }
           readOnly={true}
           onPreviewArtifact={onPreviewArtifact}
+          onCheckpointAnswered={onCheckpointAnswered}
         />
       )}
     </div>

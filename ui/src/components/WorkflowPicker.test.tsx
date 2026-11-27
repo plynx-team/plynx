@@ -92,6 +92,36 @@ describe("WorkflowPicker component", () => {
     expect(window.location.hash).toBe("#/editor/examples/workflows/foo_or_woo.yaml?view=graph");
   });
 
+  it("renders rows with multi-column grid layout for title, path, stages, and actions (BUG-UI-1)", async () => {
+    const { container } = render(
+      <RouterProvider>
+        <WorkflowPicker />
+      </RouterProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Foo or Woo Demo")).toBeDefined();
+    });
+
+    const header = container.querySelector(".list-header");
+    expect(header).toBeInTheDocument();
+    expect(header).toHaveClass("workflow-list-grid");
+    expect(header?.children.length).toBe(4);
+    expect(header?.children[0].textContent).toBe("Title");
+    expect(header?.children[1].textContent).toBe("Path");
+    expect(header?.children[2].textContent).toBe("Stages");
+    expect(header?.children[3].textContent).toBe("Actions");
+
+    const row = screen.getByTestId("workflow-card-examples/workflows/foo_or_woo.yaml");
+    expect(row).toBeInTheDocument();
+    expect(row).toHaveClass("list-row");
+    expect(row).toHaveClass("workflow-list-grid");
+    expect(row.children.length).toBe(4);
+    expect(row.children[0].textContent).toContain("Foo or Woo Demo");
+    expect(row.children[1].textContent).toBe("examples/workflows/foo_or_woo.yaml");
+    expect(row.children[2].textContent).toContain("2 stages");
+  });
+
   it("opens New Workflow modal and creates a workflow navigating to editor", async () => {
     const saveSpy = vi.spyOn(client, "saveWorkflow").mockResolvedValue({
       workflow: {

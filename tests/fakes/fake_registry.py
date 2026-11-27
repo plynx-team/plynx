@@ -479,6 +479,30 @@ def default_fake_ops() -> list[OpEntry]:
             source="builtin_packs/standard_io/src/standard_io/interactive.py",
         ),
         OpEntry(
+            id="standard_io/interactive:AskQuestions",
+            pack="standard_io",
+            module="interactive",
+            name="AskQuestions",
+            kind="class",
+            title="Ask Questions",
+            category="Core / Interactive",
+            cacheable=False,
+            description="Prompt the user with a configurable list of checkpoint questions in a single pause.\n\nArgs:\n    questions: Non-empty list of question specification dictionaries (id, question,\n        optional header, options, multi_select, allow_freeform).",
+            inputs=[
+                InputPortSpec(
+                    name="questions",
+                    type="json",
+                    required=True,
+                    description="Non-empty list of question specification dictionaries (id, question, optional header, options, multi_select, allow_freeform).",
+                ),
+            ],
+            outputs=[
+                OutputPortSpec(name="answers", type="json"),
+                OutputPortSpec(name="summary_markdown", type="str"),
+            ],
+            source="builtin_packs/standard_io/src/standard_io/interactive.py",
+        ),
+        OpEntry(
             id="standard_io/interactive:MultiStepQuestionnaire",
             pack="standard_io",
             module="toy_ops",

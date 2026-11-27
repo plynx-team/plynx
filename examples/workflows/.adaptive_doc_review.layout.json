@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "nodes": {
+    "detect_lang": {
+      "x": 32.0,
+      "y": 48.0
+    },
+    "ask_preferences": {
+      "x": 436.0,
+      "y": 48.0
+    },
+    "format_body": {
+      "x": 840.0,
+      "y": 48.0
+    },
+    "final_report": {
+      "x": 1244.0,
+      "y": 48.0
+    }
+  },
+  "viewport": {
+    "x": 0.0,
+    "y": 0.0,
+    "zoom": 1.0
+  }
+}

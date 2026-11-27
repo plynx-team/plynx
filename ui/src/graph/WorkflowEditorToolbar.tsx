@@ -5,6 +5,7 @@ import {
   ControlSeparator,
 } from "../components/ControlPanel";
 import { FeatherIcon } from "../components/FeatherIcon";
+import type { RunLayoutMode } from "./layout";
 import type { EditorViewMode } from "./WorkflowEditor";
 
 export interface WorkflowEditorToolbarProps {
@@ -32,6 +33,8 @@ export interface WorkflowEditorToolbarProps {
   onDeleteNode: () => void;
   onDeleteStage: (stageId: string) => void;
   onDeleteEdge: () => void;
+  runLayoutMode?: RunLayoutMode;
+  onChangeRunLayoutMode?: (mode: RunLayoutMode) => void;
 }
 
 export function WorkflowEditorToolbar({
@@ -59,6 +62,8 @@ export function WorkflowEditorToolbar({
   onDeleteNode,
   onDeleteStage,
   onDeleteEdge,
+  runLayoutMode = "relayout",
+  onChangeRunLayoutMode,
 }: WorkflowEditorToolbarProps) {
   return (
     <ControlPanel>
@@ -180,6 +185,45 @@ export function WorkflowEditorToolbar({
           disabled={isInspectingRun}
           onClick={onDeleteEdge}
         />
+      )}
+
+      {isInspectingRun && viewMode === "graph" && onChangeRunLayoutMode && (
+        <>
+          <ControlSeparator />
+          <div
+            data-testid="run-layout-mode-toggle"
+            className="control-toggle"
+            role="group"
+            aria-label="Run DAG layout mode"
+          >
+            <button
+              type="button"
+              data-testid="layout-mode-original"
+              aria-pressed={runLayoutMode === "original"}
+              onClick={() => onChangeRunLayoutMode("original")}
+              className={`control-button first ${
+                runLayoutMode === "original" ? "selected" : ""
+              }`}
+              title="Original layout: lock baseline nodes to layout.snapshot.json and auto-place added nodes between upstream and downstream"
+            >
+              <FeatherIcon name="anchor" size={13} />
+              <span className="control-button-text">Original</span>
+            </button>
+            <button
+              type="button"
+              data-testid="layout-mode-relayout"
+              aria-pressed={runLayoutMode === "relayout"}
+              onClick={() => onChangeRunLayoutMode("relayout")}
+              className={`control-button last ${
+                runLayoutMode === "relayout" ? "selected" : ""
+              }`}
+              title="Re-layout full run DAG with client-side Dagre auto-layout"
+            >
+              <FeatherIcon name="shuffle" size={13} />
+              <span className="control-button-text">Re-Layout</span>
+            </button>
+          </div>
+        </>
       )}
 
       <div className="ml-auto flex items-center gap-2.5 pr-2 text-xs">

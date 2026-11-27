@@ -1,4 +1,5 @@
 import type { NodeSpec, RunState, Workflow } from "../api/types.gen";
+import { isStageValidatorNodeId } from "./types";
 
 export interface InputDiffEntry {
   portName: string;
@@ -75,6 +76,9 @@ export function computeWorkflowRunDiff(
   };
   if (runState.nodes) {
     for (const nodeId of Object.keys(runState.nodes)) {
+      if (isStageValidatorNodeId(nodeId)) {
+        continue;
+      }
       if (!snapshotNodes[nodeId]) {
         snapshotNodes[nodeId] = {
           op: "unknown",

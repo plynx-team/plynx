@@ -108,6 +108,7 @@ describe("RunInspector (R4.2 snapshot fidelity)", () => {
           status: "RUNNING",
           cache_hit: false,
           attempt: 1,
+        warnings: [],
         },
       },
       checkpoints: [],

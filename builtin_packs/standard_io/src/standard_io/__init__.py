@@ -1,5 +1,9 @@
-"""PLynx built-in Node Pack: basic text, data, file, and interactive ops."""
+"""PLynx built-in Node Pack: basic text, data, file, interactive, and agent ops."""
 
+from standard_io.agent import (
+    AgentPrompt,
+    StageSupervisor,
+)
 from standard_io.data import (
     CsvSummary,
     JsonExtract,
@@ -19,11 +23,14 @@ from standard_io.files import (
 )
 from standard_io.interactive import (
     AskChoice,
+    AskQuestions,
 )
 from standard_io.text import Concat
 
 __all__ = [
+    "AgentPrompt",
     "AskChoice",
+    "AskQuestions",
     "BundleDirectory",
     "Concat",
     "CsvSummary",
@@ -34,6 +41,7 @@ __all__ = [
     "MarkdownReport",
     "MathOp",
     "ReadText",
+    "StageSupervisor",
     "TemplateFormat",
     "WriteText",
 ]

@@ -27,6 +27,8 @@ export function NodeRow({
 }: NodeRowProps) {
   const isNotInRun = nodeDiff ? nodeDiff.status === "not_in_run" : !nodeState;
   const isNewInRun = nodeDiff ? nodeDiff.status === "new_in_run" : !spec;
+  const isAddedByAgent = Boolean(spec?.meta?.injected_by);
+  const isSuperseded = Boolean(spec?.meta?.superseded_by);
   const status = nodeState?.status;
   const title = spec?.title || spec?.op || nodeId;
   const op = spec?.op;
@@ -34,7 +36,7 @@ export function NodeRow({
   return (
     <div
       onClick={() => onSelect?.(nodeId)}
-      className={`list-item !block ${isSelected ? "selected" : ""} ${
+      className={`list-row !block ${isSelected ? "selected" : ""} ${
         isNotInRun ? "opacity-60" : ""
       }`}
     >
@@ -66,9 +68,31 @@ export function NodeRow({
               &bull; {title}
             </span>
           )}
-          {isNewInRun && (
-            <span className="status-badge !border-[#00d8ff] !text-[#00d8ff] !text-[10px] !px-1.5 !py-0">
-              NEW
+          {isAddedByAgent ? (
+            <span
+              data-testid={`badge-added-by-agent-${nodeId}`}
+              className="status-badge !border-[#00d8ff] !text-[#00d8ff] !text-[10px] !px-1.5 !py-0"
+              title={
+                spec?.meta?.reason
+                  ? `Injected by ${spec.meta.injected_by}: ${spec.meta.reason}`
+                  : `Injected by ${spec?.meta?.injected_by}`
+              }
+            >
+              ADDED BY AGENT
+            </span>
+          ) : (
+            isNewInRun && (
+              <span className="status-badge !border-[#00d8ff] !text-[#00d8ff] !text-[10px] !px-1.5 !py-0">
+                NEW
+              </span>
+            )
+          )}
+          {isSuperseded && (
+            <span
+              data-testid={`badge-superseded-${nodeId}`}
+              className="status-badge CREATED !text-[10px] !px-1.5 !py-0"
+            >
+              SUPERSEDED
             </span>
           )}
           {nodeState?.cache_hit && (
@@ -78,6 +102,23 @@ export function NodeRow({
               title={getCacheHint(nodeState)}
             >
               cache hit
+            </span>
+          )}
+          {nodeState?.warnings && nodeState.warnings.length > 0 && (
+            <span
+              data-testid={`node-warnings-badge-${nodeId}`}
+              className="status-badge !text-[10px] !px-1.5 !py-0 inline-flex items-center gap-1 cursor-help"
+              style={{
+                borderColor: "var(--color-warning)",
+                color: "var(--color-warning)",
+              }}
+              title={nodeState.warnings.join("\n")}
+            >
+              <FeatherIcon name="alert-triangle" size={10} />
+              <span>
+                {nodeState.warnings.length}{" "}
+                {nodeState.warnings.length === 1 ? "warning" : "warnings"}
+              </span>
             </span>
           )}
         </div>

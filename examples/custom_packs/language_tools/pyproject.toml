@@ -1,0 +1,16 @@
+[project]
+name = "language-tools"
+version = "2.0.0"
+description = "PLynx Node Pack: statistical language detection and agentic text translation."
+requires-python = ">=3.11"
+dependencies = [
+    "langdetect>=1.0.9",
+    "plynx-sdk",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.0,<0.10"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "language_tools"

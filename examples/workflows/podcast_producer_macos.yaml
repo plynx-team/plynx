@@ -74,3 +74,7 @@ nodes:
         00:06 - Dynamic Audio Ducking & Mixing
         00:11 - Atomic Reproducibility & Outro
       transcript: "Welcome to Plynx Studio! In today's episode, we demonstrate how macOS native voice synthesis pairs with procedural lo-fi background music, automatic audio ducking, and atomic reproducibility. Zero API keys, pure local magic."
+      production_notes: |-
+        - **Speech Engine:** macOS Native TTS (`say` with PCM 16-bit 44.1 kHz LEI16).
+        - **BGM:** Procedural lo-fi chord synthesis with Rhodes electric piano harmonics.
+        - **Mixing:** Automatic RMS ducking (-14 dB attenuation during voice).

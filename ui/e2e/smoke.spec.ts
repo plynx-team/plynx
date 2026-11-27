@@ -95,10 +95,11 @@ test.describe("PLynx UI Smoke Test", () => {
     await expect(checkpointCard).toBeVisible({ timeout: 10000 });
     await expect(page.getByText("foo or woo?")).toBeVisible();
 
-    // Click option "foo" to answer the checkpoint
-    const fooBtn = checkpointCard.getByRole("button", { name: "foo", exact: true });
-    await expect(fooBtn).toBeVisible();
-    await fooBtn.click();
+    // Select option "foo" and submit to answer the checkpoint
+    const fooRadio = checkpointCard.getByRole("radio", { name: "foo", exact: true });
+    await expect(fooRadio).toBeVisible();
+    await fooRadio.check();
+    await checkpointCard.getByRole("button", { name: "Submit Answers" }).click();
 
     // Checkpoint card disappears on checkpoint_resolved!
     await expect(checkpointCard).not.toBeVisible({ timeout: 10000 });
@@ -179,7 +180,8 @@ test.describe("PLynx UI Smoke Test", () => {
     await expect(page.getByTestId("graph-node-status-pick")).toHaveText("WAITING_FOR_USER");
 
     // Answer checkpoint while in Graph view and observe live transition to SUCCESS
-    await checkpointCard.getByRole("button", { name: "foo", exact: true }).click();
+    await checkpointCard.getByRole("radio", { name: "foo", exact: true }).check();
+    await checkpointCard.getByRole("button", { name: "Submit Answers" }).click();
     await expect(page.getByTestId("graph-node-status-pick")).toHaveText("SUCCESS", { timeout: 10000 });
     await expect(page.getByTestId("graph-node-status-echo")).toHaveText("SUCCESS", { timeout: 10000 });
 
@@ -409,7 +411,9 @@ nodes:
     await expect(page.getByText("foo or woo?")).toBeVisible();
 
     // Answer after reload -> run completes to SUCCESS, and reloading again restores SUCCESS from SQLite
-    await page.getByTestId("checkpoint-card-cp_0").getByRole("button", { name: "foo", exact: true }).click();
+    const reloadedCard = page.getByTestId("checkpoint-card-cp_0");
+    await reloadedCard.getByRole("radio", { name: "foo", exact: true }).check();
+    await reloadedCard.getByRole("button", { name: "Submit Answers" }).click();
     await expect(page.getByTestId("run-status-badge")).toHaveText("SUCCESS", { timeout: 10000 });
     await page.reload();
     await expect(page.getByTestId("run-status-badge")).toHaveText("SUCCESS");
@@ -449,7 +453,8 @@ nodes:
       await page.getByRole("button", { name: "Resume Run" }).click();
       const resumedCp = page.getByTestId("checkpoint-card-cp_0");
       await expect(resumedCp).toBeVisible({ timeout: 10000 });
-      await resumedCp.getByRole("button", { name: "woo", exact: true }).click();
+      await resumedCp.getByRole("radio", { name: "woo", exact: true }).check();
+      await resumedCp.getByRole("button", { name: "Submit Answers" }).click();
       await expect(page.getByTestId("run-status-badge")).toHaveText("SUCCESS", { timeout: 10000 });
     } finally {
       await stopProcess(server1, "SIGKILL");

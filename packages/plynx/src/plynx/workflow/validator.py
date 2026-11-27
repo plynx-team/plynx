@@ -16,7 +16,14 @@ from plynx.api_models import (
     WorkflowInputSpec,
 )
 from plynx.registry import OpRegistry, PackRegistry, find_workspace_root, is_direct_builtin_pack
-from plynx.workflow.models import NodeRef, Workflow, load_workflow
+from plynx.workflow.models import (
+    STAGE_ID_FOR_VALIDATOR_PATTERN,
+    NodeRef,
+    StageValidatorSpec,
+    Workflow,
+    load_workflow,
+    stage_validator_node_id,
+)
 
 
 def _literal_matches_port_spec(value: Any, port: InputPortSpec) -> tuple[bool, str | None]:
@@ -105,6 +112,7 @@ def get_unbound_run_inputs(
                         type=port.type,
                         media=port.media,
                         options=port.options,
+                        suggestions=port.suggestions,
                         min=port.min,
                         max=port.max,
                         step=port.step,
@@ -112,6 +120,32 @@ def get_unbound_run_inputs(
                         default=port.default,
                         description=port.description,
                         stage_id=node.stage,
+                    )
+                )
+    for stage_id, stage in workflow.stages.items():
+        if stage.validator is None:
+            continue
+        val_op = registry.get(stage.validator.op)
+        if val_op is None or not val_op.valid:
+            continue
+        val_nid = stage_validator_node_id(stage_id)
+        for port in val_op.inputs:
+            if port.name not in stage.validator.inputs and port.required and port.default is None:
+                unbound.append(
+                    WorkflowInputSpec(
+                        node_id=val_nid,
+                        name=port.name,
+                        type=port.type,
+                        media=port.media,
+                        options=port.options,
+                        suggestions=port.suggestions,
+                        min=port.min,
+                        max=port.max,
+                        step=port.step,
+                        required=port.required,
+                        default=port.default,
+                        description=port.description,
+                        stage_id=stage_id,
                     )
                 )
     return unbound
@@ -144,8 +178,179 @@ def _resolve_node_ops(
                 )
             )
             continue
+        if node.allow_graph_edits is not None and op_entry.agent_role is None:
+            issues.append(
+                ValidationIssue(
+                    severity="error",
+                    node_id=node_id,
+                    message=(
+                        f"Node '{node_id}': 'allow_graph_edits' is only supported on "
+                        f"AgentOp / StageValidatorOp operations (got '{node.op}')"
+                    ),
+                )
+            )
         node_ops[node_id] = op_entry
     return node_ops
+
+
+def _validate_stage_validators(
+    workflow: Workflow,
+    registry: OpRegistry,
+    node_ops: dict[str, OpEntry],
+    stage_index: dict[str, int],
+    run_inputs: dict[str, Any] | None,
+    issues: list[ValidationIssue],
+) -> list[OpEntry]:
+    validator_ops: list[OpEntry] = []
+    for stage_id, stage in workflow.stages.items():
+        val_spec: StageValidatorSpec | None = stage.validator
+        if val_spec is None:
+            continue
+        val_nid = stage_validator_node_id(stage_id)
+        if not STAGE_ID_FOR_VALIDATOR_PATTERN.match(stage_id):
+            issues.append(
+                ValidationIssue(
+                    severity="error",
+                    node_id=val_nid,
+                    message=(
+                        f"Stage '{stage_id}': stage ID with validator must match "
+                        "^[a-zA-Z0-9][a-zA-Z0-9_-]*$"
+                    ),
+                )
+            )
+        op_entry = registry.get(val_spec.op)
+        if op_entry is None:
+            issues.append(
+                ValidationIssue(
+                    severity="error",
+                    node_id=val_nid,
+                    message=f"Stage '{stage_id}' validator: unknown op '{val_spec.op}'",
+                )
+            )
+            continue
+        if not op_entry.valid:
+            reason = op_entry.error or "invalid op declaration"
+            issues.append(
+                ValidationIssue(
+                    severity="error",
+                    node_id=val_nid,
+                    message=(f"Stage '{stage_id}' validator: invalid op '{val_spec.op}': {reason}"),
+                )
+            )
+            continue
+        if op_entry.agent_role not in ("validator", "agent"):
+            issues.append(
+                ValidationIssue(
+                    severity="error",
+                    node_id=val_nid,
+                    message=(
+                        f"Stage '{stage_id}' validator: op '{val_spec.op}' must be a "
+                        "StageValidatorOp or AgentOp"
+                    ),
+                )
+            )
+            continue
+
+        validator_ops.append(op_entry)
+        dst_inputs = {port.name: port for port in op_entry.inputs}
+
+        for port in op_entry.inputs:
+            if port.name in val_spec.inputs:
+                continue
+            bound = bool(run_inputs and f"{val_nid}.{port.name}" in run_inputs)
+            if not bound and port.required and port.default is None:
+                issues.append(
+                    ValidationIssue(
+                        severity="warning",
+                        node_id=val_nid,
+                        message=(
+                            f"Stage '{stage_id}' validator: unbound run input "
+                            f"'{port.name}' (type '{port.type}')"
+                        ),
+                    )
+                )
+
+        for port_name, val in val_spec.inputs.items():
+            dst_port = dst_inputs.get(port_name)
+            if dst_port is None:
+                if op_entry.allow_extra_inputs:
+                    dst_port = op_entry.extra_inputs_type
+                else:
+                    issues.append(
+                        ValidationIssue(
+                            severity="error",
+                            node_id=val_nid,
+                            message=(
+                                f"Stage '{stage_id}' validator: unknown input port "
+                                f"'{port_name}' for op '{val_spec.op}'"
+                            ),
+                        )
+                    )
+            if isinstance(val, NodeRef):
+                src_nid = val.from_node
+                if src_nid not in workflow.nodes:
+                    issues.append(
+                        ValidationIssue(
+                            severity="error",
+                            node_id=val_nid,
+                            message=(
+                                f"Stage '{stage_id}' validator: input '{port_name}' "
+                                f"references missing node '{src_nid}'"
+                            ),
+                        )
+                    )
+                    continue
+                src_stage = workflow.nodes[src_nid].stage
+                if stage_index[stage_id] < stage_index[src_stage]:
+                    issues.append(
+                        ValidationIssue(
+                            severity="error",
+                            node_id=val_nid,
+                            message=(
+                                f"Stage '{stage_id}' validator: backward stage edge "
+                                f"from node '{src_nid}' (stage '{src_stage}')"
+                            ),
+                        )
+                    )
+                src_op = node_ops.get(src_nid)
+                if src_op is not None:
+                    src_outputs = {p.name: p for p in src_op.outputs}
+                    src_port = src_outputs.get(val.output)
+                    if src_port is None:
+                        issues.append(
+                            ValidationIssue(
+                                severity="error",
+                                node_id=val_nid,
+                                message=(
+                                    f"Stage '{stage_id}' validator: input '{port_name}' "
+                                    f"references unknown output '{val.output}' on '{src_nid}'"
+                                ),
+                            )
+                        )
+                    elif dst_port is not None:
+                        compatible, mismatch_reason = _ports_compatible(src_port, dst_port)
+                        if not compatible:
+                            issues.append(
+                                ValidationIssue(
+                                    severity="error",
+                                    node_id=val_nid,
+                                    message=(
+                                        f"Stage '{stage_id}' validator: {mismatch_reason} "
+                                        f"on input '{port_name}' from '{src_nid}.{val.output}'"
+                                    ),
+                                )
+                            )
+            elif dst_port is not None:
+                matches, err_msg = _literal_matches_port_spec(val, dst_port)
+                if not matches:
+                    issues.append(
+                        ValidationIssue(
+                            severity="error",
+                            node_id=val_nid,
+                            message=f"Stage '{stage_id}' validator: {err_msg}",
+                        )
+                    )
+    return validator_ops
 
 
 def _check_pack_lockfiles(
@@ -315,7 +520,13 @@ def validate_workflow(
     stage_index = {stage_id: idx for idx, stage_id in enumerate(workflow.stages.keys())}
 
     node_ops = _resolve_node_ops(workflow, registry, issues)
-    _check_pack_lockfiles(node_ops, registry, issues)
+    validator_ops = _validate_stage_validators(
+        workflow, registry, node_ops, stage_index, run_inputs, issues
+    )
+    all_ops_for_locks = dict(node_ops)
+    for idx, v_op in enumerate(validator_ops):
+        all_ops_for_locks[f"__val__{idx}"] = v_op
+    _check_pack_lockfiles(all_ops_for_locks, registry, issues)
     _check_unbound_inputs(workflow, node_ops, run_inputs, issues)
 
     dep_graph: dict[str, set[str]] = {node_id: set() for node_id in workflow.nodes}

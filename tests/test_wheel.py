@@ -93,9 +93,12 @@ def test_declarative_uv_build_bundles_static_and_standard_io_without_staging(
     assert "plynx/static/index.html" in names
     assert any(n.startswith("plynx/static/assets/") for n in names)
     assert "plynx/AGENT_GUIDE.md" in names
+    assert "plynx/skills/plynx-create-workflow/SKILL.md" in names
     assert "plynx/builtin_packs/standard_io/pyproject.toml" in names
     assert "plynx/builtin_packs/standard_io/src/standard_io/__init__.py" in names
+    assert "plynx/builtin_packs/standard_io/src/standard_io/agent.py" in names
     assert "plynx/builtin_packs/standard_io/src/standard_io/demo.py" in names
+    assert "plynx/builtin_packs/standard_io/src/standard_io/interactive.py" in names
     assert "plynx/builtin_packs/standard_io/src/standard_io/text.py" in names
     assert not any(n.endswith("uv.lock") for n in names), "Wheel must not bundle uv.lock files"
     assert "Requires-Dist: plynx-sdk<3.0.0,>=2.0.0" in metadata_text or (
@@ -127,9 +130,12 @@ def test_build_script_creates_wheels_with_static_and_builtin_packs(tmp_path: Pat
     assert "plynx/static/index.html" in names
     assert any(n.startswith("plynx/static/assets/") for n in names)
     assert "plynx/AGENT_GUIDE.md" in names
+    assert "plynx/skills/plynx-create-workflow/SKILL.md" in names
     assert "plynx/builtin_packs/standard_io/pyproject.toml" in names
     assert "plynx/builtin_packs/standard_io/src/standard_io/__init__.py" in names
+    assert "plynx/builtin_packs/standard_io/src/standard_io/agent.py" in names
     assert "plynx/builtin_packs/standard_io/src/standard_io/demo.py" in names
+    assert "plynx/builtin_packs/standard_io/src/standard_io/interactive.py" in names
     assert "plynx/builtin_packs/standard_io/src/standard_io/text.py" in names
     assert not any(n.endswith("uv.lock") for n in names)
 
@@ -188,7 +194,19 @@ def test_installed_wheel_validates_and_runs_standard_io_workflow_isolated(
 
     # Fresh user workspace completely outside the source tree
     workspace = tmp_path / "user_workspace"
-    (workspace / "workflows").mkdir(parents=True)
+    clean_env = _clean_subprocess_env()
+
+    init_res = subprocess.run(
+        [str(venv_plynx), "init", str(workspace)],
+        cwd=tmp_path,
+        env=clean_env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert init_res.returncode == 0, f"stdout={init_res.stdout}\nstderr={init_res.stderr}"
+    assert (workspace / ".agents" / "skills" / "plynx-create-workflow" / "SKILL.md").is_file()
+
     workflow_file = workspace / "workflows" / "wheel_smoke.yaml"
     workflow_file.write_text(
         """version: 1
@@ -215,8 +233,6 @@ nodes:
 """,
         encoding="utf-8",
     )
-
-    clean_env = _clean_subprocess_env()
 
     # Pre-warm plynx bytecode in site-packages if any before snapshotting, then lock builtin_packs
     # read-only on POSIX and assert zero writes to site-packages during validate/run/run-node.

@@ -160,4 +160,33 @@ describe("LiteralWidget / PortInput component", () => {
       screen.getByTestId("inspector-input-config-list-container"),
     ).toBeInTheDocument();
   });
+
+  it("renders HTML datalist suggestions on str model port while keeping freeform input (FEAT-AGT-1b)", () => {
+    const onChange = vi.fn();
+    const port: InputPortSpec = {
+      name: "model",
+      type: "str",
+      media: null,
+      options: null,
+      suggestions: ["claude-sonnet-4-5", "gpt-5", "gemini-2.5-pro"],
+      min: null,
+      max: null,
+      step: null,
+      required: false,
+      default: "",
+    };
+
+    render(<LiteralWidget port={port} value="" onChange={onChange} />);
+
+    const input = screen.getByTestId("inspector-input-model");
+    expect(input.tagName).toBe("INPUT");
+    expect(input).toHaveAttribute("list", "inspector-input-model-datalist");
+
+    const datalist = screen.getByTestId("inspector-input-model-datalist");
+    expect(datalist.tagName).toBe("DATALIST");
+    expect(datalist.querySelectorAll("option")).toHaveLength(3);
+
+    fireEvent.change(input, { target: { value: "ollama/qwen2.5-coder:32b" } });
+    expect(onChange).toHaveBeenCalledWith("ollama/qwen2.5-coder:32b");
+  });
 });

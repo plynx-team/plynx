@@ -152,12 +152,14 @@ const RUN_STATE: RunState = {
       status: "SUCCESS",
       cache_hit: false,
       attempt: 1,
+    warnings: [],
     },
     rich: {
       node_id: "rich",
       status: "SUCCESS",
       cache_hit: false,
       attempt: 1,
+    warnings: [],
     },
   },
   checkpoints: [],
@@ -565,5 +567,60 @@ describe("NodeInspector component (Task 6.11)", () => {
     fireEvent.change(inputField, { target: { value: "track_2" } });
     fireEvent.click(submitBtn);
     expect(handleUpdateNodeSpec).toHaveBeenCalled();
+  });
+
+  it("renders per-node warnings and open batch checkpoints in PropertiesBar", () => {
+    const runWithWarningsAndCp: RunState = {
+      ...RUN_STATE,
+      status: "WAITING_FOR_USER",
+      nodes: {
+        ...RUN_STATE.nodes,
+        rich: {
+          ...RUN_STATE.nodes.rich,
+          status: "WAITING_FOR_USER",
+          warnings: ["Detected French language (lang=fr)"],
+        },
+      },
+      checkpoints: [
+        {
+          node_id: "rich",
+          checkpoint_id: "cp_0",
+          question: "Target track?",
+          options: null,
+          allow_freeform: false,
+          questions: [
+            {
+              id: "role",
+              header: "Track",
+              question: "Target track?",
+              options: ["ML", "Backend"],
+              multi_select: false,
+              allow_freeform: false,
+            },
+          ],
+          answer: null,
+          created_at: 1700000000,
+          answered_at: null,
+        },
+      ],
+    };
+
+    render(
+      <NodeInspector
+        nodeId="rich"
+        workflow={WORKFLOW}
+        opsMap={OPS_MAP}
+        runState={runWithWarningsAndCp}
+        readOnly={true}
+      />,
+    );
+
+    expect(screen.getByTestId("inspector-warnings-badge")).toBeInTheDocument();
+    expect(screen.getByTestId("inspector-node-warnings")).toBeInTheDocument();
+    expect(
+      screen.getByText("Detected French language (lang=fr)"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("inspector-checkpoint-cp_0")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "ML" })).toBeInTheDocument();
   });
 });

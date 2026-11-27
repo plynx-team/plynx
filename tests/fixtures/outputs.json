@@ -16,5 +16,8 @@
       "kind": "directory",
       "path": "workdir/frames"
     }
-  }
+  },
+  "warnings": [
+    "Detected non-English document (lang=fr)"
+  ]
 }
