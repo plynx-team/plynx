@@ -52,7 +52,8 @@ Follow these heuristics when designing or refactoring PLynx workflows:
 2. **Context-Free, Honest Operations (Never Overfit to One Workflow)**: Outside automated tests, never hardcode workflow-specific strings, lookup tables, questions, or toy heuristics inside an op. Parameterize domain specifics via input ports, and use real libraries in isolated Node Packs (`uv.lock`) or `AgentOp` for general tasks. Every op's `TITLE` and docstring must be 100% accurate: if an op claims to detect languages or translate text, it must genuinely do so for any input.
 3. **Goldilocks Granularity (Typically 3–8 Nodes Across 2–4 Stages)**: Never write a 1-node monolith script (which defeats Stepper visibility and intermediate CAS caching), and never create 25 tiny 2-line micro-nodes (which adds UI clutter and subprocess startup overhead). Each node should represent one coherent, human-understandable step.
 4. **Cache-Boundary Splitting**: Separate expensive or slow steps (`AgentOp` LLM calls, PDF parsing, media rendering, network I/O) from fast deterministic formatting so downstream tweaks hit `plynx-cache-1` in 0 ms.
-5. **Regression Testing Refactored Ops with `plynx run-node`**: When consolidating or refactoring Python ops in `custom_packs/`, replay historical `.plynx/runs/<run_id>/nodes/<node_id>` directories via `plynx run-node` to verify corner cases before updating `workflows/<name>.yaml`.
+5. **Isolate External Side Effects Behind Approval Gates**: Set `CACHEABLE = False` on ops with external mutations (sending emails/messages, `git push`, webhooks, DB/API writes), group them into a dedicated final stage, and set `require_approval: true` on the preceding stage (or expose a `dry_run: bool` input) so `--non-interactive` runs stop (`exit 2`) before touching external systems.
+6. **Safe Verification Before Live Re-Runs**: When refactoring ops or debugging workflows, inspect historical `.plynx/runs/<run_id>/nodes/<node_id>/{inputs.json,result.json}` and `logs/` **read-only** for corner cases, run `plynx validate`, and unit-test external or refactored ops with `pytest` mocks. Pure local deterministic nodes may be tested freely via `plynx run` / `plynx run-node`, but **always ask the user for explicit confirmation** before executing or replaying any node/stage that mutates external state or incurs non-trivial API/LLM cost.
 
 ## 4. `workflow.yaml` Schema
 
@@ -120,7 +121,7 @@ Rules:
    plynx runs <run_id>
    cat .plynx/runs/<run_id>/logs/<node_id>.stderr.log
    ```
-2. Reproduce in an isolated scratch copy (does not modify SQLite or run files):
+2. For pure local deterministic ops, reproduce in an isolated scratch copy (does not modify SQLite or run files; ask the user first if the node mutates external systems or incurs non-trivial API/LLM cost):
    ```bash
    plynx run-node .plynx/runs/<run_id>/nodes/<node_id>
    ```
