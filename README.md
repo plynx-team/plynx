@@ -130,6 +130,11 @@ git clone https://github.com/plynx-team/plynx.git
 cd plynx
 uv sync
 cd ui && npm ci && npm run build && cd ..
+
+# Launch the local web UI from the workspace (or: uv run python -m plynx.cli ui)
+uv run plynx ui
+
+# Run checks, tests, and wheel build
 uv run ruff check && uv run ruff format --check && uv run mypy && uv run pytest
 uv run python scripts/build.py
 ```
