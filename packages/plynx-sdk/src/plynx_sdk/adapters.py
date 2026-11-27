@@ -330,6 +330,11 @@ def build_provider_command(
                 "or PLYNX_AGENT_CUSTOM_COMMAND in the environment"
             )
         raw_tokens = shlex.split(template, posix=(os.name != "nt"))
+        if os.name == "nt":
+            raw_tokens = [
+                tok[1:-1] if len(tok) >= 2 and tok[0] == tok[-1] and tok[0] in ('"', "'") else tok
+                for tok in raw_tokens
+            ]
         if not raw_tokens:
             raise RuntimeError("AgentProvider.CUSTOM command template is empty")
         substitutions = {

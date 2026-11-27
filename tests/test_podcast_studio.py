@@ -52,6 +52,7 @@ def test_text_to_speech_fails_when_say_unavailable(
 ) -> None:
     """Verify TextToSpeech raises RuntimeError rather than returning fake fallback audio."""
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr("podcast_studio.voice.platform.system", lambda: "Darwin")
     monkeypatch.setattr("podcast_studio.voice.shutil.which", lambda _name: None)
     with pytest.raises(RuntimeError, match="say"):
         TextToSpeech().run(text="Should fail cleanly.")

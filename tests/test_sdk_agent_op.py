@@ -464,7 +464,10 @@ def test_provider_cli_command_builders_and_guards(tmp_path: Path) -> None:
         assert "--bare" not in built
 
 
-def test_custom_cli_subprocess_stdin_devnull_and_stdout_fallback(tmp_path: Path) -> None:
+def test_custom_cli_subprocess_stdin_devnull_and_stdout_fallback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """AgentProvider.CUSTOM runs real subprocess with stdin=DEVNULL and supports stdout fallback."""
     helper_script = tmp_path / "fake_cli.py"
     helper_script.write_text(
@@ -504,6 +507,24 @@ def test_custom_cli_subprocess_stdin_devnull_and_stdout_fallback(tmp_path: Path)
     turns = load_agent_turns(node_dir)
     assert len(turns.turns) == 1
     assert turns.turns[0].session_id == "custom_sess_42"
+
+    # Windows (os.name == "nt"): shlex.split(..., posix=False) keeps surrounding quotes,
+    # so build_provider_command must strip matching outer quotes while preserving backslashes.
+    monkeypatch.setattr("plynx_sdk.adapters.os.name", "nt")
+    win_cmd = build_provider_command(
+        AgentProvider.CUSTOM,
+        prompt="hello",
+        schema_path=workdir / "turn_schema.json",
+        schema_dict={"type": "object"},
+        output_path=workdir / "turn_output.json",
+        prompt_file_path=workdir / "turn_prompt.md",
+        workdir=workdir,
+        custom_command=r'"C:\Program Files\Python\python.exe" "C:\tmp\script.py" --schema "{schema_path}"',
+    )
+    assert win_cmd[0] == r"C:\Program Files\Python\python.exe"
+    assert win_cmd[1] == r"C:\tmp\script.py"
+    assert win_cmd[2] == "--schema"
+    assert win_cmd[3] == str(workdir / "turn_schema.json")
 
 
 def test_stage_validator_op_propose_patch_and_forbidden_guard(tmp_path: Path) -> None:
