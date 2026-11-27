@@ -1,4 +1,4 @@
-"""Baseline drift detection and node execution telemetry (ENTRYPOINT.md section 2.4.D)."""
+"""Baseline drift detection and node execution telemetry."""
 
 from __future__ import annotations
 

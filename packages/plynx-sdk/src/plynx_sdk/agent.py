@@ -1,4 +1,4 @@
-"""``AgentOp`` and ``StageValidatorOp`` authoring API (ENTRYPOINT.md sections 2.3 & 2.4).
+"""``AgentOp`` and ``StageValidatorOp`` authoring API.
 
 Standard library only. Provides:
 - 0-token replay across ``checkpoint_batch()`` restarts via ``nodes/<node_id>/agent_turns.json``

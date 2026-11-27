@@ -1,4 +1,4 @@
-"""Modular multi-provider CLI coding harness adapters (ENTRYPOINT.md section 2.3.E).
+"""Modular multi-provider CLI coding harness adapters.
 
 Standard library only. Spawns non-interactive CLI coding agents with ``stdin=DEVNULL``,
 no forced default timeout, explicit ``--resume <session_id>`` (never ``--continue``),
