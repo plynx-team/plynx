@@ -222,15 +222,15 @@ def test_extract_standard_io_files_matches_default_fake_ops() -> None:
 
 
 def test_extract_standard_io_interactive_matches_default_fake_ops() -> None:
-    """Extraction of standard_io/interactive.py matches the AskChoice op in FakeRegistry."""
+    """Extraction of standard_io/interactive.py matches AskChoice and AskQuestions in FakeRegistry."""
     interactive_py = (
         ROOT / "builtin_packs" / "standard_io" / "src" / "standard_io" / "interactive.py"
     )
     extracted = extract_ops_from_file(interactive_py)
-    assert len(extracted) == 1
+    assert len(extracted) == 2
 
     fake_ops = {op.id: op for op in default_fake_ops() if op.module == "interactive"}
-    assert len(fake_ops) == 1
+    assert len(fake_ops) == 2
 
     for op in extracted:
         assert op.id in fake_ops

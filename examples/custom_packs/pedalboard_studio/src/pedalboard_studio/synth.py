@@ -7,64 +7,19 @@ score generators, effects, and mixers.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from typing import Annotated, Any, Literal, TypedDict
+from typing import Annotated, Literal, TypedDict
 
 import numpy as np
 from pedalboard.io import AudioFile
-from plynx_sdk import AudioWav, JsonFile, MidiFile, Op, Range
+from plynx_sdk import AudioWav, MidiFile, Op, Range
 from scipy.signal import lfilter  # type: ignore[import-untyped]
 
 from pedalboard_studio.midi_io import (
     DRUM_CHANNEL,
-    MidiNote,
-    MidiScore,
     midi_pitch_to_freq,
     read_midi,
-    write_midi,
 )
-
-# J.S. Bach: Prelude I in C Major, BWV 846 (The Well-Tempered Clavier, Book 1)
-# Authentic 35-measure harmonic chord structure.
-# Each tuple defines 5 voices from lowest to highest MIDI pitch: (bass, tenor, alto, s1, s2).
-BWV_846_BARS: list[tuple[int, int, int, int, int]] = [
-    (48, 52, 55, 60, 64),  # Bar 1:  C major
-    (48, 50, 57, 62, 65),  # Bar 2:  Dm7 / C
-    (47, 50, 55, 62, 65),  # Bar 3:  G7 / B
-    (48, 52, 55, 60, 64),  # Bar 4:  C major
-    (48, 52, 57, 64, 69),  # Bar 5:  Am / C
-    (48, 50, 54, 57, 62),  # Bar 6:  D7 / C
-    (47, 50, 55, 62, 67),  # Bar 7:  G / B
-    (47, 48, 52, 55, 60),  # Bar 8:  C / B
-    (45, 48, 52, 55, 60),  # Bar 9:  Am7
-    (38, 45, 50, 54, 60),  # Bar 10: D7
-    (43, 47, 50, 55, 59),  # Bar 11: G major
-    (43, 46, 52, 55, 61),  # Bar 12: Edim7 / G
-    (41, 45, 50, 57, 62),  # Bar 13: Dm / F
-    (41, 44, 50, 53, 59),  # Bar 14: Bdim7 / F
-    (40, 43, 48, 55, 60),  # Bar 15: C / E
-    (40, 41, 45, 48, 53),  # Bar 16: F / E
-    (38, 41, 45, 48, 53),  # Bar 17: Dm7
-    (31, 38, 43, 47, 53),  # Bar 18: G7
-    (36, 40, 43, 48, 52),  # Bar 19: C major
-    (36, 43, 46, 48, 52),  # Bar 20: C7
-    (29, 41, 45, 48, 52),  # Bar 21: Fmaj7
-    (30, 36, 45, 48, 51),  # Bar 22: F#dim7
-    (32, 41, 47, 48, 50),  # Bar 23: Abdim7
-    (31, 41, 43, 47, 50),  # Bar 24: G7
-    (31, 40, 43, 48, 52),  # Bar 25: C / G
-    (31, 38, 43, 48, 53),  # Bar 26: Gsus4
-    (31, 38, 43, 47, 53),  # Bar 27: G7
-    (31, 39, 45, 48, 54),  # Bar 28: Adim7 / G
-    (31, 40, 43, 48, 55),  # Bar 29: C / G
-    (31, 38, 43, 48, 53),  # Bar 30: Gsus4
-    (31, 38, 43, 47, 53),  # Bar 31: G7
-    (24, 36, 43, 46, 52),  # Bar 32: C7 / C
-    (24, 41, 45, 48, 53),  # Bar 33: F / C
-    (24, 42, 48, 50, 57),  # Bar 34: D7 / C
-    (24, 36, 48, 52, 55),  # Bar 35: Final C Major Chord resolution
-]
 
 
 def _write_stereo_wav(path: Path, left: np.ndarray, right: np.ndarray, sample_rate: int) -> Path:
@@ -79,121 +34,6 @@ def _write_stereo_wav(path: Path, left: np.ndarray, right: np.ndarray, sample_ra
     with AudioFile(str(path), "w", samplerate=sample_rate, num_channels=2) as f:
         f.write(audio_data)
     return path
-
-
-class BachPreludeScore(Op):
-    """Generate the Standard MIDI score for J.S. Bach's Prelude I in C Major (BWV 846).
-
-    Produces an authentic 35-measure arpeggiated MIDI score with expressive dynamics,
-    alongside a JSON metadata summary. Wire ``midi`` into ``AcousticPianoSynth``,
-    ``PolySynth``, or ``MidiPianoRoll``.
-    """
-
-    TITLE = "Bach Prelude Score (BWV 846)"
-    CATEGORY = "Audio / Score"
-    CACHEABLE = True
-
-    class Outputs(TypedDict):
-        midi: MidiFile
-        metadata: JsonFile
-
-    def run(
-        self,
-        tempo_bpm: Annotated[int, Range(40, 160)] = 84,
-        bars_count: Annotated[int, Range(1, 35)] = 35,
-        dynamics: Literal["expressive", "flat", "crescendo"] = "expressive",
-        octave_shift: Annotated[int, Range(-2, 2)] = 0,
-    ) -> Outputs:
-        """Generate Bach's BWV 846 Prelude I as a Standard MIDI File.
-
-        Args:
-            tempo_bpm: Playback tempo in beats per minute.
-            bars_count: Number of measures to generate (1 to 35).
-            dynamics: Velocity phrasing curve ('expressive', 'flat', or 'crescendo').
-            octave_shift: Transpose the score up or down by whole octaves.
-
-        Returns:
-            Dictionary containing `midi` (MidiFile) and `metadata` (JsonFile).
-        """
-        sixteenth_sec = (60.0 / tempo_bpm) / 4.0
-        selected_bars = BWV_846_BARS[:bars_count]
-        midi_notes: list[MidiNote] = []
-
-        # Arpeggiation order per half-measure: (1, 2, 3, 4, 5, 3, 4, 5)
-        pattern_indices = [0, 1, 2, 3, 4, 2, 3, 4]
-
-        current_time = 0.0
-        shift = octave_shift * 12
-
-        for bar_idx, voices in enumerate(selected_bars):
-            if dynamics == "expressive":
-                progress = bar_idx / max(1, len(selected_bars) - 1)
-                bar_vel = 0.65 + 0.25 * float(np.sin(progress * np.pi))
-            elif dynamics == "crescendo":
-                bar_vel = 0.5 + 0.4 * (bar_idx / max(1, len(selected_bars) - 1))
-            else:
-                bar_vel = 0.75
-
-            is_final_bar = bar_idx == len(selected_bars) - 1 and len(selected_bars) == 35
-
-            if is_final_bar:
-                chord_notes = [voices[0], voices[1], voices[2], voices[3], voices[4], 60, 64]
-                for base_pitch in chord_notes:
-                    pitch = max(0, min(127, base_pitch + shift))
-                    vel_int = max(1, min(127, round(bar_vel * 0.9 * 127)))
-                    midi_notes.append(
-                        MidiNote(
-                            pitch=pitch,
-                            start_sec=current_time,
-                            duration_sec=sixteenth_sec * 16.0,
-                            velocity=vel_int,
-                            channel=0,
-                        )
-                    )
-                current_time += sixteenth_sec * 16.0
-                continue
-
-            for _half in range(2):
-                for step_idx, v_idx in enumerate(pattern_indices):
-                    pitch = max(0, min(127, voices[v_idx] + shift))
-                    if v_idx in (0, 1) and step_idx in (0, 1):
-                        dur = sixteenth_sec * 8.0
-                        vel = bar_vel * (1.1 if v_idx == 0 else 0.95)
-                    else:
-                        dur = sixteenth_sec * 3.5
-                        vel = bar_vel * (1.05 if v_idx == 4 else 0.9)
-
-                    vel_int = max(1, min(127, round(min(1.0, vel) * 127)))
-                    midi_notes.append(
-                        MidiNote(
-                            pitch=pitch,
-                            start_sec=current_time,
-                            duration_sec=dur,
-                            velocity=vel_int,
-                            channel=0,
-                        )
-                    )
-                    current_time += sixteenth_sec
-
-        midi_score = MidiScore(
-            notes=midi_notes,
-            tempo_bpm=float(tempo_bpm),
-            title="Prelude I in C Major, BWV 846",
-        )
-        midi_path = Path("bach_bwv_846.mid")
-        write_midi(midi_path, midi_score)
-
-        metadata: dict[str, Any] = {
-            "title": "Prelude I in C Major, BWV 846",
-            "composer": "Johann Sebastian Bach",
-            "tempo_bpm": tempo_bpm,
-            "bars_count": len(selected_bars),
-            "total_duration_sec": round(current_time, 3),
-            "notes_count": len(midi_notes),
-        }
-        meta_path = Path("score_metadata.json")
-        meta_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
-        return {"midi": midi_path, "metadata": meta_path}
 
 
 class AcousticPianoSynth(Op):
@@ -568,7 +408,6 @@ class DrumSynth(Op):
 
 __all__ = [
     "AcousticPianoSynth",
-    "BachPreludeScore",
     "DrumSynth",
     "PolySynth",
 ]

@@ -7,11 +7,13 @@ or visualizer (``MidiPianoRoll``).
 
 from __future__ import annotations
 
+import json
+import math
 import re
 from pathlib import Path
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Any, Literal, TypedDict
 
-from plynx_sdk import MidiFile, Op, Range
+from plynx_sdk import JsonFile, MidiFile, Op, Range
 
 from pedalboard_studio.midi_io import (
     DRUM_CHANNEL,
@@ -641,9 +643,137 @@ class MidiMerge(Op):
         }
 
 
+class MidiTransform(Op):
+    """Adjust tempo, pitch transposition, velocity dynamics, or bar length of any MIDI file.
+
+    Accepts any Standard MIDI File (``.mid``) and outputs a transformed ``MidiFile`` plus a
+    JSON summary of note count, tempo, and duration. Melodic channels are transposed cleanly
+    while General MIDI percussion (Channel 9) pitches remain untouched.
+    """
+
+    TITLE = "MIDI Transform & Trim"
+    CATEGORY = "Audio / Score"
+    CACHEABLE = True
+
+    class Outputs(TypedDict):
+        midi: MidiFile
+        metadata: JsonFile
+        note_count: int
+        duration_sec: float
+
+    def run(
+        self,
+        midi: MidiFile,
+        tempo_bpm: Annotated[int, Range(0, 240)] = 0,
+        transpose_semitones: Annotated[int, Range(-24, 24)] = 0,
+        dynamics: Literal["original", "expressive", "flat", "crescendo"] = "original",
+        max_bars: Annotated[int, Range(0, 128)] = 0,
+    ) -> Outputs:
+        """Transform tempo, transposition, dynamics, or bar length of an input MIDI file.
+
+        Args:
+            midi: Input Standard MIDI File to transform.
+            tempo_bpm: Target tempo in BPM (0 keeps the input MIDI file's original tempo).
+            transpose_semitones: Semitone shift applied to non-percussion channels (-24 to +24).
+            dynamics: Velocity phrasing curve ('original', 'expressive', 'flat', or 'crescendo').
+            max_bars: Trim output to the first N 4/4 bars (0 keeps the entire score).
+
+        Returns:
+            Dictionary containing `midi`, `metadata`, `note_count`, and `duration_sec`.
+        """
+        src_score = read_midi(Path(midi))
+        orig_bpm = max(20.0, float(src_score.tempo_bpm))
+        target_bpm = float(tempo_bpm) if tempo_bpm > 0 else orig_bpm
+        time_scale = orig_bpm / target_bpm
+
+        bar_duration_sec = (60.0 / target_bpm) * 4.0
+        cutoff_sec = (max_bars * bar_duration_sec) if max_bars > 0 else None
+
+        scaled_notes: list[MidiNote] = []
+        for note in src_score.notes:
+            new_start = note.start_sec * time_scale
+            if cutoff_sec is not None and new_start >= cutoff_sec - 1e-6:
+                continue
+            new_dur = note.duration_sec * time_scale
+            if cutoff_sec is not None and new_start + new_dur > cutoff_sec:
+                new_dur = max(0.02, cutoff_sec - new_start)
+
+            new_pitch = (
+                note.pitch
+                if note.channel == DRUM_CHANNEL
+                else max(0, min(127, note.pitch + transpose_semitones))
+            )
+            scaled_notes.append(
+                MidiNote(
+                    pitch=new_pitch,
+                    start_sec=new_start,
+                    duration_sec=new_dur,
+                    velocity=note.velocity,
+                    channel=note.channel,
+                )
+            )
+
+        total_span = max(
+            (n.start_sec + n.duration_sec for n in scaled_notes),
+            default=0.0,
+        )
+        if dynamics != "original" and scaled_notes:
+            shaped_notes: list[MidiNote] = []
+            denom = max(total_span, 1e-6)
+            for n in scaled_notes:
+                progress = min(1.0, max(0.0, n.start_sec / denom))
+                if dynamics == "expressive":
+                    curve = 0.72 + 0.28 * math.sin(progress * math.pi)
+                    vel = round(min(127.0, max(1.0, n.velocity * curve / 0.85)))
+                elif dynamics == "crescendo":
+                    vel = round(56.0 + 64.0 * progress)
+                else:  # flat
+                    vel = 96
+                shaped_notes.append(
+                    MidiNote(
+                        pitch=n.pitch,
+                        start_sec=n.start_sec,
+                        duration_sec=n.duration_sec,
+                        velocity=max(1, min(127, int(vel))),
+                        channel=n.channel,
+                    )
+                )
+            scaled_notes = shaped_notes
+
+        out_score = MidiScore(
+            notes=scaled_notes,
+            tempo_bpm=target_bpm,
+            title=src_score.title or Path(midi).stem,
+        )
+        out_midi = Path("transformed.mid")
+        write_midi(out_midi, out_score)
+
+        bars_estimated = round(total_span / bar_duration_sec, 2) if bar_duration_sec > 0 else 0.0
+        meta: dict[str, Any] = {
+            "title": out_score.title,
+            "source_tempo_bpm": round(orig_bpm, 2),
+            "tempo_bpm": round(target_bpm, 2),
+            "transpose_semitones": transpose_semitones,
+            "dynamics": dynamics,
+            "bars_estimated": bars_estimated,
+            "total_duration_sec": round(total_span, 3),
+            "notes_count": len(scaled_notes),
+        }
+        meta_path = Path("score_metadata.json")
+        meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+
+        return {
+            "midi": out_midi,
+            "metadata": meta_path,
+            "note_count": len(scaled_notes),
+            "duration_sec": round(total_span, 3),
+        }
+
+
 __all__ = [
     "KEY_CHOICES",
     "ChordProgressionScore",
     "MidiMerge",
+    "MidiTransform",
     "StepSequencer",
 ]

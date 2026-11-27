@@ -869,12 +869,26 @@ class _RunExecution:
             json.dumps(ctx_payload, indent=2, ensure_ascii=False) + "\n",
         )
 
+    def _append_gate_log_sync(self, nid: str, message: str) -> None:
+        logs_dir = self.store.run_dir(self.active_run_id) / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        log_path = logs_dir / f"{nid}.stdout.log"
+        with log_path.open("a", encoding="utf-8", newline="\n") as handle:
+            handle.write(f"[gate] {message}\n")
+
     async def _run_node_attempt(self, nid: str, node_dir: Path) -> tuple[bool, bool]:
         """Run one attempt for ``nid``. Returns ``(finished, mark_done)``."""
         is_validator = nid in self.validator_specs
         if is_validator:
             should_skip, skip_cache_hit, skip_msg = self._evaluate_stage_validator_skip(nid)
             if should_skip:
+                sid = self.validator_stage_by_nid[nid]
+                val_mode = self.validator_specs[nid].mode.value
+                await asyncio.to_thread(
+                    self._append_gate_log_sync,
+                    nid,
+                    f"Stage '{sid}' validator skipped (mode={val_mode}): {skip_msg}",
+                )
                 now_ts = time.time()
                 skip_manifest = ResultManifest(
                     status="SUCCESS",
@@ -920,6 +934,14 @@ class _RunExecution:
             self.node_attempts[nid] = attempt
 
             if is_validator:
+                sid = self.validator_stage_by_nid[nid]
+                vspec = self.validator_specs[nid]
+                await asyncio.to_thread(
+                    self._append_gate_log_sync,
+                    nid,
+                    f"Stage '{sid}' validator triggered (mode={vspec.mode.value}, "
+                    f"allow_graph_edits={vspec.allow_graph_edits.value}, attempt={attempt})",
+                )
                 await asyncio.to_thread(self._write_stage_context_sync, nid, node_dir)
 
             try:
@@ -1337,6 +1359,11 @@ class _RunExecution:
                     allow_freeform=False,
                     questions=question_states,
                 )
+                await asyncio.to_thread(
+                    self._append_gate_log_sync,
+                    patch_nid,
+                    f"Proposed graph patch validated; awaiting user confirmation: {pending.patch.reason}",
+                )
                 await self._emit_node_status(
                     patch_nid,
                     NodeStatus.WAITING_FOR_USER,
@@ -1378,6 +1405,11 @@ class _RunExecution:
 
             chosen = self.resolved_answers.get(f"{patch_nid}.{cp_id}")
             if chosen == "Reject":
+                await asyncio.to_thread(
+                    self._append_gate_log_sync,
+                    patch_nid,
+                    "Graph patch rejected by user.",
+                )
                 await self._archive_patch_file(pending.node_dir, "rejected")
                 outs = pending.result.outputs.outputs if pending.result.outputs else {}
                 res_manifest = await asyncio.to_thread(
@@ -1427,6 +1459,12 @@ class _RunExecution:
                 return True
 
         # Step 4: Apply accepted patch to workflow.snapshot.yaml and dynamically reload the DAG
+        await asyncio.to_thread(
+            self._append_gate_log_sync,
+            patch_nid,
+            f"Applying graph patch (added={list(pending.patch.add_nodes.keys())}, "
+            f"rewired={list(pending.patch.rewire_inputs.keys())}) and reloading DAG.",
+        )
         await self._apply_patch_and_reload(
             patch_nid=patch_nid,
             pending=pending,

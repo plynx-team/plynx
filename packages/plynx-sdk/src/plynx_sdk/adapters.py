@@ -15,6 +15,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -251,7 +253,7 @@ def build_provider_command(
             cmd = [
                 binary,
                 "--output-format",
-                "json",
+                "stream-json",
                 "--json-schema",
                 str(schema_path),
                 "--add-dir",
@@ -423,6 +425,10 @@ def _parse_envelope_from_text(text: str) -> tuple[dict[str, Any] | None, str | N
             if _is_turn_envelope(nested):
                 assert isinstance(nested, Mapping)
                 return _normalize_envelope(nested)
+            if isinstance(nested, Mapping):
+                inner_mapped = _inspect_parsed(nested)
+                if inner_mapped is not None:
+                    return inner_mapped
         for text_key in ("result", "response", "message", "content"):
             text_field = parsed.get(text_key)
             if isinstance(text_field, str) and text_field.strip():
@@ -483,6 +489,183 @@ def _parse_envelope_from_text(text: str) -> tuple[dict[str, Any] | None, str | N
             return cand, discovered_sid
 
     return None, discovered_sid
+
+
+def _truncate_log_text(text: str, limit: int = 240) -> str:
+    collapsed = " ".join(text.split())
+    if len(collapsed) <= limit:
+        return collapsed
+    return collapsed[: limit - 3] + "..."
+
+
+def _format_cli_stdout_for_log(raw_line: str) -> str | None:
+    """Format a raw stdout line from an agent CLI for live human-readable node logs."""
+    stripped = raw_line.strip()
+    if not stripped:
+        return None
+    if not (stripped.startswith("{") and stripped.endswith("}")):
+        return stripped
+
+    try:
+        obj = json.loads(stripped)
+    except json.JSONDecodeError:
+        return stripped
+
+    if not isinstance(obj, Mapping):
+        return stripped
+
+    event = obj.get("event")
+    # 1. Antigravity (`agy --output-format stream-json`) events
+    if event == "init" and isinstance(obj.get("init"), Mapping):
+        init_info = obj["init"]
+        conv_id = obj.get("conversation_id") or "-"
+        model_id = init_info.get("model") or "-"
+        return f"[cli:init] conversation={conv_id} model={model_id}"
+
+    if event == "step_update" and isinstance(obj.get("step_update"), Mapping):
+        su = obj["step_update"]
+        idx = su.get("step_index", "?")
+        state = su.get("state", "")
+        stype = su.get("step_type", "")
+        dur = su.get("duration_seconds")
+        dur_str = f" ({dur:.2f}s)" if isinstance(dur, (int, float)) else ""
+        if stype == "tool":
+            tname = su.get("tool_name") or "tool"
+            tinfo = su.get("tool_info") if isinstance(su.get("tool_info"), Mapping) else {}
+            if state == "ACTIVE":
+                params = tinfo.get("parameters")
+                p_str = (
+                    f" {_truncate_log_text(json.dumps(params, ensure_ascii=False), 180)}"
+                    if params
+                    else ""
+                )
+                return f"[cli:step {idx}] -> {tname}{p_str}"
+            if state == "DONE":
+                out = tinfo.get("output")
+                out_str = f": {_truncate_log_text(str(out), 160)}" if out else ""
+                return f"[cli:step {idx}] <- {tname} done{dur_str}{out_str}"
+        if stype == "agent_response" and state == "DONE":
+            usage = su.get("usage") if isinstance(su.get("usage"), Mapping) else {}
+            tok_str = (
+                f" [in={usage.get('input_tokens', 0)} out={usage.get('output_tokens', 0)}]"
+                if usage
+                else ""
+            )
+            delta = su.get("text_delta")
+            delta_str = f": {_truncate_log_text(str(delta), 160)}" if delta else ""
+            return f"[cli:step {idx}] agent_response{dur_str}{tok_str}{delta_str}"
+        if stype == "finish" and state == "DONE":
+            return f"[cli:step {idx}] finish{dur_str}"
+        return None
+
+    if event == "result" and isinstance(obj.get("result"), Mapping):
+        res = obj["result"]
+        dur = res.get("duration_seconds")
+        dur_str = f"{dur:.2f}s" if isinstance(dur, (int, float)) else "-"
+        usage = res.get("usage") if isinstance(res.get("usage"), Mapping) else {}
+        total_tok = usage.get("total_tokens", "-")
+        return (
+            f"[cli:result] status={res.get('status', '-')} "
+            f"duration={dur_str} turns={res.get('num_turns', '-')} tokens={total_tok}"
+        )
+
+    # 2. OpenCode / Codex / Claude / Cursor JSON / JSONL events
+    ev_type = obj.get("type")
+    if ev_type == "tool_use" and isinstance(obj.get("part"), Mapping):
+        part = obj["part"]
+        tool_name = part.get("tool", "tool")
+        state_obj = part.get("state") if isinstance(part.get("state"), Mapping) else {}
+        title = state_obj.get("title") or ""
+        status = state_obj.get("status") or ""
+        return f"[cli:tool] {tool_name} {title} ({status})".strip()
+
+    if ev_type == "text" and isinstance(obj.get("part"), Mapping):
+        txt = obj["part"].get("text")
+        if isinstance(txt, str) and txt.strip():
+            return f"[cli:text] {_truncate_log_text(txt, 200)}"
+        return None
+
+    if "structured_output" in obj or (
+        "status" in obj and ("outputs" in obj or "graph_patch" in obj)
+    ):
+        sid = _extract_session_id(obj)
+        sid_part = f" session={sid}" if sid else ""
+        return f"[cli:output]{sid_part} {_truncate_log_text(stripped, 220)}"
+
+    return f"[cli] {_truncate_log_text(stripped, 220)}"
+
+
+def _run_streaming_cli(
+    cmd: list[str],
+    *,
+    cwd: Path,
+    timeout_seconds: int | float | None,
+    provider_name: str,
+) -> tuple[int, str, str]:
+    """Spawn ``cmd`` with ``stdin=DEVNULL`` and stream stdout/stderr live to node logs."""
+    start_ts = time.monotonic()
+    preview_args = " ".join(
+        shlex.quote(tok) if len(tok) <= 80 else shlex.quote(tok[:77] + "...") for tok in cmd[:8]
+    )
+    if len(cmd) > 8:
+        preview_args += f" ... (+{len(cmd) - 8} args)"
+    print(f"[cli] Spawning ({provider_name}): {preview_args}", flush=True)
+
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=str(cwd),
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            bufsize=1,
+        )
+    except FileNotFoundError as exc:
+        raise RuntimeError(
+            f"Agent CLI binary {cmd[0]!r} for provider {provider_name!r} was not found on PATH"
+        ) from exc
+
+    stdout_chunks: list[str] = []
+    stderr_chunks: list[str] = []
+
+    def _read_stdout() -> None:
+        assert proc.stdout is not None
+        for line in proc.stdout:
+            stdout_chunks.append(line)
+            formatted = _format_cli_stdout_for_log(line)
+            if formatted is not None:
+                sys.stdout.write(formatted + "\n")
+                sys.stdout.flush()
+
+    def _read_stderr() -> None:
+        assert proc.stderr is not None
+        for line in proc.stderr:
+            stderr_chunks.append(line)
+            sys.stderr.write(line if line.endswith("\n") else line + "\n")
+            sys.stderr.flush()
+
+    t_out = threading.Thread(target=_read_stdout, daemon=True)
+    t_err = threading.Thread(target=_read_stderr, daemon=True)
+    t_out.start()
+    t_err.start()
+
+    try:
+        returncode = proc.wait(timeout=timeout_seconds)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
+        t_out.join(timeout=2.0)
+        t_err.join(timeout=2.0)
+        raise
+
+    t_out.join(timeout=5.0)
+    t_err.join(timeout=5.0)
+    elapsed = time.monotonic() - start_ts
+    print(f"[cli] Exited with code {returncode} ({elapsed:.2f}s)", flush=True)
+    return returncode, "".join(stdout_chunks), "".join(stderr_chunks)
 
 
 def _load_mock_turn(
@@ -662,30 +845,14 @@ def execute_provider_turn(
         # Name Turn 0 session explicitly so Turn 1 `--resume --name <sid>` can locate it.
         cmd = [*cmd[:2], "--name", goose_generated_sid, *cmd[2:]]
 
-    try:
-        proc = subprocess.run(
-            cmd,
-            cwd=str(workdir),
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=timeout_seconds,
-            check=False,
-        )
-    except FileNotFoundError as exc:
-        raise RuntimeError(
-            f"Agent CLI binary {cmd[0]!r} for provider {provider.value!r} was not found on PATH"
-        ) from exc
+    returncode, raw_stdout, raw_stderr = _run_streaming_cli(
+        cmd,
+        cwd=workdir,
+        timeout_seconds=timeout_seconds,
+        provider_name=provider.value,
+    )
 
-    if proc.stderr:
-        sys.stderr.write(proc.stderr)
-        if not proc.stderr.endswith("\n"):
-            sys.stderr.write("\n")
-        sys.stderr.flush()
-
-    stdout_env, stdout_sid = _parse_envelope_from_text(proc.stdout or "")
+    stdout_env, stdout_sid = _parse_envelope_from_text(raw_stdout)
     fallback_sid = stdout_sid or resume_session_id or goose_generated_sid
 
     if output_path.is_file():
@@ -702,12 +869,10 @@ def execute_provider_turn(
         disk_dict.pop("session_id", None)
         return AdapterTurnResult(envelope=disk_dict, session_id=disk_sid)
 
-    if proc.returncode != 0:
-        detail = (proc.stderr or proc.stdout or "").strip()
+    if returncode != 0:
+        detail = (raw_stderr or raw_stdout or "").strip()
         snippet = f": {detail[:400]}" if detail else ""
-        raise RuntimeError(
-            f"Agent CLI {provider.value!r} exited with code {proc.returncode}{snippet}"
-        )
+        raise RuntimeError(f"Agent CLI {provider.value!r} exited with code {returncode}{snippet}")
 
     if stdout_env is not None:
         clean_env = dict(stdout_env)

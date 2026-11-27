@@ -37,6 +37,9 @@ Instructions for AI coding agents working on the PLynx codebase.
 ## Hard Rules
 
 - **Keep dependencies light.** `plynx-sdk` must have zero third-party dependencies. Core `plynx` keeps only lightweight CLI/HTTP/YAML packages. Heavy libraries belong only in isolated Node Packs.
+- **Context-free, reusable operations.** Outside `tests/`, never hardcode workflow-specific strings, lookup tables, survey options, or toy heuristics inside an operation. Operations must remain general-purpose building blocks reusable across workflows: pass workflow context via input ports, and use real libraries in isolated Node Packs or `AgentOp` when general capability is required.
+- **100% accurate descriptions.** An operation's `TITLE`, docstring, and port names must state concisely and accurately what the code actually does for arbitrary inputs. Never claim general capabilities (such as language detection or translation) unless the implementation genuinely performs them on any valid input.
+- **`self.warn()` vs. raising (`FAILED`).** Use `self.warn(...)` only when an operation still produces valid output and downstream can proceed if unguarded (giving an optional `on_anomaly` stage validator a signal to inspect). When an operation cannot fulfill its contract (e.g. missing OS tool or invalid input), raise an exception (`FAILED`) rather than returning fake fallback data; downstream stops and an `on_failure`/`on_anomaly` validator can inspect `stderr.log` and splice an alternative.
 - **No test code in production packages.** Test fakes and demo fixtures live in `tests/`, never in `packages/plynx/src/`.
 - **Cross-platform.** Support Linux, macOS, and Windows. Use `pathlib`, POSIX forward slashes in manifests/outputs, no OS-specific shell commands in core or built-in packs.
 - **Types stay synced.** After changing `api_models.py` or `workflow/models.py`, run `uv run python scripts/gen_ts_types.py` and commit `ui/src/api/types.gen.ts`.

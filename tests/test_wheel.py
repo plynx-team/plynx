@@ -98,6 +98,7 @@ def test_declarative_uv_build_bundles_static_and_standard_io_without_staging(
     assert "plynx/builtin_packs/standard_io/src/standard_io/__init__.py" in names
     assert "plynx/builtin_packs/standard_io/src/standard_io/agent.py" in names
     assert "plynx/builtin_packs/standard_io/src/standard_io/demo.py" in names
+    assert "plynx/builtin_packs/standard_io/src/standard_io/interactive.py" in names
     assert "plynx/builtin_packs/standard_io/src/standard_io/text.py" in names
     assert not any(n.endswith("uv.lock") for n in names), "Wheel must not bundle uv.lock files"
     assert "Requires-Dist: plynx-sdk<3.0.0,>=2.0.0" in metadata_text or (
@@ -134,6 +135,7 @@ def test_build_script_creates_wheels_with_static_and_builtin_packs(tmp_path: Pat
     assert "plynx/builtin_packs/standard_io/src/standard_io/__init__.py" in names
     assert "plynx/builtin_packs/standard_io/src/standard_io/agent.py" in names
     assert "plynx/builtin_packs/standard_io/src/standard_io/demo.py" in names
+    assert "plynx/builtin_packs/standard_io/src/standard_io/interactive.py" in names
     assert "plynx/builtin_packs/standard_io/src/standard_io/text.py" in names
     assert not any(n.endswith("uv.lock") for n in names)
 

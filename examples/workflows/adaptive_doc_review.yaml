@@ -1,9 +1,9 @@
 version: 1
 name: adaptive_doc_review
-description: "Showcase workflow demonstrating self.warn() anomaly detection, StageSupervisor bounded graph repair, and batch multi-question checkpoint_batch()."
+description: "Showcase workflow composing statistical language detection (self.warn), StageSupervisor dynamic translation splicing, standard_io AskQuestions batch checkpoints, and MarkdownReport."
 stages:
   ingest:
-    title: "1. Ingest Document"
+    title: "1. Ingest & Language Check"
     require_approval: false
     validator:
       op: standard_io/agent:StageSupervisor
@@ -11,23 +11,52 @@ stages:
       allow_graph_edits: confirm
       inputs:
         prompt: >-
-          If ingest_doc emits a non-English language warning (lang=fr), propose a graph_patch
-          that adds node translate_doc (op: doc_review/ops:TranslateToEnglish, stage: ingest,
-          inputs: {text: $ingest_doc.text}) and rewires compile_brief.text to $translate_doc.text.
+          If detect_lang emits a warning that the detected language differs from 'en',
+          propose a graph_patch that adds node translate_doc (op: language_tools/ops:TranslateText,
+          stage: ingest, inputs: {text: $detect_lang.text, target_language: English}) and
+          rewires format_body.document to $translate_doc.text.
   review:
-    title: "2. Review & Report"
+    title: "2. Preferences & Report"
     require_approval: false
 nodes:
-  ingest_doc:
-    op: doc_review/ops:InspectDocument
-    title: "Inspect Incoming Document"
+  detect_lang:
+    op: language_tools/ops:DetectLanguage
+    title: "Detect Document Language"
     stage: ingest
     inputs:
-      document_text: "Bonjour equipe. Rapport trimestriel: les revenus ont augmente de 14 pour cent grace aux renouvellements entreprises. Merci."
-  compile_brief:
-    op: doc_review/ops:CompileReviewBrief
-    title: "Compile Review Brief"
+      text: "Bonjour l'équipe. Le rapport trimestriel montre que les revenus ont augmenté de 14 % grâce aux renouvellements entreprises. Merci pour votre collaboration."
+      expected_language: "en"
+  ask_preferences:
+    op: standard_io/interactive:AskQuestions
+    title: "Collect Review Preferences"
     stage: review
     inputs:
-      text: $ingest_doc.text
+      questions:
+        - id: audience
+          header: "Target Audience"
+          question: "Who is the primary audience for this review?"
+          options: ["Executive", "Engineering", "Legal"]
+          multi_select: false
+          allow_freeform: true
+        - id: focus
+          header: "Focus Areas"
+          question: "Which focus areas should be highlighted?"
+          options: ["Metrics", "Risks", "Action Items"]
+          multi_select: true
+          allow_freeform: false
+  format_body:
+    op: standard_io/data:TemplateFormat
+    title: "Format Review Body"
+    stage: review
+    inputs:
+      template: "{preferences}\n\n## Document Content\n\n{document}"
+      preferences: $ask_preferences.summary_markdown
+      document: $detect_lang.text
+  final_report:
+    op: standard_io/files:MarkdownReport
+    title: "Generate Markdown Report"
+    stage: review
+    inputs:
       title: "Quarterly Document Review"
+      body: $format_body.text
+      filename: "review_brief.md"

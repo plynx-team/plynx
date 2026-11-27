@@ -81,18 +81,18 @@ plynx clean --days 7
 
 ## Built-in Operations (`standard_io`)
 
-The `plynx` wheel ships with **15 stdlib-only operations** in `standard_io`:
+The `plynx` wheel ships with **16 stdlib-only operations** in `standard_io`:
 
 - **`Core / Text & Data`**: `Echo`, `Concat`, `TemplateFormat`, `MathOp`, `JsonExtract`, `JsonMerge`, `CsvSummary`
 - **`Core / Files`**: `ReadText`, `WriteText`, `ListDirectory`, `BundleDirectory`, `MarkdownReport`
-- **`Core / Interactive`**: `AskChoice`
+- **`Core / Interactive`**: `AskChoice`, `AskQuestions`
 - **`Core / Agents`**: `AgentPrompt`, `StageSupervisor`
 
 Run `plynx ops` (or `plynx ops --json`) in any workspace to list all built-in and custom operations with their full port schemas.
 
 ## Examples (Repository Only)
 
-This repository includes optional demo packs (`examples/custom_packs/`: `doc_review`, `media_studio`, `pedalboard_studio`, `podcast_studio`) and showcase workflows in `examples/workflows/`:
+This repository includes optional demo packs (`examples/custom_packs/`: `language_tools`, `media_studio`, `pedalboard_studio`, `podcast_studio`) and showcase workflows in `examples/workflows/`:
 
 | Workflow | Focus |
 | :--- | :--- |

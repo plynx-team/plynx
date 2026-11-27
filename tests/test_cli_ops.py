@@ -12,6 +12,7 @@ EXPECTED_STANDARD_IO_OPS = {
     "standard_io/agent:AgentPrompt",
     "standard_io/agent:StageSupervisor",
     "standard_io/interactive:AskChoice",
+    "standard_io/interactive:AskQuestions",
     "standard_io/demo:Echo",
     "standard_io/demo:ReadText",
     "standard_io/demo:WriteText",

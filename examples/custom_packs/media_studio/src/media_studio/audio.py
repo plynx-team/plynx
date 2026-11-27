@@ -143,10 +143,20 @@ class ToneSynth(Op):
         return {"audio": out_path}
 
 
-class ChordProgression(Op):
-    """Synthesize a musical chord progression or ambient harmonic drone."""
+class PresetAudioLoop(Op):
+    """Synthesize a procedural audio loop from built-in harmonic and rhythmic presets.
 
-    TITLE = "Chords & Melodies"
+    Args:
+        preset: Built-in musical pattern ('pop_chords', 'jazz_seventh', 'minor_cinematic',
+            'ambient_drone', 'arpeggio', or 'bassline').
+        root_hz: Root pitch frequency in Hz (default 261.63 Hz = middle C4) used to transpose
+            the selected preset.
+        tempo_bpm: Playback tempo in beats per minute.
+        duration_sec: Total output audio duration in seconds.
+        volume: Peak output gain in [0.0, 1.0].
+    """
+
+    TITLE = "Preset Audio Loop"
     CATEGORY = "Audio / Score"
     CACHEABLE = True
 
@@ -155,7 +165,15 @@ class ChordProgression(Op):
 
     def run(
         self,
-        progression: Literal["pop_chords", "ambient_drone", "arpeggio", "bassline"] = "pop_chords",
+        preset: Literal[
+            "pop_chords",
+            "jazz_seventh",
+            "minor_cinematic",
+            "ambient_drone",
+            "arpeggio",
+            "bassline",
+        ] = "pop_chords",
+        root_hz: Annotated[float, Range(55.0, 880.0)] = 261.63,
         tempo_bpm: Annotated[int, Range(60, 240)] = 120,
         duration_sec: Annotated[float, Range(1.0, 30.0)] = 6.0,
         volume: Annotated[float, Range(0.0, 1.0)] = 0.5,
@@ -163,38 +181,50 @@ class ChordProgression(Op):
         sample_rate = 44100
         total_samples = int(sample_rate * duration_sec)
         samples = [0.0] * total_samples
+        ratio = root_hz / 261.63
 
-        if progression == "pop_chords":
-            # I - V - vi - IV progression (C, G, Am, F)
-            chords = [
-                [261.63, 329.63, 392.00],  # C major
-                [196.00, 246.94, 293.66],  # G major
-                [220.00, 261.63, 329.63],  # A minor
-                [174.61, 220.00, 261.63],  # F major
-            ]
+        chord_presets: dict[str, list[list[float]]] = {
+            "pop_chords": [
+                [261.63, 329.63, 392.00],  # I
+                [196.00, 246.94, 293.66],  # V
+                [220.00, 261.63, 329.63],  # vi
+                [174.61, 220.00, 261.63],  # IV
+            ],
+            "jazz_seventh": [
+                [293.66, 349.23, 440.00, 523.25],  # Dm7 (ii7)
+                [196.00, 246.94, 293.66, 349.23],  # G7 (V7)
+                [261.63, 329.63, 392.00, 493.88],  # Cmaj7 (Imaj7)
+                [220.00, 277.18, 329.63, 392.00],  # A7 (VI7)
+            ],
+            "minor_cinematic": [
+                [220.00, 261.63, 329.63],  # Am
+                [174.61, 220.00, 261.63],  # F
+                [261.63, 329.63, 392.00],  # C
+                [196.00, 246.94, 293.66],  # G
+            ],
+        }
+
+        if preset in chord_presets:
+            chords = [[f * ratio for f in ch] for ch in chord_presets[preset]]
             beat_sec = 60.0 / tempo_bpm
             chord_dur = beat_sec * 2.0
-            for ci, chord in enumerate(chords):
-                start_s = int(ci * chord_dur * sample_rate)
-                end_s = min(total_samples, int((ci + 1) * chord_dur * sample_rate))
+            n_slots = max(1, math.ceil(duration_sec / chord_dur))
+            for slot in range(n_slots):
+                chord = chords[slot % len(chords)]
+                start_s = int(slot * chord_dur * sample_rate)
+                end_s = min(total_samples, int((slot + 1) * chord_dur * sample_rate))
                 for i in range(start_s, end_s):
                     t = (i - start_s) / sample_rate
-                    val = 0.0
-                    for freq in chord:
-                        val += math.sin(2.0 * math.pi * freq * t)
-                    val /= len(chord)
-                    # Envelope
+                    val = sum(math.sin(2.0 * math.pi * freq * t) for freq in chord) / len(chord)
                     env = math.exp(-1.5 * t)
                     samples[i] += val * env * volume
 
-        elif progression == "ambient_drone":
-            # Rich ethereal harmonic pad: 110Hz root, 165Hz fifth, 220Hz octave, 277.18Hz major third
-            freqs = [110.0, 164.81, 220.0, 277.18]
+        elif preset == "ambient_drone":
+            freqs = [f * ratio for f in (110.0, 164.81, 220.0, 277.18)]
             for i in range(total_samples):
                 t = i / sample_rate
                 val = 0.0
                 for idx, f in enumerate(freqs):
-                    # Slight chorusing / lfo detune
                     detune = math.sin(t * (0.2 + idx * 0.1)) * 0.7
                     val += math.sin(2.0 * math.pi * (f + detune) * t)
                 val /= len(freqs)
@@ -203,27 +233,24 @@ class ChordProgression(Op):
                 )
                 samples[i] = val * volume * fade
 
-        elif progression == "arpeggio":
-            notes = [261.63, 329.63, 392.00, 523.25, 392.00, 329.63]
+        elif preset == "arpeggio":
+            notes = [f * ratio for f in (261.63, 329.63, 392.00, 523.25, 392.00, 329.63)]
             note_dur = 60.0 / (tempo_bpm * 2.0)
-            note_len = int(note_dur * sample_rate)
+            note_len = max(1, int(note_dur * sample_rate))
             for i in range(total_samples):
-                note_idx = int(i / note_len) % len(notes)
-                freq = notes[note_idx]
+                freq = notes[(i // note_len) % len(notes)]
                 t_note = (i % note_len) / sample_rate
                 val = math.sin(2.0 * math.pi * freq * t_note)
                 env = math.exp(-4.0 * t_note)
                 samples[i] = val * env * volume
 
         else:  # bassline
-            bass_notes = [55.0, 55.0, 65.41, 73.42]
+            bass_notes = [f * ratio for f in (55.0, 55.0, 65.41, 73.42)]
             note_dur = 60.0 / tempo_bpm
-            note_len = int(note_dur * sample_rate)
+            note_len = max(1, int(note_dur * sample_rate))
             for i in range(total_samples):
-                note_idx = int(i / note_len) % len(bass_notes)
-                freq = bass_notes[note_idx]
+                freq = bass_notes[(i // note_len) % len(bass_notes)]
                 t_note = (i % note_len) / sample_rate
-                # Warm sawtooth-like square
                 phase = (freq * t_note) % 1.0
                 val = (1.0 if phase < 0.5 else -1.0) * 0.7 + math.sin(
                     2.0 * math.pi * freq * t_note
@@ -231,7 +258,7 @@ class ChordProgression(Op):
                 env = math.exp(-2.5 * t_note)
                 samples[i] = val * env * volume
 
-        out_path = Path("progression.wav")
+        out_path = Path("preset_loop.wav")
         _write_pcm16_wav(out_path, samples, sample_rate)
         return {"audio": out_path}
 
@@ -278,4 +305,4 @@ class AudioEchoFilter(Op):
         return {"filtered_audio": out_path}
 
 
-__all__ = ["AudioEchoFilter", "ChordProgression", "ToneSynth"]
+__all__ = ["AudioEchoFilter", "PresetAudioLoop", "ToneSynth"]

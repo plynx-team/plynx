@@ -584,6 +584,17 @@ def test_parse_fenced_json_and_jsonl_envelopes() -> None:
     assert env3 == {"status": "completed", "outputs": {"summary": "ok"}}
     assert sid3 == "conv-agy-123"
 
+    # Real `agy --output-format stream-json --json-schema` NDJSON stream with nested `result`
+    agy_stream = (
+        '{"event":"init","conversation_id":"conv-stream-7","init":{"model":"gemini-3.8-flash-medium"}}\n'
+        '{"event":"step_update","step_update":{"step_index":1,"state":"ACTIVE","step_type":"tool","tool_name":"read_file"}}\n'
+        '{"event":"result","result":{"conversation_id":"conv-stream-7","status":"SUCCESS",'
+        '"structured_output":{"status":"completed","outputs":{"summary":"streamed ok"}}}}\n'
+    )
+    env3b, sid3b = _parse_envelope_from_text(agy_stream)
+    assert env3b == {"status": "completed", "outputs": {"summary": "streamed ok"}}
+    assert sid3b == "conv-stream-7"
+
     # OpenCode `--format json` streams `part.text` chunks across JSONL lines
     opencode_jsonl = (
         '{"type":"step_start","sessionID":"ses_open_1","part":{"type":"step-start"}}\n'
@@ -632,6 +643,7 @@ def test_provider_quirks_agy_claude_codex_aider(
         resume_session_id="conv_42",
     )
     assert agy_cmd[0] == "agy"
+    assert agy_cmd[1:3] == ["--output-format", "stream-json"]
     assert agy_cmd[-2:] == ["-p", "hello agy"]
     assert "--dangerously-skip-permissions" in agy_cmd
     assert agy_cmd[agy_cmd.index("--model") + 1] == "gemini-3.8-flash-medium"

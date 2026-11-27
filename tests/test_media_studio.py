@@ -4,7 +4,7 @@ import wave
 from pathlib import Path
 
 import pytest
-from media_studio.audio import AudioEchoFilter, ChordProgression, ToneSynth
+from media_studio.audio import AudioEchoFilter, PresetAudioLoop, ToneSynth
 from media_studio.image import CardOrPoster, GeometricPattern, ImageFilterOp, MandelbrotFractal
 from media_studio.inspect import AudioWaveformVisualizer, MediaMetadataInspector
 from PIL import Image
@@ -32,13 +32,14 @@ def test_tone_synth_and_echo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
         assert wf.getnframes() > 0
 
 
-def test_chord_progression(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_preset_audio_loop(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.chdir(tmp_path)
 
-    chord = ChordProgression()
-    res = chord.run(progression="pop_chords", tempo_bpm=120, duration_sec=1.0)
-    audio_path = Path(res["audio"])
-    assert audio_path.is_file()
+    loop_op = PresetAudioLoop()
+    for preset in ("pop_chords", "jazz_seventh", "minor_cinematic", "ambient_drone"):
+        res = loop_op.run(preset=preset, root_hz=220.0, tempo_bpm=120, duration_sec=1.0)
+        audio_path = Path(res["audio"])
+        assert audio_path.is_file()
 
 
 def test_mandelbrot_and_filter_and_poster(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -98,7 +99,7 @@ def test_media_inspector(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Non
     assert metadata_file.is_file()
 
     summary_text = summary_file.read_text(encoding="utf-8")
-    assert "# Media Studio Inspection Report" in summary_text
+    assert "# Media Inspection Report" in summary_text
     assert "Image Dimensions" in summary_text
     assert "Audio Duration" in summary_text
 

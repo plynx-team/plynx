@@ -760,7 +760,13 @@ class AgentOp(Op):
 
         manifest = load_agent_turns(node_dir)
         if idx < len(manifest.turns):
-            return manifest.turns[idx]
+            cached_turn = manifest.turns[idx]
+            print(
+                f"[agent] Turn {idx}: replaying cached turn from {AGENT_TURNS_FILENAME} "
+                f"(status={cached_turn.status.value}, 0 tokens)",
+                flush=True,
+            )
+            return cached_turn
         if idx > len(manifest.turns):
             raise ProtocolError(
                 f"Cannot execute agent turn {idx} when only {len(manifest.turns)} prior turn(s) exist"
@@ -786,6 +792,11 @@ class AgentOp(Op):
 
         resolved_provider = resolve_runtime_provider(provider)
         resolved_model = resolve_runtime_model(model)
+        print(
+            f"[agent] Turn {idx}: starting provider={resolved_provider.value!r} "
+            f"model={(resolved_model or 'default')!r} policy={effective_policy.value}",
+            flush=True,
+        )
 
         schema_dict = generate_turn_schema(type(self), allow_graph_edits=effective_policy)
         schema_path = workdir / TURN_SCHEMA_FILENAME
@@ -891,6 +902,25 @@ class AgentOp(Op):
         )
         manifest.turns.append(record)
         save_agent_turns(node_dir, manifest)
+        if status == AgentTurnStatus.NEEDS_INPUT:
+            print(
+                f"[agent] Turn {idx}: status=needs_input ({len(questions)} question(s)); "
+                "pausing for user checkpoint",
+                flush=True,
+            )
+        elif status == AgentTurnStatus.PROPOSE_PATCH and graph_patch is not None:
+            print(
+                f"[agent] Turn {idx}: status=propose_patch "
+                f"(add_nodes={list(graph_patch.add_nodes.keys())}, "
+                f"rewire_inputs={list(graph_patch.rewire_inputs.keys())}) — {graph_patch.reason}",
+                flush=True,
+            )
+        else:
+            print(
+                f"[agent] Turn {idx}: status=completed "
+                f"(outputs={list((outputs_payload or {}).keys())})",
+                flush=True,
+            )
         return record
 
     def run_agent(

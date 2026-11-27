@@ -23,12 +23,14 @@ from standard_io.files import (
 )
 from standard_io.interactive import (
     AskChoice,
+    AskQuestions,
 )
 from standard_io.text import Concat
 
 __all__ = [
     "AgentPrompt",
     "AskChoice",
+    "AskQuestions",
     "BundleDirectory",
     "Concat",
     "CsvSummary",

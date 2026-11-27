@@ -1,7 +1,8 @@
 """Tests for Phase 5 (FEAT-AGT-4):
 - Built-in standard_io/agent:AgentPrompt and standard_io/agent:StageSupervisor discovery & execution
+- General-purpose DetectLanguage across real languages (English, French, Russian, Spanish)
 - End-to-end showcase workflow examples/workflows/adaptive_doc_review.yaml
-  (self.warn -> StageSupervisor graph repair -> batch multi-question checkpoint_batch -> Markdown report)
+  (DetectLanguage warn -> StageSupervisor splices TranslateText -> AskQuestions batch checkpoint -> MarkdownReport)
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
+from language_tools.ops import DetectLanguage
 from plynx.api_models import NodeStatus, RunStatus
 from plynx.cli import main as cli_main
 from plynx.registry import PackRegistry
@@ -18,6 +20,7 @@ from plynx.registry.extractor import extract_ops_from_file
 from plynx.store import RunStore
 from plynx.workflow.models import stage_validator_node_id
 from plynx.workflow.validator import validate_workflow_file
+from plynx_sdk.anomaly import warning_context
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -55,6 +58,47 @@ def test_standard_io_agent_ops_ast_extraction() -> None:
     assert len(sup_op.outputs) == 1
     assert sup_op.outputs[0].name == "summary"
     assert sup_op.outputs[0].type == "str"
+
+
+def test_detect_language_genuinely_detects_multiple_languages() -> None:
+    """DetectLanguage genuinely detects English, Russian, French, and Spanish on arbitrary text."""
+    op = DetectLanguage()
+
+    with warning_context() as warns_en:
+        res_en = op.run(
+            "Quarterly revenue grew significantly across enterprise subscriptions this year.",
+            expected_language="en",
+        )
+    assert res_en["language"] == "en"
+    assert res_en["confidence"] > 0.8
+    assert warns_en == []
+
+    with warning_context() as warns_ru:
+        res_ru = op.run(
+            "Привет команда! Квартальный отчет показывает уверенный рост выручки компании.",
+            expected_language="en",
+        )
+    assert res_ru["language"] == "ru"
+    assert len(warns_ru) == 1
+    assert "'ru'" in warns_ru[0]
+
+    with warning_context() as warns_es:
+        res_es = op.run(
+            "Hola equipo, el informe trimestral muestra un crecimiento sólido en las ventas.",
+            expected_language="en",
+        )
+    assert res_es["language"] == "es"
+    assert len(warns_es) == 1
+    assert "'es'" in warns_es[0]
+
+    # Disabling expected_language (`""`) performs pure detection with zero warnings
+    with warning_context() as warns_none:
+        res_fr = op.run(
+            "Bonjour à tous, voici les résultats financiers du dernier trimestre.",
+            expected_language="",
+        )
+    assert res_fr["language"] == "fr"
+    assert warns_none == []
 
 
 def test_standard_io_agent_prompt_executes_with_mock_provider(
@@ -122,7 +166,7 @@ def test_adaptive_doc_review_showcase_end_to_end(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Showcase workflow validates and runs: warn -> StageSupervisor patch -> batch checkpoint."""
+    """Showcase workflow validates and runs: DetectLanguage -> StageSupervisor -> TranslateText -> AskQuestions -> MarkdownReport."""
     showcase_src = ROOT / "examples" / "workflows" / "adaptive_doc_review.yaml"
     assert showcase_src.is_file()
 
@@ -147,21 +191,36 @@ def test_adaptive_doc_review_showcase_end_to_end(
             {
                 "status": "propose_patch",
                 "graph_patch": {
-                    "reason": "French document detected (lang=fr); splice TranslateToEnglish before review.",
+                    "reason": "Detected French document ('fr'); splice TranslateText before formatting.",
                     "add_nodes": {
                         "translate_doc": {
-                            "op": "doc_review/ops:TranslateToEnglish",
+                            "op": "language_tools/ops:TranslateText",
                             "stage": "ingest",
-                            "title": "Translate French Document",
-                            "inputs": {"text": "$ingest_doc.text"},
+                            "title": "Translate Document to English",
+                            "inputs": {
+                                "text": "$detect_lang.text",
+                                "target_language": "English",
+                            },
                         }
                     },
                     "rewire_inputs": {
-                        "compile_brief": {"text": "$translate_doc.text"},
+                        "format_body": {"document": "$translate_doc.text"},
                     },
                 },
             }
-        ]
+        ],
+        "translate_doc": [
+            {
+                "status": "completed",
+                "outputs": {
+                    "text": (
+                        "Hello team. The quarterly report shows revenue increased by 14% "
+                        "driven by enterprise renewals. Thank you for your collaboration."
+                    ),
+                    "source_language": "fr",
+                },
+            }
+        ],
     }
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("PLYNX_MOCK_AGENT_RESPONSES", json.dumps(mock_payload))
@@ -181,8 +240,8 @@ def test_adaptive_doc_review_showcase_end_to_end(
     state_a = store.get_run_state(run_id)
     assert state_a is not None
     assert state_a.status == RunStatus.WAITING_FOR_USER
-    assert state_a.nodes["ingest_doc"].status == NodeStatus.SUCCESS
-    assert any("lang=fr" in w for w in state_a.nodes["ingest_doc"].warnings)
+    assert state_a.nodes["detect_lang"].status == NodeStatus.SUCCESS
+    assert any("'fr'" in w for w in state_a.nodes["detect_lang"].warnings)
     open_patch_cps = [
         cp for cp in state_a.checkpoints if cp.node_id == val_node_id and cp.answered_at is None
     ]
@@ -190,7 +249,7 @@ def test_adaptive_doc_review_showcase_end_to_end(
     patch_cp = open_patch_cps[0]
     assert patch_cp.options == ["Approve Patch", "Reject"]
 
-    # Step B: approve the graph patch -> splices translate_doc, then pauses on batch checkpoint
+    # Step B: approve the graph patch -> splices translate_doc, then pauses on AskQuestions batch checkpoint
     resume_b = runner.invoke(
         cli_main,
         [
@@ -210,7 +269,7 @@ def test_adaptive_doc_review_showcase_end_to_end(
     assert state_b.status == RunStatus.WAITING_FOR_USER
     assert "translate_doc" in state_b.nodes
     assert state_b.nodes["translate_doc"].status == NodeStatus.SUCCESS
-    assert state_b.nodes["compile_brief"].status == NodeStatus.WAITING_FOR_USER
+    assert state_b.nodes["ask_preferences"].status == NodeStatus.WAITING_FOR_USER
 
     # Step C: answer batch multi-question checkpoint in a single resume
     resume_c = runner.invoke(
@@ -222,11 +281,11 @@ def test_adaptive_doc_review_showcase_end_to_end(
             "--agent-provider",
             "mock",
             "--answer",
-            "compile_brief.cp_0.audience=Executive",
+            "ask_preferences.cp_0.audience=Executive",
             "--answer",
-            "compile_brief.cp_0.focus=Metrics",
+            "ask_preferences.cp_0.focus=Metrics",
             "--answer",
-            "compile_brief.cp_0.focus=Action Items",
+            "ask_preferences.cp_0.focus=Action Items",
         ],
     )
     assert resume_c.exit_code == 0, resume_c.output
@@ -234,19 +293,19 @@ def test_adaptive_doc_review_showcase_end_to_end(
     state_c = store.get_run_state(run_id)
     assert state_c is not None
     assert state_c.status == RunStatus.SUCCESS
-    assert state_c.nodes["compile_brief"].status == NodeStatus.SUCCESS
-    brief_result = json.loads(
+    assert state_c.nodes["final_report"].status == NodeStatus.SUCCESS
+    report_result = json.loads(
         (
-            tmp_path / ".plynx" / "runs" / run_id / "nodes" / "compile_brief" / "result.json"
+            tmp_path / ".plynx" / "runs" / run_id / "nodes" / "final_report" / "result.json"
         ).read_text(encoding="utf-8")
     )
-    report_out = brief_result["outputs"]["report"]
+    report_out = report_result["outputs"]["report"]
     assert report_out["kind"] == "file"
     sha = report_out["sha256"]
     report_text = (tmp_path / ".plynx" / "cache" / "blobs" / sha[:2] / sha).read_text(
         encoding="utf-8"
     )
     assert "# Quarterly Document Review" in report_text
-    assert "**Audience**: Executive" in report_text
-    assert "**Focus Areas**: Metrics, Action Items" in report_text
-    assert "Hello team. Quarterly report: revenue increased by 14 percent" in report_text
+    assert "- **Target Audience**: Executive" in report_text
+    assert "- **Focus Areas**: Metrics, Action Items" in report_text
+    assert "Hello team. The quarterly report shows revenue increased by 14%" in report_text

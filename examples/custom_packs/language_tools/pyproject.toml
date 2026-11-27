@@ -1,9 +1,10 @@
 [project]
-name = "doc-review"
+name = "language-tools"
 version = "2.0.0"
-description = "PLynx example Node Pack: document inspection, translation adapter, and batch-checkpoint review brief."
+description = "PLynx Node Pack: statistical language detection and agentic text translation."
 requires-python = ">=3.11"
 dependencies = [
+    "langdetect>=1.0.9",
     "plynx-sdk",
 ]
 
@@ -12,4 +13,4 @@ requires = ["uv_build>=0.9.0,<0.10"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
-module-name = "doc_review"
+module-name = "language_tools"

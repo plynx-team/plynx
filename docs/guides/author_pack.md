@@ -208,6 +208,7 @@ The engine cannot enforce every rule below; breaking them can produce stale cach
    - Set `CACHEABLE = False` (or `cacheable=False`) for non-deterministic ops.
 7. **Handle secrets via environment variables.** Read secrets from `.env` or host env (configured with `env_passthrough` in `plynx.yaml`). Never write secrets to outputs, files, or logs.
 8. **Let exceptions propagate.** Log to stdout/stderr with `print` or `logging`. Do not call `sys.exit(2)` or `sys.exit(10)` manually.
+9. **Build context-free ops with 100% accurate descriptions.** Design every op to be reusable across future workflows: expose workflow-specific prompts, thresholds, or choices as input ports rather than hardcoding them in Python (outside `tests/`). Ensure `TITLE` and docstrings state concisely and accurately what the op actually does on arbitrary inputs.
 
 ## 5. Verifying Discovery
 
