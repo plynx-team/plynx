@@ -501,9 +501,9 @@ describe("Phase 4 Stage Validator, Patch Diff, & Drift UI (FEAT-AGT-3)", () => {
     expect(screen.getByTestId("run-layout-mode-toggle")).toBeInTheDocument();
     const origBtn = screen.getByTestId("layout-mode-original");
     const relayoutBtn = screen.getByTestId("layout-mode-relayout");
-    expect(origBtn).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(relayoutBtn);
     expect(relayoutBtn).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(origBtn);
+    expect(origBtn).toHaveAttribute("aria-pressed", "true");
 
     // Also verify regular AgentOp node allow_graph_edits selector in editor mode
     cleanup();

@@ -151,6 +151,22 @@ def build_provider_command(
         binary = "gemini"
         if shutil.which("gemini") is None and shutil.which("agy") is not None:
             binary = "agy"
+        if binary == "agy":
+            cmd = [
+                binary,
+                "-p",
+                "--output-format",
+                "json",
+                "--json-schema",
+                str(schema_path),
+                "--dangerously-skip-permissions",
+            ]
+            if model_clean:
+                cmd.extend(["--model", model_clean])
+            if sid:
+                cmd.extend(["--conversation", sid])
+            cmd.append(prompt)
+            return cmd
         cmd = [binary, "-p", prompt, "--output-format", "json", "--yolo"]
         if model_clean:
             cmd.extend(["-m", model_clean])

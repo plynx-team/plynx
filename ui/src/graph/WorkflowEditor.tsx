@@ -72,6 +72,7 @@ import {
   type ArtifactPreviewTarget,
 } from "./NodeInspector";
 import { OpPalette } from "./OpPalette";
+import type { RunLayoutMode } from "./layout";
 import { computeWorkflowRunDiff } from "./runDiff";
 import { validateConnection } from "./validation";
 import { WorkflowEditorModals } from "./WorkflowEditorModals";
@@ -171,6 +172,7 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
   const [runSubSeq, setRunSubSeq] = useState<number>(0);
   const isInspectingRun = selectedRunId !== null;
   const [selectedRun, setSelectedRun] = useState<RunState | null>(null);
+  const [runLayoutMode, setRunLayoutMode] = useState<RunLayoutMode>("relayout");
   const [runsCollapsed, setRunsCollapsed] = useState<boolean>(false);
   const [opsCollapsed, setOpsCollapsed] = useState<boolean>(false);
   const [runActionBusy, setRunActionBusy] = useState<boolean>(false);
@@ -1381,6 +1383,8 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
         onDeleteNode={handleDeleteSelected}
         onDeleteStage={handleDeleteStageRequest}
         onDeleteEdge={handleDeleteSelectedEdge}
+        runLayoutMode={runLayoutMode}
+        onChangeRunLayoutMode={setRunLayoutMode}
       />
 
       {error && (
@@ -1636,6 +1640,9 @@ export function WorkflowEditor({ workflowPath }: { workflowPath: string }) {
                 onApproved={handleStageApproved}
                 onCheckpointAnswered={() => void handleStageApproved()}
                 showNodeInspector={false}
+                runLayoutMode={runLayoutMode}
+                onChangeRunLayoutMode={setRunLayoutMode}
+                showLayoutToggle={false}
               />
             ) : (
               <div

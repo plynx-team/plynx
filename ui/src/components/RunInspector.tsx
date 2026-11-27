@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   OpEntry,
   OutputPortSpec,
@@ -42,6 +42,11 @@ export interface RunInspectorProps {
   showLogsHeader?: boolean;
   /** Render the right-side NodeInspector inside RunInspector (default true). */
   showNodeInspector?: boolean;
+  /** Optional controlled run DAG layout mode (when hosted in an external toolbar). */
+  runLayoutMode?: RunLayoutMode;
+  onChangeRunLayoutMode?: (mode: RunLayoutMode) => void;
+  /** Render the inline Graph layout toggle inside RunInspector (default true). */
+  showLayoutToggle?: boolean;
 }
 
 /**
@@ -66,9 +71,22 @@ export function RunInspector({
   onCheckpointAnswered,
   showLogsHeader = false,
   showNodeInspector = true,
+  runLayoutMode: controlledLayoutMode,
+  onChangeRunLayoutMode,
+  showLayoutToggle = true,
 }: RunInspectorProps) {
-  const [runLayoutMode, setRunLayoutMode] = useState<RunLayoutMode>("original");
+  const [internalLayoutMode, setInternalLayoutMode] =
+    useState<RunLayoutMode>("relayout");
+  const runLayoutMode = controlledLayoutMode ?? internalLayoutMode;
   const [fitTrigger, setFitTrigger] = useState<number>(0);
+  const prevLayoutModeRef = useRef<RunLayoutMode>(runLayoutMode);
+
+  useEffect(() => {
+    if (prevLayoutModeRef.current !== runLayoutMode) {
+      prevLayoutModeRef.current = runLayoutMode;
+      setFitTrigger((c) => c + 1);
+    }
+  }, [runLayoutMode]);
 
   const snapshotWorkflow = runState.workflow_snapshot ?? editorWorkflow ?? null;
   const snapshotLayout = runState.layout_snapshot ?? fallbackLayout ?? null;
@@ -88,8 +106,11 @@ export function RunInspector({
   };
 
   const handleLayoutModeChange = (mode: RunLayoutMode) => {
-    setRunLayoutMode(mode);
-    setFitTrigger((c) => c + 1);
+    if (onChangeRunLayoutMode) {
+      onChangeRunLayoutMode(mode);
+    } else {
+      setInternalLayoutMode(mode);
+    }
   };
 
   const openCheckpoints = runState.checkpoints.filter((cp) => !cp.answered_at);
@@ -142,8 +163,8 @@ export function RunInspector({
             </div>
           )}
 
-        {/* Client-side layout toggle in Graph view */}
-        {viewMode === "graph" && snapshotWorkflow && (
+        {/* Client-side layout toggle in standalone Graph view */}
+        {showLayoutToggle && viewMode === "graph" && snapshotWorkflow && (
           <div
             data-testid="run-layout-mode-toggle"
             className="absolute top-2.5 right-2.5 z-20 flex items-center rounded shadow-md overflow-hidden text-[11px]"
@@ -162,10 +183,10 @@ export function RunInspector({
                   ? "bg-[var(--color-primary)] text-white font-semibold"
                   : "hover:bg-white/5 text-[var(--text-secondary)]"
               }`}
-              title="Lock baseline nodes to layout.snapshot.json and place added nodes between upstream and downstream"
+              title="Original layout: lock baseline nodes to layout.snapshot.json and auto-place added nodes between upstream and downstream"
             >
               <FeatherIcon name="anchor" size={11} />
-              <span>Original Layout (+ Auto-place Added Nodes)</span>
+              <span>Original</span>
             </button>
             <button
               type="button"
@@ -177,10 +198,10 @@ export function RunInspector({
                   ? "bg-[var(--color-primary)] text-white font-semibold"
                   : "hover:bg-white/5 text-[var(--text-secondary)]"
               }`}
-              title="Run client-side Dagre auto-layout across the full run snapshot"
+              title="Re-layout full run DAG with client-side Dagre auto-layout"
             >
               <FeatherIcon name="shuffle" size={11} />
-              <span>Re-Layout Full Run DAG</span>
+              <span>Re-Layout</span>
             </button>
           </div>
         )}
