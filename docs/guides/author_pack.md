@@ -213,7 +213,11 @@ The engine cannot enforce every rule below; breaking them can produce stale cach
    - Set `CACHEABLE = False` (or `cacheable=False`) for non-deterministic ops.
 7. **Handle secrets via environment variables.** Read secrets from `.env` or host env (configured with `env_passthrough` in `plynx.yaml`). Never write secrets to outputs, files, or logs.
 8. **Let exceptions propagate.** Log to stdout/stderr with `print` or `logging`. Do not call `sys.exit(2)` or `sys.exit(10)` manually.
-9. **Build context-free ops with 100% accurate descriptions.** Design every op to be reusable across future workflows: expose workflow-specific prompts, thresholds, or choices as input ports rather than hardcoding them in Python (outside `tests/`). Ensure `TITLE` and docstrings state concisely and accurately what the op actually does on arbitrary inputs.
+9. **Develop ops detached from any single workflow, with 100% accurate descriptions.**
+   - **Author & test in isolation first:** Design and unit-test each new op on **at least two distinct synthetic input structures** (e.g., a 2-column comma CSV and a 5-column semicolon CSV) *before* wiring it into `workflows/<name>.yaml`.
+   - **Parameterize variable schemas & fail loudly:** For generic formats (CSV, JSON, text, files), pass dataset-specific column names, keys, delimiters, thresholds, or prompts via simple typed input ports (`SelectCsvColumns(csv_file, columns, delimiter)` rather than `ParseQ3Invoices`). Raise a clear `ValueError` listing available keys/headers when a configured field is missing—never silently fall back.
+   - **Workflow-blind, accurate contracts:** Name ops and ports after the mechanism, and ensure `TITLE` and docstrings state concisely and accurately what the op handles on arbitrary inputs.
+   - **Know the boundaries:** Do **not** invent untyped string/dict expression DSLs in `workflow.yaml` (e.g., `filter_expr: "total > 100"`), do **not** shatter one coherent step into 5 tiny micro-nodes (preserve 3–8 node Goldilocks granularity; use `AgentOp` for unpredictable unstructured inputs), and do **not** over-parameterize fixed vendor API schemas (`jira_pack` or `stripe_pack` ops should know Jira/Stripe's fixed payload keys directly).
 
 ## 5. Verifying Discovery
 
