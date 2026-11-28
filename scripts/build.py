@@ -73,6 +73,7 @@ def verify_wheel_contents(plynx_wheel: Path) -> None:
         "plynx/builtin_packs/standard_io/src/standard_io/__init__.py",
         "plynx/builtin_packs/standard_io/src/standard_io/agent.py",
         "plynx/builtin_packs/standard_io/src/standard_io/demo.py",
+        "plynx/builtin_packs/standard_io/src/standard_io/http.py",
         "plynx/builtin_packs/standard_io/src/standard_io/interactive.py",
         "plynx/builtin_packs/standard_io/src/standard_io/text.py",
     ]

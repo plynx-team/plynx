@@ -147,6 +147,20 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
                 <span>SUPERSEDED</span>
               </span>
             )}
+            {opEntry?.side_effects === "write" && (
+              <span
+                data-testid={`badge-side-effects-write-${nodeId}`}
+                className="node-diff-badge"
+                style={{
+                  borderColor: "var(--color-warning)",
+                  color: "var(--color-warning)",
+                }}
+                title="External write side effects (side_effects='write')"
+              >
+                <FeatherIcon name="upload-cloud" size={9} />
+                <span>WRITE</span>
+              </span>
+            )}
             {hasDiff && nodeDiff && !isAddedByAgent && (
               <span
                 data-testid={`graph-node-diff-${nodeId}`}

@@ -23,6 +23,7 @@ const MOCK_OPS: Array<OpEntry> = [
     valid: true,
     error: null,
     cacheable: true,
+    side_effects: "none",
     description: "",
     source: "",
     inputs: [
@@ -42,6 +43,7 @@ const MOCK_OPS: Array<OpEntry> = [
     valid: true,
     error: null,
     cacheable: true,
+    side_effects: "none",
     description: "",
     source: "",
     inputs: [
@@ -62,6 +64,7 @@ const MOCK_OPS: Array<OpEntry> = [
     valid: true,
     error: null,
     cacheable: true,
+    side_effects: "none",
     description: "",
     source: "",
     inputs: [

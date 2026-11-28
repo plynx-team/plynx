@@ -53,6 +53,7 @@ const MOCK_OPS: Array<OpEntry> = [
     title: "Ask foo or woo",
     category: "Demo",
     cacheable: false,
+    side_effects: "none",
     description: "Ask the user to pick foo or woo.",
     inputs: [
       {
@@ -82,6 +83,7 @@ const MOCK_OPS: Array<OpEntry> = [
     title: "Echo text",
     category: "Demo",
     cacheable: true,
+    side_effects: "none",
     description: "Echo text",
     inputs: [
       {

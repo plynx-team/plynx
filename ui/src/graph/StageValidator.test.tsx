@@ -45,6 +45,7 @@ const OPS: Array<OpEntry> = [
     title: "Ingest",
     category: "Demo",
     cacheable: true,
+    side_effects: "none",
     description: "",
     inputs: [],
     outputs: [{ name: "text", type: "str", media: null }],
@@ -62,6 +63,7 @@ const OPS: Array<OpEntry> = [
     title: "Translate French",
     category: "Demo",
     cacheable: true,
+    side_effects: "none",
     description: "",
     inputs: [
       {
@@ -91,6 +93,7 @@ const OPS: Array<OpEntry> = [
     title: "Stage Supervisor",
     category: "Agents",
     cacheable: false,
+    side_effects: "read",
     description: "Inspects stage outcomes.",
     agent_role: "validator",
     allow_graph_edits: "confirm",
@@ -122,6 +125,7 @@ const OPS: Array<OpEntry> = [
     title: "Planner Agent",
     category: "Agents",
     cacheable: true,
+    side_effects: "read",
     description: "Agent op.",
     agent_role: "agent",
     allow_graph_edits: "forbidden",

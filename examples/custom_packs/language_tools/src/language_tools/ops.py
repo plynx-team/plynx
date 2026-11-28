@@ -10,6 +10,7 @@ from plynx_sdk import (
     AgentProviderLiteral,
     MarkdownFile,
     Op,
+    SideEffect,
 )
 
 # Seed langdetect's n-gram sampler once so language detection is 100% deterministic.
@@ -31,6 +32,7 @@ class DetectLanguage(Op):
     TITLE = "Detect Language"
     CATEGORY = "Text & Language"
     CACHEABLE = True
+    SIDE_EFFECTS = SideEffect.NONE
 
     class Outputs(TypedDict):
         text: str
@@ -95,6 +97,7 @@ class TranslateText(AgentOp):
     TITLE = "Translate Text"
     CATEGORY = "Text & Language"
     CACHEABLE = True
+    SIDE_EFFECTS = SideEffect.READ
 
     class Outputs(TypedDict):
         text: str

@@ -63,6 +63,7 @@ const OPS: Array<OpEntry> = [
     title: "Ask",
     category: "Demo",
     cacheable: false,
+    side_effects: "none",
     description: "",
     inputs: [
       {

@@ -1,4 +1,9 @@
-import type { NodeRunState, NodeSpec, NodeStatus } from "../api/types.gen";
+import type {
+  NodeRunState,
+  NodeSpec,
+  NodeStatus,
+  OpEntry,
+} from "../api/types.gen";
 import type { NodeDiff } from "../graph/runDiff";
 import { FeatherIcon } from "../components/FeatherIcon";
 import { formatDuration } from "../components/RunList";
@@ -12,6 +17,7 @@ export interface NodeRowProps {
   nodeId: string;
   nodeState?: NodeRunState;
   spec?: NodeSpec;
+  opEntry?: OpEntry;
   nodeDiff?: NodeDiff;
   isSelected?: boolean;
   onSelect?: (nodeId: string) => void;
@@ -21,6 +27,7 @@ export function NodeRow({
   nodeId,
   nodeState,
   spec,
+  opEntry,
   nodeDiff,
   isSelected = false,
   onSelect,
@@ -93,6 +100,20 @@ export function NodeRow({
               className="status-badge CREATED !text-[10px] !px-1.5 !py-0"
             >
               SUPERSEDED
+            </span>
+          )}
+          {opEntry?.side_effects === "write" && (
+            <span
+              data-testid={`stepper-badge-write-${nodeId}`}
+              className="status-badge !text-[10px] !px-1.5 !py-0 inline-flex items-center gap-1 cursor-help"
+              style={{
+                borderColor: "var(--color-warning)",
+                color: "var(--color-warning)",
+              }}
+              title="External write side effects (side_effects='write')"
+            >
+              <FeatherIcon name="upload-cloud" size={10} />
+              <span>EXTERNAL WRITE</span>
             </span>
           )}
           {nodeState?.cache_hit && (

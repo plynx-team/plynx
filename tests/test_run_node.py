@@ -190,3 +190,95 @@ def test_run_node_missing_dir_or_inputs_exits_1(tmp_path: Path) -> None:
     no_inputs = _run_cli(tmp_path, "run-node", str(empty_dir))
     assert no_inputs.returncode == 1
     assert "inputs.json" in no_inputs.stderr
+
+
+def test_run_node_blocks_write_side_effects_unless_flag_passed_and_allows_read(
+    tmp_path: Path,
+) -> None:
+    """plynx run-node blocks SideEffect.WRITE without --allow-side-effects, and allows READ."""
+    ops_file = _create_debug_pack(tmp_path)
+    marker_file = (tmp_path / "external_mutation.log").as_posix()
+    ops_file.write_text(
+        f"""from pathlib import Path
+from typing import TypedDict
+from plynx_sdk import Op, SideEffect
+
+
+class LiveReadOp(Op):
+    TITLE = "Live Read"
+    CACHEABLE = False
+    SIDE_EFFECTS = SideEffect.READ
+
+    class Outputs(TypedDict):
+        data: str
+
+    def run(self, query: str) -> Outputs:
+        print(f"read query={{query}}", flush=True)
+        return {{"data": query}}
+
+
+class ExternalWriteOp(Op):
+    TITLE = "External Write"
+    SIDE_EFFECTS = SideEffect.WRITE
+
+    class Outputs(TypedDict):
+        sent: bool
+
+    def run(self, msg: str) -> Outputs:
+        with open({marker_file!r}, "a", encoding="utf-8") as fh:
+            fh.write(msg + "\\n")
+        print(f"wrote msg={{msg}}", flush=True)
+        return {{"sent": True}}
+""",
+        encoding="utf-8",
+    )
+
+    node_dir = tmp_path / "scratch_target"
+    (node_dir / "workdir").mkdir(parents=True)
+    (node_dir / "inputs.json").write_text(
+        '{"schema": 1, "inputs": {"msg": {"kind": "scalar", "value": "hello-client"}}, "checkpoint_answers": {}}\n',
+        encoding="utf-8",
+    )
+
+    # 1. SideEffect.WRITE without --allow-side-effects -> blocked with exit 1, zero child execution
+    blocked = _run_cli(
+        tmp_path,
+        "run-node",
+        str(node_dir),
+        "--op",
+        "debug_pack/ops:ExternalWriteOp",
+    )
+    assert blocked.returncode == 1
+    assert "side_effects='write'" in blocked.stderr
+    assert "--allow-side-effects" in blocked.stderr
+    assert not Path(marker_file).exists()
+
+    # 2. SideEffect.WRITE with --allow-side-effects -> executes in scratch
+    allowed = _run_cli(
+        tmp_path,
+        "run-node",
+        str(node_dir),
+        "--op",
+        "debug_pack/ops:ExternalWriteOp",
+        "--allow-side-effects",
+    )
+    assert allowed.returncode == 0, f"stdout={allowed.stdout}\nstderr={allowed.stderr}"
+    assert "wrote msg=hello-client" in allowed.stdout
+    assert Path(marker_file).read_text(encoding="utf-8") == "hello-client\n"
+
+    # 3. SideEffect.READ runs without --allow-side-effects
+    read_dir = tmp_path / "read_target"
+    (read_dir / "workdir").mkdir(parents=True)
+    (read_dir / "inputs.json").write_text(
+        '{"schema": 1, "inputs": {"query": {"kind": "scalar", "value": "PROJ-123"}}, "checkpoint_answers": {}}\n',
+        encoding="utf-8",
+    )
+    read_res = _run_cli(
+        tmp_path,
+        "run-node",
+        str(read_dir),
+        "--op",
+        "debug_pack/ops:LiveReadOp",
+    )
+    assert read_res.returncode == 0, f"stdout={read_res.stdout}\nstderr={read_res.stderr}"
+    assert "read query=PROJ-123" in read_res.stdout

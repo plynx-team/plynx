@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from plynx_sdk.protocol import AGENT_PROVIDER_VALUES, AgentProvider, GraphEditPolicy
+from plynx_sdk.protocol import AGENT_PROVIDER_VALUES, AgentProvider, GraphEditPolicy, SideEffect
 from plynx_sdk.types import SEMANTIC_MEDIA_ALIASES
 
 from plynx.api_models import InputPortSpec, OpEntry, OutputPortSpec, PortType
@@ -70,6 +70,8 @@ def _extract_literal(node: ast.AST) -> Any:
             return AgentProvider[node.attr].value
         if owner == "GraphEditPolicy" and node.attr in GraphEditPolicy.__members__:
             return GraphEditPolicy[node.attr].value
+        if owner == "SideEffect" and node.attr in SideEffect.__members__:
+            return SideEffect[node.attr].value
     raise ValueError(f"Expression is not a supported literal: {ast.dump(node)}")
 
 
@@ -137,6 +139,38 @@ def _extract_literal_bool(expr: ast.AST, field_name: str, context: str = "") -> 
             msg = f"Op {field_name} must be a boolean literal, got {tname}"
         raise ValueError(msg)
     return expr.value
+
+
+def _extract_side_effects(expr: ast.AST, field_name: str, context: str = "") -> SideEffect:
+    """Extract a ``SideEffect`` enum member or string literal from an AST node."""
+    ctx_suffix = f" in {context}" if context else ""
+    if isinstance(expr, ast.Attribute):
+        owner = _get_name_or_attr(expr.value)
+        if owner == "SideEffect":
+            if expr.attr in SideEffect.__members__:
+                return SideEffect[expr.attr]
+            raise ValueError(f"Invalid {field_name}{ctx_suffix}: SideEffect.{expr.attr}")
+        raise ValueError(
+            f"Computed metadata is not supported: {field_name}{ctx_suffix} must be a "
+            "SideEffect member or string literal"
+        )
+    if isinstance(expr, ast.Constant):
+        if isinstance(expr.value, str):
+            try:
+                return SideEffect(expr.value)
+            except ValueError as exc:
+                allowed = ", ".join(repr(m.value) for m in SideEffect)
+                raise ValueError(
+                    f"Invalid {field_name}{ctx_suffix} value {expr.value!r} (expected {allowed})"
+                ) from exc
+        tname = type(expr.value).__name__
+        raise ValueError(
+            f"{field_name}{ctx_suffix} must be a SideEffect or string literal, got {tname}"
+        )
+    raise ValueError(
+        f"Computed metadata is not supported: {field_name}{ctx_suffix} must be a "
+        "SideEffect member or string literal"
+    )
 
 
 def _parse_annotation(
@@ -655,7 +689,9 @@ def _extract_class_op(
     title: str | None = None
     category = "Uncategorized"
     cacheable = True
+    explicit_cacheable: bool | None = None
     allow_extra_inputs = False
+    side_effects = SideEffect.NONE
     agent_role: Literal["agent", "validator"] | None = None
     allow_graph_edits: GraphEditPolicy | None = None
     inner_typed_dicts: dict[str, ast.ClassDef] = {}
@@ -681,10 +717,12 @@ def _extract_class_op(
             agent_role = "validator"
             category = "Agents / Validators"
             allow_extra_inputs = True
+            side_effects = SideEffect.READ
             allow_graph_edits = GraphEditPolicy.CONFIRM
         elif is_agent_base:
             agent_role = "agent"
             allow_extra_inputs = True
+            side_effects = SideEffect.READ
             allow_graph_edits = GraphEditPolicy.FORBIDDEN
 
         for item in class_node.body:
@@ -706,9 +744,12 @@ def _extract_class_op(
                     elif target_id == "CATEGORY":
                         category = _extract_literal_str(val_expr, "CATEGORY")
                     elif target_id == "CACHEABLE":
-                        cacheable = _extract_literal_bool(val_expr, "CACHEABLE")
+                        explicit_cacheable = _extract_literal_bool(val_expr, "CACHEABLE")
+                        cacheable = explicit_cacheable
                     elif target_id == "ALLOW_EXTRA_INPUTS":
                         allow_extra_inputs = _extract_literal_bool(val_expr, "ALLOW_EXTRA_INPUTS")
+                    elif target_id == "SIDE_EFFECTS":
+                        side_effects = _extract_side_effects(val_expr, "SIDE_EFFECTS")
                     elif target_id == "ALLOW_GRAPH_EDITS":
                         raw_pol = _extract_literal(val_expr)
                         if not isinstance(raw_pol, str):
@@ -723,6 +764,16 @@ def _extract_class_op(
                             ) from exc
             elif isinstance(item, ast.FunctionDef) and item.name == "run":
                 run_func = item
+
+        if side_effects == SideEffect.WRITE:
+            if explicit_cacheable is True:
+                raise ValueError(
+                    f"Op class '{class_node.name}' declares SIDE_EFFECTS='write' with "
+                    "CACHEABLE=True; side-effecting write ops must set CACHEABLE=False"
+                )
+            cacheable = False
+        else:
+            cacheable = True if explicit_cacheable is None else explicit_cacheable
 
         if title is None:
             raise ValueError(f"Op class '{class_node.name}' is missing required TITLE attribute")
@@ -800,6 +851,7 @@ def _extract_class_op(
             title=title,
             category=category,
             cacheable=cacheable,
+            side_effects=side_effects,
             description=description,
             inputs=inputs,
             outputs=outputs,
@@ -820,6 +872,7 @@ def _extract_class_op(
             title=title or class_node.name,
             category=category,
             cacheable=cacheable,
+            side_effects=side_effects,
             description="",
             inputs=[],
             outputs=[],
@@ -844,7 +897,9 @@ def _extract_function_op(
     title: str | None = None
     category = "Uncategorized"
     cacheable = True
+    explicit_cacheable: bool | None = None
     allow_extra_inputs = False
+    side_effects = SideEffect.NONE
     op_id = _format_op_id(pack, module, func_node.name)
 
     try:
@@ -856,7 +911,11 @@ def _extract_function_op(
             )
 
         raw_kwargs: dict[str, ast.expr] = {}
-        for name, expr in zip(["title", "category", "cacheable"], dec.args, strict=False):
+        for name, expr in zip(
+            ["title", "category", "cacheable", "allow_extra_inputs", "side_effects"],
+            dec.args,
+            strict=False,
+        ):
             raw_kwargs[name] = expr
         for kw in dec.keywords:
             if kw.arg is not None:
@@ -868,11 +927,24 @@ def _extract_function_op(
             elif name == "category":
                 category = _extract_literal_str(expr, "category", context="@op")
             elif name == "cacheable":
-                cacheable = _extract_literal_bool(expr, "cacheable", context="@op")
+                explicit_cacheable = _extract_literal_bool(expr, "cacheable", context="@op")
+                cacheable = explicit_cacheable
             elif name == "allow_extra_inputs":
                 allow_extra_inputs = _extract_literal_bool(
                     expr, "allow_extra_inputs", context="@op"
                 )
+            elif name == "side_effects":
+                side_effects = _extract_side_effects(expr, "side_effects", context="@op")
+
+        if side_effects == SideEffect.WRITE:
+            if explicit_cacheable is True:
+                raise ValueError(
+                    f"Op function '{func_node.name}' declares side_effects='write' with "
+                    "cacheable=True; side-effecting write ops must set cacheable=False"
+                )
+            cacheable = False
+        else:
+            cacheable = True if explicit_cacheable is None else explicit_cacheable
 
         if title is None:
             raise ValueError(
@@ -910,6 +982,7 @@ def _extract_function_op(
             title=title,
             category=category,
             cacheable=cacheable,
+            side_effects=side_effects,
             description=description,
             inputs=inputs,
             outputs=outputs,
@@ -929,6 +1002,7 @@ def _extract_function_op(
             title=title or func_node.name,
             category=category,
             cacheable=cacheable,
+            side_effects=side_effects,
             description="",
             inputs=[],
             outputs=[],

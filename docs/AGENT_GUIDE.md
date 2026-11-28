@@ -32,7 +32,7 @@ plynx runs --stats
 | `plynx validate <workflow.yaml>` | Statically validate schema, DAG cycles, op IDs, port types/media, stage validators, stage order, and `uv.lock`. |
 | `plynx run <workflow.yaml> [opts]` | Execute a workflow. Options: `--set node.port=val` (scalars), `--input node.port=path` (files/dirs), `--answer node.cp_n=val`, `--answers file.json`, `--concurrency N`, `--agent-provider <p>`, `--agent-model <m>`, `--max-injected-nodes N`, `--non-interactive`, `--no-cache`. |
 | `plynx resume <run_id> [opts]` | Continue a failed, canceled, or waiting run, reusing completed node outputs and validating any edits made to `.plynx/runs/<run_id>/workflow.snapshot.yaml`. Options: `--answer`, `--answers`, `--concurrency`, `--agent-provider`, `--agent-model`, `--max-injected-nodes N`, `--non-interactive`. |
-| `plynx run-node <node_dir> [--op <op>]` | Re-run a single node attempt in a scratch copy without touching SQLite or the original directory. Streams stdout/stderr and exits with the child exit code. |
+| `plynx run-node <node_dir> [--op <op>] [--allow-side-effects]` | Re-run a single node attempt in a scratch copy without touching SQLite or the original directory. Blocks `side_effects: "write"` ops unless `--allow-side-effects` is passed after user confirmation. |
 | `plynx runs [run_id] [--limit N] [--workflow PATH] [--stats] [--json]` | List recent runs (with `[DRIFT]` alerts), inspect one run by ID or unique prefix, or report per-node execution stats, cache-hit rates, and dynamic injections (`--stats`). |
 | `plynx clean [--days 14] [--dry-run]` | Delete old unpinned runs and unreferenced cache blobs. |
 | `plynx ui [--port 8080] [--host 127.0.0.1] [--no-browser]` | Start local web UI and REST/SSE API. |
@@ -52,8 +52,11 @@ Follow these heuristics when designing or refactoring PLynx workflows:
 2. **Context-Free, Honest Operations (Never Overfit to One Workflow)**: Outside automated tests, never hardcode workflow-specific strings, lookup tables, questions, or toy heuristics inside an op. Parameterize domain specifics via input ports, and use real libraries in isolated Node Packs (`uv.lock`) or `AgentOp` for general tasks. Every op's `TITLE` and docstring must be 100% accurate: if an op claims to detect languages or translate text, it must genuinely do so for any input.
 3. **Goldilocks Granularity (Typically 3–8 Nodes Across 2–4 Stages)**: Never write a 1-node monolith script (which defeats Stepper visibility and intermediate CAS caching), and never create 25 tiny 2-line micro-nodes (which adds UI clutter and subprocess startup overhead). Each node should represent one coherent, human-understandable step.
 4. **Cache-Boundary Splitting**: Separate expensive or slow steps (`AgentOp` LLM calls, PDF parsing, media rendering, network I/O) from fast deterministic formatting so downstream tweaks hit `plynx-cache-1` in 0 ms.
-5. **Isolate External Side Effects Behind Approval Gates**: Set `CACHEABLE = False` on ops with external mutations (sending emails/messages, `git push`, webhooks, DB/API writes), group them into a dedicated final stage, and set `require_approval: true` on the preceding stage (or expose a `dry_run: bool` input) so `--non-interactive` runs stop (`exit 2`) before touching external systems.
-6. **Safe Verification Before Live Re-Runs**: When refactoring ops or debugging workflows, inspect historical `.plynx/runs/<run_id>/nodes/<node_id>/{inputs.json,result.json}` and `logs/` **read-only** for corner cases, run `plynx validate`, and unit-test external or refactored ops with `pytest` mocks. Pure local deterministic nodes may be tested freely via `plynx run` / `plynx run-node`, but **always ask the user for explicit confirmation** before executing or replaying any node/stage that mutates external state or incurs non-trivial API/LLM cost.
+5. **Declare `SIDE_EFFECTS` & Isolate External Writes Behind Approval Gates**: Separate preview/fetch steps (`SIDE_EFFECTS = SideEffect.NONE` or `SideEffect.READ`) from external mutations (`SIDE_EFFECTS = SideEffect.WRITE`, which automatically sets `CACHEABLE = False`: sending emails/messages, `HttpPostJson`, `git push`, DB/API writes) instead of overloading one op with a `dry_run` flag. Group `WRITE` ops into a dedicated final stage with `require_approval: true` on the preceding stage so `--non-interactive` runs stop (`exit 2`) before touching external systems (`plynx validate` warns if unguarded).
+6. **Safe Debugging by `side_effects` (`plynx ops --json`)**: When refactoring ops or debugging workflows, inspect historical `.plynx/runs/<run_id>/nodes/<node_id>/{inputs.json,result.json}` and `logs/` **read-only**, run `plynx validate`, and check each op's `side_effects` field:
+   - `"none"`: pure local `workdir/` op — safe to test and replay freely with `plynx run` and `plynx run-node`.
+   - `"read"`: external read-only query or `AgentOp` — safe from external mutations (mock network calls in `pytest`; avoid unnecessary batch replays on paid APIs/LLMs).
+   - `"write"`: mutates external state — `plynx run-node` blocks execution by default (`exit 1`), and `allow_graph_edits: auto` downgrades to `confirm`. **Never** pass `--allow-side-effects` or approve a pre-write stage gate without explicit human confirmation.
 
 ## 4. `workflow.yaml` Schema
 
@@ -121,7 +124,7 @@ Rules:
    plynx runs <run_id>
    cat .plynx/runs/<run_id>/logs/<node_id>.stderr.log
    ```
-2. For pure local deterministic ops, reproduce in an isolated scratch copy (does not modify SQLite or run files; ask the user first if the node mutates external systems or incurs non-trivial API/LLM cost):
+2. For `side_effects: "none"` (or `"read"`) ops, reproduce in an isolated scratch copy (does not modify SQLite or run files; `side_effects: "write"` ops are blocked by default unless `--allow-side-effects` is passed after user confirmation):
    ```bash
    plynx run-node .plynx/runs/<run_id>/nodes/<node_id>
    ```
@@ -140,7 +143,7 @@ Create `custom_packs/<pack_name>/` with `pyproject.toml`, `uv.lock` (`cd custom_
 from pathlib import Path
 from typing import Annotated, Literal, TypedDict
 
-from plynx_sdk import Directory, Media, Op, Range, TextFile, op
+from plynx_sdk import Directory, Media, Op, Range, SideEffect, TextFile, op
 
 CsvReport = Annotated[Path, Media("text/csv")]
 
@@ -151,6 +154,7 @@ class WrapText(Op):
     TITLE = "Wrap Text"
     CATEGORY = "Custom"
     CACHEABLE = True
+    SIDE_EFFECTS = SideEffect.NONE
 
     class Outputs(TypedDict):
         text: str
@@ -175,7 +179,8 @@ def count_files(folder: Directory) -> int:
 ```
 
 Key pack authoring rules:
-- **Static AST discovery**: `TITLE`, `CATEGORY`, `CACHEABLE`, `ALLOW_EXTRA_INPUTS`, `@op(...)` arguments, and port defaults must be plain literals. Verify with `plynx ops --json` (`"valid": true`).
+- **Static AST discovery**: `TITLE`, `CATEGORY`, `CACHEABLE`, `ALLOW_EXTRA_INPUTS`, `SIDE_EFFECTS`, `@op(...)` arguments, and port defaults must be plain literals (or `SideEffect.<MEMBER>`). Verify with `plynx ops --json` (`"valid": true`).
+- **Side-effect classification (`SIDE_EFFECTS`)**: Set `SIDE_EFFECTS = SideEffect.NONE` (default) for pure `workdir/` ops, `SideEffect.READ` (with `CACHEABLE = False` when live freshness matters) for external read-only API/DB queries, and `SideEffect.WRITE` for external mutations (which defaults `CACHEABLE = False` and rejects `CACHEABLE = True`).
 - **Class `Op` inputs**: Declare input ports as parameters of `run(self, ...)` (not class attributes) and outputs as `class Outputs(TypedDict):`.
 - **Variadic inputs**: Set `ALLOW_EXTRA_INPUTS = True` (or `@op(..., allow_extra_inputs=True)`) and add `**extra: <Type>` to `run()`.
 - **Filesystem rules**: Inputs are read-only; write outputs only inside `workdir/` (current working directory) and return relative `Path` objects. Keep JSON/scalar outputs under 1 MiB.

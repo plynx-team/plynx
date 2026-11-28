@@ -22,6 +22,7 @@ const CONCAT_OP: OpEntry = {
   title: "Concat text",
   category: "Text / Basic",
   cacheable: true,
+  side_effects: "none",
   description: "Join two strings.",
   inputs: [
     {

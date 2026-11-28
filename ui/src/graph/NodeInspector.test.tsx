@@ -23,6 +23,7 @@ const OPS_MAP: Record<string, OpEntry> = {
     title: "Producer",
     category: "Demo",
     cacheable: true,
+    side_effects: "none",
     description: "Produces text.",
     inputs: [],
     outputs: [{ name: "text", type: "str", media: null }],
@@ -40,6 +41,7 @@ const OPS_MAP: Record<string, OpEntry> = {
     title: "Rich Op",
     category: "Demo",
     cacheable: true,
+    side_effects: "none",
     description: "Op exercising all registry input types.",
     inputs: [
       {
@@ -492,6 +494,7 @@ describe("NodeInspector component (Task 6.11)", () => {
         title: "Variadic Op",
         category: "Demo",
         cacheable: true,
+        side_effects: "none" as const,
         description: "Op accepting extra inputs.",
         inputs: [],
         outputs: [],
@@ -622,5 +625,41 @@ describe("NodeInspector component (Task 6.11)", () => {
     ).toBeInTheDocument();
     expect(screen.getByTestId("inspector-checkpoint-cp_0")).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "ML" })).toBeInTheDocument();
+  });
+
+  it("displays write (external) badge in PropertiesBar when op declares side_effects === 'write'", () => {
+    const opsWithWrite: Record<string, OpEntry> = {
+      ...OPS_MAP,
+      "pack/mod:SendWebhook": {
+        id: "pack/mod:SendWebhook",
+        pack: "pack",
+        module: "mod",
+        name: "SendWebhook",
+        kind: "class",
+        title: "Send Webhook",
+        category: "Network",
+        cacheable: false,
+        side_effects: "write",
+        description: "Posts external webhook.",
+        inputs: [],
+        outputs: [],
+        allow_extra_inputs: false,
+        source: "mod.py",
+        valid: true,
+        error: null,
+      },
+    };
+    const wf: Workflow = {
+      version: 1,
+      name: "write_inspector_test",
+      nodes: {
+        hook: { op: "pack/mod:SendWebhook", stage: "main", inputs: {} },
+      },
+    };
+
+    render(<NodeInspector nodeId="hook" workflow={wf} opsMap={opsWithWrite} />);
+    expect(screen.getByTestId("inspector-side-effects")).toHaveTextContent(
+      "write (external)",
+    );
   });
 });

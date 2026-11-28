@@ -11,6 +11,8 @@ from plynx.cli import main as cli_main
 EXPECTED_STANDARD_IO_OPS = {
     "standard_io/agent:AgentPrompt",
     "standard_io/agent:StageSupervisor",
+    "standard_io/http:HttpGetJson",
+    "standard_io/http:HttpPostJson",
     "standard_io/interactive:AskChoice",
     "standard_io/interactive:AskQuestions",
     "standard_io/demo:Echo",
@@ -29,7 +31,7 @@ def test_cli_ops_human_table() -> None:
     lines = result.output.splitlines()
     assert len(lines) >= 3
     header = lines[0]
-    for col in ("NAME", "PACK", "CATEGORY", "INPUTS", "OUTPUTS", "DESCRIPTION"):
+    for col in ("NAME", "PACK", "CATEGORY", "SIDE EFFECTS", "INPUTS", "OUTPUTS", "DESCRIPTION"):
         assert col in header
 
     # Ensure every demo op in standard_io is listed
@@ -62,8 +64,17 @@ def test_cli_ops_json() -> None:
         assert "category" in entry
         assert "inputs" in entry
         assert "outputs" in entry
+        assert "side_effects" in entry
+        assert entry["side_effects"] in ("none", "read", "write")
         assert "valid" in entry
         assert entry["valid"] is True
+
+    by_id = {entry["id"]: entry for entry in data}
+    assert by_id["standard_io/demo:Echo"]["side_effects"] == "none"
+    assert by_id["standard_io/agent:AgentPrompt"]["side_effects"] == "read"
+    assert by_id["standard_io/http:HttpGetJson"]["side_effects"] == "read"
+    assert by_id["standard_io/http:HttpPostJson"]["side_effects"] == "write"
+    assert by_id["standard_io/http:HttpPostJson"]["cacheable"] is False
 
 
 def test_cli_ops_no_ops_found(tmp_path: Path, monkeypatch: object) -> None:

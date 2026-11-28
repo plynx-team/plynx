@@ -63,6 +63,14 @@ class ValidatorMode(StrEnum):
     ALWAYS = "always"
 
 
+class SideEffect(StrEnum):
+    """Declarative external side-effect classification for PLynx operations."""
+
+    NONE = "none"
+    READ = "read"
+    WRITE = "write"
+
+
 class AgentProvider(StrEnum):
     """Supported coding-agent CLI providers."""
 

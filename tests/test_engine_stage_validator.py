@@ -65,6 +65,7 @@ def _create_phase4_pack(workspace: Path) -> Path:
         "    GraphEditPolicy,\n"
         "    MarkdownFile,\n"
         "    Op,\n"
+        "    SideEffect,\n"
         "    StageValidatorOp,\n"
         ")\n\n"
         "class IngestDoc(Op):\n"
@@ -131,6 +132,14 @@ def _create_phase4_pack(workspace: Path) -> Path:
         "class DemoSupervisor(StageValidatorOp):\n"
         '    """Stage supervisor driven by mock responses."""\n'
         '    TITLE = "Demo Stage Supervisor"\n\n'
+        "class ExternalNotifyOp(Op):\n"
+        '    """External write operation that must never auto-run via allow_graph_edits=auto."""\n'
+        '    TITLE = "External Notify"\n'
+        "    SIDE_EFFECTS = SideEffect.WRITE\n\n"
+        "    class Outputs(TypedDict):\n"
+        "        text: str\n\n"
+        "    def run(self, text: str) -> Outputs:\n"
+        "        return {'text': f'SENT:{text}'}\n\n"
         "class PlannerAgent(AgentOp):\n"
         '    """Regular AgentOp that can propose graph edits when enabled."""\n'
         '    TITLE = "Planner Agent"\n'
@@ -1029,3 +1038,99 @@ def test_regular_agent_op_graph_edits_and_outer_agent_snapshot_resume(
     assert outer_final.status == RunStatus.SUCCESS
     assert outer_final.nodes["outer_tr"].status == NodeStatus.SUCCESS
     assert outer_final.nodes["summarize"].status == NodeStatus.SUCCESS
+
+
+def test_auto_graph_edits_downgrades_to_confirm_when_splicing_write_op(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """allow_graph_edits: auto pauses for human confirmation when a patch injects a SideEffect.WRITE op."""
+    _init_workspace(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    val_id = stage_validator_node_id("s1")
+    runner = CliRunner()
+    store = RunStore(tmp_path)
+
+    wf_write_patch = tmp_path / "workflows" / "auto_write_guard.yaml"
+    wf_write_patch.write_text(
+        "version: 1\n"
+        "name: auto_write_guard\n"
+        "stages:\n"
+        "  s1:\n"
+        "    title: Ingest\n"
+        "    validator:\n"
+        "      op: phase4_ops/ops:DemoSupervisor\n"
+        "      mode: on_anomaly\n"
+        "      allow_graph_edits: auto\n"
+        "  s2:\n"
+        "    title: Summarize\n"
+        "nodes:\n"
+        "  ingest:\n"
+        "    op: phase4_ops/ops:IngestDoc\n"
+        "    stage: s1\n"
+        "    inputs:\n"
+        "      raw_text: Alert payload\n"
+        "      emit_warning: Needs external notification\n"
+        "  summarize:\n"
+        "    op: phase4_ops/ops:SummarizeText\n"
+        "    stage: s2\n"
+        "    inputs:\n"
+        "      text: $ingest.text\n",
+        encoding="utf-8",
+    )
+
+    mock_write_patch = tmp_path / "mock_write_patch.json"
+    mock_write_patch.write_text(
+        json.dumps(
+            {
+                val_id: {
+                    "status": "propose_patch",
+                    "session_id": "write_guard_1",
+                    "graph_patch": {
+                        "reason": "Send external alert before summarizing.",
+                        "add_nodes": {
+                            "notify_ext": {
+                                "op": "phase4_ops/ops:ExternalNotifyOp",
+                                "stage": "s2",
+                                "inputs": {"text": "$ingest.text"},
+                            }
+                        },
+                        "rewire_inputs": {"summarize": {"text": "$notify_ext.text"}},
+                    },
+                    "outputs": {"summary": "Proposed external notify splice."},
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("PLYNX_MOCK_AGENT_RESPONSES", str(mock_write_patch))
+
+    # Even though allow_graph_edits is 'auto', injecting ExternalNotifyOp (WRITE) pauses in WAITING_FOR_USER (exit 2)
+    r_paused = runner.invoke(
+        cli_main, ["run", "--non-interactive", "--no-cache", str(wf_write_patch)]
+    )
+    assert r_paused.exit_code == 2, r_paused.output
+    run_id = store.list_runs(limit=1)[0].id
+    paused_state = store.get_run_state(run_id)
+    assert paused_state is not None
+    assert paused_state.status == RunStatus.WAITING_FOR_USER
+    assert "notify_ext" not in paused_state.nodes
+    cp = next(c for c in paused_state.checkpoints if c.node_id == val_id and c.answered_at is None)
+
+    # Once explicitly approved by the user, notify_ext is spliced and runs
+    r_approved = runner.invoke(
+        cli_main,
+        [
+            "resume",
+            run_id,
+            "--non-interactive",
+            "--answer",
+            f"{val_id}.{cp.checkpoint_id}=Approve Patch",
+        ],
+    )
+    assert r_approved.exit_code == 0, r_approved.output
+    final_state = store.get_run_state(run_id)
+    assert final_state is not None
+    assert final_state.status == RunStatus.SUCCESS
+    assert final_state.nodes["notify_ext"].status == NodeStatus.SUCCESS
+    assert final_state.nodes["summarize"].status == NodeStatus.SUCCESS

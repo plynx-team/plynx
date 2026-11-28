@@ -18,6 +18,7 @@ const OPS: Array<OpEntry> = [
     title: "Echo text",
     category: "Demo",
     cacheable: true,
+    side_effects: "none",
     description: "Echo an input string.",
     inputs: [],
     outputs: [],
@@ -35,6 +36,7 @@ const OPS: Array<OpEntry> = [
     title: "Concat text",
     category: "Text / Basic",
     cacheable: true,
+    side_effects: "none",
     description: "Join two strings.",
     inputs: [],
     outputs: [],
@@ -52,6 +54,7 @@ const OPS: Array<OpEntry> = [
     title: "Read text file",
     category: "Files",
     cacheable: true,
+    side_effects: "none",
     description: "Read UTF-8 text from a file.",
     inputs: [],
     outputs: [],
@@ -134,6 +137,7 @@ describe("OpPalette component (Task 6.9)", () => {
         title: "Synthesizer",
         category: "Audio",
         cacheable: true,
+        side_effects: "none",
         description: "# Synthesizer Overview\n\nLong paragraph.\n- bullet\n- bullet",
         inputs: [],
         outputs: [],
@@ -156,5 +160,38 @@ describe("OpPalette component (Task 6.9)", () => {
       "title",
       "Synthesizer Overview (media_studio/audio:Synth)",
     );
+  });
+
+  it("renders a write warning badge on operations with side_effects === 'write'", () => {
+    const opsWithWrite: Array<OpEntry> = [
+      ...OPS,
+      {
+        id: "standard_io/http:HttpPostJson",
+        pack: "standard_io",
+        module: "http",
+        name: "HttpPostJson",
+        kind: "class",
+        title: "HTTP POST JSON",
+        category: "Core / Network",
+        cacheable: false,
+        side_effects: "write",
+        description: "Send a JSON payload over HTTP POST.",
+        inputs: [],
+        outputs: [],
+        allow_extra_inputs: false,
+        source: "http.py",
+        valid: true,
+        error: null,
+      },
+    ];
+
+    render(<OpPalette ops={opsWithWrite} onAddOp={vi.fn()} />);
+
+    expect(
+      screen.getByTestId("palette-op-write-standard_io/http:HttpPostJson"),
+    ).toHaveTextContent("write");
+    expect(
+      screen.queryByTestId("palette-op-write-standard_io/demo:Echo"),
+    ).not.toBeInTheDocument();
   });
 });

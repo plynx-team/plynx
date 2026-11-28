@@ -18,6 +18,9 @@ from plynx_sdk.protocol import (
     GraphEditPolicy as GraphEditPolicy,
 )
 from plynx_sdk.protocol import (
+    SideEffect as SideEffect,
+)
+from plynx_sdk.protocol import (
     ValidatorMode as ValidatorMode,
 )
 from pydantic import BaseModel, ConfigDict, Field
@@ -465,6 +468,7 @@ class OpEntry(BaseModel):
     title: str
     category: str = "Uncategorized"
     cacheable: bool = True
+    side_effects: SideEffect = SideEffect.NONE
     description: str = ""
     inputs: list[InputPortSpec] = Field(default_factory=list)
     outputs: list[OutputPortSpec] = Field(default_factory=list)

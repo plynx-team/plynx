@@ -31,6 +31,8 @@ What `plynx run-node` does:
 4. Streams the child's stdout and stderr directly to your terminal and exits with the child's exit code (`0` on success, `1` on exception, `10` on checkpoint interrupt).
 5. Leaves `.plynx/plynx.db`, `events.jsonl`, logs, and the original `<node_dir>` completely untouched.
 
+> **External Write Guardrail (`SIDE_EFFECTS = SideEffect.WRITE`):** If the target operation declares `side_effects="write"` (e.g. `standard_io/http:HttpPostJson` or a custom webhook/email op), `plynx run-node` exits `1` before spawning a subprocess so debugging never triggers accidental external actions. Pass `--allow-side-effects` only when you intentionally want to execute the external write.
+
 ## 3. Fix and Verify
 
 1. Edit the op's Python source file to fix the bug.

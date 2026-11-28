@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 from typing import Annotated, Literal, TypedDict
 
-from plynx_sdk import AudioWav, Op, Range, TextFile
+from plynx_sdk import AudioWav, Op, Range, SideEffect, TextFile
 
 MACOS_VOICES = Literal[
     "Samantha",
@@ -34,6 +34,7 @@ class TextToSpeech(Op):
     TITLE = "Text to Speech (macOS only)"
     CATEGORY = "Audio / Synth & Voice"
     CACHEABLE = True
+    SIDE_EFFECTS = SideEffect.NONE
 
     class Outputs(TypedDict):
         voiceover: AudioWav

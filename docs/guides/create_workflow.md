@@ -105,7 +105,7 @@ Always validate statically before running:
 plynx validate workflows/greet.yaml
 ```
 
-Static validation checks YAML schema, DAG cycles, op existence, port wiring, type/media compatibility, stage ordering, and missing `uv.lock` files.
+Static validation checks YAML schema, DAG cycles, op existence, port wiring, type/media compatibility, stage ordering, unguarded `SideEffect.WRITE` nodes (emitting a warning if no `require_approval: true` gate precedes an external write), and missing `uv.lock` files.
 
 Run, inspect, and view in the UI:
 

@@ -11,6 +11,8 @@ export type AgentTurnStatus = "completed" | "needs_input" | "propose_patch";
 
 export type GraphEditPolicy = "forbidden" | "confirm" | "auto";
 
+export type SideEffect = "none" | "read" | "write";
+
 export type ValidatorMode = "on_anomaly" | "on_failure" | "always";
 
 export type AgentProvider = "default" | "claude" | "cursor" | "codex" | "gemini" | "opencode" | "goose" | "aider" | "custom" | "mock";
@@ -317,6 +319,7 @@ export interface OpEntry {
   title: string;
   category: string;
   cacheable: boolean;
+  side_effects: SideEffect;
   description: string;
   inputs: Array<InputPortSpec>;
   outputs: Array<OutputPortSpec>;

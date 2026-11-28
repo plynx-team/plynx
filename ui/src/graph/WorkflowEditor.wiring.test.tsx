@@ -144,6 +144,7 @@ const OPS: Array<OpEntry> = [
     title: "Ask",
     category: "Demo",
     cacheable: false,
+    side_effects: "none",
     description: "",
     inputs: [
       {
@@ -173,6 +174,7 @@ const OPS: Array<OpEntry> = [
     title: "Echo",
     category: "Demo",
     cacheable: true,
+    side_effects: "none",
     description: "",
     inputs: [
       {
@@ -202,6 +204,7 @@ const OPS: Array<OpEntry> = [
     title: "ReadText",
     category: "Files",
     cacheable: true,
+    side_effects: "none",
     description: "",
     inputs: [
       {
@@ -231,6 +234,7 @@ const OPS: Array<OpEntry> = [
     title: "WriteText",
     category: "Files",
     cacheable: true,
+    side_effects: "none",
     description: "",
     inputs: [],
     outputs: [{ name: "file", type: "file", media: "text/plain" }],
@@ -248,6 +252,7 @@ const OPS: Array<OpEntry> = [
     title: "ParsePdf",
     category: "Files",
     cacheable: true,
+    side_effects: "none",
     description: "",
     inputs: [
       {

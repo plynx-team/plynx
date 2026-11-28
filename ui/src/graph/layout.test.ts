@@ -21,6 +21,7 @@ const SAMPLE_OPS: Record<string, OpEntry> = {
     title: "Ask foo or woo",
     category: "Demo",
     cacheable: false,
+    side_effects: "none",
     description: "Ask the user to pick foo or woo.",
     inputs: [
       {
@@ -50,6 +51,7 @@ const SAMPLE_OPS: Record<string, OpEntry> = {
     title: "Echo text",
     category: "Demo",
     cacheable: true,
+    side_effects: "none",
     description: "Echo an input string.",
     inputs: [
       {
@@ -472,6 +474,7 @@ describe("graph layout utilities (Task 6.8)", () => {
         title: "Variadic",
         category: "Demo",
         cacheable: true,
+        side_effects: "none",
         description: "",
         inputs: [{ name: "base", type: "str", required: true, default: null, media: null }],
         outputs: [{ name: "out", type: "str", media: null }],
