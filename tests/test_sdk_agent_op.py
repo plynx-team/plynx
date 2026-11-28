@@ -483,7 +483,13 @@ def test_provider_cli_command_builders_and_guards(tmp_path: Path) -> None:
         workdir=workdir,
         model="o3",
     )
-    assert codex_fresh[:3] == ["codex", "exec", "--full-auto"]
+    codex_sandbox_options = [
+        "-c",
+        'sandbox_mode="workspace-write"',
+        "-c",
+        'approval_policy="on-request"',
+    ]
+    assert codex_fresh[:6] == ["codex", "exec", *codex_sandbox_options]
     assert "--output-schema" in codex_fresh
     assert codex_fresh[codex_fresh.index("-m") + 1] == "o3"
 
@@ -498,7 +504,7 @@ def test_provider_cli_command_builders_and_guards(tmp_path: Path) -> None:
         model="",
         resume_session_id="thread_77",
     )
-    assert codex_resume[:4] == ["codex", "exec", "resume", "--full-auto"]
+    assert codex_resume[:7] == ["codex", "exec", "resume", *codex_sandbox_options]
     assert "-m" not in codex_resume
     assert "thread_77" in codex_resume
 

@@ -221,15 +221,21 @@ def build_provider_command(
         return cmd
 
     if provider == AgentProvider.CODEX:
+        sandbox_options = [
+            "-c",
+            'sandbox_mode="workspace-write"',
+            "-c",
+            'approval_policy="on-request"',
+        ]
         if sid:
-            cmd = ["codex", "exec", "resume", "--full-auto"]
+            cmd = ["codex", "exec", "resume", *sandbox_options]
             if model_clean:
                 cmd.extend(["-m", model_clean])
             cmd.append(sid)
             _append_positional_prompt(cmd, prompt)
             return cmd
 
-        cmd = ["codex", "exec", "--full-auto"]
+        cmd = ["codex", "exec", *sandbox_options]
         if not _schema_has_open_object(schema_dict):
             codex_schema_path = schema_path
             if schema_path.parent.is_dir():

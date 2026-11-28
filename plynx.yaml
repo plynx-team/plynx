@@ -4,10 +4,15 @@ workflows:
   - examples/workflows
 packs:
   - examples/custom_packs
+# agent:
+#   provider: gemini
+#   model: gemini-3.8-flash-medium
+#   models:
+#     - gemini-3.8-flash-low
+#     - gemini-3.8-flash-medium
+#     - gemini-3.8-flash-high
 agent:
-  provider: gemini
-  model: gemini-3.8-flash-medium
+  provider: codex
+  model: gpt-6-luna
   models:
-    - gemini-3.8-flash-low
-    - gemini-3.8-flash-medium
-    - gemini-3.8-flash-high
+    - gpt-6-luna

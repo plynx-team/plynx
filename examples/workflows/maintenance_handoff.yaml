@@ -17,6 +17,15 @@ stages:
           so the on-call operator can check it against the source. Preserve the distinction
           between a proposal and an approval. If the source does not establish one approved
           window and owner, ask the operator for clarification before proposing a repair.
+
+          If the approved details are in handoff text and the notice failed on missing fields,
+          propose a graph patch that adds an `approved_fields` node in `prepare` using
+          `standard_io/agent:AgentJson`. In `add_nodes.approved_fields.inputs`, set
+          `ticket_json: $ticket.value_json` as a direct input reference and give the node a
+          prompt to extract the ticket ID, approved window with time zone, and owner into
+          the JSON keys `ticket`, `approved_window`, and `owner`. Set
+          `rewire_inputs.notice.values` to `$approved_fields.data`. Include both the added
+          node and the rewire in the patch so the notice still depends on the original ticket.
   publish_draft:
     title: Save the local draft
 nodes:
