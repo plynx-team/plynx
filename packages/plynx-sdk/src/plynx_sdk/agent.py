@@ -218,9 +218,16 @@ def _parse_output_field(name: str, annotation: Any) -> _OutputFieldSpec:
     raise ProtocolError(f"Unsupported output port annotation on {name!r}: {annotation!r}")
 
 
-def _extract_output_specs_for_op(op_cls: type[Op]) -> dict[str, _OutputFieldSpec]:
+def _extract_output_specs_for_op(op_cls: type[Any]) -> dict[str, _OutputFieldSpec]:
     module = inspect.getmodule(op_cls)
     globalns = vars(module) if module is not None else {}
+    if is_typeddict(op_cls):
+        hints = get_type_hints(
+            op_cls,
+            globalns=globalns,
+            include_extras=True,
+        )
+        return {port: _parse_output_field(port, ann) for port, ann in hints.items()}
     outputs_cls = getattr(op_cls, "Outputs", None)
     if outputs_cls is not None and is_typeddict(outputs_cls):
         hints = get_type_hints(
@@ -321,7 +328,7 @@ def _field_to_json_schema(spec: _OutputFieldSpec) -> dict[str, Any]:
 
 
 def generate_turn_schema(
-    op_cls: type[Op],
+    op_cls: type[Any],
     *,
     allow_graph_edits: GraphEditPolicy = GraphEditPolicy.FORBIDDEN,
 ) -> dict[str, Any]:
@@ -330,6 +337,7 @@ def generate_turn_schema(
     allowed_statuses = [
         AgentTurnStatus.COMPLETED.value,
         AgentTurnStatus.NEEDS_INPUT.value,
+        AgentTurnStatus.FAILED.value,
     ]
     if allow_graph_edits != GraphEditPolicy.FORBIDDEN:
         allowed_statuses.append(AgentTurnStatus.PROPOSE_PATCH.value)
@@ -348,6 +356,21 @@ def generate_turn_schema(
             "properties": outputs_properties,
             "required": outputs_required,
             "additionalProperties": False,
+        },
+        "warnings": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": (
+                "Optional non-fatal anomaly messages recorded via PLynx warnings "
+                "when the operation still produces valid outputs."
+            ),
+        },
+        "error": {
+            "type": "string",
+            "description": (
+                "Clear failure explanation required when status is 'failed' "
+                "(e.g. corrupt/impossible input where valid outputs cannot be produced)."
+            ),
         },
         "questions": {
             "type": "array",
@@ -451,7 +474,7 @@ def _looks_like_existing_workdir_file(
 
 def materialize_turn_outputs(
     raw_outputs: Mapping[str, Any],
-    op_cls: type[Op],
+    op_cls: type[Any],
     *,
     node_dir: Path,
     workdir: Path,
@@ -611,9 +634,12 @@ def _build_full_turn_prompt(
         (
             f"Write your final response as a JSON object conforming to `{schema_path}` "
             f"into `{output_path}` (do not search PLynx engine source code; write `{TURN_OUTPUT_FILENAME}` and finish as soon as your task is resolved):\n"
-            '- Set `"status": "completed"` and populate `"outputs"` when the task is complete.\n'
+            '- Set `"status": "completed"` and populate `"outputs"` when the task is complete '
+            '(optionally include `"warnings": ["..."]` for non-fatal data anomalies).\n'
             '- Set `"status": "needs_input"` and populate `"questions"` (batch all needed '
-            "human clarifications into one list) only when human user input is required."
+            "human clarifications into one list) only when human user input is required.\n"
+            '- Set `"status": "failed"` and populate `"error"` if the inputs are corrupt or '
+            "the contract cannot be fulfilled (never fabricate fake outputs)."
             + (
                 '\n- Set `"status": "propose_patch"` and populate `"graph_patch"` '
                 '(`{"reason": "...", "add_nodes": {"<new_id>": {"op": "<pack>/<mod>:<Op>", "stage": "<stage_id>", "inputs": {"<port>": "$<up>.<out>"}}}, '
@@ -744,6 +770,7 @@ class AgentOp(Op):
         timeout_seconds: int | float | None = None,
         custom_command: str | None = None,
         mock_responses: Any = None,
+        output_schema: type[Any] | None = None,
         **task_inputs: Any,
     ) -> AgentTurnRecord:
         """Execute one agent turn or replay it in 0 tokens from ``agent_turns.json``."""
@@ -800,7 +827,8 @@ class AgentOp(Op):
             flush=True,
         )
 
-        schema_dict = generate_turn_schema(type(self), allow_graph_edits=effective_policy)
+        schema_target: type[Any] = output_schema if output_schema is not None else type(self)
+        schema_dict = generate_turn_schema(schema_target, allow_graph_edits=effective_policy)
         schema_path = workdir / TURN_SCHEMA_FILENAME
         output_path = workdir / TURN_OUTPUT_FILENAME
         _atomic_write_text(
@@ -875,6 +903,26 @@ class AgentOp(Op):
                 )
             graph_patch = GraphPatchPayload.from_dict(raw_patch)
 
+        raw_warnings = envelope.get("warnings")
+        turn_warnings: list[str] = []
+        if raw_warnings is not None:
+            if not isinstance(raw_warnings, list) or not all(
+                isinstance(w, str) for w in raw_warnings
+            ):
+                raise ProtocolError("Agent turn 'warnings' must be a list of strings")
+            turn_warnings = [w.strip() for w in raw_warnings if w.strip()]
+
+        error_msg: str | None = None
+        if status == AgentTurnStatus.FAILED:
+            raw_error = envelope.get("error")
+            if not isinstance(raw_error, str) or not raw_error.strip():
+                raise ProtocolError(
+                    "Agent turn with status 'failed' must provide a non-empty 'error' string"
+                )
+            error_msg = raw_error.strip()
+        elif isinstance(envelope.get("error"), str) and envelope["error"].strip():
+            error_msg = envelope["error"].strip()
+
         outputs_payload: dict[str, JsonValue] | None = None
         if status == AgentTurnStatus.COMPLETED:
             raw_outs = envelope.get("outputs")
@@ -899,6 +947,8 @@ class AgentOp(Op):
             questions=questions,
             user_answers=None,
             graph_patch=graph_patch,
+            warnings=turn_warnings,
+            error=error_msg,
             started_at=started_at,
             finished_at=finished_at,
         )
@@ -915,6 +965,11 @@ class AgentOp(Op):
                 f"[agent] Turn {idx}: status=propose_patch "
                 f"(add_nodes={list(graph_patch.add_nodes.keys())}, "
                 f"rewire_inputs={list(graph_patch.rewire_inputs.keys())}) — {graph_patch.reason}",
+                flush=True,
+            )
+        elif status == AgentTurnStatus.FAILED:
+            print(
+                f"[agent] Turn {idx}: status=failed — {error_msg}",
                 flush=True,
             )
         else:
@@ -936,10 +991,12 @@ class AgentOp(Op):
         timeout_seconds: int | float | None = None,
         custom_command: str | None = None,
         mock_responses: Any = None,
+        output_schema: type[Any] | None = None,
         **extra: Any,
     ) -> dict[str, Any]:
         """Run the multi-turn agent loop with 0-token checkpoint replay and output materialization."""
         node_dir, workdir, _ = _resolve_dirs()
+        schema_target: type[Any] = output_schema if output_schema is not None else type(self)
         turn_idx = 0
         prev_session_id: str | None = None
         latest_answers: dict[str, AnswerValue] | None = None
@@ -957,8 +1014,15 @@ class AgentOp(Op):
                 timeout_seconds=timeout_seconds,
                 custom_command=custom_command,
                 mock_responses=mock_responses,
+                output_schema=output_schema,
                 **extra,
             )
+
+            for warning_msg in turn.warnings:
+                self.warn(warning_msg)
+
+            if turn.status == AgentTurnStatus.FAILED:
+                raise RuntimeError(turn.error or "Agent turn failed")
 
             if turn.status == AgentTurnStatus.NEEDS_INPUT:
                 answers = self.checkpoint_batch(turn.questions)
@@ -976,12 +1040,12 @@ class AgentOp(Op):
                 assert turn.graph_patch is not None
                 _atomic_write_text(node_dir / GRAPH_PATCH_FILENAME, turn.graph_patch.to_json())
                 raw_patch_outs: Mapping[str, Any] = turn.outputs or {}
-                specs = _extract_output_specs_for_op(type(self))
+                specs = _extract_output_specs_for_op(schema_target)
                 if not raw_patch_outs and set(specs.keys()) == {"summary"}:
                     raw_patch_outs = {"summary": f"Proposed graph patch: {turn.graph_patch.reason}"}
                 return materialize_turn_outputs(
                     raw_patch_outs,
-                    type(self),
+                    schema_target,
                     node_dir=node_dir,
                     workdir=workdir,
                 )
@@ -989,7 +1053,7 @@ class AgentOp(Op):
             assert turn.status == AgentTurnStatus.COMPLETED
             return materialize_turn_outputs(
                 turn.outputs or {},
-                type(self),
+                schema_target,
                 node_dir=node_dir,
                 workdir=workdir,
             )

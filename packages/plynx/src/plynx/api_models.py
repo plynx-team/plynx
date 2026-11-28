@@ -693,6 +693,8 @@ class AgentTurnModel(BaseModel):
     questions: list[CheckpointQuestionState] = Field(default_factory=list)
     user_answers: dict[str, str | list[str]] | None = None
     graph_patch: GraphPatchModel | None = None
+    warnings: list[str] = Field(default_factory=list)
+    error: str | None = None
     started_at: float
     finished_at: float
 

@@ -160,7 +160,12 @@ def _write_inputs(node_dir: Path, answers: dict[str, object] | None = None) -> N
 
 
 def test_strenum_values_and_json_serialization() -> None:
-    assert [m.value for m in AgentTurnStatus] == ["completed", "needs_input", "propose_patch"]
+    assert [m.value for m in AgentTurnStatus] == [
+        "completed",
+        "needs_input",
+        "propose_patch",
+        "failed",
+    ]
     assert [m.value for m in GraphEditPolicy] == ["forbidden", "confirm", "auto"]
     assert [m.value for m in ValidatorMode] == ["on_anomaly", "on_failure", "always"]
     assert [m.value for m in AgentProvider] == [

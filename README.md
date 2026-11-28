@@ -81,12 +81,12 @@ plynx clean --days 7
 
 ## Built-in Operations (`standard_io`)
 
-The `plynx` wheel ships with **18 stdlib-only operations** in `standard_io`:
+The `plynx` wheel ships with **21 stdlib-only operations** in `standard_io`:
 
 - **`Core / Text & Data`**: `Echo`, `Concat`, `TemplateFormat`, `MathOp`, `JsonExtract`, `JsonMerge`, `CsvSummary`
 - **`Core / Files`**: `ReadText`, `WriteText`, `ListDirectory`, `BundleDirectory`, `MarkdownReport`
 - **`Core / Interactive`**: `AskChoice`, `AskQuestions`
-- **`Core / Agents`**: `AgentPrompt`, `StageSupervisor`
+- **`Core / Agents`**: `AgentPrompt`, `AgentText`, `AgentJson`, `AgentBool`, `StageSupervisor`
 - **`Core / Network`**: `HttpGetJson`, `HttpPostJson`
 
 Run `plynx ops` (or `plynx ops --json`) in any workspace to list all built-in and custom operations with their full port schemas.

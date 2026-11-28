@@ -106,7 +106,11 @@ Rules:
 
 - **Built-in Agent Ops**:
   - `standard_io/agent:AgentPrompt`: Choice A `AgentOp` accepting `prompt_file`, `prompt`, `provider`, `model`, and variadic `**extra` inputs, returning `response: MarkdownFile`.
+  - `standard_io/agent:AgentText`: Returns `text: str` for inline string wiring and `StageSupervisor` adapter splices.
+  - `standard_io/agent:AgentJson`: Returns `data: dict` and `file: JsonFile` (pair with `standard_io/data:JsonExtract` to fan out fields).
+  - `standard_io/agent:AgentBool`: Returns `value: bool` and `reason: str` for classification or review checks.
   - `standard_io/agent:StageSupervisor`: `StageValidatorOp` inspecting `stage_context.json` (`outputs.json`, `warnings`, `stdout`/`stderr` tails, `workflow.snapshot.yaml`, and `plynx ops` schemas) and optionally proposing a bounded `graph_patch`.
+  - All `AgentOp` turn envelopes support optional `"warnings": [...]` (forwarded to `self.warn()`) and `"status": "failed"` with `"error": "..."` (clean `exit 1` `FAILED`).
 - **Provider & Model Resolution** (lowest to highest precedence, written into `inputs.json` before `plynx-cache-1` hashing):
   1. `plynx.yaml` `agent: { provider, model, agent_concurrency, max_injected_nodes, models, custom_command }` (or `PLYNX_AGENT_PROVIDER` / `PLYNX_AGENT_MODEL`).
   2. `workflow.yaml` top-level `agent: { provider, model }`.

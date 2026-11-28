@@ -286,7 +286,7 @@ The engine hashes each output, moves it into the blob store, and writes:
 }
 ```
 
-Before executing Turn `k`, `AgentOp` consults `agent_turns.json`. If Turn `k` is already recorded (e.g. replaying `run()` after a `checkpoint_batch()` exit `10`), `AgentOp` returns the recorded turn in 0 tokens, reads the stored checkpoint answer from `inputs.json`, and resumes Turn `k+1` via `--resume <session_id>`. Before each turn, `AgentOp` writes `workdir/turn_schema.json` and reads `workdir/turn_output.json` (falling back to CLI `stdout` JSON).
+Before executing Turn `k`, `AgentOp` consults `agent_turns.json`. If Turn `k` is already recorded (e.g. replaying `run()` after a `checkpoint_batch()` exit `10`), `AgentOp` returns the recorded turn in 0 tokens, reads the stored checkpoint answer from `inputs.json`, and resumes Turn `k+1` via `--resume <session_id>`. Before each turn, `AgentOp` writes `workdir/turn_schema.json` and reads `workdir/turn_output.json` (falling back to CLI `stdout` JSON). Turns may include optional `"warnings": [...]` (forwarded to `self.warn()`) or `"status": "failed"` with `"error": "..."` (raising `RuntimeError` so the node exits `1` `FAILED` cleanly).
 
 ### `stage_context.json` (engine writes inside `nodes/__stage_validator__<stage_id>/`)
 
@@ -333,7 +333,7 @@ All are `enum.StrEnum`; use the members instead of raw strings. `ui/src/api/type
 
 | Enum | Values |
 |---|---|
-| `AgentTurnStatus` | `completed`, `needs_input`, `propose_patch` |
+| `AgentTurnStatus` | `completed`, `needs_input`, `propose_patch`, `failed` |
 | `GraphEditPolicy` | `forbidden`, `confirm`, `auto` |
 | `ValidatorMode` | `on_anomaly`, `on_failure`, `always` |
 | `SideEffect` | `none`, `read`, `write` |
