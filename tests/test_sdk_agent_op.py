@@ -112,6 +112,67 @@ def test_agent_turns_manifest_and_graph_patch_roundtrip() -> None:
     assert reloaded.to_dict() == manifest.to_dict()
 
 
+def test_agent_turn_envelope_warnings_and_failed_status(tmp_path: Path) -> None:
+    """AgentOp records warnings via self.warn() and raises RuntimeError on status='failed'."""
+    from plynx_sdk.anomaly import warning_context
+
+    class SimpleTextAgent(AgentOp):
+        TITLE = "Simple Text Agent"
+
+        class Outputs(TypedDict):
+            text: str
+
+    schema = generate_turn_schema(SimpleTextAgent)
+    assert "failed" in schema["properties"]["status"]["enum"]
+    assert "warnings" in schema["properties"]
+    assert "error" in schema["properties"]
+
+    # 1. Completed turn with warnings -> forwarded to warning_context()
+    node_dir_ok = tmp_path / "ok_node"
+    with agent_context(node_dir=node_dir_ok), warning_context() as collected:
+        out = SimpleTextAgent().run_agent(
+            prompt="Return text",
+            provider=AgentProvider.MOCK,
+            mock_responses=[
+                {
+                    "status": "completed",
+                    "outputs": {"text": "done"},
+                    "warnings": ["Low OCR confidence"],
+                }
+            ],
+        )
+    assert out == {"text": "done"}
+    assert collected == ["Low OCR confidence"]
+    turns_ok = load_agent_turns(node_dir_ok)
+    assert turns_ok.turns[0].warnings == ["Low OCR confidence"]
+
+    # 2. Failed turn -> raises RuntimeError and records status='failed' + error
+    node_dir_fail = tmp_path / "fail_node"
+    with (
+        agent_context(node_dir=node_dir_fail),
+        pytest.raises(RuntimeError, match="Corrupt payload"),
+    ):
+        SimpleTextAgent().run_agent(
+            prompt="Return text",
+            provider=AgentProvider.MOCK,
+            mock_responses=[{"status": "failed", "error": "Corrupt payload"}],
+        )
+    turns_fail = load_agent_turns(node_dir_fail)
+    assert turns_fail.turns[0].status == AgentTurnStatus.FAILED
+    assert turns_fail.turns[0].error == "Corrupt payload"
+
+    # 3. Failed turn without error string -> ProtocolError
+    with (
+        agent_context(node_dir=tmp_path / "bad_fail_node"),
+        pytest.raises(ProtocolError, match="non-empty 'error'"),
+    ):
+        SimpleTextAgent().run_agent(
+            prompt="Return text",
+            provider=AgentProvider.MOCK,
+            mock_responses=[{"status": "failed", "error": "   "}],
+        )
+
+
 def test_generate_turn_schema_respects_graph_edit_policy() -> None:
     """generate_turn_schema omits propose_patch when forbidden and includes it when allowed."""
 
@@ -126,7 +187,7 @@ def test_generate_turn_schema_respects_graph_edit_policy() -> None:
 
     forbidden_schema = generate_turn_schema(ReviewOp, allow_graph_edits=GraphEditPolicy.FORBIDDEN)
     status_enum = forbidden_schema["properties"]["status"]["enum"]
-    assert status_enum == ["completed", "needs_input"]
+    assert status_enum == ["completed", "needs_input", "failed"]
     assert "graph_patch" not in forbidden_schema["properties"]
 
     out_props = forbidden_schema["properties"]["outputs"]["properties"]

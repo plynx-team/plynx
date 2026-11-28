@@ -32,9 +32,33 @@ def test_standard_io_agent_ops_ast_extraction() -> None:
     by_id = {op.id: op for op in ops}
 
     assert set(by_id.keys()) == {
+        "standard_io/agent:AgentBool",
+        "standard_io/agent:AgentJson",
         "standard_io/agent:AgentPrompt",
+        "standard_io/agent:AgentText",
         "standard_io/agent:StageSupervisor",
     }
+
+    text_op = by_id["standard_io/agent:AgentText"]
+    assert text_op.valid is True
+    assert text_op.side_effects == "read"
+    assert [(p.name, p.type) for p in text_op.outputs] == [("text", "str")]
+
+    json_op = by_id["standard_io/agent:AgentJson"]
+    assert json_op.valid is True
+    assert json_op.side_effects == "read"
+    assert [(p.name, p.type, p.media) for p in json_op.outputs] == [
+        ("data", "json", None),
+        ("file", "file", "application/json"),
+    ]
+
+    bool_op = by_id["standard_io/agent:AgentBool"]
+    assert bool_op.valid is True
+    assert bool_op.side_effects == "read"
+    assert [(p.name, p.type) for p in bool_op.outputs] == [
+        ("value", "bool"),
+        ("reason", "str"),
+    ]
 
     prompt_op = by_id["standard_io/agent:AgentPrompt"]
     assert prompt_op.valid is True
@@ -160,6 +184,125 @@ nodes:
         / response_out["sha256"]
     )
     assert "# Release Notes" in blob_path.read_text(encoding="utf-8")
+
+
+def test_standard_io_typed_agent_ops_warnings_and_failed_status(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """AgentText, AgentJson, AgentBool run end-to-end with warnings and clean failed status."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "workflows").mkdir()
+    wf_ok = tmp_path / "workflows" / "typed_agents.yaml"
+    wf_ok.write_text(
+        """version: 1
+name: typed_agents
+nodes:
+  gen_text:
+    op: standard_io/agent:AgentText
+    inputs:
+      prompt: "Normalize greeting."
+      provider: mock
+  gen_json:
+    op: standard_io/agent:AgentJson
+    inputs:
+      prompt: "Extract structured fields."
+      source: $gen_text.text
+      provider: mock
+  check_bool:
+    op: standard_io/agent:AgentBool
+    inputs:
+      prompt: "Verify payload."
+      payload: $gen_json.data
+      provider: mock
+""",
+        encoding="utf-8",
+    )
+    mock_ok = {
+        "gen_text": [
+            {
+                "status": "completed",
+                "outputs": {"text": "Hello world"},
+                "warnings": ["Normalized mixed casing"],
+            }
+        ],
+        "gen_json": [
+            {
+                "status": "completed",
+                "outputs": {"data": {"greeting": "Hello world", "count": 2}},
+            }
+        ],
+        "check_bool": [
+            {
+                "status": "completed",
+                "outputs": {"value": True, "reason": "Matches schema."},
+            }
+        ],
+    }
+    monkeypatch.setenv("PLYNX_MOCK_AGENT_RESPONSES", json.dumps(mock_ok))
+    runner = CliRunner()
+    res = runner.invoke(cli_main, ["run", "--non-interactive", str(wf_ok)])
+    assert res.exit_code == 0, res.output
+
+    store = RunStore(tmp_path)
+    run_id = store.list_runs(limit=1)[0].id
+    state = store.get_run_state(run_id)
+    assert state is not None
+    assert state.status == RunStatus.SUCCESS
+    assert state.nodes["gen_text"].warnings == ["Normalized mixed casing"]
+
+    json_res = json.loads(
+        (store.node_dir(run_id, "gen_json") / "result.json").read_text(encoding="utf-8")
+    )
+    assert json_res["outputs"]["data"]["value"] == {"greeting": "Hello world", "count": 2}
+    assert json_res["outputs"]["file"]["kind"] == "file"
+    assert json_res["outputs"]["file"]["media"] == "application/json"
+
+    bool_res = json.loads(
+        (store.node_dir(run_id, "check_bool") / "result.json").read_text(encoding="utf-8")
+    )
+    assert bool_res["outputs"]["value"]["value"] is True
+    assert bool_res["outputs"]["reason"]["value"] == "Matches schema."
+
+    # Agent returning status='failed' exits 1 (FAILED) with error message recorded
+    wf_fail = tmp_path / "workflows" / "agent_fail.yaml"
+    wf_fail.write_text(
+        """version: 1
+name: agent_fail
+nodes:
+  parse_doc:
+    op: standard_io/agent:AgentText
+    inputs:
+      prompt: "Parse corrupt input."
+      provider: mock
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv(
+        "PLYNX_MOCK_AGENT_RESPONSES",
+        json.dumps(
+            {
+                "parse_doc": [
+                    {
+                        "status": "failed",
+                        "error": "Input document is encrypted and unreadable.",
+                    }
+                ]
+            }
+        ),
+    )
+    fail_res = runner.invoke(cli_main, ["run", "--non-interactive", str(wf_fail)])
+    assert fail_res.exit_code == 1
+    fail_run_id = store.list_runs(limit=1)[0].id
+    fail_state = store.get_run_state(fail_run_id)
+    assert fail_state is not None
+    assert fail_state.status == RunStatus.FAILED
+    assert fail_state.nodes["parse_doc"].status == NodeStatus.FAILED
+    assert fail_state.nodes["parse_doc"].exit_code == 1
+    stderr_text = (store.run_dir(fail_run_id) / "logs" / "parse_doc.stderr.log").read_text(
+        encoding="utf-8"
+    )
+    assert "Input document is encrypted and unreadable." in stderr_text
 
 
 def test_adaptive_doc_review_showcase_end_to_end(

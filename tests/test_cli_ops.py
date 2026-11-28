@@ -9,7 +9,10 @@ from click.testing import CliRunner
 from plynx.cli import main as cli_main
 
 EXPECTED_STANDARD_IO_OPS = {
+    "standard_io/agent:AgentBool",
+    "standard_io/agent:AgentJson",
     "standard_io/agent:AgentPrompt",
+    "standard_io/agent:AgentText",
     "standard_io/agent:StageSupervisor",
     "standard_io/http:HttpGetJson",
     "standard_io/http:HttpPostJson",

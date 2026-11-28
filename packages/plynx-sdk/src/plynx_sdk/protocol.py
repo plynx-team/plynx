@@ -45,6 +45,7 @@ class AgentTurnStatus(StrEnum):
     COMPLETED = "completed"
     NEEDS_INPUT = "needs_input"
     PROPOSE_PATCH = "propose_patch"
+    FAILED = "failed"
 
 
 class GraphEditPolicy(StrEnum):
@@ -1438,6 +1439,8 @@ class AgentTurnRecord:
     questions: list[CheckpointQuestion] = field(default_factory=list)
     user_answers: dict[str, AnswerValue] | None = None
     graph_patch: GraphPatchPayload | None = None
+    warnings: list[str] = field(default_factory=list)
+    error: str | None = None
 
     def __post_init__(self) -> None:
         if isinstance(self.provider, str) and not isinstance(self.provider, AgentProvider):
@@ -1505,6 +1508,12 @@ class AgentTurnRecord:
                     "AgentTurnRecord: 'graph_patch' must be a GraphPatchPayload or None"
                 )
             self.graph_patch.validate()
+        if not isinstance(self.warnings, list) or not all(
+            isinstance(w, str) for w in self.warnings
+        ):
+            raise ProtocolError("AgentTurnRecord: 'warnings' must be a list of str")
+        if self.error is not None and not isinstance(self.error, str):
+            raise ProtocolError("AgentTurnRecord: 'error' must be a str or None")
 
         if self.status == AgentTurnStatus.NEEDS_INPUT and not self.questions:
             raise ProtocolError(
@@ -1516,6 +1525,10 @@ class AgentTurnRecord:
             )
         if self.status == AgentTurnStatus.COMPLETED and self.outputs is None:
             raise ProtocolError("AgentTurnRecord: 'outputs' is required when status is 'completed'")
+        if self.status == AgentTurnStatus.FAILED and not (self.error and self.error.strip()):
+            raise ProtocolError(
+                "AgentTurnRecord: non-empty 'error' is required when status is 'failed'"
+            )
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to a validated JSON-ready dictionary."""
@@ -1538,6 +1551,10 @@ class AgentTurnRecord:
             out["user_answers"] = dict(self.user_answers)
         if self.graph_patch is not None:
             out["graph_patch"] = self.graph_patch.to_dict(include_schema=False)
+        if self.warnings:
+            out["warnings"] = list(self.warnings)
+        if self.error is not None:
+            out["error"] = self.error
         return out
 
     @classmethod
@@ -1556,6 +1573,8 @@ class AgentTurnRecord:
                 "questions",
                 "user_answers",
                 "graph_patch",
+                "warnings",
+                "error",
             },
             context="AgentTurnRecord",
         )
@@ -1570,6 +1589,12 @@ class AgentTurnRecord:
         raw_answers = data.get("user_answers")
         if raw_answers is not None and not isinstance(raw_answers, Mapping):
             raise ProtocolError("AgentTurnRecord: 'user_answers' must be an object or null")
+        raw_warnings = data.get("warnings", [])
+        if not isinstance(raw_warnings, list) or not all(isinstance(w, str) for w in raw_warnings):
+            raise ProtocolError("AgentTurnRecord: 'warnings' must be a list of str")
+        raw_error = data.get("error")
+        if raw_error is not None and not isinstance(raw_error, str):
+            raise ProtocolError("AgentTurnRecord: 'error' must be a str or null")
 
         return cls(
             turn_index=data["turn_index"],
@@ -1582,6 +1607,8 @@ class AgentTurnRecord:
             questions=[CheckpointQuestion.from_dict(q) for q in raw_questions],
             user_answers=dict(raw_answers) if raw_answers is not None else None,
             graph_patch=patch,
+            warnings=list(raw_warnings),
+            error=raw_error,
             started_at=data["started_at"],
             finished_at=data["finished_at"],
         )
@@ -1686,6 +1713,7 @@ __all__ = [
     "ScalarData",
     "ScalarPrimitive",
     "ScalarValue",
+    "SideEffect",
     "ValidatorMode",
     "ValueKind",
     "validate_batch_answers",

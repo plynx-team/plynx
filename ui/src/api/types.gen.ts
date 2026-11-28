@@ -7,7 +7,7 @@ export type RunStatus = "RUNNING" | "WAITING_FOR_USER" | "SUCCESS" | "FAILED" | 
 
 export type StageGateStatus = "WAITING" | "APPROVED";
 
-export type AgentTurnStatus = "completed" | "needs_input" | "propose_patch";
+export type AgentTurnStatus = "completed" | "needs_input" | "propose_patch" | "failed";
 
 export type GraphEditPolicy = "forbidden" | "confirm" | "auto";
 
@@ -501,6 +501,8 @@ export interface AgentTurnModel {
   questions: Array<CheckpointQuestionState>;
   user_answers?: Record<string, string | Array<string>> | null;
   graph_patch?: GraphPatchModel | null;
+  warnings: Array<string>;
+  error?: string | null;
   started_at: number;
   finished_at: number;
 }

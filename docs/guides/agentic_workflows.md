@@ -87,9 +87,12 @@ agent:
 
 ## 4. Using Built-in Agent Ops
 
-`standard_io` ships two ready-to-use agent ops:
+`standard_io` ships five ready-to-use agent ops:
 
 - `standard_io/agent:AgentPrompt` — takes `prompt` / `prompt_file`, `provider`, `model`, and arbitrary `**extra` inputs; returns `response: MarkdownFile`.
+- `standard_io/agent:AgentText` — returns `text: str` for direct wiring into string ports or stage-validator adapter splices.
+- `standard_io/agent:AgentJson` — returns `data: dict` and `file: JsonFile` (pair with `standard_io/data:JsonExtract` to fan out fields).
+- `standard_io/agent:AgentBool` — returns `value: bool` and `reason: str`.
 - `standard_io/agent:StageSupervisor` — attaches to `stages.<stage_id>.validator:` to inspect stage outputs, `self.warn()` warnings, and failure logs, and optionally propose a bounded graph patch.
 
 ```yaml
