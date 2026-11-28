@@ -339,6 +339,7 @@ def test_uvx_serves_ui_in_clean_machine_environment(tmp_path: Path) -> None:
     port = 8891
     server_cmd = [
         uv_bin,
+        "--no-cache",
         "--find-links",
         str(dist_dir),
         "--from",
