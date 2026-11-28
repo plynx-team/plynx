@@ -36,6 +36,7 @@ export function StageGroupNode({ data }: NodeProps<StageGroupGraphNode>) {
   const isSelected = Boolean(data.isSelected);
   const isDropTarget = Boolean(data.isDropTarget);
   const isEmpty = data.nodeCount === 0;
+  const validatorStatus = getValidatorDisplayStatus(data);
 
   return (
     <div
@@ -185,7 +186,7 @@ export function StageGroupNode({ data }: NodeProps<StageGroupGraphNode>) {
               data.isValidatorSelected
                 ? "border border-[var(--color-primary)] ring-1 ring-[var(--color-primary)]"
                 : "border border-[#3e3e3e] hover:border-[var(--color-primary)]"
-            }`}
+            } ${validatorStatus.label === "RUNNING" ? "stage-validator-running" : ""}`}
             title={`Stage Validator: ${data.validatorTitle || data.validator.op} (${data.validator.mode || "on_anomaly"})`}
           >
             <div className="flex items-center gap-1.5 min-w-0">
@@ -206,9 +207,9 @@ export function StageGroupNode({ data }: NodeProps<StageGroupGraphNode>) {
             </div>
             <span
               data-testid={`stage-validator-status-${data.stageId}`}
-              className={`${getValidatorDisplayStatus(data).badgeClass} !text-[9px] shrink-0`}
+              className={`${validatorStatus.badgeClass} !text-[9px] shrink-0`}
             >
-              {getValidatorDisplayStatus(data).label}
+              {validatorStatus.label}
             </span>
           </div>
         </div>

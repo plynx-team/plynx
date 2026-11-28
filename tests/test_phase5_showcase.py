@@ -452,3 +452,78 @@ def test_adaptive_doc_review_showcase_end_to_end(
     assert "- **Target Audience**: Executive" in report_text
     assert "- **Focus Areas**: Metrics, Action Items" in report_text
     assert "Hello team. The quarterly report shows revenue increased by 14%" in report_text
+
+
+def test_maintenance_handoff_replacement(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise the same workflow with structured fields and with a superseded formatter."""
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    assert runner.invoke(cli_main, ["init", "."]).exit_code == 0
+    workflow = Path("workflows/maintenance_handoff.yaml")
+    baseline = (ROOT / "examples" / workflow).read_bytes()
+    workflow.write_bytes(baseline)
+    ticket = Path("examples/samples/maintenance_handoff.json")
+    ticket.parent.mkdir(parents=True)
+    ticket.write_text(
+        json.dumps({"ticket": "OPS-001", "approved_window": "Monday 09:00 UTC", "owner": "Ari"}),
+        encoding="utf-8",
+    )
+    run = ["run", "--non-interactive", "--agent-provider", "mock", str(workflow)]
+    normal = runner.invoke(cli_main, run)
+    assert normal.exit_code == 0, normal.output
+
+    ticket.write_bytes((ROOT / ticket).read_bytes())
+    supervisor = stage_validator_node_id("prepare")
+    statement = "OPS-317 — approved window: Friday 04:00 UTC. Owner: Mina."
+    patch = {
+        "reason": "The release-control decision approves Friday with Mina and withdraws Tuesday.",
+        "add_nodes": {
+            "interpret_decision": {
+                "op": "standard_io/agent:AgentText",
+                "stage": "prepare",
+                "inputs": {
+                    "record": "$ticket.value_json",
+                    "prompt": "State the approved ticket, window and owner from the decision.",
+                },
+            },
+        },
+        "rewire_inputs": {"draft": {"body": "$interpret_decision.text"}},
+    }
+    monkeypatch.setenv(
+        "PLYNX_MOCK_AGENT_RESPONSES",
+        json.dumps(
+            {
+                supervisor: {"status": "propose_patch", "graph_patch": patch},
+                "interpret_decision": {"status": "completed", "outputs": {"text": statement}},
+            }
+        ),
+    )
+    paused = runner.invoke(cli_main, run)
+    assert paused.exit_code == 2, paused.output
+    store = RunStore(tmp_path)
+    run_id = store.list_runs(limit=1)[0].id
+    state = store.get_run_state(run_id)
+    assert state is not None and state.nodes["notice"].status == NodeStatus.FAILED
+    cp = next(c for c in state.checkpoints if c.node_id == supervisor)
+    resumed = runner.invoke(
+        cli_main,
+        [
+            "resume",
+            run_id,
+            "--non-interactive",
+            "--answer",
+            f"{supervisor}.{cp.checkpoint_id}=Approve Patch",
+        ],
+    )
+    assert resumed.exit_code == 0, resumed.output
+    state = store.get_run_state(run_id)
+    assert state is not None and state.workflow_snapshot is not None
+    assert state.nodes["notice"].status == NodeStatus.FAILED
+    meta = state.workflow_snapshot.nodes["notice"].meta
+    assert meta is not None and meta.superseded_by == "interpret_decision"
+    assert state.nodes["interpret_decision"].status == NodeStatus.SUCCESS
+    result = json.loads((store.node_dir(run_id, "draft") / "result.json").read_bytes())
+    sha = result["outputs"]["report"]["sha256"]
+    report = (tmp_path / ".plynx/cache/blobs" / sha[:2] / sha).read_text(encoding="utf-8")
+    assert report.strip() == f"# Maintenance notice\n\n{statement}"
+    assert workflow.read_bytes() == baseline

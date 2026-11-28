@@ -594,6 +594,7 @@ def test_stage_validator_op_propose_patch_and_forbidden_guard(tmp_path: Path) ->
     class CheckStage(StageValidatorOp):
         TITLE = "Stage Check"
 
+    reason = "**Sanitize the input** so parsing can continue.\n\nEvidence: `raw.out` has a BOM."
     val_dir = tmp_path / "validator_node"
     with agent_context(node_dir=val_dir):
         out = CheckStage().run_agent(
@@ -602,7 +603,7 @@ def test_stage_validator_op_propose_patch_and_forbidden_guard(tmp_path: Path) ->
             mock_responses={
                 "status": "propose_patch",
                 "graph_patch": {
-                    "reason": "Add sanitizer",
+                    "reason": reason,
                     "add_nodes": {
                         "sanitize": {
                             "op": "standard_io/text:Concat",
@@ -613,11 +614,18 @@ def test_stage_validator_op_propose_patch_and_forbidden_guard(tmp_path: Path) ->
                 },
             },
         )
-    assert "Proposed graph patch: Add sanitizer" in out["summary"]
+    assert out["summary"] == f"Proposed graph patch: {reason}"
     patch_file = val_dir / "graph_patch.json"
     assert patch_file.is_file()
     loaded_patch = GraphPatchPayload.from_json(patch_file.read_bytes())
-    assert loaded_patch.reason == "Add sanitizer"
+    assert loaded_patch.reason == reason
+    [turn] = load_agent_turns(val_dir).turns
+    assert turn.graph_patch is not None
+    assert turn.graph_patch.reason == reason
+
+    prompt = (val_dir / "workdir" / "turn_prompt.md").read_text(encoding="utf-8")
+    assert "For `graph_patch.reason`: In one short sentence" in prompt
+    assert "one short evidence line naming the source and the decisive observation" in prompt
 
     class StrictAgent(AgentOp):
         TITLE = "No Edits Allowed"
@@ -635,6 +643,8 @@ def test_stage_validator_op_propose_patch_and_forbidden_guard(tmp_path: Path) ->
                 "graph_patch": {"reason": "Not allowed"},
             },
         )
+    strict_prompt = (strict_dir / "workdir" / "turn_prompt.md").read_text(encoding="utf-8")
+    assert "graph_patch.reason" not in strict_prompt
 
 
 def test_parse_fenced_json_and_jsonl_envelopes() -> None:

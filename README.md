@@ -100,6 +100,7 @@ This repository includes optional demo packs (`examples/custom_packs/`: `languag
 | [`foo_or_woo.yaml`](examples/workflows/foo_or_woo.yaml) | Minimal 2-node checkpoint workflow using `standard_io`. |
 | [`interactive_wizard_staged.yaml`](examples/workflows/interactive_wizard_staged.yaml) | Multi-stage interactive survey with `require_approval: true` and Markdown report. |
 | [`adaptive_doc_review.yaml`](examples/workflows/adaptive_doc_review.yaml) | End-to-end agentic workflow with `self.warn()`, `StageSupervisor` graph repair, and batch multi-question `checkpoint_batch()`. |
+| [`maintenance_handoff.yaml`](examples/workflows/maintenance_handoff.yaml) | A ticket export records the approved maintenance window in handoff notes. The template fails on missing fields. The supervisor diagnoses the failure and asks the operator to approve a repair. |
 | [`data_bundle_pipeline.yaml`](examples/workflows/data_bundle_pipeline.yaml) | Data pipeline covering CSV, JSON, math, directory bundling, and Markdown output. |
 | [`generative_art_studio.yaml`](examples/workflows/generative_art_studio.yaml) | Procedural image generation (Mandelbrot, geometric patterns, filters, metadata). |
 | [`midi_groove_studio.yaml`](examples/workflows/midi_groove_studio.yaml) | Multi-track MIDI sequencing, synthesis, mixing, and mastering. |

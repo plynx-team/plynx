@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "reason": "Detected French document; splicing translator before summarize.",
+  "reason": "**Translate before summarizing** because the summary step expects English.\n\nEvidence: `pick.choice` is in French.",
   "add_nodes": {
     "translate_fr": {
       "op": "demo_pack/ops:TranslateFr",

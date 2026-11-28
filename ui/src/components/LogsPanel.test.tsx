@@ -221,4 +221,43 @@ describe("LogsPanel component (Task 6.4)", () => {
       "completed",
     );
   });
+
+  it("renders the patch reason and keeps the full patch JSON in a disclosure", async () => {
+    const patch = {
+      add_nodes: { translate: { op: "demo/text:Translate", stage: "ingest" } },
+      rewire_inputs: { planner: { text: "$translate.text" } },
+    };
+    vi.spyOn(client, "fetchNodeAgentTurns").mockResolvedValue({
+      schema: 1,
+      turns: [
+        {
+          turn_index: 0,
+          provider: "mock",
+          model: "",
+          status: "propose_patch",
+          prompt_summary: "",
+          questions: [],
+          warnings: [],
+          started_at: 1000,
+          finished_at: 1001,
+          graph_patch: {
+            ...patch,
+            reason: "**Translate before planning.**\n\nEvidence: `ingest.text` is in French.",
+          },
+        },
+      ],
+    });
+
+    render(<LogsPanel runId="run-100" nodeId="validator" />);
+    fireEvent.click(await screen.findByText("Agent Turns (1)"));
+
+    expect(screen.getByText("Translate before planning.").tagName).toBe("STRONG");
+    expect(screen.getByText("ingest.text").tagName).toBe("CODE");
+    const summary = screen.getByText("Patch details (JSON)");
+    const details = summary.closest("details");
+    expect(details?.open).toBe(false);
+    fireEvent.click(summary);
+    expect(details?.open).toBe(true);
+    expect(details?.querySelector("pre")?.textContent).toBe(JSON.stringify(patch, null, 2));
+  });
 });

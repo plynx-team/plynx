@@ -741,14 +741,17 @@ export function NodeInspector({
               )}
               {spec.meta?.reason && (
                 <div
-                  className="rounded p-1.5 text-[11px]"
+                  className="rounded p-1.5 [overflow-wrap:anywhere]"
                   style={{
                     backgroundColor: "rgba(171, 71, 188, 0.1)",
                     border: "1px solid rgba(171, 71, 188, 0.35)",
                     color: "var(--text-primary)",
                   }}
                 >
-                  {spec.meta.reason}
+                  <MarkdownPreviewer
+                    content={spec.meta.reason}
+                    allowLinks={false}
+                  />
                 </div>
               )}
               {spec.meta?.superseded_by && (

@@ -2,6 +2,7 @@ import React from "react";
 
 export interface MarkdownPreviewerProps {
   content: string;
+  allowLinks?: boolean;
 }
 
 function isAllowedLinkUrl(url: string): boolean {
@@ -18,11 +19,11 @@ function isAllowedLinkUrl(url: string): boolean {
   }
 }
 
-function renderInline(text: string): React.ReactNode {
+function renderInline(text: string, allowLinks: boolean): React.ReactNode {
   // Simple regex-based inline parser
   const parts: Array<React.ReactNode> = [];
-  // Match `code`, **bold**, *italic*, [link](url)
-  const regex = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g;
+  // Match `code`, **bold**, *italic*, and link or image syntax.
+  const regex = /(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|!?\[[^\]]*\]\([^)]+\))/g;
 
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -54,11 +55,12 @@ function renderInline(text: string): React.ReactNode {
           {token.slice(1, -1)}
         </em>,
       );
-    } else if (token.startsWith("[") && token.includes("](") && token.endsWith(")")) {
+    } else {
+      const isImage = token.startsWith("!");
       const splitIdx = token.indexOf("](");
-      const linkText = token.slice(1, splitIdx);
+      const linkText = token.slice(isImage ? 2 : 1, splitIdx);
       const linkUrl = token.slice(splitIdx + 2, -1);
-      if (isAllowedLinkUrl(linkUrl)) {
+      if (!isImage && allowLinks && isAllowedLinkUrl(linkUrl)) {
         parts.push(
           <a
             key={match.index}
@@ -85,7 +87,7 @@ function renderInline(text: string): React.ReactNode {
   return parts.length > 0 ? parts : text;
 }
 
-export function MarkdownPreviewer({ content }: MarkdownPreviewerProps) {
+export function MarkdownPreviewer({ content, allowLinks = true }: MarkdownPreviewerProps) {
   const lines = content.split(/\r?\n/);
   const elements: Array<React.ReactNode> = [];
 
@@ -121,19 +123,19 @@ export function MarkdownPreviewer({ content }: MarkdownPreviewerProps) {
     if (line.startsWith("# ")) {
       elements.push(
         <h1 key={i} className="mt-3 mb-1.5 text-base font-bold text-[var(--text-primary)] border-b border-[var(--border-subtle)] pb-1">
-          {renderInline(line.slice(2))}
+          {renderInline(line.slice(2), allowLinks)}
         </h1>,
       );
     } else if (line.startsWith("## ")) {
       elements.push(
         <h2 key={i} className="mt-2.5 mb-1 text-sm font-bold text-[var(--text-primary)]">
-          {renderInline(line.slice(3))}
+          {renderInline(line.slice(3), allowLinks)}
         </h2>,
       );
     } else if (line.startsWith("### ")) {
       elements.push(
         <h3 key={i} className="mt-2 mb-0.5 text-xs font-semibold text-[var(--text-secondary)]">
-          {renderInline(line.slice(4))}
+          {renderInline(line.slice(4), allowLinks)}
         </h3>,
       );
     } else if (line.startsWith("> ")) {
@@ -142,13 +144,13 @@ export function MarkdownPreviewer({ content }: MarkdownPreviewerProps) {
           key={i}
           className="my-1.5 border-l-2 border-[var(--border-strong)] pl-2.5 italic text-[var(--text-secondary)]"
         >
-          {renderInline(line.slice(2))}
+          {renderInline(line.slice(2), allowLinks)}
         </blockquote>,
       );
     } else if (line.startsWith("- ") || line.startsWith("* ")) {
       elements.push(
         <li key={i} className="ml-4 list-disc text-xs text-[var(--text-primary)]">
-          {renderInline(line.slice(2))}
+          {renderInline(line.slice(2), allowLinks)}
         </li>,
       );
     } else if (!line.trim()) {
@@ -156,7 +158,7 @@ export function MarkdownPreviewer({ content }: MarkdownPreviewerProps) {
     } else {
       elements.push(
         <p key={i} className="my-1 text-xs leading-relaxed text-[var(--text-primary)]">
-          {renderInline(line)}
+          {renderInline(line, allowLinks)}
         </p>,
       );
     }

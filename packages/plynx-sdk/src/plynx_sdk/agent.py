@@ -62,6 +62,13 @@ TURN_OUTPUT_FILENAME = "turn_output.json"
 GRAPH_PATCH_FILENAME = "graph_patch.json"
 STAGE_CONTEXT_FILENAME = "stage_context.json"
 
+_GRAPH_PATCH_REASON_GUIDANCE = (
+    "In one short sentence, state the repair decision and why it is needed. "
+    "If useful, add one short evidence line naming the source and the decisive observation. "
+    "Use simple Markdown for emphasis and identifiers. Keep node specs, rewires, and long excerpts "
+    "in the patch or logs."
+)
+
 _MEDIA_EXTENSIONS: dict[str, str] = {
     "text/markdown": ".md",
     "application/json": ".json",
@@ -396,7 +403,7 @@ def generate_turn_schema(
             "properties": {
                 "reason": {
                     "type": "string",
-                    "description": "Concise human-readable reason for the proposed DAG patch.",
+                    "description": _GRAPH_PATCH_REASON_GUIDANCE,
                 },
                 "add_nodes": {
                     "type": "object",
@@ -645,6 +652,7 @@ def _build_full_turn_prompt(
                 '(`{"reason": "...", "add_nodes": {"<new_id>": {"op": "<pack>/<mod>:<Op>", "stage": "<stage_id>", "inputs": {"<port>": "$<up>.<out>"}}}, '
                 '"rewire_inputs": {"<downstream_id>": {"<port>": "$<new_id>.<out>"}}}`) '
                 "if the workflow graph needs bounded repair (omit `outputs` when proposing a patch)."
+                f"\n  For `graph_patch.reason`: {_GRAPH_PATCH_REASON_GUIDANCE}"
                 if allow_graph_edits != GraphEditPolicy.FORBIDDEN
                 else ""
             )

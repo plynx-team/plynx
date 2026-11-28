@@ -46,6 +46,10 @@ Exit codes for `plynx run` and `plynx resume`:
 
 ## 3. Workflow Design & Granularity Heuristics
 
+Design for handoff. When the original author is absent and the input is slightly wrong, can the next operator get the right result and explain why they trust it? Try one normal input, one unexpected but recoverable input, and one where the evidence is insufficient.
+
+Give a stage supervisor the required outcome and the evidence needed to accept it. Let it diagnose the failure from the source, error, and registered op schemas. If the repair is already known when authoring the workflow, encode that behavior directly. For a repair proposal, identify the failed assumption, cite the source evidence, and explain the downstream change. Prefer a parameter correction when the same op can still fulfill its contract. Use a separate replacement node when the method changes. A registered agent op with a task-specific prompt can supply missing interpretation. Ask for clarification when the source cannot support a decision.
+
 Follow these heuristics when designing or refactoring PLynx workflows:
 
 1. **Reuse Before Authoring (`plynx ops --json` first)**: Always inspect built-in `standard_io` ops (including `standard_io/agent:AgentPrompt` and `standard_io/agent:StageSupervisor`) and existing `custom_packs/` ops before writing new Python ops.

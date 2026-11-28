@@ -5,6 +5,7 @@ import {
   subscribeRunEvents,
 } from "../api/client";
 import type { AgentTurnModel, NodeLogEvent } from "../api/types.gen";
+import { MarkdownPreviewer } from "../previewers/MarkdownPreviewer";
 import { parseAnsi, stripAnsi } from "../utils/ansi";
 import { ControlButton } from "./ControlPanel";
 import { FeatherIcon } from "./FeatherIcon";
@@ -494,25 +495,32 @@ export function LogsPanel({ runId, nodeId, onClose }: LogsPanelProps) {
 
                       {turn.graph_patch && (
                         <div
-                          className="rounded p-1.5 space-y-1 text-xs"
+                          className="rounded p-1.5 space-y-1 text-xs [overflow-wrap:anywhere]"
                           style={{
                             backgroundColor: "var(--bg-app)",
                             border: "1px solid var(--border-subtle)",
                           }}
                         >
-                          <div className="font-semibold">
-                            Proposed Patch: {turn.graph_patch.reason}
-                          </div>
-                          <pre className="font-mono text-[11px] whitespace-pre-wrap overflow-x-auto">
-                            {JSON.stringify(
-                              {
-                                add_nodes: turn.graph_patch.add_nodes,
-                                rewire_inputs: turn.graph_patch.rewire_inputs,
-                              },
-                              null,
-                              2,
-                            )}
-                          </pre>
+                          <div className="font-semibold">Proposed Patch</div>
+                          <MarkdownPreviewer
+                            content={turn.graph_patch.reason}
+                            allowLinks={false}
+                          />
+                          <details>
+                            <summary className="cursor-pointer font-semibold">
+                              Patch details (JSON)
+                            </summary>
+                            <pre className="mt-1 font-mono text-[11px] whitespace-pre-wrap overflow-x-auto">
+                              {JSON.stringify(
+                                {
+                                  add_nodes: turn.graph_patch.add_nodes,
+                                  rewire_inputs: turn.graph_patch.rewire_inputs,
+                                },
+                                null,
+                                2,
+                              )}
+                            </pre>
+                          </details>
                         </div>
                       )}
 

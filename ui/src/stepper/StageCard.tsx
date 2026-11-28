@@ -63,6 +63,10 @@ export function StageCard({
   const openValidatorCheckpoints = validatorCheckpoints.filter(
     (cp) => !cp.answered_at,
   );
+  const isValidatorRunning =
+    openValidatorCheckpoints.length === 0 &&
+    (validatorState?.status === "RUNNING" ||
+      validatorState?.status === "BUILDING_ENVIRONMENT");
   const totalNodes = nodes.length;
   const completedNodes = nodes.filter(
     (n) => n.state?.status === "SUCCESS",
@@ -76,8 +80,7 @@ export function StageCard({
         n.state?.status === "RUNNING" ||
         n.state?.status === "BUILDING_ENVIRONMENT",
     ) ||
-    validatorState?.status === "RUNNING" ||
-    validatorState?.status === "BUILDING_ENVIRONMENT";
+    isValidatorRunning;
   const isWaiting =
     gateState?.status === "WAITING" ||
     validatorState?.status === "WAITING_FOR_USER" ||
@@ -200,7 +203,7 @@ export function StageCard({
             onClick={() => onSelectNode?.(validatorNodeId)}
             className={`mt-2 list-row !block cursor-pointer ${
               selectedNodeId === validatorNodeId ? "selected" : ""
-            }`}
+            } ${isValidatorRunning ? "stage-validator-running" : ""}`}
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">

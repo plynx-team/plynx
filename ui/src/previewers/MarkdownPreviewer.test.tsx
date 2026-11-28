@@ -39,4 +39,18 @@ describe("MarkdownPreviewer link URL sanitization", () => {
     expect(screen.getByText("Data URI")).toBeDefined();
     expect(screen.getByText("VBScript")).toBeDefined();
   });
+
+  it("keeps links, images, and raw HTML inert when link rendering is disabled", () => {
+    const content = [
+      "[Evidence](https://example.com/evidence)",
+      "![Remote image](https://example.com/pixel.png)",
+      '<img src="https://example.com/raw.png" />',
+    ].join("\n");
+    const { container } = render(<MarkdownPreviewer content={content} allowLinks={false} />);
+
+    expect(screen.getByText("Evidence")).toBeDefined();
+    expect(screen.getByText("Remote image")).toBeDefined();
+    expect(screen.getByText('<img src="https://example.com/raw.png" />')).toBeDefined();
+    expect(container.querySelector("a, img")).toBeNull();
+  });
 });

@@ -5,6 +5,7 @@ import type {
   CheckpointState,
 } from "../api/types.gen";
 import { FeatherIcon } from "../components/FeatherIcon";
+import { MarkdownPreviewer } from "../previewers/MarkdownPreviewer";
 
 export type CheckpointAnswers = Record<string, string | string[]>;
 
@@ -139,6 +140,14 @@ export function CheckpointCard({
   if (graphPatch) {
     const addedEntries = Object.entries(graphPatch.add_nodes ?? {});
     const rewireEntries = Object.entries(graphPatch.rewire_inputs ?? {});
+    const rewiredInputs = rewireEntries.flatMap(([nodeId, ports]) =>
+      Object.entries(ports).map(([port, value]) => ({
+        target: `${nodeId}.${port}`,
+        value,
+      })),
+    );
+    const nodeLabel = addedEntries.length === 1 ? "node" : "nodes";
+    const inputLabel = rewiredInputs.length === 1 ? "input" : "inputs";
 
     return (
       <div
@@ -188,75 +197,66 @@ export function CheckpointCard({
           </div>
         )}
 
-        <div className="space-y-1">
+        <div className="space-y-1 [overflow-wrap:anywhere]">
           <div
             className="text-[11px] font-bold uppercase tracking-wide"
             style={{ color: "var(--text-secondary)" }}
           >
             Reason
           </div>
-          <p className="text-xs">{graphPatch.reason}</p>
+          <MarkdownPreviewer content={graphPatch.reason} allowLinks={false} />
         </div>
 
-        <div
+        <details
           data-testid={`patch-diff-preview-${checkpoint.checkpoint_id}`}
-          className="rounded p-2.5 space-y-2 font-mono text-xs"
+          className="rounded p-2.5 text-xs"
           style={{
             backgroundColor: "var(--bg-canvas)",
             border: "1px solid var(--border-subtle)",
           }}
         >
-          {addedEntries.length > 0 && (
-            <div className="space-y-1">
-              <div style={{ color: "var(--color-status-success)" }}>
-                + Add Nodes ({addedEntries.length})
-              </div>
-              {addedEntries.map(([nid, spec]) => (
-                <div
-                  key={nid}
-                  className="pl-2 py-0.5 rounded"
-                  style={{ backgroundColor: "rgba(56, 193, 114, 0.1)" }}
-                >
-                  <span className="font-bold">+ {nid}</span>:{" "}
-                  <span>{String(spec.op ?? "")}</span>
-                  {spec.inputs ? (
-                    <span style={{ color: "var(--text-secondary)" }}>
-                      {" "}
-                      {JSON.stringify(spec.inputs)}
-                    </span>
-                  ) : null}
+          <summary className="cursor-pointer font-semibold">
+            Graph changes ({addedEntries.length} {nodeLabel} added, {rewiredInputs.length} {inputLabel} rewired)
+          </summary>
+          <div className="mt-2 space-y-2 font-mono [overflow-wrap:anywhere]">
+            {addedEntries.length > 0 && (
+              <div className="space-y-1">
+                <div style={{ color: "var(--color-status-success)" }}>
+                  + Add Nodes
                 </div>
-              ))}
-            </div>
-          )}
-
-          {rewireEntries.length > 0 && (
-            <div className="space-y-1">
-              <div style={{ color: "var(--color-warning)" }}>
-                ~ Rewire Inputs
-              </div>
-              {rewireEntries.map(([targetNid, ports]) =>
-                Object.entries(ports).map(([portName, newVal]) => (
+                {addedEntries.map(([nid, { op, ...spec }]) => (
                   <div
-                    key={`${targetNid}.${portName}`}
+                    key={nid}
+                    className="pl-2 py-0.5 rounded"
+                    style={{ backgroundColor: "rgba(56, 193, 114, 0.1)" }}
+                  >
+                    <span className="font-bold">+ {nid}</span> {String(op ?? "")}
+                    <pre className="whitespace-pre-wrap text-[var(--text-secondary)]">
+                      {JSON.stringify(spec, null, 2)}
+                    </pre>
+                  </div>
+                ))}
+              </div>
+            )}
+            {rewiredInputs.length > 0 && (
+              <div className="space-y-1">
+                <div style={{ color: "var(--color-warning)" }}>
+                  ~ Rewire Inputs
+                </div>
+                {rewiredInputs.map(({ target, value }) => (
+                  <div
+                    key={target}
                     className="pl-2 py-0.5 rounded"
                     style={{ backgroundColor: "rgba(255, 167, 38, 0.1)" }}
                   >
-                    <span className="font-bold">
-                      ~ {targetNid}.{portName}
-                    </span>{" "}
-                    &larr;{" "}
-                    <span>
-                      {typeof newVal === "string"
-                        ? newVal
-                        : JSON.stringify(newVal)}
-                    </span>
+                    <span className="font-bold">~ {target}</span> &larr;{" "}
+                    {typeof value === "string" ? value : JSON.stringify(value)}
                   </div>
-                )),
-              )}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </details>
 
         <div className="flex items-center gap-2 pt-1">
           <button

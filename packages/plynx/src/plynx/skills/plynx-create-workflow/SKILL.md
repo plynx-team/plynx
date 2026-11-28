@@ -5,6 +5,8 @@ description: Create, validate, run, and debug PLynx YAML workflows and custom No
 
 # Create a PLynx Workflow
 
+Design for the operator who will run this without the author. Follow the handoff and repair guidance in `plynx agent-guide`: define what evidence makes an output acceptable, and exercise both a recoverable input change and a case that requires human clarification.
+
 Follow this 5-step procedure whenever authoring or updating PLynx workflows or custom operations:
 
 1. **Load current schemas and ops**: Run `plynx agent-guide` and `plynx ops --json`. Reuse existing `standard_io` or `custom_packs/` ops before writing new Python code.

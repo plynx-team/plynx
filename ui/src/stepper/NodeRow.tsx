@@ -79,11 +79,7 @@ export function NodeRow({
             <span
               data-testid={`badge-added-by-agent-${nodeId}`}
               className="status-badge !border-[#00d8ff] !text-[#00d8ff] !text-[10px] !px-1.5 !py-0"
-              title={
-                spec?.meta?.reason
-                  ? `Injected by ${spec.meta.injected_by}: ${spec.meta.reason}`
-                  : `Injected by ${spec?.meta?.injected_by}`
-              }
+              title={`Injected by ${spec?.meta?.injected_by}`}
             >
               ADDED BY AGENT
             </span>

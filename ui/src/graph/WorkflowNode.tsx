@@ -128,11 +128,7 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowGraphNode>) {
               <span
                 data-testid={`badge-added-by-agent-${nodeId}`}
                 className="node-diff-badge new-in-run"
-                title={
-                  spec.meta?.reason
-                    ? `Injected by ${spec.meta.injected_by}: ${spec.meta.reason}`
-                    : `Injected by ${spec.meta?.injected_by}`
-                }
+                title={`Injected by ${spec.meta?.injected_by}`}
               >
                 <FeatherIcon name="cpu" size={9} />
                 <span>ADDED BY AGENT</span>

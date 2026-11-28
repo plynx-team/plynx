@@ -38,6 +38,7 @@ Visual, interaction, and styling invariants for `ui/`.
 ## 6. Stepper View, Checkpoints & Gates
 
 - **Stepper**: Scrollable stages with progress bar, completion counts, and status-highlighted node rows.
+- **Stage validator** has a soft cyan pulse while running in Graph and Stepper. Reduced-motion settings keep the cyan outline static.
 - **Prompts**: Checkpoint and Stage Approval cards with distinct left accent borders, clear question text, and action buttons.
 
 ## 7. List Pages & Modals

@@ -1,0 +1,43 @@
+version: 1
+name: maintenance_handoff
+description: Produce a maintenance notice from the approved window and owner in a ticket export.
+max_injected_nodes: 2
+stages:
+  prepare:
+    title: Prepare the notice
+    validator:
+      op: standard_io/agent:StageSupervisor
+      mode: on_failure
+      allow_graph_edits: confirm
+      inputs:
+        prompt: >-
+          The notice must identify the ticket, its approved maintenance window (including time
+          zone), and the responsible person. Diagnose the failed step using its error, the
+          original ticket, and the available operations. Explain the evidence for any repair
+          so the on-call operator can check it against the source. Preserve the distinction
+          between a proposal and an approval. If the source does not establish one approved
+          window and owner, ask the operator for clarification before proposing a repair.
+  publish_draft:
+    title: Save the local draft
+nodes:
+  ticket:
+    op: standard_io/data:JsonExtract
+    title: Read ticket export
+    stage: prepare
+    inputs:
+      json_file: examples/samples/maintenance_handoff.json
+  notice:
+    op: standard_io/data:TemplateFormat
+    title: Format approved window and owner
+    stage: prepare
+    inputs:
+      values: $ticket.value_json
+      template: "{ticket} — approved window: {approved_window}. Owner: {owner}."
+  draft:
+    op: standard_io/files:MarkdownReport
+    title: Save maintenance notice
+    stage: publish_draft
+    inputs:
+      title: Maintenance notice
+      body: $notice.text
+      filename: maintenance-notice.md

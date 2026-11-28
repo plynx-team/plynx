@@ -368,7 +368,7 @@ describe("Phase 4 Stage Validator, Patch Diff, & Drift UI (FEAT-AGT-3)", () => {
           allow_freeform: false,
           questions: [],
           graph_patch: {
-            reason: "Detected French; splicing translator.",
+            reason: "**Translate before planning** because the planner expects English.\n\nEvidence: `ingest.text` is in French.",
             add_nodes: {
               translate_fr: {
                 op: "standard_io/demo:TranslateFr",
@@ -396,9 +396,16 @@ describe("Phase 4 Stage Validator, Patch Diff, & Drift UI (FEAT-AGT-3)", () => {
 
     expect(screen.getByTestId("stage-validator-row-s1")).toBeInTheDocument();
     const card = screen.getByTestId("checkpoint-card-cp_patch_1");
-    expect(card).toHaveTextContent("Detected French; splicing translator.");
+    expect(card.querySelector("strong")).toHaveTextContent("Translate before planning");
+    expect(card.querySelector("code")).toHaveTextContent("ingest.text");
     const preview = screen.getByTestId("patch-diff-preview-cp_patch_1");
+    expect(preview).not.toHaveAttribute("open");
+    expect(screen.getByRole("button", { name: "Approve Patch" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Reject" })).toBeVisible();
+    fireEvent.click(screen.getByText("Graph changes (1 node added, 1 input rewired)"));
+    expect(preview).toHaveAttribute("open");
     expect(preview).toHaveTextContent("+ translate_fr");
+    expect(preview).toHaveTextContent('"stage": "s1"');
     expect(preview).toHaveTextContent("~ planner.text");
     expect(preview).toHaveTextContent("$translate_fr.text");
 
@@ -426,7 +433,7 @@ describe("Phase 4 Stage Validator, Patch Diff, & Drift UI (FEAT-AGT-3)", () => {
           stage: "s1",
           meta: {
             injected_by: "__stage_validator__s1",
-            reason: "French text detected in ingest output",
+            reason: "French text detected in `ingest` output",
           },
           inputs: { text: "$ingest.text" },
         },
@@ -500,6 +507,7 @@ describe("Phase 4 Stage Validator, Patch Diff, & Drift UI (FEAT-AGT-3)", () => {
     expect(screen.getByTestId("inspector-injected-meta")).toHaveTextContent(
       "French text detected in ingest output",
     );
+    expect(screen.getByTestId("inspector-injected-meta").querySelector("code")).toHaveTextContent("ingest");
 
     // Client-side layout toggle bar
     expect(screen.getByTestId("run-layout-mode-toggle")).toBeInTheDocument();

@@ -297,7 +297,7 @@ Before launching a Stage Validator subprocess, the engine writes `stage_context.
 ```json
 {
   "schema": 1,
-  "reason": "Detected French document; splicing translator before summarize.",
+  "reason": "**Translate before summarizing** because the summary step expects English.\n\nEvidence: `pick.choice` is in French.",
   "add_nodes": {
     "translate_fr": {
       "op": "demo_pack/ops:TranslateFr",
@@ -310,6 +310,8 @@ Before launching a Stage Validator subprocess, the engine writes `stage_context.
   }
 }
 ```
+
+Use one short sentence for the repair decision and why it is needed. Add one brief source evidence line when it helps the operator decide. The web UI renders basic Markdown in confirmation, Agent Turns, and node provenance, with links and images shown as text. The confirmation card and Agent Turns offer expandable graph change details. The CLI and stored patch records retain the original reason text.
 
 When a child exits `0` with `graph_patch.json` present:
 - `GraphEditPolicy.FORBIDDEN`: the engine rejects the attempt (`FAILED`).
